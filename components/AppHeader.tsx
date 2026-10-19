@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
-import { signOut } from "@/app/(auth)/actions";
+import { AccountMenu } from "@/components/AccountMenu";
 import { Guide } from "@/components/onboarding/Guide";
+import { getKeyInfo } from "@/lib/groq-keys";
+import { isOwner, planOf } from "@/lib/plans";
+import { createClient } from "@/lib/supabase/server";
 import { getCurrentRole, getFirstTime, getUser } from "@/lib/dal";
 
 export function Logo() {
@@ -13,32 +16,28 @@ export function Logo() {
 }
 
 async function UserMenu() {
-  const [user, role, firstTime] = await Promise.all([getUser(), getCurrentRole(), getFirstTime()]);
+  const user = await getUser();
   if (!user) return null;
+  const supabase = await createClient();
+  const [role, firstTime, key] = await Promise.all([getCurrentRole(), getFirstTime(), getKeyInfo(supabase, user.id, null)]);
   return (
-    <div className="animate-fade flex items-center gap-3 text-sm">
-      {role === "admin" && <span className="rounded border border-ink px-1.5 py-px font-mono text-[10px] uppercase tracking-wider">Admin</span>}
-      <span className="hidden text-muted sm:inline">{user.name ?? user.email}</span>
+    <div className="animate-fade flex items-center">
       {/* No button: opens by itself for new accounts, or from Settings. */}
-      <Guide firstTime={firstTime} needsKey={role !== "admin"} />
-      <Link href="/settings" className="rounded-md px-2 py-1 text-muted transition hover:bg-paper hover:text-ink">
-        Settings
-      </Link>
-      <form action={signOut}>
-        <button className="rounded-md px-2 py-1 text-muted transition hover:bg-paper hover:text-ink">Sign out</button>
-      </form>
+      <Guide firstTime={firstTime} needsKey={planOf(role) !== "pro"} />
+      <AccountMenu name={user.name} email={user.email} plan={planOf(role)} owner={isOwner(role)} keyLast4={key?.last4 ?? null} />
     </div>
   );
 }
 
 export function AppHeader({ children }: { children?: ReactNode }) {
   return (
-    <header className="flex h-14 shrink-0 items-center gap-4 border-b border-ink bg-panel px-5">
+    // Its own layer above the page, so the account dropdown is never painted over.
+    <header className="relative z-40 flex h-14 shrink-0 items-center gap-4 border-b border-ink bg-panel px-5">
       <Link href="/dashboard" className="transition hover:opacity-70">
         <Logo />
       </Link>
       <div className="min-w-0 flex-1">{children}</div>
-      <Suspense fallback={<div className="skeleton h-6 w-28 rounded" />}>
+      <Suspense fallback={<div className="skeleton h-8 w-32 rounded-lg" />}>
         <UserMenu />
       </Suspense>
     </header>

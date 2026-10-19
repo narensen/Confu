@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { Logo } from "@/components/AppHeader";
+import { AccountDeletedNotice } from "@/components/landing/AccountDeletedNotice";
 import { LandingMotion, Words } from "@/components/landing/LandingMotion";
 import { ExamMock, PaperMock, PlanMock, WorkspaceMock } from "@/components/landing/Mocks";
 import { buttonClass, eyebrowClass, ghostButtonClass } from "@/components/ui";
 import { getUser } from "@/lib/dal";
+import { PLANS } from "@/lib/plans";
 
 export const metadata: Metadata = {
   title: "Confu — understand it deeply, not just skim it",
@@ -79,11 +81,15 @@ const STEPS = [
 const FAQ: { q: string; a: ReactNode }[] = [
   {
     q: "Is Confu free?",
-    a: "Yes, to start. The AI runs on Groq, and you bring your own Groq API key. Groq has a free tier, so you can start without paying anyone.",
+    a: "Yes. On Free, the AI runs on Groq with your own Groq API key, and Groq has a free tier, so you can start without paying anyone. Pro, in early access, runs on our keys instead.",
   },
   {
     q: "Why do I need a Groq API key?",
-    a: "It keeps Confu free and means the AI's usage is yours: you can see exactly how much you've used and how much is left in Settings. Getting a key takes a minute at console.groq.com.",
+    a: "On Free, it keeps Confu free and makes the AI's usage yours: you can see exactly how much you've used and what's left in Settings. Getting a key takes a minute at console.groq.com. On Pro you don't need one.",
+  },
+  {
+    q: "What's Pro?",
+    a: "The same Confu, running on our own Groq keys: no API key, no setup, with a daily fair-use allowance you can see in your account menu. It's in early access. Create an account, then request it in Settings → Plan.",
   },
   {
     q: "How much can I do on Groq's free tier?",
@@ -119,6 +125,9 @@ export default function Home() {
       <noscript>
         <style>{`.motion-pending [data-hero],.motion-pending [data-word],.motion-pending [data-split],.motion-pending [data-reveal],.motion-pending [data-reveal-item],.motion-pending [data-slide-item]{visibility:visible!important}`}</style>
       </noscript>
+      <Suspense fallback={null}>
+        <AccountDeletedNotice />
+      </Suspense>
       {/* Nav */}
       <nav className="sticky top-0 z-30 border-b border-ink bg-panel/90 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3.5">
@@ -132,6 +141,9 @@ export default function Home() {
             </a>
             <a href="#honest" className="transition hover:text-ink">
               Our approach
+            </a>
+            <a href="#plans" className="transition hover:text-ink">
+              Plans
             </a>
             <a href="#faq" className="transition hover:text-ink">
               FAQ
@@ -284,7 +296,7 @@ export default function Home() {
               ["Grounded, and honest about limits", "Answers cite the page they came from. When something isn't in your material, it says so. AI can still be wrong, so check what matters."],
               ["Your key is yours", "Your Groq key is encrypted, used only for your requests, and never shared, sold or logged."],
               ["No ads, no tracking", "No advertising, no analytics cookies, and we don't train AI models on your notes."],
-              ["Your data, your call", "Delete a session and its PDFs, notes and conversations go with it."],
+              ["Your data, your call", "Delete a session and its PDFs, notes and conversations go with it. Export everything, or delete your account, from Settings."],
             ].map(([title, body]) => (
               <li key={title} data-slide-item className="bg-panel p-6">
                 <p className="font-medium">{title}</p>
@@ -292,6 +304,71 @@ export default function Home() {
               </li>
             ))}
           </ul>
+        </div>
+      </section>
+
+      {/* Plans */}
+      <section id="plans" className="scroll-mt-16 border-b border-ink bg-paper">
+        <div className="mx-auto max-w-6xl px-6 py-24">
+          <div className="max-w-2xl">
+            <p data-reveal className={eyebrowClass}>
+              Plans
+            </p>
+            <h2 data-split className="mt-2 font-serif text-4xl leading-tight tracking-tight sm:text-5xl">Start free. Skip the setup with Pro.</h2>
+            <p data-reveal className="mt-4 text-lg leading-relaxed text-muted">
+              Every feature is in both. The only difference is whose AI key does the work.
+            </p>
+          </div>
+          <div data-reveal-group className="mt-14 grid gap-6 md:grid-cols-2">
+            {(["free", "pro"] as const).map((p) => (
+              <article
+                key={p}
+                data-reveal-item
+                className={`flex flex-col rounded-2xl border border-ink p-8 ${p === "pro" ? "bg-ink text-white" : "bg-panel"}`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="font-serif text-4xl">
+                    {PLANS[p].name}
+                    {p === "pro" && <span className="text-yellow-400">.</span>}
+                  </h3>
+                  <span
+                    className={`rounded-full px-3 py-1 font-mono text-[11px] uppercase ${p === "pro" ? "bg-yellow-300 text-ink" : "border border-ink/30 text-muted"}`}
+                  >
+                    {p === "pro" ? "Early access" : "Free forever"}
+                  </span>
+                </div>
+                <p className={`mt-3 text-lg ${p === "pro" ? "text-white/70" : "text-muted"}`}>{PLANS[p].tagline}</p>
+                <ul className="mt-8 flex-1 space-y-3 text-sm">
+                  {PLANS[p].features.map((f) => (
+                    <li key={f} className="flex gap-3">
+                      <svg viewBox="0 0 16 16" aria-hidden className={`mt-0.5 size-4 shrink-0 ${p === "pro" ? "text-yellow-300" : ""}`}>
+                        <path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                {p === "pro" ? (
+                  <div className="mt-10">
+                    <Link
+                      href="/settings#plan"
+                      className="inline-flex items-center gap-2 rounded-lg border border-white bg-white px-5 py-2.5 text-sm font-medium text-ink transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[3px_3px_0_0_#facc15] active:translate-y-0"
+                    >
+                      Request Pro →
+                    </Link>
+                    <p className="mt-3 text-xs text-white/50">Sign in, then request it in Settings → Plan.</p>
+                  </div>
+                ) : (
+                  <div className="mt-10">
+                    <Link href="/signup" className={`${buttonClass} px-5 py-2.5`}>
+                      Create your free account
+                    </Link>
+                    <p className="mt-3 text-xs text-muted">You&apos;ll need a Groq API key; Groq has a free tier.</p>
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 

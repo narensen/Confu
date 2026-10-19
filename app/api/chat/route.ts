@@ -266,7 +266,10 @@ export async function POST(request: Request) {
   // Persist the exchange and update the learner model once the stream ends.
   after(async () => {
     const reply = await done;
-    if (!reply.trim()) return access.meter.flush();
+    // Record the answer's usage now, so meters update right away; the
+    // progress-notes update below is recorded when it finishes.
+    await access.meter.flush();
+    if (!reply.trim()) return;
     const base = {
       user_id: userId,
       session_id: sessionId,

@@ -3,9 +3,11 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { HEARD_FROM, OCCUPATIONS, PURPOSES } from "@/lib/signup-survey";
 import { createClient } from "@/lib/supabase/server";
 
-export type AuthState = { error?: string; message?: string } | undefined;
+// `values` hands the sign-up answers back on an error, so the form keeps them.
+export type AuthState = { error?: string; message?: string; values?: Record<string, string> } | undefined;
 
 function safeNext(value: FormDataEntryValue | null): string {
   const next = typeof value === "string" ? value : "";
@@ -34,24 +36,40 @@ export async function login(_: AuthState, formData: FormData): Promise<AuthState
   redirect(safeNext(formData.get("next")));
 }
 
+const Signup = Credentials.extend({
+  fullName: z.string().trim().min(1, "Enter your name").max(100),
+  confirm: z.string(),
+  heardFrom: z.enum(HEARD_FROM, "Tell us how you heard about Confu"),
+  occupation: z.enum(OCCUPATIONS, "Tell us what describes you best"),
+  purpose: z.enum(PURPOSES, "Tell us what you'll use Confu for"),
+  purposeDetail: z.string().trim().max(500, "Keep it under 500 characters"),
+}).refine((v) => v.password === v.confirm, { message: "Passwords don't match", path: ["confirm"] });
+
 export async function signup(_: AuthState, formData: FormData): Promise<AuthState> {
-  const parsed = Credentials.extend({ fullName: z.string().trim().min(1, "Enter your name").max(100) }).safeParse({
-    email: formData.get("email"),
-    password: formData.get("password"),
-    fullName: formData.get("fullName"),
-  });
-  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const raw = Object.fromEntries(
+    ["fullName", "email", "password", "confirm", "heardFrom", "occupation", "purpose", "purposeDetail"].map((k) => [k, String(formData.get(k) ?? "")]),
+  );
+  // Everything but the passwords goes back to the form on an error.
+  const values = Object.fromEntries(Object.entries(raw).filter(([k]) => k !== "password" && k !== "confirm"));
+  const parsed = Signup.safeParse(raw);
+  if (!parsed.success) return { error: parsed.error.issues[0].message, values };
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
     options: {
-      data: { full_name: parsed.data.fullName },
+      data: {
+        full_name: parsed.data.fullName,
+        heard_from: parsed.data.heardFrom,
+        occupation: parsed.data.occupation,
+        purpose: parsed.data.purpose,
+        purpose_detail: parsed.data.purposeDetail || null,
+      },
       emailRedirectTo: `${await origin()}/auth/confirm?next=/dashboard`,
     },
   });
-  if (error) return { error: error.message };
+  if (error) return { error: error.message, values };
 
   // With email confirmation disabled, Supabase returns a session immediately.
   if (data.session) redirect("/dashboard");

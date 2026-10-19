@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { login, requestPasswordReset, signup, updatePassword, type AuthState } from "@/app/(auth)/actions";
 import { buttonClass, inputClass, labelClass } from "@/components/ui";
+import { HEARD_FROM, OCCUPATIONS, PURPOSES } from "@/lib/signup-survey";
 
 function Status({ state, urlError }: { state: AuthState; urlError?: string | null }) {
   const error = state?.error ?? urlError;
@@ -45,14 +46,64 @@ export function LoginForm() {
 
 export function SignupForm() {
   const [state, action, pending] = useActionState(signup, undefined);
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const v = state?.values ?? {};
   if (state?.message) return <Status state={state} />;
+  const mismatch = confirm.length > 0 && confirm !== password;
   return (
-    <form action={action} className="space-y-4">
-      <Field label="Name" name="fullName" autoComplete="name" required />
-      <Field label="Email" name="email" type="email" autoComplete="email" required />
-      <Field label="Password" name="password" type="password" autoComplete="new-password" required minLength={8} placeholder="At least 8 characters" />
+    // Keyed by the returned answers so they're refilled after an error.
+    <form key={JSON.stringify(v)} action={action} className="space-y-4">
+      <Field label="Name" name="fullName" autoComplete="name" required defaultValue={v.fullName} />
+      <Field label="Email" name="email" type="email" autoComplete="email" required defaultValue={v.email} />
+      <Field
+        label="Password"
+        name="password"
+        type="password"
+        autoComplete="new-password"
+        required
+        minLength={8}
+        placeholder="At least 8 characters"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+      />
+      <div>
+        <Field
+          label="Confirm password"
+          name="confirm"
+          type="password"
+          autoComplete="new-password"
+          required
+          minLength={8}
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          aria-invalid={mismatch}
+        />
+        {mismatch && <p className="animate-pop mt-1.5 text-xs text-danger">Passwords don&apos;t match yet.</p>}
+      </div>
+
+      <div className="space-y-4 border-t border-line pt-5">
+        <p className="text-sm text-muted">Three quick questions so we can build Confu for you.</p>
+        <Select label="How did you hear about Confu?" name="heardFrom" options={HEARD_FROM} defaultValue={v.heardFrom} />
+        <Select label="What describes you best?" name="occupation" options={OCCUPATIONS} defaultValue={v.occupation} />
+        <Select label="What will you mainly use Confu for?" name="purpose" options={PURPOSES} defaultValue={v.purpose} />
+        <label className="block">
+          <span className={labelClass}>
+            Anything more about your goal? <span className="font-normal text-muted">(optional)</span>
+          </span>
+          <textarea
+            name="purposeDetail"
+            rows={2}
+            maxLength={500}
+            defaultValue={v.purposeDetail}
+            placeholder="e.g. Passing my linear algebra final in May"
+            className={`${inputClass} resize-none`}
+          />
+        </label>
+      </div>
+
       <Status state={state} />
-      <button className={`${buttonClass} w-full py-2.5`} disabled={pending}>
+      <button className={`${buttonClass} w-full py-2.5`} disabled={pending || mismatch}>
         {pending ? "Creating account…" : "Create account"}
       </button>
       <p className="text-center text-xs leading-relaxed text-muted">
@@ -67,6 +118,24 @@ export function SignupForm() {
         .
       </p>
     </form>
+  );
+}
+
+function Select({ label, name, options, defaultValue }: { label: string; name: string; options: readonly string[]; defaultValue?: string }) {
+  return (
+    <label className="block">
+      <span className={labelClass}>{label}</span>
+      <select name={name} required defaultValue={defaultValue ?? ""} className={`${inputClass} cursor-pointer`}>
+        <option value="" disabled>
+          Choose one
+        </option>
+        {options.map((o) => (
+          <option key={o} value={o}>
+            {o}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 

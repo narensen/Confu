@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 // the daily limit in headers, so until a key hits it (and Groq tells us the
 // exact number) we show this, marked as an estimate, only for keys whose
 // other limits match the free tier.
-const FREE_TIER_DAILY_TOKENS: Record<string, number> = {
+export const FREE_TIER_DAILY_TOKENS: Record<string, number> = {
   "openai/gpt-oss-120b": 200_000,
   "openai/gpt-oss-20b": 200_000,
 };
@@ -45,20 +45,32 @@ type QuotaRow = {
   tokens_limit: number | null;
   daily_tokens_limit: number | null;
   daily_limit_hit_at: string | null;
-  last_success_at: string | null;
+  last_success_at?: string | null; // added in migration 0011
   observed_at: string;
 };
 
 const DAY = 86_400_000;
 
-export function statusOf(q: QuotaRow | undefined, now = Date.now()): { status: UsageStatus; blockedSince: string | null } {
-  if (!q) return { status: "none", blockedSince: null };
+// lastUsage: the newest recorded request on this key + model. It counts as a
+// sign of life too, so the meter works even without Groq's limit headers.
+export function statusOf(
+  q: QuotaRow | undefined,
+  now = Date.now(),
+  lastUsage: number | null = null,
+): { status: UsageStatus; blockedSince: string | null; checkedAt: string | null } {
+  if (!q) {
+    if (lastUsage === null) return { status: "none", blockedSince: null, checkedAt: null };
+    return { status: now - lastUsage > STALE_AFTER_MS ? "stale" : "ok", blockedSince: null, checkedAt: new Date(lastUsage).toISOString() };
+  }
+  const seen = Math.max(Date.parse(q.observed_at), lastUsage ?? 0);
+  const checkedAt = new Date(seen).toISOString();
   const hit = q.daily_limit_hit_at ? Date.parse(q.daily_limit_hit_at) : null;
-  const success = q.last_success_at ? Date.parse(q.last_success_at) : null;
+  // A request recorded after the hit also proves the key works again.
+  const success = Math.max(q.last_success_at ? Date.parse(q.last_success_at) : 0, lastUsage ?? 0) || null;
   // Blocked until something succeeds after the hit. A day later it has surely
   // freed up, so stop claiming it.
-  if (hit && hit > now - DAY && (!success || success < hit)) return { status: "blocked", blockedSince: q.daily_limit_hit_at };
-  return { status: now - Date.parse(q.observed_at) > STALE_AFTER_MS ? "stale" : "ok", blockedSince: null };
+  if (hit && hit > now - DAY && (!success || success < hit)) return { status: "blocked", blockedSince: q.daily_limit_hit_at, checkedAt };
+  return { status: now - seen > STALE_AFTER_MS ? "stale" : "ok", blockedSince: null, checkedAt };
 }
 
 // Usage for the given keys (only keys that exist now; replaced keys are history).
@@ -93,8 +105,10 @@ export async function usageSummary(supabase: SupabaseClient, userId: string, key
         .map((model): ModelUsage => {
           const q = quotas.find((x) => x.key_ref === keyRef && x.model === model);
           const mine = keyRows.filter((r) => r.model === model);
-          const estimate = q && looksFreeTier(q) ? (FREE_TIER_DAILY_TOKENS[model] ?? null) : null;
-          const { status, blockedSince } = statusOf(q, now);
+          // No limit headers seen yet: assume the free tier (most keys are), marked as an estimate.
+          const estimate = !q?.requests_limit || looksFreeTier(q) ? (FREE_TIER_DAILY_TOKENS[model] ?? null) : null;
+          const lastUsage = mine.length ? Math.max(...mine.map((r) => Date.parse(r.created_at))) : null;
+          const { status, blockedSince, checkedAt } = statusOf(q, now, lastUsage);
           return {
             model,
             status,
@@ -107,7 +121,7 @@ export async function usageSummary(supabase: SupabaseClient, userId: string, key
             // A "remaining" count past its reset time has replenished.
             requestsRemaining: q && q.requests_reset_at && Date.parse(q.requests_reset_at) > now ? q.requests_remaining : (q?.requests_limit ?? null),
             requestsResetAt: q?.requests_reset_at ?? null,
-            checkedAt: q?.observed_at ?? null,
+            checkedAt,
             blockedSince,
           };
         })

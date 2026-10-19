@@ -5,6 +5,7 @@ import { SessionTitle } from "@/components/workspace/SessionTitle";
 import { Workspace } from "@/components/workspace/Workspace";
 import { getCurrentRole, requireUser } from "@/lib/dal";
 import { getKeyInfo } from "@/lib/groq-keys";
+import { planOf } from "@/lib/plans";
 import type { Attempt } from "@/lib/exam";
 import type { PaperReview } from "@/lib/paper";
 import { createClient } from "@/lib/supabase/server";
@@ -148,7 +149,7 @@ async function SessionWorkspace({ params }: { params: Promise<{ id: string }> })
         initialMemory={m ? { ...EMPTY_MEMORY, ...m } : EMPTY_MEMORY}
         initialHighlights={(highlights.data ?? []) as Highlight[]}
         initialMessages={((messages.data ?? []) as ChatMessage[]).reverse()}
-        needsKey={role !== "admin"}
+        needsKey={planOf(role) !== "pro"}
         initialKey={keyInfo}
         initialReviews={(reviews.data ?? []) as PaperReview[]}
         initialAttempts={(attempts.data ?? []) as Attempt[]}

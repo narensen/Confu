@@ -6,7 +6,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 // Groq reveals when it's hit. Plugged into the Groq client as its `fetch`, so
 // call sites don't change. Call flush() once the route's work is done.
 
-export type KeyRef = `server:${string}` | `key:${string}`;
+// 'pro': Pro/owner usage on Confu's key pool. 'key:<id>': a user's own key.
+export type KeyRef = "pro" | `key:${string}`;
 export type Feature = "chat" | "plan" | "figure" | "quiz" | "grade" | "triage" | "pass1" | "probe";
 
 type Usage = { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
@@ -60,7 +61,21 @@ async function usageFromStream(body: ReadableStream<Uint8Array>): Promise<Usage 
   return usage;
 }
 
-export function createMeter(supabase: SupabaseClient, ctx: { userId: string; sessionId: string | null; keyRef: KeyRef; feature: Feature }) {
+export function createMeter(
+  supabase: SupabaseClient,
+  ctx: {
+    userId: string;
+    sessionId: string | null;
+    keyRef: KeyRef;
+    feature: Feature;
+    // The fetch to observe (e.g. the key pool's); defaults to the global fetch.
+    baseFetch?: typeof fetch;
+    // Per-key limits only mean something for a user's own key, not the pool.
+    trackQuota?: boolean;
+  },
+) {
+  const baseFetch = ctx.baseFetch ?? fetch;
+  const trackQuota = ctx.trackQuota ?? true;
   const pending: Promise<unknown>[] = [];
   const rows: { model: string; usage: Usage }[] = [];
   const quotas = new Map<string, QuotaPatch>();
@@ -68,14 +83,14 @@ export function createMeter(supabase: SupabaseClient, ctx: { userId: string; ses
   const patch = (model: string, p: QuotaPatch) => quotas.set(model, { ...quotas.get(model), ...p });
 
   const meteredFetch: typeof fetch = async (input, init) => {
-    const res = await fetch(input, init);
+    const res = await baseFetch(input, init);
     let model = "unknown";
     try {
       model = (JSON.parse(String(init?.body ?? "{}")) as { model?: string }).model ?? model;
     } catch {}
 
     const h = res.headers;
-    if (h.has("x-ratelimit-limit-requests")) {
+    if (trackQuota && h.has("x-ratelimit-limit-requests")) {
       const reset = parseDuration(h.get("x-ratelimit-reset-requests"));
       patch(model, {
         requests_limit: int(h.get("x-ratelimit-limit-requests")),
@@ -87,10 +102,10 @@ export function createMeter(supabase: SupabaseClient, ctx: { userId: string; ses
     }
 
     // A successful request proves the key isn't blocked for this model now.
-    if (res.ok) patch(model, { last_success_at: new Date().toISOString() });
+    if (res.ok && trackQuota) patch(model, { last_success_at: new Date().toISOString() });
 
     const type = h.get("content-type") ?? "";
-    if (res.status === 429) {
+    if (res.status === 429 && trackQuota) {
       // e.g. "Rate limit reached … on tokens per day (TPD): Limit 200000, Used 199996"
       pending.push(
         res
@@ -144,7 +159,16 @@ export function createMeter(supabase: SupabaseClient, ctx: { userId: string; ses
           ),
         // One upsert per model: a row only updates the fields observed this time,
         // so a learned daily limit isn't wiped by a later header-only update.
-        ...quota.map((q) => supabase.from("ai_quota").upsert(q, { onConflict: "user_id,key_ref,model" })),
+        ...quota.map(async (q) => {
+          const { error } = await supabase.from("ai_quota").upsert(q, { onConflict: "user_id,key_ref,model" });
+          // Before migration 0011 these columns don't exist; keep the rest.
+          if (error && /last_success_at|daily_used_at_hit/.test(error.message)) {
+            const { last_success_at: _a, daily_used_at_hit: _b, ...base } = q as typeof q & { last_success_at?: string; daily_used_at_hit?: number };
+            void _a;
+            void _b;
+            await supabase.from("ai_quota").upsert(base, { onConflict: "user_id,key_ref,model" });
+          }
+        }),
       ]);
     },
   };

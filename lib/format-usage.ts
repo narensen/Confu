@@ -21,6 +21,7 @@ export const FEATURE_LABELS: Record<string, string> = {
   grade: "Answer marking",
   triage: "Paper triage",
   pass1: "First-pass drafts",
+  probe: "Usage checks",
 };
 
 export function ago(iso: string | null): string {
@@ -30,5 +31,7 @@ export function ago(iso: string | null): string {
   const m = Math.round(s / 60);
   if (m < 60) return `${m} min ago`;
   const h = Math.round(m / 60);
-  return h < 48 ? `${h} h ago` : `${Math.round(h / 24)} days ago`;
+  if (h < 24) return `${h} h ago`;
+  const d = Math.round(h / 24);
+  return d === 1 ? "yesterday" : `${d} days ago`;
 }

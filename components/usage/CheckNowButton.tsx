@@ -17,7 +17,7 @@ export function CheckNowButton({ sessionId }: { sessionId: string | null }) {
           router.refresh();
         })
       }
-      className="rounded-md border border-ink/30 px-2 py-0.5 text-[11px] text-muted transition hover:border-ink hover:text-ink disabled:opacity-50"
+      className="shrink-0 rounded-md border border-ink/30 px-2 py-0.5 text-[11px] whitespace-nowrap text-muted transition hover:border-ink hover:text-ink disabled:opacity-50"
     >
       {pending ? "Checking…" : "Check now"}
     </button>

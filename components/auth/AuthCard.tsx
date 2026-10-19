@@ -1,21 +1,36 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Logo } from "@/components/AppHeader";
+import { AuthShowcase } from "./AuthShowcase";
 
+// Sign-in pages: the form on the left, a glimpse of the product on the right
+// (desktop only).
 export function AuthCard({ title, subtitle, children, footer }: { title: string; subtitle?: string; children: ReactNode; footer?: ReactNode }) {
   return (
-    <main className="flex min-h-dvh flex-1 items-center justify-center bg-paper px-4 py-12">
-      <div className="animate-enter w-full max-w-sm">
-        <Link href="/" className="mb-8 block text-center transition hover:opacity-70">
+    <main className="grid min-h-dvh flex-1 bg-paper lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+      <div className="flex flex-col px-6 py-7 sm:px-10">
+        <Link href="/" className="self-start transition hover:opacity-70">
           <Logo />
         </Link>
-        <div className="rounded-2xl border border-ink bg-panel p-7 shadow-hard">
-          <h1 className="font-serif text-[1.7rem] leading-tight">{title}</h1>
-          {subtitle && <p className="mt-1.5 text-sm text-muted">{subtitle}</p>}
-          <div className="mt-6">{children}</div>
+        <div className="flex flex-1 items-center justify-center py-12">
+          <div className="w-full max-w-sm">
+            <h1 className="animate-enter font-serif text-4xl leading-tight tracking-tight">{title}</h1>
+            {subtitle && (
+              <p className="animate-enter mt-2 text-muted" style={{ animationDelay: "50ms" }}>
+                {subtitle}
+              </p>
+            )}
+            <div className="animate-enter mt-8" style={{ animationDelay: "100ms" }}>
+              {children}
+            </div>
+            {footer && (
+              <div className="animate-enter mt-8 border-t border-line pt-6 text-sm text-muted" style={{ animationDelay: "150ms" }}>
+                {footer}
+              </div>
+            )}
+          </div>
         </div>
-        {footer && <div className="mt-6 text-center text-sm text-muted">{footer}</div>}
-        <p className="mt-6 text-center text-xs text-muted">
+        <p className="text-xs text-muted">
           <Link href="/privacy" className="hover:text-ink">
             Privacy
           </Link>
@@ -25,6 +40,7 @@ export function AuthCard({ title, subtitle, children, footer }: { title: string;
           </Link>
         </p>
       </div>
+      <AuthShowcase />
     </main>
   );
 }

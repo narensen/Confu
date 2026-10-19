@@ -358,9 +358,40 @@ const PapersArt = (
   </div>
 );
 
+const ExamArt = (
+  <div className="flex h-full flex-col justify-center gap-2.5">
+    <div className="flex items-end justify-between">
+      <div>
+        <p className="font-mono text-[9px] tracking-widest text-muted uppercase">Exam</p>
+        <p className="font-serif text-lg leading-tight">12 days to go</p>
+      </div>
+      <Chip>Mar 14</Chip>
+    </div>
+    <Frame className="p-3">
+      <p className="font-mono text-[9px] text-muted">Question 2 of 5 · short answer</p>
+      <p className="mt-1 text-[11px] font-medium leading-snug">Why does PCA centre the data before computing the covariance matrix?</p>
+      <div className="mt-2 space-y-1 rounded border border-ink/30 bg-paper p-2">
+        <Line w="92%" />
+        <Line w="70%" />
+      </div>
+      <div className="mt-2 flex items-center justify-between">
+        <span className="text-[9px] text-muted">Answer is in D1 p. 14</span>
+        <Btn dark>Mark my answer</Btn>
+      </div>
+    </Frame>
+    <div className="rounded-lg border border-dashed border-ink/40 p-2.5">
+      <p className="text-[10px] font-medium">Your weak topics</p>
+      <div className="mt-1.5 flex flex-wrap gap-1">
+        <Chip>Eigenvectors · 40%</Chip>
+        <Chip>Scree plots · 55%</Chip>
+      </div>
+    </div>
+  </div>
+);
+
 const ReadyArt = (
   <div className="flex h-full flex-col justify-center gap-2.5">
-    {["Create a study or paper session", "Set your goal, or triage your papers", "Start learning, one idea or one pass at a time"].map((t, i) => (
+    {["Create a study, exam or paper session", "Set your goal, your exam date, or triage your papers", "Start learning, one idea or one question at a time"].map((t, i) => (
       <Frame key={t} className="flex items-center gap-3 px-3 py-2.5">
         <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-ink font-mono text-[10px]">
           {i + 1}
@@ -395,9 +426,9 @@ export const GUIDE_STEPS: GuideStep[] = [
     intro:
       "A session holds your material, chat and memory. Pick a type: a study session (goal and plan), exam prep (practice questions and weak topics), or a paper session (research papers). Your library lists them all.",
     points: [
-      { label: "Start one", body: <>Press <b>+ New session</b> and choose one or more PDFs: textbook chapters, papers, lecture notes.</> },
+      { label: "Start one", body: <>Press <b>+ New session</b>, pick a type and give it a title. Add PDFs (textbook chapters, lecture notes, past papers) now or later.</> },
       { label: "Rename it", body: "Click the session title at the top of the workspace to edit it. Enter saves, Esc cancels." },
-      { label: "See progress", body: "Each card shows your goal, topics completed and days left. Hover a card to delete it." },
+      { label: "Your library", body: "Each card shows that session's progress. Filter by type, search titles and PDFs, and hover a card to delete it." },
     ],
     art: SessionsArt,
   },
@@ -408,10 +439,10 @@ export const GUIDE_STEPS: GuideStep[] = [
     intro: "Confu's AI runs on Groq, using your own Groq API key. Add it once in Settings and every session uses it.",
     points: [
       { label: "Get one", body: <>Sign in at <b>console.groq.com/keys</b> (there&apos;s a free tier), create a key and copy it. It starts with <code className="font-mono text-xs">gsk_</code>.</> },
-      { label: "Add it", body: <>Paste it in <b>Settings → Groq API key</b>, or in the panel that appears in a session. We check it with Groq first. A session can also have its own key that overrides your account key.</> },
+      { label: "Add it", body: <>Paste it in <b>Settings → API key</b>, or in the panel that appears in a session. We check it with Groq first. A session can also have its own key that overrides your account key.</> },
       { label: "Security", body: "It's encrypted before it's stored and never shown again; you'll only see its last four characters. Replace or remove it any time in Settings." },
     ],
-    tip: "You can read your PDFs without a key; you only need it for the AI features.",
+    tip: <>You can read your PDFs without a key; you only need it for the AI features. Rather not manage a key? Request Pro in <b>Settings → Plan</b>.</>,
     art: KeyArt,
     onlyForKeyUsers: true,
   },
@@ -515,8 +546,21 @@ export const GUIDE_STEPS: GuideStep[] = [
       { label: "Pass 2, the content (~1 hour)", body: "Read it properly, skip the proofs, scrutinise the figures, and explain the main idea and evidence. The tutor grades your explanation." },
       { label: "Pass 3, re-implementation (hours)", body: "Rebuild it from its assumptions with the tutor; list hidden assumptions, missing experiments and weaknesses. That's where research ideas come from." },
     ],
-    tip: "Write your research goal in the Passes tab and press “Suggest a pass for each paper”. The tutor can also search the literature, find who cites a paper, and search the web.",
+    tip: "Write your research goal in the Passes tab and press “Suggest a pass for each paper”. The tutor can also search the literature and find who cites a paper.",
     art: PapersArt,
+  },
+  {
+    id: "exam",
+    eyebrow: "Exam prep",
+    title: "Revise for an exam with your own notes",
+    intro: "Choose “Exam prep” when you start a session, add your course PDFs (notes, slides, past papers) and set the exam date. It keeps things simple: a countdown, practice, and your weak spots.",
+    points: [
+      { label: "Practise", body: "Five exam-style questions at a time, written from your own material, from one PDF or all of them." },
+      { label: "Get marked", body: "Write your answer as you would in the exam. It's marked strictly, with what you missed and where in your notes the answer is." },
+      { label: "Weak topics", body: "Your results find the topics you keep getting wrong. Press “Practise these” to drill them before the day." },
+    ],
+    tip: "The tutor is there too: ask about any question, or highlight a passage in your notes.",
+    art: ExamArt,
   },
   {
     id: "ready",
@@ -524,11 +568,11 @@ export const GUIDE_STEPS: GuideStep[] = [
     title: "Start your first session",
     intro: "That's everything. The fastest way to learn the app is to use it.",
     points: [
-      { label: "1", body: <>Press <b>+ New session</b> on the dashboard and pick your PDFs.</> },
+      { label: "1", body: <>Press <b>+ New session</b>, choose Study, Exam prep or Papers, and name it.</> },
       { label: "2", body: "Set your goal in the Plan tab and build your plan." },
       { label: "3", body: <>Press <b>Teach me this topic</b> and start. Highlight anything you don&apos;t get.</> },
     ],
-    tip: <>Reopen this guide any time from <b>Guide</b> in the top bar.</>,
+    tip: <>Reopen this guide any time from <b>Settings → Help &amp; legal</b>.</>,
     art: ReadyArt,
   },
 ];

@@ -1,7 +1,6 @@
-// Public site details used on the legal pages. Replace contactEmail with the
-// address you want users to write to about privacy and their data.
+// Public site details: the contact address appears on the legal pages and in Settings.
 export const SITE = {
   name: "Confu",
-  contactEmail: "privacy@example.com",
+  contactEmail: "confuedu.ai@gmail.com",
   policyDate: "October 20, 2026",
 };
