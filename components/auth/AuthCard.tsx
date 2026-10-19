@@ -15,6 +15,15 @@ export function AuthCard({ title, subtitle, children, footer }: { title: string;
           <div className="mt-6">{children}</div>
         </div>
         {footer && <div className="mt-6 text-center text-sm text-muted">{footer}</div>}
+        <p className="mt-6 text-center text-xs text-muted">
+          <Link href="/privacy" className="hover:text-ink">
+            Privacy
+          </Link>
+          <span className="mx-2">·</span>
+          <Link href="/terms" className="hover:text-ink">
+            Terms &amp; disclaimer
+          </Link>
+        </p>
       </div>
     </main>
   );

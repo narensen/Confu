@@ -4,7 +4,8 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { deleteDocument } from "@/components/dashboard/actions";
 import type { RegionCapture, TextSelection } from "@/components/pdf/PdfViewer";
-import { aiHeaders, forgetKey, readAiError, useSessionKey } from "@/lib/ai-key-store";
+import { JSON_HEADERS, KEY_ERROR_EVENT, readAiError } from "@/lib/ai-errors";
+import type { KeyInfo } from "@/lib/groq-keys";
 import { uploadPdfToSession } from "@/lib/pdf/upload";
 import { currentTopic } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/client";
@@ -39,8 +40,9 @@ type Props = {
   initialMemory: LearnerMemory;
   initialHighlights: Highlight[];
   initialMessages: ChatMessage[];
-  // Regular users bring their own Groq key per session; admins don't.
+  // Regular users bring their own Groq key; admins use the server's.
   needsKey: boolean;
+  initialKey: KeyInfo | null;
 };
 
 export type SendRequest = {
@@ -68,6 +70,7 @@ export function Workspace({
   initialHighlights,
   initialMessages,
   needsKey,
+  initialKey,
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const [docs, setDocs] = useState(initialDocs);
@@ -88,8 +91,21 @@ export function Workspace({
   const [mobileView, setMobileView] = useState<"tutor" | "pdf">("pdf");
   const [split, setSplit] = useState(40);
   const rootRef = useRef<HTMLDivElement>(null);
-  const sessionKey = useSessionKey(session.id);
-  const locked = needsKey && !sessionKey;
+  const [keyInfo, setKeyInfo] = useState(initialKey);
+  const [keyNotice, setKeyNotice] = useState<string | null>(null);
+  const locked = needsKey && !keyInfo;
+
+  // An AI request reported a missing or rejected key: ask for one again.
+  useEffect(() => {
+    const onKeyError = (e: Event) => {
+      setKeyNotice((e as CustomEvent<{ message: string }>).detail.message);
+      setKeyInfo(null);
+      setDrawerOpen(true);
+      setMobileView("tutor");
+    };
+    window.addEventListener(KEY_ERROR_EVENT, onKeyError);
+    return () => window.removeEventListener(KEY_ERROR_EVENT, onKeyError);
+  }, []);
 
   // Without a key, AI actions open the tutor panel, where the key form is.
   const revealGate = useCallback(() => {
@@ -216,7 +232,7 @@ export function Workspace({
       try {
         const res = await fetch("/api/chat", {
           method: "POST",
-          headers: aiHeaders(session.id),
+          headers: JSON_HEADERS,
           body: JSON.stringify({
             sessionId: session.id,
             documentId: activeDoc?.id ?? null,
@@ -228,7 +244,7 @@ export function Workspace({
             highlightId: req.highlightId ?? null,
           }),
         });
-        if (!res.ok || !res.body) throw new Error(await readAiError(session.id, res));
+        if (!res.ok || !res.body) throw new Error(await readAiError(res));
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let text = "";
@@ -293,10 +309,10 @@ export function Workspace({
       try {
         const res = await fetch("/api/figure", {
           method: "POST",
-          headers: aiHeaders(session.id),
+          headers: JSON_HEADERS,
           body: JSON.stringify({ documentId, ...capture }),
         });
-        if (!res.ok) throw new Error(await readAiError(session.id, res));
+        if (!res.ok) throw new Error(await readAiError(res));
         const json = await res.json();
         highlight = json.highlight as Highlight;
         setHighlights((h) => [...h, highlight!]);
@@ -320,7 +336,7 @@ export function Workspace({
       }
       if (highlight) await send({ action: "figure", message, highlightId: highlight.id, figure: { page: capture.page, documentId } });
     },
-    [activeDoc, locked, revealGate, send, session.id],
+    [activeDoc, locked, revealGate, send],
   );
 
   const deleteHighlight = useCallback(
@@ -434,7 +450,15 @@ export function Workspace({
   };
 
   const panel = locked ? (
-    <KeyGate sessionId={session.id} onClose={focusMode ? () => setDrawerOpen(false) : undefined} />
+    <KeyGate
+      sessionId={session.id}
+      notice={keyNotice}
+      onSaved={(info) => {
+        setKeyInfo(info);
+        setKeyNotice(null);
+      }}
+      onClose={focusMode ? () => setDrawerOpen(false) : undefined}
+    />
   ) : (
     <TutorPanel
       tab={tab}
@@ -456,10 +480,7 @@ export function Workspace({
       onDeleteHighlight={deleteHighlight}
       onPlanCreated={reloadPlan}
       onClose={focusMode ? () => setDrawerOpen(false) : undefined}
-      keyHint={needsKey && sessionKey ? sessionKey.slice(-4) : undefined}
-      onForgetKey={() => {
-        if (confirm("Remove your Groq key from this session? You'll need to add it again to use the tutor here.")) forgetKey(session.id);
-      }}
+      keyInfo={needsKey ? keyInfo : null}
     />
   );
 

@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     return Response.json({ error: parsed.error.issues[0]?.message ?? "Invalid request" }, { status: 400 });
   }
 
-  const access = await resolveGroq(supabase, userId, request);
+  const access = await resolveGroq(supabase, userId, parsed.data.sessionId);
   if ("error" in access) return access.error;
 
   try {

@@ -38,3 +38,14 @@ export const getCurrentRole = cache(async (): Promise<"admin" | null> => {
   if (!user) return null;
   return getRole(await createClient(), user.id);
 });
+
+// Whether to auto-open the first-login guide: true = never seen it, false =
+// seen it, null = unknown (e.g. the onboarding migration hasn't been run).
+export const getFirstTime = cache(async (): Promise<boolean | null> => {
+  const user = await getUser();
+  if (!user) return null;
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("profiles").select("onboarded_at").eq("id", user.id).maybeSingle();
+  if (error || !data) return null;
+  return data.onboarded_at === null;
+});

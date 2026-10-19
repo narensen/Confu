@@ -1,7 +1,8 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { GROQ_KEY_HEADER, KEY_ERRORS, looksLikeGroqKey } from "@/lib/ai-key";
+import { KEY_ERRORS } from "@/lib/ai-key";
 import { groqClient, SERVER_GROQ_KEY, type Groq } from "@/lib/groq";
+import { loadKey } from "@/lib/groq-keys";
 
 export async function getRole(supabase: SupabaseClient, userId: string): Promise<"admin" | null> {
   const { data } = await supabase.from("profiles").select("role").eq("id", userId).maybeSingle();
@@ -9,26 +10,23 @@ export async function getRole(supabase: SupabaseClient, userId: string): Promise
 }
 
 // Decide which Groq key a request runs on. Admins use the server key; everyone
-// else must send their own key for the session. The user's key is used for
-// this request only and is never stored or logged.
+// else uses their own key, stored encrypted: the session's key if it has one,
+// otherwise their account key.
 export async function resolveGroq(
   supabase: SupabaseClient,
   userId: string,
-  request: Request,
+  sessionId: string | null,
 ): Promise<{ groq: Groq } | { error: Response }> {
   if ((await getRole(supabase, userId)) === "admin") {
     if (!SERVER_GROQ_KEY) return { error: Response.json({ error: "The server's Groq key is not configured." }, { status: 500 }) };
     return { groq: groqClient(SERVER_GROQ_KEY) };
   }
 
-  const key = request.headers.get(GROQ_KEY_HEADER)?.trim();
+  const key = await loadKey(supabase, userId, sessionId);
   if (!key) {
     return {
-      error: Response.json({ error: "Add your Groq API key for this session to use the tutor.", code: KEY_ERRORS.required }, { status: 428 }),
+      error: Response.json({ error: "Add your Groq API key to use the tutor.", code: KEY_ERRORS.required }, { status: 428 }),
     };
-  }
-  if (!looksLikeGroqKey(key)) {
-    return { error: Response.json({ error: "That doesn't look like a Groq API key (they start with gsk_).", code: KEY_ERRORS.invalid }, { status: 401 }) };
   }
   return { groq: groqClient(key) };
 }
@@ -38,7 +36,7 @@ export async function resolveGroq(
 export function groqErrorResponse(err: unknown, fallback: string): Response {
   const status = (err as { status?: number })?.status;
   if (status === 401 || status === 403) {
-    return Response.json({ error: "Groq rejected this API key. Check it and enter it again.", code: KEY_ERRORS.invalid }, { status: 401 });
+    return Response.json({ error: "Groq rejected your saved API key. Replace it in Settings or below.", code: KEY_ERRORS.invalid }, { status: 401 });
   }
   if (status === 429) {
     return Response.json({ error: "Groq's rate limit was reached for this key. Wait a minute and try again." }, { status: 429 });

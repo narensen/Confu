@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { DeleteSessionButton } from "@/components/dashboard/DeleteSessionButton";
 import { NewSessionButton } from "@/components/dashboard/NewSessionButton";
+import { TourButton } from "@/components/onboarding/TourButton";
 import { eyebrowClass } from "@/components/ui";
 import { requireUser } from "@/lib/dal";
 import { daysBetween, toISODate } from "@/lib/schedule";
@@ -85,6 +86,7 @@ async function SessionList() {
           Start a session with one or more PDFs: textbook chapters, papers, lecture notes. You&apos;ll set a goal and a deadline,
           and Confu builds a plan across all of them and beyond.
         </p>
+        <TourButton />
       </div>
     );
   }

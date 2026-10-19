@@ -26,9 +26,6 @@ export async function POST(request: Request) {
   if (!parsed.success) return Response.json({ error: "Invalid request" }, { status: 400 });
   const { documentId, page, rect, image } = parsed.data;
 
-  const access = await resolveGroq(supabase, userId, request);
-  if ("error" in access) return access.error;
-  const { groq } = access;
 
   const base64 = image.slice(image.indexOf(",") + 1);
   const bytes = Buffer.from(base64, "base64");
@@ -37,10 +34,14 @@ export async function POST(request: Request) {
   }
 
   const [{ data: doc }, { data: pageRow }] = await Promise.all([
-    supabase.from("documents").select("title").eq("id", documentId).maybeSingle(),
+    supabase.from("documents").select("title, session_id").eq("id", documentId).maybeSingle(),
     supabase.from("document_pages").select("content").eq("document_id", documentId).eq("page_number", page).maybeSingle(),
   ]);
   if (!doc) return Response.json({ error: "Not found" }, { status: 404 });
+
+  const access = await resolveGroq(supabase, userId, doc.session_id);
+  if ("error" in access) return access.error;
+  const { groq } = access;
 
   let description: string;
   try {

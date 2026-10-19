@@ -57,6 +57,18 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-ink px-6 py-5 text-sm text-muted">
+        <span>Confu is a study aid. AI can make mistakes, so check important facts.</span>
+        <div className="flex gap-4">
+          <Link href="/privacy" className="hover:text-ink">
+            Privacy
+          </Link>
+          <Link href="/terms" className="hover:text-ink">
+            Terms &amp; disclaimer
+          </Link>
+        </div>
+      </footer>
     </main>
   );
 }

@@ -1,6 +1,4 @@
-// Shared between client and server: how a user's own Groq key travels.
-export const GROQ_KEY_HEADER = "x-groq-key";
-
+// Shared between client and server.
 export const KEY_ERRORS = {
   required: "GROQ_KEY_REQUIRED",
   invalid: "GROQ_KEY_INVALID",

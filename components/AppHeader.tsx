@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { signOut } from "@/app/(auth)/actions";
-import { getCurrentRole, getUser } from "@/lib/dal";
+import { Guide } from "@/components/onboarding/Guide";
+import { getCurrentRole, getFirstTime, getUser } from "@/lib/dal";
 
 export function Logo() {
   return (
@@ -12,7 +13,7 @@ export function Logo() {
 }
 
 async function UserMenu() {
-  const [user, role] = await Promise.all([getUser(), getCurrentRole()]);
+  const [user, role, firstTime] = await Promise.all([getUser(), getCurrentRole(), getFirstTime()]);
   if (!user) return null;
   const initial = (user.name ?? user.email ?? "?").trim().charAt(0).toUpperCase();
   return (
@@ -20,6 +21,10 @@ async function UserMenu() {
       {role === "admin" && <span className="rounded border border-ink px-1.5 py-px font-mono text-[10px] uppercase tracking-wider">Admin</span>}
       <span className="hidden text-muted sm:inline">{user.name ?? user.email}</span>
       <span className="flex size-7 items-center justify-center rounded-full border border-ink font-mono text-xs">{initial}</span>
+      <Guide firstTime={firstTime} needsKey={role !== "admin"} />
+      <Link href="/settings" className="rounded-md px-2 py-1 text-muted transition hover:bg-paper hover:text-ink">
+        Settings
+      </Link>
       <form action={signOut}>
         <button className="rounded-md px-2 py-1 text-muted transition hover:bg-paper hover:text-ink">Sign out</button>
       </form>

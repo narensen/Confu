@@ -38,7 +38,7 @@ export async function POST(request: Request) {
   const { sessionId, documentId = null, action, message, page = null, topicId, selection = null, highlightId = null } = parsed.data;
   if (action === "chat" && !message?.trim() && !selection) return new Response("Empty message", { status: 400 });
 
-  const access = await resolveGroq(supabase, userId, request);
+  const access = await resolveGroq(supabase, userId, sessionId);
   if ("error" in access) return access.error;
   const { groq } = access;
 

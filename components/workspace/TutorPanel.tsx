@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useLayoutEffect, useRef, useState } from "react";
+import type { KeyInfo } from "@/lib/groq-keys";
 import type { ChatMessage, Highlight, LearnerMemory, PlanTopic, SessionDoc, StudyPlan, TopicStatus } from "@/lib/types";
 import { ChatPanel } from "./ChatPanel";
 import { HighlightsPanel } from "./HighlightsPanel";
@@ -30,8 +32,7 @@ type Props = {
   onDeleteHighlight: (h: Highlight) => void;
   onPlanCreated: () => void;
   onClose?: () => void;
-  keyHint?: string; // last 4 characters of the user's own Groq key
-  onForgetKey?: () => void;
+  keyInfo?: KeyInfo | null; // the user's own Groq key in use here (never the key itself)
 };
 
 export function TutorPanel(props: Props) {
@@ -94,18 +95,18 @@ export function TutorPanel(props: Props) {
           )}
         </div>
         <div className="flex-1" />
-        {props.keyHint && (
-          <button
-            onClick={props.onForgetKey}
-            title="Your Groq key for this session. Click to remove it."
+        {props.keyInfo && (
+          <Link
+            href="/settings"
+            title={`Using your ${props.keyInfo.source === "session" ? "session" : "account"} Groq key. Manage it in Settings.`}
             className="my-2.5 mr-1 flex items-center gap-1.5 rounded-md border border-line px-2 font-mono text-[11px] text-muted transition hover:border-ink hover:text-ink"
           >
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
               <circle cx="7.5" cy="15.5" r="4.5" />
               <path d="m10.7 12.3 9.3-9.3M17 6l3 3M14 9l2 2" />
             </svg>
-            …{props.keyHint}
-          </button>
+            …{props.keyInfo.last4}
+          </Link>
         )}
         {props.onClose && (
           <button

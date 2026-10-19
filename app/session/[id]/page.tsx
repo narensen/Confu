@@ -4,6 +4,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { SessionTitle } from "@/components/workspace/SessionTitle";
 import { Workspace } from "@/components/workspace/Workspace";
 import { getCurrentRole, requireUser } from "@/lib/dal";
+import { getKeyInfo } from "@/lib/groq-keys";
 import { createClient } from "@/lib/supabase/server";
 import {
   docLabel,
@@ -50,11 +51,12 @@ function WorkspaceSkeleton() {
 async function SessionWorkspace({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!UUID.test(id)) notFound();
-  await requireUser();
+  const user = await requireUser();
   const supabase = await createClient();
 
-  const [role, session, docs, plan, memory, messages] = await Promise.all([
+  const [role, keyInfo, session, docs, plan, memory, messages] = await Promise.all([
     getCurrentRole(),
+    getKeyInfo(supabase, user.id, id),
     supabase.from("study_sessions").select("id, title").eq("id", id).maybeSingle(),
     supabase
       .from("documents")
@@ -132,6 +134,7 @@ async function SessionWorkspace({ params }: { params: Promise<{ id: string }> })
         initialHighlights={(highlights.data ?? []) as Highlight[]}
         initialMessages={((messages.data ?? []) as ChatMessage[]).reverse()}
         needsKey={role !== "admin"}
+        initialKey={keyInfo}
       />
     </>
   );
