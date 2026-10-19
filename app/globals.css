@@ -1,0 +1,188 @@
+@import "tailwindcss";
+
+/* Confu — white, black frames, editorial type. Light only. */
+:root {
+  color-scheme: light;
+  --paper: #f6f6f3;      /* app background, inputs, hover */
+  --panel: #ffffff;      /* surfaces */
+  --ink: #0d0d0c;        /* text, frames, primary buttons */
+  --muted: #62625d;
+  --line: #e4e3de;       /* hairlines inside frames */
+  --accent: #0d0d0c;     /* primary = ink; no brand colour */
+  --accent-soft: #efefeb;
+  --accent-ink: #ffffff;
+  --danger: #b42318;
+  --ok: #18794e;
+  --warn: #a15c07;
+  --hl-yellow: rgba(253, 216, 53, 0.42);
+  --hl-region: rgba(13, 13, 12, 0.06);
+  --viewer: #ebebe7;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-panel: var(--panel);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-danger: var(--danger);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-viewer: var(--viewer);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-newsreader);
+  --ease-fluid: var(--ease);
+  --shadow-hard: 3px 3px 0 0 var(--ink);
+  --shadow-hard-sm: 2px 2px 0 0 var(--ink);
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+::selection { background: rgba(253, 216, 53, 0.55); color: var(--ink); }
+
+/* ------------------------------------------------------------------ motion */
+
+@keyframes enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pop {
+  from { opacity: 0; transform: translateY(4px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes shimmer { from { background-position: -200% 0; } to { background-position: 200% 0; } }
+@keyframes blink { 50% { opacity: 0; } }
+@keyframes indeterminate {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}
+
+.animate-enter { animation: enter 0.5s var(--ease) both; }
+.animate-pop { animation: pop 0.2s var(--ease) both; }
+.animate-slide-in { animation: slide-in 0.35s var(--ease) both; }
+.animate-fade { animation: fade 0.3s ease both; }
+
+.skeleton {
+  background: linear-gradient(90deg, var(--paper) 25%, #ecebe6 50%, var(--paper) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+.indeterminate { position: relative; overflow: hidden; }
+.indeterminate::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: var(--ink);
+  animation: indeterminate 1.3s var(--ease) infinite;
+}
+
+/* Smooth height for disclosures: <div class="disclosure" data-open><div>…</div></div>
+   (not ".collapse": Tailwind already defines that as visibility: collapse) */
+.disclosure {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.35s var(--ease), opacity 0.25s ease;
+}
+.disclosure[data-open="true"] { grid-template-rows: 1fr; opacity: 1; }
+.disclosure > * { min-height: 0; overflow: hidden; }
+
+.is-streaming .prose-tutor > :last-child::after {
+  content: "";
+  display: inline-block;
+  width: 0.5em;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  background: var(--ink);
+  animation: blink 1s steps(1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------------------------------------------------------- tutor answers */
+
+.prose-tutor {
+  line-height: 1.7;
+  font-size: 0.925rem;
+  overflow-wrap: anywhere;
+}
+.prose-tutor > * + * { margin-top: 0.75em; }
+.prose-tutor h1, .prose-tutor h2, .prose-tutor h3, .prose-tutor h4 {
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-weight: 600;
+  line-height: 1.25;
+  margin-top: 1.1em;
+  letter-spacing: -0.01em;
+}
+.prose-tutor h1 { font-size: 1.3rem; }
+.prose-tutor h2 { font-size: 1.18rem; }
+.prose-tutor h3 { font-size: 1.06rem; }
+.prose-tutor h4 { font-size: 0.98rem; }
+.prose-tutor > :first-child { margin-top: 0; }
+.prose-tutor ul { list-style: none; padding-left: 1.1rem; }
+.prose-tutor ul > li { position: relative; }
+.prose-tutor ul > li::before {
+  content: "";
+  position: absolute;
+  left: -0.85rem;
+  top: 0.68em;
+  width: 5px;
+  height: 5px;
+  background: var(--ink);
+}
+.prose-tutor ol { list-style: decimal; padding-left: 1.25rem; }
+.prose-tutor ol > li::marker { font-family: var(--font-geist-mono), monospace; font-size: 0.85em; color: var(--muted); }
+.prose-tutor li + li { margin-top: 0.3em; }
+.prose-tutor li > ul, .prose-tutor li > ol { margin-top: 0.3em; }
+.prose-tutor strong { font-weight: 600; }
+.prose-tutor em { font-style: normal; font-weight: 500; text-decoration: underline; text-decoration-color: rgba(13, 13, 12, 0.25); text-underline-offset: 3px; }
+.prose-tutor a { text-decoration: underline; text-underline-offset: 3px; }
+.prose-tutor hr { border: 0; border-top: 1px solid var(--line); margin: 1.2em 0; }
+.prose-tutor code {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.84em;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  padding: 0.05em 0.3em;
+  border-radius: 4px;
+}
+.prose-tutor pre { background: var(--paper); border: 1px solid var(--ink); border-radius: 8px; padding: 0.8rem; overflow-x: auto; }
+.prose-tutor pre code { border: 0; padding: 0; background: none; }
+.prose-tutor blockquote {
+  border-left: 3px solid var(--ink);
+  padding: 0.15em 0 0.15em 0.8rem;
+  color: #2f2f2c;
+}
+.prose-tutor table { border-collapse: collapse; font-size: 0.86em; display: block; overflow-x: auto; }
+.prose-tutor th, .prose-tutor td { border: 1px solid var(--ink); padding: 0.35em 0.6em; text-align: left; }
+.prose-tutor th { background: var(--paper); font-weight: 600; }
+.prose-tutor .katex-display { overflow-x: auto; overflow-y: hidden; padding: 0.35em 0; }
+.prose-compact { font-size: 0.875rem; line-height: 1.6; }
+
+/* ---------------------------------------------------------------- viewer */
+
+.pdf-page .react-pdf__Page__textContent ::selection { background: rgba(253, 216, 53, 0.55); }
+.pdf-page.region-mode .react-pdf__Page__textContent { pointer-events: none; }
