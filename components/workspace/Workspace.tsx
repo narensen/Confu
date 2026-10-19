@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { deleteDocument } from "@/components/dashboard/actions";
 import type { RegionCapture, TextSelection } from "@/components/pdf/PdfViewer";
+import { aiHeaders, forgetKey, readAiError, useSessionKey } from "@/lib/ai-key-store";
 import { uploadPdfToSession } from "@/lib/pdf/upload";
 import { currentTopic } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/client";
@@ -21,6 +22,7 @@ import {
   type TutorAction,
 } from "@/lib/types";
 import { DocTabs } from "./DocTabs";
+import { KeyGate } from "./KeyGate";
 import { TutorPanel, type Tab } from "./TutorPanel";
 
 const PdfViewer = dynamic(() => import("@/components/pdf/PdfViewer"), {
@@ -37,6 +39,8 @@ type Props = {
   initialMemory: LearnerMemory;
   initialHighlights: Highlight[];
   initialMessages: ChatMessage[];
+  // Regular users bring their own Groq key per session; admins don't.
+  needsKey: boolean;
 };
 
 export type SendRequest = {
@@ -63,6 +67,7 @@ export function Workspace({
   initialMemory,
   initialHighlights,
   initialMessages,
+  needsKey,
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const [docs, setDocs] = useState(initialDocs);
@@ -83,6 +88,14 @@ export function Workspace({
   const [mobileView, setMobileView] = useState<"tutor" | "pdf">("pdf");
   const [split, setSplit] = useState(40);
   const rootRef = useRef<HTMLDivElement>(null);
+  const sessionKey = useSessionKey(session.id);
+  const locked = needsKey && !sessionKey;
+
+  // Without a key, AI actions open the tutor panel, where the key form is.
+  const revealGate = useCallback(() => {
+    setDrawerOpen(true);
+    setMobileView("tutor");
+  }, []);
 
   const activeDoc = docs.find((d) => d.id === activeDocId) ?? docs[0] ?? null;
   const page = activeDoc?.lastPage ?? 1;
@@ -172,6 +185,7 @@ export function Workspace({
 
   const send = useCallback(
     async (req: SendRequest) => {
+      if (locked) return revealGate();
       if (busyRef.current) return;
       busyRef.current = true;
       const topic = topics.find((t) => t.id === req.topicId) ?? activeTopic;
@@ -202,7 +216,7 @@ export function Workspace({
       try {
         const res = await fetch("/api/chat", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: aiHeaders(session.id),
           body: JSON.stringify({
             sessionId: session.id,
             documentId: activeDoc?.id ?? null,
@@ -214,7 +228,7 @@ export function Workspace({
             highlightId: req.highlightId ?? null,
           }),
         });
-        if (!res.ok || !res.body) throw new Error((await res.text()) || `Request failed (${res.status})`);
+        if (!res.ok || !res.body) throw new Error(await readAiError(session.id, res));
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let text = "";
@@ -234,7 +248,7 @@ export function Workspace({
         window.setTimeout(refreshProgress, 10000);
       }
     },
-    [activeDoc, activeTopic, labelOf, multi, page, refreshProgress, session.id, topics],
+    [activeDoc, activeTopic, labelOf, locked, multi, page, refreshProgress, revealGate, session.id, topics],
   );
 
   const onTextAction = useCallback(
@@ -267,6 +281,7 @@ export function Workspace({
 
   const onRegion = useCallback(
     async (capture: RegionCapture, message?: string) => {
+      if (locked) return revealGate();
       if (busyRef.current || !activeDoc) return;
       const documentId = activeDoc.id;
       busyRef.current = true;
@@ -278,11 +293,11 @@ export function Workspace({
       try {
         const res = await fetch("/api/figure", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: aiHeaders(session.id),
           body: JSON.stringify({ documentId, ...capture }),
         });
+        if (!res.ok) throw new Error(await readAiError(session.id, res));
         const json = await res.json();
-        if (!res.ok) throw new Error(json.error ?? "Could not read the figure");
         highlight = json.highlight as Highlight;
         setHighlights((h) => [...h, highlight!]);
       } catch (err) {
@@ -305,7 +320,7 @@ export function Workspace({
       }
       if (highlight) await send({ action: "figure", message, highlightId: highlight.id, figure: { page: capture.page, documentId } });
     },
-    [activeDoc, send],
+    [activeDoc, locked, revealGate, send, session.id],
   );
 
   const deleteHighlight = useCallback(
@@ -418,7 +433,9 @@ export function Workspace({
     window.addEventListener("pointerup", up);
   };
 
-  const panel = (
+  const panel = locked ? (
+    <KeyGate sessionId={session.id} onClose={focusMode ? () => setDrawerOpen(false) : undefined} />
+  ) : (
     <TutorPanel
       tab={tab}
       onTab={setTab}
@@ -439,6 +456,10 @@ export function Workspace({
       onDeleteHighlight={deleteHighlight}
       onPlanCreated={reloadPlan}
       onClose={focusMode ? () => setDrawerOpen(false) : undefined}
+      keyHint={needsKey && sessionKey ? sessionKey.slice(-4) : undefined}
+      onForgetKey={() => {
+        if (confirm("Remove your Groq key from this session? You'll need to add it again to use the tutor here.")) forgetKey(session.id);
+      }}
     />
   );
 

@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { groq, MODELS } from "@/lib/groq";
+import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
+import { MODELS } from "@/lib/groq";
 import { createClient } from "@/lib/supabase/server";
 
 export const maxDuration = 60;
@@ -24,6 +25,10 @@ export async function POST(request: Request) {
   const parsed = Body.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: "Invalid request" }, { status: 400 });
   const { documentId, page, rect, image } = parsed.data;
+
+  const access = await resolveGroq(supabase, userId, request);
+  if ("error" in access) return access.error;
+  const { groq } = access;
 
   const base64 = image.slice(image.indexOf(",") + 1);
   const bytes = Buffer.from(base64, "base64");
@@ -72,8 +77,7 @@ ${(pageRow?.content ?? "").slice(0, 3000)}
     });
     description = res.choices[0]?.message?.content?.trim() ?? "";
   } catch (err) {
-    console.error("vision request failed", err);
-    return Response.json({ error: "The vision model could not read this region. Try again." }, { status: 502 });
+    return groqErrorResponse(err, "The vision model could not read this region. Try again.");
   }
   if (!description) return Response.json({ error: "The vision model returned nothing." }, { status: 502 });
 

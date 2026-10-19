@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { groq, MODELS, parseJsonObject } from "@/lib/groq";
+import { MODELS, parseJsonObject, type Groq } from "@/lib/groq";
 import type { LearnerMemory, PlanTopic } from "@/lib/types";
 
 const str = z.array(z.string().max(200)).max(8).catch([]);
@@ -37,6 +37,7 @@ function merge(existing: string[], add: string[], remove: string[], cap: number)
 // repeating itself, and what feeds topic mastery.
 export async function updateLearnerMemory(
   supabase: SupabaseClient,
+  groq: Groq,
   input: {
     userId: string;
     sessionId: string;

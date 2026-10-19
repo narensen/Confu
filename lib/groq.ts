@@ -1,12 +1,16 @@
 import "server-only";
 import Groq from "groq-sdk";
 
-// Prefer a server-only GROQ_API_KEY. NEXT_PUBLIC_GROQ_API_KEY is accepted as a
-// fallback but is only ever read on the server here; rename it so it can never
-// be inlined into a client bundle.
-const apiKey = process.env.GROQ_API_KEY ?? process.env.NEXT_PUBLIC_GROQ_API_KEY;
+export type { Groq };
 
-export const groq = new Groq({ apiKey });
+// The server's own key, used only for admin accounts. Prefer the server-only
+// GROQ_API_KEY; NEXT_PUBLIC_GROQ_API_KEY is accepted as a fallback but is only
+// ever read here, on the server.
+export const SERVER_GROQ_KEY = process.env.GROQ_API_KEY ?? process.env.NEXT_PUBLIC_GROQ_API_KEY;
+
+export function groqClient(apiKey: string) {
+  return new Groq({ apiKey, maxRetries: 1 });
+}
 
 export const MODELS = {
   // Tutor answers and plan generation.

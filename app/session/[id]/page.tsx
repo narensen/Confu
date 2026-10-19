@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { SessionTitle } from "@/components/workspace/SessionTitle";
 import { Workspace } from "@/components/workspace/Workspace";
-import { requireUser } from "@/lib/dal";
+import { getCurrentRole, requireUser } from "@/lib/dal";
 import { createClient } from "@/lib/supabase/server";
 import {
   docLabel,
@@ -53,7 +53,8 @@ async function SessionWorkspace({ params }: { params: Promise<{ id: string }> })
   await requireUser();
   const supabase = await createClient();
 
-  const [session, docs, plan, memory, messages] = await Promise.all([
+  const [role, session, docs, plan, memory, messages] = await Promise.all([
+    getCurrentRole(),
     supabase.from("study_sessions").select("id, title").eq("id", id).maybeSingle(),
     supabase
       .from("documents")
@@ -130,6 +131,7 @@ async function SessionWorkspace({ params }: { params: Promise<{ id: string }> })
         initialMemory={m ? { ...EMPTY_MEMORY, ...m } : EMPTY_MEMORY}
         initialHighlights={(highlights.data ?? []) as Highlight[]}
         initialMessages={((messages.data ?? []) as ChatMessage[]).reverse()}
+        needsKey={role !== "admin"}
       />
     </>
   );

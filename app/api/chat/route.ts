@@ -1,6 +1,7 @@
 import { after } from "next/server";
 import { z } from "zod";
-import { groq, MODELS } from "@/lib/groq";
+import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
+import { MODELS } from "@/lib/groq";
 import { currentTopic, scheduleStatus, toISODate } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/server";
 import { loadTutorState, retrieveContext } from "@/lib/tutor/context";
@@ -36,6 +37,10 @@ export async function POST(request: Request) {
   if (!parsed.success) return new Response("Invalid request", { status: 400 });
   const { sessionId, documentId = null, action, message, page = null, topicId, selection = null, highlightId = null } = parsed.data;
   if (action === "chat" && !message?.trim() && !selection) return new Response("Empty message", { status: 400 });
+
+  const access = await resolveGroq(supabase, userId, request);
+  if ("error" in access) return access.error;
+  const { groq } = access;
 
   const state = await loadTutorState(supabase, sessionId);
   if (!state.session) return new Response("Not found", { status: 404 });
@@ -119,8 +124,7 @@ export async function POST(request: Request) {
       include_reasoning: false,
     });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Model request failed";
-    return new Response(msg, { status: 502 });
+    return groqErrorResponse(err, "The tutor couldn't answer right now. Try again.");
   }
 
   let resolveDone: (text: string) => void;
@@ -169,7 +173,7 @@ export async function POST(request: Request) {
       await supabase.from("plan_topics").update({ status: "in_progress" }).eq("id", topic.id);
     }
     try {
-      await updateLearnerMemory(supabase, {
+      await updateLearnerMemory(supabase, groq, {
         userId,
         sessionId,
         memory: state.memory,

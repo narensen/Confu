@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { buttonClass, eyebrowClass, ghostButtonClass, inputClass, labelClass } from "@/components/ui";
+import { aiHeaders, readAiError } from "@/lib/ai-key-store";
 import { addDays, toISODate } from "@/lib/schedule";
 import type { Level, StudyPlan } from "@/lib/types";
 
@@ -68,11 +69,10 @@ export function GoalSetup({
     try {
       const res = await fetch("/api/plan", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: aiHeaders(sessionId),
         body: JSON.stringify({ sessionId, goal, materials, level, startDate: today, deadline, minutesPerDay }),
       });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(json.error ?? "Could not create a plan");
+      if (!res.ok) throw new Error(await readAiError(sessionId, res));
       onCreated();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not create a plan");

@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
+import { getRole } from "@/lib/ai-access";
 import { createClient } from "@/lib/supabase/server";
 
 export type SessionUser = { id: string; email: string | null; name: string | null };
@@ -29,3 +30,11 @@ export async function requireUser(): Promise<SessionUser> {
   if (!user) redirect("/login");
   return user;
 }
+
+// 'admin' accounts use the server's Groq key; everyone else (NULL) brings
+// their own key per session. The role is only ever set by hand in Supabase.
+export const getCurrentRole = cache(async (): Promise<"admin" | null> => {
+  const user = await getUser();
+  if (!user) return null;
+  return getRole(await createClient(), user.id);
+});

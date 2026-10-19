@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { groq, MODELS, parseJsonObject } from "@/lib/groq";
+import { MODELS, parseJsonObject, type Groq } from "@/lib/groq";
 import { assignDueDates, daysBetween } from "@/lib/schedule";
 import { docLabel, type Level, type OutlineItem } from "@/lib/types";
 
@@ -87,6 +87,7 @@ async function documentMap(supabase: SupabaseClient, doc: Doc, budget: number) {
 
 export async function generatePlan(
   supabase: SupabaseClient,
+  groq: Groq,
   input: {
     userId: string;
     sessionId: string;

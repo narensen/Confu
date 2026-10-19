@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
 import { createClient } from "@/lib/supabase/server";
 import { generatePlan } from "@/lib/tutor/plan";
 
@@ -29,14 +30,15 @@ export async function POST(request: Request) {
     return Response.json({ error: parsed.error.issues[0]?.message ?? "Invalid request" }, { status: 400 });
   }
 
+  const access = await resolveGroq(supabase, userId, request);
+  if ("error" in access) return access.error;
+
   try {
-    const planId = await generatePlan(supabase, { userId, ...parsed.data });
+    const planId = await generatePlan(supabase, access.groq, { userId, ...parsed.data });
     return Response.json({ planId });
   } catch (err) {
+    if ((err as { status?: number })?.status) return groqErrorResponse(err, "Could not generate a plan. Try again.");
     console.error("plan generation failed", err);
-    return Response.json(
-      { error: err instanceof Error ? err.message : "Could not generate a plan. Try again." },
-      { status: 502 },
-    );
+    return Response.json({ error: err instanceof Error ? err.message : "Could not generate a plan. Try again." }, { status: 502 });
   }
 }
