@@ -9,6 +9,11 @@ export const ACTION_LABELS: Record<TutorAction, string> = {
   figure: "Figure",
   quiz: "Check my understanding",
   teach: "Teach me",
+  pass1_check: "Check my five Cs",
+  pass2_figures: "Walk me through the figures",
+  pass2_check: "Check my explanation",
+  pass3_rebuild: "Re-implementation",
+  pass3_probe: "Probe for weaknesses",
 };
 
 function quote(text: string, max = 600): string {
@@ -36,7 +41,7 @@ export function displayUserTurn(input: {
   const label = ACTION_LABELS[action];
   if (message?.trim()) {
     parts.push(action === "chat" || action === "ask" || action === "figure" ? message.trim() : `**${label}:** ${message.trim()}`);
-  } else if (action === "quiz" || action === "teach") {
+  } else if (action.startsWith("pass") || action === "quiz" || action === "teach") {
     parts.push(`**${label}**${topicTitle ? ` — ${topicTitle}` : ""}`);
   } else if (action !== "chat") {
     parts.push(`**${label}**`);

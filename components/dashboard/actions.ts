@@ -9,7 +9,10 @@ async function storagePathsFor(supabase: Awaited<ReturnType<typeof createClient>
     supabase.from("documents").select("storage_path").in("id", documentIds),
     supabase.from("highlights").select("image_path").in("document_id", documentIds).not("image_path", "is", null),
   ]);
-  return [...(docs ?? []).map((d) => d.storage_path as string), ...(figures ?? []).map((f) => f.image_path as string)];
+  // Papers added by arXiv ID / DOI may have no stored PDF.
+  return [...(docs ?? []).map((d) => d.storage_path as string | null), ...(figures ?? []).map((f) => f.image_path as string)].filter(
+    (p): p is string => Boolean(p),
+  );
 }
 
 export async function deleteSession(sessionId: string) {

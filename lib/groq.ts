@@ -8,8 +8,9 @@ export type { Groq };
 // ever read here, on the server.
 export const SERVER_GROQ_KEY = process.env.GROQ_API_KEY ?? process.env.NEXT_PUBLIC_GROQ_API_KEY;
 
-export function groqClient(apiKey: string) {
-  return new Groq({ apiKey, maxRetries: 1 });
+// `fetchImpl` lets a usage meter observe every request (see lib/usage.ts).
+export function groqClient(apiKey: string, fetchImpl?: typeof fetch) {
+  return new Groq({ apiKey, maxRetries: 1, ...(fetchImpl ? { fetch: fetchImpl } : {}) });
 }
 
 export const MODELS = {

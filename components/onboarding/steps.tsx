@@ -319,9 +319,48 @@ const ProgressArt = (
   </div>
 );
 
+const PapersArt = (
+  <div className="flex h-full flex-col justify-center gap-2.5">
+    <p className="font-mono text-[9px] tracking-widest text-muted uppercase">Reading list</p>
+    {[
+      ["D1", "Proximal Policy Optimization", 3, 1],
+      ["D2", "DeepSeekMath: GRPO", 3, 2],
+      ["D3", "Let's Verify Step by Step", 2, 2],
+      ["D4", "A survey of RLHF", 1, 1],
+    ].map(([label, title, target, done]) => (
+      <Frame key={label as string} className={`flex items-center gap-2 px-2.5 py-1.5 ${label === "D2" ? "" : "border-line shadow-none"}`}>
+        <Chip dark={label === "D2"}>{label}</Chip>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[10px] font-medium">{title}</p>
+          <div className="mt-1 flex gap-0.5">
+            {[1, 2, 3].map((n) => (
+              <span
+                key={n}
+                className={`h-1 w-4 rounded-full ${n <= (done as number) ? "bg-ink" : n <= (target as number) ? "bg-ink/20" : "border border-dashed border-ink/20"}`}
+              />
+            ))}
+          </div>
+        </div>
+        <div className="flex rounded border border-ink p-px font-mono text-[8px]">
+          {[1, 2, 3].map((n) => (
+            <span key={n} className={`px-1 ${n === target ? "rounded-sm bg-ink text-white" : "text-muted"}`}>
+              {n}
+            </span>
+          ))}
+        </div>
+      </Frame>
+    ))}
+    <div className="grid grid-cols-3 gap-1 text-[9px]">
+      <span className="rounded border border-ink/40 px-1.5 py-1">Pass 1 ✓</span>
+      <span className="rounded border border-ink bg-ink px-1.5 py-1 text-white">Pass 2</span>
+      <span className="rounded border border-ink/40 px-1.5 py-1">Pass 3</span>
+    </div>
+  </div>
+);
+
 const ReadyArt = (
   <div className="flex h-full flex-col justify-center gap-2.5">
-    {["Create a session with your PDFs", "Set a specific goal and deadline", "Press “Teach me” and start learning"].map((t, i) => (
+    {["Create a study or paper session", "Set your goal, or triage your papers", "Start learning, one idea or one pass at a time"].map((t, i) => (
       <Frame key={t} className="flex items-center gap-3 px-3 py-2.5">
         <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-ink font-mono text-[10px]">
           {i + 1}
@@ -353,7 +392,8 @@ export const GUIDE_STEPS: GuideStep[] = [
     id: "sessions",
     eyebrow: "Sessions",
     title: "One session per thing you're learning",
-    intro: "A session holds one goal, any number of PDFs, its own plan, chat and memory. Your library on the dashboard lists them all.",
+    intro:
+      "A session holds your material, chat and memory. Pick a type: a study session (goal and plan), exam prep (practice questions and weak topics), or a paper session (research papers). Your library lists them all.",
     points: [
       { label: "Start one", body: <>Press <b>+ New session</b> and choose one or more PDFs: textbook chapters, papers, lecture notes.</> },
       { label: "Rename it", body: "Click the session title at the top of the workspace to edit it. Enter saves, Esc cancels." },
@@ -463,6 +503,20 @@ export const GUIDE_STEPS: GuideStep[] = [
       { label: "Mastery by topic", body: "Estimated from your answers, not from what you've read. When a topic reaches ~75%, it suggests marking it understood." },
     ],
     art: ProgressArt,
+  },
+  {
+    id: "papers",
+    eyebrow: "Paper sessions",
+    title: "Read research papers in three passes",
+    intro:
+      "Choose “Paper session” when you start a session, then add papers by arXiv ID, DOI, link or title. No PDF needed. It follows S. Keshav's three-pass method: each pass goes deeper, and you stop once you have what you need.",
+    points: [
+      { label: "Pass 1, bird's-eye view (5–10 min)", body: "Abstract, introduction, headings, conclusion, then the five Cs: category, context, correctness, contributions, clarity. Most papers stop here." },
+      { label: "Pass 2, the content (~1 hour)", body: "Read it properly, skip the proofs, scrutinise the figures, and explain the main idea and evidence. The tutor grades your explanation." },
+      { label: "Pass 3, re-implementation (hours)", body: "Rebuild it from its assumptions with the tutor; list hidden assumptions, missing experiments and weaknesses. That's where research ideas come from." },
+    ],
+    tip: "Write your research goal in the Passes tab and press “Suggest a pass for each paper”. The tutor can also search the literature, find who cites a paper, and search the web.",
+    art: PapersArt,
   },
   {
     id: "ready",

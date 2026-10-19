@@ -5,6 +5,8 @@ import { SessionTitle } from "@/components/workspace/SessionTitle";
 import { Workspace } from "@/components/workspace/Workspace";
 import { getCurrentRole, requireUser } from "@/lib/dal";
 import { getKeyInfo } from "@/lib/groq-keys";
+import type { Attempt } from "@/lib/exam";
+import type { PaperReview } from "@/lib/paper";
 import { createClient } from "@/lib/supabase/server";
 import {
   docLabel,
@@ -12,6 +14,7 @@ import {
   type ChatMessage,
   type Highlight,
   type LearnerMemory,
+  type PaperDocMeta,
   type PlanTopic,
   type SessionDoc,
   type StudyPlan,
@@ -57,10 +60,10 @@ async function SessionWorkspace({ params }: { params: Promise<{ id: string }> })
   const [role, keyInfo, session, docs, plan, memory, messages] = await Promise.all([
     getCurrentRole(),
     getKeyInfo(supabase, user.id, id),
-    supabase.from("study_sessions").select("id, title").eq("id", id).maybeSingle(),
+    supabase.from("study_sessions").select("id, title, kind, research_goal, exam_date").eq("id", id).maybeSingle(),
     supabase
       .from("documents")
-      .select("id, title, storage_path, page_count, last_page, position, status, updated_at")
+      .select("id, title, storage_path, page_count, last_page, position, status, updated_at, source_url, meta")
       .eq("session_id", id)
       .order("position")
       .order("created_at"),
@@ -78,7 +81,9 @@ async function SessionWorkspace({ params }: { params: Promise<{ id: string }> })
   const docRows = (docs.data ?? []) as {
     id: string;
     title: string;
-    storage_path: string;
+    storage_path: string | null;
+    source_url: string | null;
+    meta: PaperDocMeta | null;
     page_count: number;
     last_page: number;
     position: number;
@@ -87,23 +92,31 @@ async function SessionWorkspace({ params }: { params: Promise<{ id: string }> })
   }[];
   const docIds = docRows.map((d) => d.id);
 
-  const [topics, signed, highlights] = await Promise.all([
+  const isPaper = session.data.kind === "paper";
+  const isExam = session.data.kind === "exam";
+  const [topics, signed, highlights, reviews, attempts] = await Promise.all([
     plan.data
       ? supabase.from("plan_topics").select("*").eq("plan_id", plan.data.id).order("position")
       : Promise.resolve({ data: [] }),
-    docRows.length
+    docRows.some((d) => d.storage_path)
       ? supabase.storage.from("documents").createSignedUrls(
-          docRows.map((d) => d.storage_path),
+          docRows.flatMap((d) => (d.storage_path ? [d.storage_path] : [])),
           URL_TTL,
         )
       : Promise.resolve({ data: [] }),
     docIds.length
       ? supabase.from("highlights").select("*").in("document_id", docIds).order("page_number").order("created_at")
       : Promise.resolve({ data: [] }),
+    isPaper ? supabase.from("paper_reviews").select("*").eq("session_id", id) : Promise.resolve({ data: [] }),
+    isExam
+      ? supabase.from("exam_attempts").select("topic, score, created_at").eq("session_id", id).order("created_at", { ascending: false }).limit(500)
+      : Promise.resolve({ data: [] }),
   ]);
 
   const urls = new Map((signed.data ?? []).map((s) => [s.path, s.signedUrl]));
   const sessionDocs: SessionDoc[] = docRows
+    // Keep papers without a PDF (added by arXiv ID / DOI); drop PDFs whose file is missing.
+    .filter((d) => !d.storage_path || urls.get(d.storage_path))
     .map((d, i) => ({
       id: d.id,
       label: docLabel(i),
@@ -111,9 +124,11 @@ async function SessionWorkspace({ params }: { params: Promise<{ id: string }> })
       pageCount: d.page_count,
       lastPage: d.last_page,
       position: d.position,
-      url: urls.get(d.storage_path) ?? "",
-    }))
-    .filter((d) => d.url);
+      url: d.storage_path ? (urls.get(d.storage_path) ?? "") : "",
+      hasPdf: Boolean(d.storage_path),
+      sourceUrl: d.source_url,
+      meta: d.meta ?? {},
+    }));
 
   // Reopen the PDF the student was reading most recently.
   const recent = [...docRows].sort((a, b) => b.updated_at.localeCompare(a.updated_at))[0];
@@ -125,7 +140,7 @@ async function SessionWorkspace({ params }: { params: Promise<{ id: string }> })
         <SessionTitle sessionId={session.data.id} initialTitle={session.data.title} />
       </AppHeader>
       <Workspace
-        session={{ id: session.data.id, title: session.data.title }}
+        session={{ id: session.data.id, title: session.data.title, kind: session.data.kind, researchGoal: session.data.research_goal ?? "", examDate: session.data.exam_date ?? null }}
         initialDocs={sessionDocs}
         initialDocId={sessionDocs.find((d) => d.id === recent?.id)?.id ?? sessionDocs[0]?.id ?? null}
         initialPlan={plan.data as StudyPlan | null}
@@ -135,6 +150,8 @@ async function SessionWorkspace({ params }: { params: Promise<{ id: string }> })
         initialMessages={((messages.data ?? []) as ChatMessage[]).reverse()}
         needsKey={role !== "admin"}
         initialKey={keyInfo}
+        initialReviews={(reviews.data ?? []) as PaperReview[]}
+        initialAttempts={(attempts.data ?? []) as Attempt[]}
       />
     </>
   );

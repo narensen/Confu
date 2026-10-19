@@ -10,10 +10,13 @@ type Props = {
   onSelect: (id: string) => void;
   onAdd: (files: File[]) => void;
   onRemove: (doc: SessionDoc) => void;
+  // Paper sessions open the "Add papers" dialog instead of a file picker.
+  onAddClick?: () => void;
+  addLabel?: string;
 };
 
 // The session's PDFs as tabs above the viewer.
-export function DocTabs({ docs, activeId, uploadStatus, onSelect, onAdd, onRemove }: Props) {
+export function DocTabs({ docs, activeId, uploadStatus, onSelect, onAdd, onRemove, onAddClick, addLabel = "+ Add PDF" }: Props) {
   const input = useRef<HTMLInputElement>(null);
 
   return (
@@ -71,7 +74,7 @@ export function DocTabs({ docs, activeId, uploadStatus, onSelect, onAdd, onRemov
         }}
       />
       <button
-        onClick={() => input.current?.click()}
+        onClick={() => (onAddClick ? onAddClick() : input.current?.click())}
         disabled={Boolean(uploadStatus)}
         className="flex shrink-0 items-center gap-1.5 border-l border-ink px-3 text-xs font-medium transition duration-200 hover:bg-ink hover:text-white disabled:pointer-events-none"
       >
@@ -81,7 +84,7 @@ export function DocTabs({ docs, activeId, uploadStatus, onSelect, onAdd, onRemov
             <span className="max-w-56 truncate text-muted">{uploadStatus}</span>
           </>
         ) : (
-          "+ Add PDF"
+          addLabel
         )}
       </button>
     </div>

@@ -1,16 +1,32 @@
 "use client";
 
-import Link from "next/link";
 import { useLayoutEffect, useRef, useState } from "react";
+import { PassesPanel } from "@/components/paper/PassesPanel";
+import { UsageMeter } from "@/components/usage/UsageMeter";
+import { ExamProgress } from "@/components/exam/ExamProgress";
+import { PracticePanel } from "@/components/exam/PracticePanel";
+import type { ExamPractice } from "@/components/exam/useExamPractice";
 import type { KeyInfo } from "@/lib/groq-keys";
-import type { ChatMessage, Highlight, LearnerMemory, PlanTopic, SessionDoc, StudyPlan, TopicStatus } from "@/lib/types";
+import type { PaperReview } from "@/lib/paper";
+import type { ChatMessage, Highlight, LearnerMemory, PlanTopic, SessionDoc, SessionKind, StudyPlan, TopicStatus } from "@/lib/types";
 import { ChatPanel } from "./ChatPanel";
 import { HighlightsPanel } from "./HighlightsPanel";
 import { MemoryPanel } from "./MemoryPanel";
 import { PlanPanel } from "./PlanPanel";
 import type { SendRequest } from "./Workspace";
 
-export type Tab = "chat" | "plan" | "highlights" | "memory";
+export type Tab = "chat" | "plan" | "passes" | "practice" | "highlights" | "memory";
+
+export type ExamProps = { practice: ExamPractice; examDate: string | null; onExamDate: (date: string | null) => void };
+
+export type PaperProps = {
+  reviews: Record<string, PaperReview>;
+  researchGoal: string;
+  activeDocId: string | null;
+  onSelectDoc: (docId: string) => void;
+  onUpdate: (docId: string, patch: Partial<PaperReview>, persist?: boolean) => void;
+  onResearchGoal: (goal: string) => void;
+};
 
 type Props = {
   tab: Tab;
@@ -33,17 +49,37 @@ type Props = {
   onPlanCreated: () => void;
   onClose?: () => void;
   keyInfo?: KeyInfo | null; // the user's own Groq key in use here (never the key itself)
+  kind: SessionKind;
+  paper: PaperProps;
+  exam: ExamProps;
 };
 
 export function TutorPanel(props: Props) {
   const { tab, onTab, plan, topics, highlights } = props;
   const done = topics.filter((t) => t.status === "completed").length;
-  const tabs: { id: Tab; label: string; badge?: string }[] = [
-    { id: "chat", label: "Tutor" },
-    { id: "plan", label: "Plan", badge: plan ? `${done}/${topics.length}` : "Set goal" },
-    { id: "highlights", label: "Highlights", badge: highlights.length ? String(highlights.length) : undefined },
-    { id: "memory", label: "Progress" },
-  ];
+  const answered = props.exam.practice.attempts.length;
+  // Exam sessions keep it simple: ask, practise, see progress.
+  const tabs: { id: Tab; label: string; badge?: string }[] =
+    props.kind === "exam"
+      ? [
+          { id: "chat", label: "Tutor" },
+          { id: "practice", label: "Practice" },
+          { id: "memory", label: "Progress", badge: answered ? String(answered) : undefined },
+        ]
+      : [
+          { id: "chat", label: "Tutor" },
+          props.kind === "paper"
+            ? {
+                id: "passes",
+                label: "Passes",
+                badge: props.docs.length
+                  ? `${props.docs.filter((d) => (props.paper.reviews[d.id]?.passes_done ?? 0) >= (props.paper.reviews[d.id]?.target_pass ?? 1)).length}/${props.docs.length}`
+                  : undefined,
+              }
+            : { id: "plan", label: "Plan", badge: plan ? `${done}/${topics.length}` : "Set goal" },
+          { id: "highlights", label: "Highlights", badge: highlights.length ? String(highlights.length) : undefined },
+          { id: "memory", label: "Progress" },
+        ];
 
   // Sliding underline under the active tab.
   const navRef = useRef<HTMLDivElement>(null);
@@ -95,19 +131,7 @@ export function TutorPanel(props: Props) {
           )}
         </div>
         <div className="flex-1" />
-        {props.keyInfo && (
-          <Link
-            href="/settings"
-            title={`Using your ${props.keyInfo.source === "session" ? "session" : "account"} Groq key. Manage it in Settings.`}
-            className="my-2.5 mr-1 flex items-center gap-1.5 rounded-md border border-line px-2 font-mono text-[11px] text-muted transition hover:border-ink hover:text-ink"
-          >
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
-              <circle cx="7.5" cy="15.5" r="4.5" />
-              <path d="m10.7 12.3 9.3-9.3M17 6l3 3M14 9l2 2" />
-            </svg>
-            …{props.keyInfo.last4}
-          </Link>
-        )}
+        <UsageMeter sessionId={props.sessionId} keyId={props.keyInfo?.id} keyLast4={props.keyInfo?.last4} />
         {props.onClose && (
           <button
             onClick={props.onClose}
@@ -129,7 +153,37 @@ export function TutorPanel(props: Props) {
             onSend={props.onSend}
             onJump={props.onJump}
             onCite={props.onCite}
-            onOpenPlan={() => onTab("plan")}
+            onOpenPlan={() => onTab(props.kind === "paper" ? "passes" : props.kind === "exam" ? "practice" : "plan")}
+            kind={props.kind}
+            paperFocus={(() => {
+              const doc = props.docs.find((d) => d.id === props.paper.activeDocId);
+              const r = doc ? props.paper.reviews[doc.id] : undefined;
+              return props.kind === "paper" && doc && r ? { label: doc.label, title: doc.title, done: r.passes_done, target: r.target_pass } : null;
+            })()}
+          />
+        )}
+        {tab === "practice" && (
+          <PracticePanel
+            practice={props.exam.practice}
+            docs={props.docs}
+            examDate={props.exam.examDate}
+            onExamDate={props.exam.onExamDate}
+            onJump={props.onJump}
+            onAsk={(message) => props.onSend({ action: "chat", message })}
+          />
+        )}
+        {tab === "passes" && (
+          <PassesPanel
+            sessionId={props.sessionId}
+            docs={props.docs}
+            activeDocId={props.paper.activeDocId}
+            reviews={props.paper.reviews}
+            researchGoal={props.paper.researchGoal}
+            busy={Boolean(props.busy)}
+            onSelectDoc={props.paper.onSelectDoc}
+            onUpdate={props.paper.onUpdate}
+            onResearchGoal={props.paper.onResearchGoal}
+            onSend={props.onSend}
           />
         )}
         {tab === "plan" && (
@@ -161,7 +215,20 @@ export function TutorPanel(props: Props) {
             onSend={props.onSend}
           />
         )}
-        {tab === "memory" && <MemoryPanel memory={props.memory} plan={plan} topics={topics} />}
+        {tab === "memory" &&
+          (props.kind === "exam" ? (
+            <ExamProgress
+              practice={props.exam.practice}
+              examDate={props.exam.examDate}
+              memorySummary={props.memory.summary}
+              onPractiseWeak={(weak) => {
+                onTab("practice");
+                void props.exam.practice.start({ topics: weak });
+              }}
+            />
+          ) : (
+            <MemoryPanel memory={props.memory} plan={plan} topics={topics} />
+          ))}
       </div>
     </div>
   );

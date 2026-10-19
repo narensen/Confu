@@ -7,7 +7,7 @@ export type DocumentRow = {
   session_id: string;
   position: number;
   title: string;
-  storage_path: string;
+  storage_path: string | null;
   page_count: number;
   outline: OutlineItem[];
   status: "processing" | "ready" | "failed";
@@ -28,7 +28,19 @@ export type SessionDoc = {
   pageCount: number;
   lastPage: number;
   position: number;
-  url: string;
+  url: string; // signed PDF URL; empty when the paper has no PDF
+  hasPdf: boolean;
+  sourceUrl: string | null; // landing page (arXiv, doi.org, …) for papers added by identifier
+  meta: PaperDocMeta;
+};
+
+export type PaperDocMeta = {
+  authors?: string[];
+  year?: number | null;
+  venue?: string | null;
+  doi?: string | null;
+  arxiv_id?: string | null;
+  abstract?: string | null;
 };
 
 export function docLabel(index: number) {
@@ -122,7 +134,31 @@ export type TutorAction =
   | "simplify"
   | "figure"
   | "quiz"
-  | "teach";
+  | "teach"
+  // Paper sessions (three-pass method)
+  | "pass1_check"
+  | "pass2_figures"
+  | "pass2_check"
+  | "pass3_rebuild"
+  | "pass3_probe";
+
+export const TUTOR_ACTIONS = [
+  "chat",
+  "ask",
+  "summarize",
+  "context",
+  "simplify",
+  "figure",
+  "quiz",
+  "teach",
+  "pass1_check",
+  "pass2_figures",
+  "pass2_check",
+  "pass3_rebuild",
+  "pass3_probe",
+] as const satisfies readonly TutorAction[];
+
+export type SessionKind = "study" | "paper" | "exam";
 
 export type ChatMessage = {
   id: string;

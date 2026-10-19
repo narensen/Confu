@@ -4,9 +4,15 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { deleteDocument } from "@/components/dashboard/actions";
 import type { RegionCapture, TextSelection } from "@/components/pdf/PdfViewer";
-import { JSON_HEADERS, KEY_ERROR_EVENT, readAiError } from "@/lib/ai-errors";
+import { JSON_HEADERS, KEY_ERROR_EVENT, notifyAiUsed, readAiError } from "@/lib/ai-errors";
 import type { KeyInfo } from "@/lib/groq-keys";
-import { uploadPdfToSession } from "@/lib/pdf/upload";
+import { emptyReview, type PaperReview } from "@/lib/paper";
+import type { Attempt } from "@/lib/exam";
+import { useExamPractice } from "@/components/exam/useExamPractice";
+import { addPaperFromMeta, type PaperMeta } from "@/lib/pdf/add-paper";
+import { attachPdfToDocument, uploadPdfToSession } from "@/lib/pdf/upload";
+import { AddPaperDialog } from "@/components/paper/AddPaperDialog";
+import { PaperCard } from "@/components/paper/PaperCard";
 import { currentTopic } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/client";
 import { displayUserTurn } from "@/lib/tutor/format";
@@ -18,6 +24,7 @@ import {
   type LearnerMemory,
   type PlanTopic,
   type SessionDoc,
+  type SessionKind,
   type StudyPlan,
   type TopicStatus,
   type TutorAction,
@@ -32,7 +39,7 @@ const PdfViewer = dynamic(() => import("@/components/pdf/PdfViewer"), {
 });
 
 type Props = {
-  session: { id: string; title: string };
+  session: { id: string; title: string; kind: SessionKind; researchGoal: string; examDate: string | null };
   initialDocs: SessionDoc[];
   initialDocId: string | null;
   initialPlan: StudyPlan | null;
@@ -43,6 +50,10 @@ type Props = {
   // Regular users bring their own Groq key; admins use the server's.
   needsKey: boolean;
   initialKey: KeyInfo | null;
+  // Paper sessions: three-pass notes per paper.
+  initialReviews: PaperReview[];
+  // Exam sessions: past practice answers.
+  initialAttempts: Attempt[];
 };
 
 export type SendRequest = {
@@ -71,11 +82,14 @@ export function Workspace({
   initialMessages,
   needsKey,
   initialKey,
+  initialReviews,
+  initialAttempts,
 }: Props) {
   const supabase = useMemo(() => createClient(), []);
   const [docs, setDocs] = useState(initialDocs);
   const [activeDocId, setActiveDocId] = useState(initialDocId);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const [addPaperOpen, setAddPaperOpen] = useState(false);
   const [plan, setPlan] = useState(initialPlan);
   const [topics, setTopics] = useState(initialTopics);
   const [memory, setMemory] = useState(initialMemory);
@@ -84,7 +98,15 @@ export function Workspace({
   const [busy, setBusy] = useState<string | null>(null);
   const busyRef = useRef(false);
   const [goTo, setGoTo] = useState<{ page: number; n: number } | null>(null);
-  const [tab, setTab] = useState<Tab>(initialPlan ? "chat" : "plan");
+  const isPaper = session.kind === "paper";
+  const isExam = session.kind === "exam";
+  const [tab, setTab] = useState<Tab>(isExam ? "practice" : isPaper ? "passes" : initialPlan ? "chat" : "plan");
+  const practice = useExamPractice(session.id, initialAttempts);
+  const [examDate, setExamDate] = useState(session.examDate);
+  const [researchGoal, setResearchGoal] = useState(session.researchGoal);
+  const [storedReviews, setStoredReviews] = useState<Record<string, PaperReview>>(() =>
+    Object.fromEntries(initialReviews.map((r) => [r.document_id, r])),
+  );
   const [activeTopicId, setActiveTopicId] = useState<string | null>(null);
   const [focusMode, setFocusMode] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -247,11 +269,29 @@ export function Workspace({
         if (!res.ok || !res.body) throw new Error(await readAiError(res));
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
-        let text = "";
+        let raw = "";
         for (;;) {
           const { done, value } = await reader.read();
           if (done) break;
-          text += decoder.decode(value, { stream: true });
+          raw += decoder.decode(value, { stream: true });
+          // Status records ("Searching papers…") are \u001e{json}\n; show the latest, keep the rest as the answer.
+          let text = "";
+          let rest = raw;
+          for (;;) {
+            const start = rest.indexOf("\u001e");
+            if (start === -1) {
+              text += rest;
+              break;
+            }
+            text += rest.slice(0, start);
+            const end = rest.indexOf("\n", start);
+            if (end === -1) break; // record still arriving
+            try {
+              const event = JSON.parse(rest.slice(start + 1, end)) as { type: string; label?: string };
+              if (event.type === "status" && event.label) setBusy(event.label);
+            } catch {}
+            rest = rest.slice(end + 1);
+          }
           setReply(text);
         }
       } catch (err) {
@@ -259,6 +299,7 @@ export function Workspace({
       } finally {
         busyRef.current = false;
         setBusy(null);
+        notifyAiUsed();
         // Memory and mastery are updated server-side after the reply finishes.
         window.setTimeout(refreshProgress, 4000);
         window.setTimeout(refreshProgress, 10000);
@@ -317,6 +358,7 @@ export function Workspace({
         highlight = json.highlight as Highlight;
         setHighlights((h) => [...h, highlight!]);
       } catch (err) {
+        notifyAiUsed();
         setMessages((m) => [
           ...m,
           {
@@ -348,47 +390,101 @@ export function Workspace({
     [supabase],
   );
 
-  const addPdfs = useCallback(
-    async (files: File[]) => {
+  // Load a freshly added document (uploaded or found by identifier) as a tab.
+  const loadDoc = useCallback(
+    async (id: string): Promise<SessionDoc | null> => {
+      const { data: row } = await supabase
+        .from("documents")
+        .select("id, title, storage_path, page_count, last_page, position, source_url, meta")
+        .eq("id", id)
+        .single();
+      if (!row) return null;
+      const signed = row.storage_path ? (await supabase.storage.from("documents").createSignedUrl(row.storage_path, URL_TTL)).data : null;
+      return {
+        id,
+        label: "",
+        title: row.title,
+        pageCount: row.page_count,
+        lastPage: row.last_page,
+        position: row.position,
+        url: signed?.signedUrl ?? "",
+        hasPdf: Boolean(row.storage_path),
+        sourceUrl: row.source_url,
+        meta: row.meta ?? {},
+      };
+    },
+    [supabase],
+  );
+
+  // Shared by "+ Add PDF" uploads and papers added by arXiv ID / DOI.
+  const addDocs = useCallback(
+    async (adders: ((userId: string, position: number) => Promise<string>)[]) => {
       if (uploadStatus) return;
       try {
         const { data: auth } = await supabase.auth.getUser();
         if (!auth.user) throw new Error("Your session expired. Sign in again.");
         let position = Math.max(-1, ...docs.map((d) => d.position)) + 1;
         const added: SessionDoc[] = [];
-        for (const file of files) {
-          const { id } = await uploadPdfToSession(supabase, {
-            userId: auth.user.id,
-            sessionId: session.id,
-            file,
-            position: position++,
-            onStatus: setUploadStatus,
-          });
-          const { data: row } = await supabase
-            .from("documents")
-            .select("id, title, storage_path, page_count, last_page, position")
-            .eq("id", id)
-            .single();
-          const { data: signed } = await supabase.storage.from("documents").createSignedUrl(row!.storage_path, URL_TTL);
-          added.push({
-            id,
-            label: "",
-            title: row!.title,
-            pageCount: row!.page_count,
-            lastPage: row!.last_page,
-            position: row!.position,
-            url: signed?.signedUrl ?? "",
-          });
+        for (const add of adders) {
+          const doc = await loadDoc(await add(auth.user.id, position++));
+          if (doc) added.push(doc);
         }
         setDocs((list) => relabel([...list, ...added]));
         if (added.length) selectDoc(added[added.length - 1].id);
       } catch (err) {
-        alert(err instanceof Error ? err.message : "Upload failed.");
+        alert(err instanceof Error ? err.message : "Couldn't add that.");
       } finally {
         setUploadStatus(null);
       }
     },
-    [docs, selectDoc, session.id, supabase, uploadStatus],
+    [docs, loadDoc, selectDoc, supabase, uploadStatus],
+  );
+
+  const addPdfs = useCallback(
+    (files: File[]) =>
+      addDocs(
+        files.map((file) => async (userId, position) => {
+          const { id } = await uploadPdfToSession(supabase, { userId, sessionId: session.id, file, position, onStatus: setUploadStatus });
+          return id;
+        }),
+      ),
+    [addDocs, session.id, supabase],
+  );
+
+  const addPapers = useCallback(
+    async (papers: PaperMeta[]) => {
+      const skipped: string[] = [];
+      await addDocs(
+        papers.map((paper) => async (userId, position) => {
+          const res = await addPaperFromMeta(supabase, { userId, sessionId: session.id, position, paper, onStatus: setUploadStatus });
+          if (!res.hasPdf) skipped.push(`• ${paper.title}${res.note ? ` (${res.note})` : ""}`);
+          return res.id;
+        }),
+      );
+      if (skipped.length) {
+        alert(`Added without a PDF (abstract only):\n${skipped.join("\n")}\n\nYou can still do a first pass, and the tutor can look these up. Upload the PDF later for a deeper read.`);
+      }
+    },
+    [addDocs, session.id, supabase],
+  );
+
+  // Give a metadata-only paper its PDF, keeping its id (and so its notes).
+  const attachPdf = useCallback(
+    async (docId: string, file: File) => {
+      if (uploadStatus) return;
+      try {
+        const { data: auth } = await supabase.auth.getUser();
+        if (!auth.user) throw new Error("Your session expired. Sign in again.");
+        await attachPdfToDocument(supabase, { userId: auth.user.id, documentId: docId, file, onStatus: setUploadStatus });
+        const fresh = await loadDoc(docId);
+        if (fresh) setDocs((list) => relabel(list.map((d) => (d.id === docId ? fresh : d))));
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "Couldn't attach the PDF.");
+      } finally {
+        setUploadStatus(null);
+      }
+    },
+    [loadDoc, supabase, uploadStatus],
   );
 
   const removePdf = useCallback(
@@ -449,6 +545,55 @@ export function Workspace({
     window.addEventListener("pointerup", up);
   };
 
+  // Every paper has a review, even before its first note is saved.
+  const reviews = useMemo(
+    () => Object.fromEntries(docs.map((d) => [d.id, storedReviews[d.id] ?? emptyReview(d.id)])),
+    [docs, storedReviews],
+  );
+
+  // Notes save as you type, debounced per paper.
+  const saveTimers = useRef(new Map<string, number>());
+  const updateReview = useCallback(
+    (docId: string, patch: Partial<PaperReview>, persist = true) => {
+      setStoredReviews((all) => {
+        const next = { ...(all[docId] ?? emptyReview(docId)), ...patch };
+        if (persist) {
+          window.clearTimeout(saveTimers.current.get(docId));
+          saveTimers.current.set(
+            docId,
+            window.setTimeout(() => {
+              const { document_id, target_pass, passes_done, triage_reason, pass1, pass2, pass3 } = next;
+              void supabase
+                .from("paper_reviews")
+                .upsert(
+                  { document_id, session_id: session.id, target_pass, passes_done, triage_reason, pass1, pass2, pass3 },
+                  { onConflict: "document_id" },
+                );
+            }, 600),
+          );
+        }
+        return { ...all, [docId]: next };
+      });
+    },
+    [session.id, supabase],
+  );
+
+  const saveExamDate = useCallback(
+    (date: string | null) => {
+      setExamDate(date);
+      void supabase.from("study_sessions").update({ exam_date: date }).eq("id", session.id);
+    },
+    [session.id, supabase],
+  );
+
+  const saveResearchGoal = useCallback(
+    (goal: string) => {
+      setResearchGoal(goal);
+      void supabase.from("study_sessions").update({ research_goal: goal }).eq("id", session.id);
+    },
+    [session.id, supabase],
+  );
+
   const panel = locked ? (
     <KeyGate
       sessionId={session.id}
@@ -481,6 +626,16 @@ export function Workspace({
       onPlanCreated={reloadPlan}
       onClose={focusMode ? () => setDrawerOpen(false) : undefined}
       keyInfo={needsKey ? keyInfo : null}
+      kind={session.kind}
+      paper={{
+        reviews,
+        researchGoal,
+        activeDocId: activeDoc?.id ?? null,
+        onSelectDoc: selectDoc,
+        onUpdate: updateReview,
+        onResearchGoal: saveResearchGoal,
+      }}
+      exam={{ practice, examDate, onExamDate: saveExamDate }}
     />
   );
 
@@ -514,9 +669,13 @@ export function Workspace({
           onSelect={selectDoc}
           onAdd={addPdfs}
           onRemove={removePdf}
+          onAddClick={isPaper ? () => setAddPaperOpen(true) : undefined}
+          addLabel={isPaper ? "+ Add paper" : "+ Add PDF"}
         />
         <div className="relative min-h-0 flex-1">
-          {activeDoc ? (
+          {activeDoc && !activeDoc.hasPdf ? (
+            <PaperCard key={activeDoc.id} doc={activeDoc} busy={Boolean(uploadStatus)} onAttach={(file) => attachPdf(activeDoc.id, file)} />
+          ) : activeDoc ? (
             <PdfViewer
               key={activeDoc.id}
               url={activeDoc.url}
@@ -546,8 +705,17 @@ export function Workspace({
             />
           ) : (
             <div className="animate-enter flex h-full flex-col items-center justify-center gap-2 bg-viewer px-6 text-center">
-              <p className="font-serif text-2xl">No PDFs in this session</p>
-              <p className="max-w-sm text-sm text-muted">Use “+ Add PDF” above. The tutor still works from your goal and outside resources meanwhile.</p>
+              <p className="font-serif text-2xl">{isPaper ? "No papers yet" : "No PDFs in this session"}</p>
+              <p className="max-w-sm text-sm text-muted">
+                {isPaper
+                  ? "Add papers by arXiv ID, DOI, link or title. No PDF needed."
+                  : "Use “+ Add PDF” above. The tutor still works from your goal and outside resources meanwhile."}
+              </p>
+              {isPaper && (
+                <button onClick={() => setAddPaperOpen(true)} className="mt-3 rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-white transition hover:-translate-y-px hover:shadow-hard-sm">
+                  + Add papers
+                </button>
+              )}
             </div>
           )}
           {focusMode && drawerOpen && (
@@ -557,6 +725,8 @@ export function Workspace({
           )}
         </div>
       </section>
+
+      {addPaperOpen && <AddPaperDialog onClose={() => setAddPaperOpen(false)} onAdd={(papers) => void addPapers(papers)} onUpload={(files) => void addPdfs(files)} />}
 
       {!focusMode && (
         <button

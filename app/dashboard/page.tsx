@@ -6,6 +6,7 @@ import { NewSessionButton } from "@/components/dashboard/NewSessionButton";
 import { TourButton } from "@/components/onboarding/TourButton";
 import { eyebrowClass } from "@/components/ui";
 import { requireUser } from "@/lib/dal";
+import { countdownLabel, daysUntil } from "@/lib/exam";
 import { daysBetween, toISODate } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/server";
 
@@ -43,7 +44,11 @@ function ListSkeleton() {
 type Row = {
   id: string;
   title: string;
+  kind: "study" | "paper" | "exam";
+  exam_date: string | null;
+  exam_attempts: { score: number }[];
   updated_at: string;
+  paper_reviews: { target_pass: number; passes_done: number }[];
   documents: { id: string; title: string; page_count: number; status: string }[];
   study_plans: { goal: string; goal_title: string; deadline: string; plan_topics: { status: string }[] } | null;
 };
@@ -53,9 +58,13 @@ async function SessionList() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("study_sessions")
-    .select("id, title, updated_at, documents(id, title, page_count, status), study_plans(goal, goal_title, deadline, plan_topics(status))")
+    .select(
+      "id, title, kind, exam_date, updated_at, documents(id, title, page_count, status), study_plans(goal, goal_title, deadline, plan_topics(status)), paper_reviews(target_pass, passes_done), exam_attempts(score)",
+    )
     .order("updated_at", { ascending: false })
-    .order("position", { referencedTable: "documents" });
+    .order("position", { referencedTable: "documents" })
+    .order("created_at", { referencedTable: "exam_attempts", ascending: false })
+    .limit(200, { referencedTable: "exam_attempts" });
 
   // Never let a failed query masquerade as an empty library.
   if (error) {
@@ -108,7 +117,12 @@ async function SessionList() {
           >
             <div className="flex items-start justify-between gap-3">
               <Link href={`/session/${s.id}`} className="min-w-0 font-serif text-lg leading-snug after:absolute after:inset-0">
-                <span className="line-clamp-2">{s.title}</span>
+                {s.kind !== "study" && (
+                  <span className="mr-2 inline-block -translate-y-0.5 rounded border border-ink px-1.5 py-px align-middle font-mono text-[10px] tracking-wider uppercase">
+                    {s.kind === "paper" ? "Papers" : "Exam"}
+                  </span>
+                )}
+                <span className="line-clamp-2 inline">{s.title}</span>
               </Link>
               <div className="relative z-10 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
                 <DeleteSessionButton id={s.id} title={s.title} />
@@ -128,7 +142,11 @@ async function SessionList() {
                 {s.documents.length > 4 && <span className="px-1 text-[11px] text-muted">+{s.documents.length - 4}</span>}
               </div>
             )}
-            {plan ? (
+            {s.kind === "exam" ? (
+              <ExamSummary examDate={s.exam_date} scores={(s.exam_attempts ?? []).map((a) => a.score)} today={today} />
+            ) : s.kind === "paper" ? (
+              <PaperProgress papers={s.documents.length} reviews={s.paper_reviews ?? []} />
+            ) : plan ? (
               <div className="mt-4 space-y-2">
                 <p className="line-clamp-2 text-sm">{plan.goal_title || plan.goal}</p>
                 <div className="h-1.5 overflow-hidden rounded-full border border-ink/40 bg-panel">
@@ -146,5 +164,43 @@ async function SessionList() {
         );
       })}
     </ul>
+  );
+}
+
+function PaperProgress({ papers, reviews }: { papers: number; reviews: { target_pass: number; passes_done: number }[] }) {
+  if (!papers) return <p className="mt-4 text-sm text-muted">Add papers to start reading.</p>;
+  const done = reviews.filter((r) => r.passes_done >= r.target_pass).length;
+  const byTarget = [1, 2, 3].map((n) => reviews.filter((r) => r.target_pass === n).length + (n === 1 ? papers - reviews.length : 0));
+  return (
+    <div className="mt-4 space-y-2">
+      <div className="flex gap-1.5 font-mono text-[11px]">
+        {byTarget.map((count, i) => (
+          <span key={i} className="rounded border border-ink/30 px-1.5 py-0.5 text-muted">
+            pass {i + 1} · {count}
+          </span>
+        ))}
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full border border-ink/40 bg-panel">
+        <div className="h-full bg-ink transition-[width] duration-700 ease-fluid" style={{ width: `${(done / papers) * 100}%` }} />
+      </div>
+      <p className="font-mono text-[11px] text-muted">
+        {done}/{papers} papers read to their target pass
+      </p>
+    </div>
+  );
+}
+
+function ExamSummary({ examDate, scores, today }: { examDate: string | null; scores: number[]; today: string }) {
+  const accuracy = scores.length ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100) : null;
+  return (
+    <div className="mt-4 space-y-2">
+      <p className="text-sm">{countdownLabel(daysUntil(examDate, today))}</p>
+      <div className="h-1.5 overflow-hidden rounded-full border border-ink/40 bg-panel">
+        <div className="h-full bg-ink transition-[width] duration-700 ease-fluid" style={{ width: `${accuracy ?? 0}%` }} />
+      </div>
+      <p className="font-mono text-[11px] text-muted">
+        {scores.length ? `${scores.length} practice answers · ${accuracy}% correct (recent)` : "No practice yet"}
+      </p>
+    </div>
   );
 }

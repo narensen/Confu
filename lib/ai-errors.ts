@@ -21,3 +21,10 @@ export async function readAiError(res: Response): Promise<string> {
   }
   return message;
 }
+
+export const AI_USED_EVENT = "confu:ai-used";
+
+// Tell usage meters an AI request finished, so they refresh.
+export function notifyAiUsed() {
+  window.dispatchEvent(new Event(AI_USED_EVENT));
+}

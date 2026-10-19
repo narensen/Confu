@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { docLabel, EMPTY_MEMORY, type LearnerMemory, type PlanTopic, type StudyPlan, type TutorAction } from "@/lib/types";
+import { emptyReview, type PaperReview } from "@/lib/paper";
+import { docLabel, EMPTY_MEMORY, type LearnerMemory, type PlanTopic, type SessionKind, type StudyPlan, type TutorAction } from "@/lib/types";
 import type { Excerpt, FigureNote, Material } from "@/lib/tutor/prompts";
 
 // Rough budget for document text in a prompt (~3k tokens). Groq's on-demand
@@ -9,7 +10,7 @@ const TOTAL_BUDGET = 11_000;
 
 export async function loadTutorState(supabase: SupabaseClient, sessionId: string) {
   const [session, docs, plan, memory] = await Promise.all([
-    supabase.from("study_sessions").select("id, title").eq("id", sessionId).maybeSingle(),
+    supabase.from("study_sessions").select("id, title, kind, research_goal, exam_date").eq("id", sessionId).maybeSingle(),
     supabase.from("documents").select("id, title, page_count").eq("session_id", sessionId).order("position").order("created_at"),
     supabase.from("study_plans").select("*").eq("session_id", sessionId).maybeSingle(),
     supabase.from("learner_memory").select("*").eq("session_id", sessionId).maybeSingle(),
@@ -28,9 +29,18 @@ export async function loadTutorState(supabase: SupabaseClient, sessionId: string
     pageCount: d.page_count,
   }));
 
+  const sessionRow = session.data as { id: string; title: string; kind: SessionKind; research_goal: string; exam_date: string | null } | null;
+  const reviews = new Map<string, PaperReview>();
+  if (sessionRow?.kind === "paper") {
+    const { data } = await supabase.from("paper_reviews").select("*").eq("session_id", sessionId);
+    for (const r of (data ?? []) as PaperReview[]) reviews.set(r.document_id, r);
+    for (const m of materials) if (!reviews.has(m.id)) reviews.set(m.id, emptyReview(m.id));
+  }
+
   const m = memory.data as LearnerMemory | null;
   return {
-    session: session.data as { id: string; title: string } | null,
+    session: sessionRow,
+    reviews,
     materials,
     plan: plan.data as StudyPlan | null,
     topics,
@@ -81,7 +91,7 @@ function windowed(text: string, query: string, max: number): string {
   return `${start > 0 ? "…" : ""}${clean.slice(start, start + max)}${start + max < clean.length ? "…" : ""}`;
 }
 
-type PageRef = { docId: string; page: number; reason: string; max: number };
+export type PageRef = { docId: string; page: number; reason: string; max: number };
 
 export async function retrieveContext(
   supabase: SupabaseClient,
@@ -94,9 +104,11 @@ export async function retrieveContext(
     focus: { docId: string; page: number } | null; // page of a selection or captured figure
     topic: PlanTopic | null;
     highlightId: string | null;
+    // Pages a paper pass always needs (e.g. abstract, introduction, conclusion).
+    extraPages?: PageRef[];
   },
 ): Promise<{ excerpts: Excerpt[]; figures: FigureNote[] }> {
-  const { sessionId, materials, action, query, current, focus, topic, highlightId } = input;
+  const { sessionId, materials, action, query, current, focus, topic, highlightId, extraPages = [] } = input;
   const labelOf = new Map(materials.map((m) => [m.id, m.label]));
 
   // Pages we always want, in priority order.
@@ -110,6 +122,8 @@ export async function retrieveContext(
       wanted.push({ docId: topic.document_id, page: p, reason: "current topic", max: 2500 });
     }
   }
+
+  wanted.push(...extraPages);
 
   // Fetch fixed pages, grouped by document.
   const byDoc = new Map<string, number[]>();

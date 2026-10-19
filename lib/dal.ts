@@ -39,13 +39,19 @@ export const getCurrentRole = cache(async (): Promise<"admin" | null> => {
   return getRole(await createClient(), user.id);
 });
 
-// Whether to auto-open the first-login guide: true = never seen it, false =
-// seen it, null = unknown (e.g. the onboarding migration hasn't been run).
-export const getFirstTime = cache(async (): Promise<boolean | null> => {
+// Whether to auto-open the first-login guide. Only brand-new accounts qualify:
+// anyone who already has a session isn't new, even if they never saw the guide
+// (e.g. accounts created before it existed).
+export const getFirstTime = cache(async (): Promise<boolean> => {
   const user = await getUser();
-  if (!user) return null;
+  if (!user) return false;
   const supabase = await createClient();
-  const { data, error } = await supabase.from("profiles").select("onboarded_at").eq("id", user.id).maybeSingle();
-  if (error || !data) return null;
-  return data.onboarded_at === null;
+  const [{ count }, profile] = await Promise.all([
+    supabase.from("study_sessions").select("id", { count: "exact", head: true }).eq("user_id", user.id),
+    supabase.from("profiles").select("onboarded_at").eq("id", user.id).maybeSingle(),
+  ]);
+  if ((count ?? 0) > 0) return false;
+  // Without the onboarding column, a local "seen" flag stops repeats.
+  if (profile.error || !profile.data) return true;
+  return profile.data.onboarded_at === null;
 });

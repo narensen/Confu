@@ -114,7 +114,28 @@ body {
   animation: blink 1s steps(1) infinite;
 }
 
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.animate-float { animation: float 6s ease-in-out infinite; }
+
+/* Landing page (GSAP, components/landing/LandingMotion.tsx): animated pieces
+   start hidden so they don't flash before their entrance. The class is removed
+   when the motion script runs; <noscript> on the page undoes this without JS. */
+.motion-pending [data-hero],
+.motion-pending [data-word],
+.motion-pending [data-split],
+.motion-pending [data-reveal],
+.motion-pending [data-reveal-item],
+.motion-pending [data-slide-item] {
+  visibility: hidden;
+}
+
+html { scroll-behavior: smooth; }
+
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;

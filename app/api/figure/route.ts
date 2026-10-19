@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { z } from "zod";
 import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
 import { MODELS } from "@/lib/groq";
@@ -39,8 +40,9 @@ export async function POST(request: Request) {
   ]);
   if (!doc) return Response.json({ error: "Not found" }, { status: 404 });
 
-  const access = await resolveGroq(supabase, userId, doc.session_id);
+  const access = await resolveGroq(supabase, userId, doc.session_id, "figure");
   if ("error" in access) return access.error;
+  after(() => access.meter.flush());
   const { groq } = access;
 
   let description: string;

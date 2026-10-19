@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { buttonClass, eyebrowClass, ghostButtonClass, inputClass, labelClass } from "@/components/ui";
-import { JSON_HEADERS, readAiError } from "@/lib/ai-errors";
+import { JSON_HEADERS, notifyAiUsed, readAiError } from "@/lib/ai-errors";
 import { addDays, toISODate } from "@/lib/schedule";
 import type { Level, StudyPlan } from "@/lib/types";
 
@@ -78,6 +78,7 @@ export function GoalSetup({
       setError(err instanceof Error ? err.message : "Could not create a plan");
     } finally {
       setPending(false);
+      notifyAiUsed();
     }
   }
 

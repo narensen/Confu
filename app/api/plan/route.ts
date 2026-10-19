@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { z } from "zod";
 import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
 import { createClient } from "@/lib/supabase/server";
@@ -30,8 +31,9 @@ export async function POST(request: Request) {
     return Response.json({ error: parsed.error.issues[0]?.message ?? "Invalid request" }, { status: 400 });
   }
 
-  const access = await resolveGroq(supabase, userId, parsed.data.sessionId);
+  const access = await resolveGroq(supabase, userId, parsed.data.sessionId, "plan");
   if ("error" in access) return access.error;
+  after(() => access.meter.flush());
 
   try {
     const planId = await generatePlan(supabase, access.groq, { userId, ...parsed.data });
