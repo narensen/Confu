@@ -251,10 +251,13 @@ Choose 6–10 papers that together take them from where they are to the research
 For each: "pass" = how deep to read with Keshav's three-pass method (3 only for what they'll build on, 1 for context), and "why": one or two sentences, specific to THIS person (link to what they studied or are missing). Only say what a paper does if its title or abstract above says so; never credit it with a method or result it doesn't state. Plain text, no Markdown.
 Order picks in the sequence they should read them.
 "summary": 2 sentences on the path and where it leads. If the candidates are poor for the goal, pick fewer and say so in the summary.
+The ids (P1, P2…) are only for your reply's "id" fields: never mention them in "summary" or "why"; the reader never sees them.
 Return ONLY JSON: {"summary": "string", "picks": [{"id": "P3", "stage": "start" | "core" | "frontier", "pass": 1 | 2 | 3, "why": "string"}]}`,
     "medium",
   );
 
+  // In case an id slips into the prose anyway: "(P1, P2)" or a bare "P3".
+  const noIds = (s: string) => s.replace(/\s*\((?:P\d+[\s,;&and]*)+\)/g, "").replace(/\bP\d+\b/g, "").replace(/\s{2,}/g, " ").trim();
   const byId = new Map(candidates.map((c) => [c.id.toLowerCase(), c]));
   const seen = new Set<string>();
   const items: Recommendation[] = [];
@@ -262,7 +265,7 @@ Return ONLY JSON: {"summary": "string", "picks": [{"id": "P3", "stage": "start" 
     const c = byId.get(p.id.trim().toLowerCase());
     if (!c || seen.has(c.id)) continue; // unknown id: ignore, never trust a made-up paper
     seen.add(c.id);
-    items.push({ paper: c.paper, stage: p.stage, pass: p.pass as 1 | 2 | 3, why: p.why.trim() });
+    items.push({ paper: c.paper, stage: p.stage, pass: p.pass as 1 | 2 | 3, why: noIds(p.why) });
   }
-  return { summary: picked.summary.trim(), items };
+  return { summary: noIds(picked.summary), items };
 }
