@@ -6,7 +6,8 @@ import net from "node:net";
 //   arXiv IDs -> arXiv API (authoritative)
 //   DOIs      -> Crossref (authoritative); open-access PDFs from Semantic Scholar / OpenAlex
 //   search, citations -> Semantic Scholar when reachable (set SEMANTIC_SCHOLAR_API_KEY:
-//                        the shared anonymous pool is often rate-limited), else arXiv + OpenAlex.
+//                        the shared anonymous pool is often rate-limited), else arXiv + OpenAlex
+//                        (set OPENALEX_API_KEY: keyless requests share a tiny per-IP daily budget).
 // OpenAlex sometimes merges records wrongly (a famous paper's record can carry
 // another paper's title), so its metadata is only trusted when the title matches.
 
@@ -106,9 +107,14 @@ function parseArxivEntry(entry: string): PaperMeta | null {
   };
 }
 
-async function arxivQuery(params: string): Promise<PaperMeta[]> {
+async function arxivQuery(params: string, retry = true): Promise<PaperMeta[]> {
   try {
     const res = await fetch(`https://export.arxiv.org/api/query?${params}`, { headers: { "User-Agent": UA }, signal: AbortSignal.timeout(TIMEOUT) });
+    // arXiv asks for one request every few seconds; wait once and retry.
+    if (res.status === 429 && retry) {
+      await new Promise((r) => setTimeout(r, 3500));
+      return arxivQuery(params, false);
+    }
     if (!res.ok) return [];
     const xml = await res.text();
     return [...xml.matchAll(/<entry>([\s\S]*?)<\/entry>/g)].map((m) => parseArxivEntry(m[1])).filter((p): p is PaperMeta => Boolean(p));
@@ -142,6 +148,8 @@ const oaUrl = (path: string, params: Record<string, string> = {}) => {
   for (const [k, v] of Object.entries(params)) u.searchParams.set(k, v);
   u.searchParams.set("select", OA_FIELDS);
   if (process.env.OPENALEX_MAILTO) u.searchParams.set("mailto", process.env.OPENALEX_MAILTO);
+  // Without a key, every app on the same IP shares one small daily budget.
+  if (process.env.OPENALEX_API_KEY) u.searchParams.set("api_key", process.env.OPENALEX_API_KEY);
   return u.toString();
 };
 
@@ -171,6 +179,13 @@ function fromOpenAlex(w: OAWork): PaperMeta {
 }
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+// Every word of a (shortened or partial) title appears in the full one.
+export function titleWithin(part: string, full: string) {
+  const words = norm(part).split(" ").filter(Boolean);
+  const all = new Set(norm(full).split(" "));
+  return words.length >= 2 && words.every((w) => all.has(w));
+}
 
 export function sameTitle(a: string, b: string) {
   const x = new Set(norm(a).split(" "));
@@ -313,7 +328,9 @@ export async function resolvePaper(input: string): Promise<PaperMeta[]> {
   return searchPapers(id.q, 6);
 }
 
-export async function searchPapers(query: string, limit = 6, fromYear?: number): Promise<PaperMeta[]> {
+// opts.arxiv = false skips arXiv, which allows only one request every few
+// seconds: callers that search many times at once use OpenAlex instead.
+export async function searchPapers(query: string, limit = 6, fromYear?: number, opts: { arxiv?: boolean } = {}): Promise<PaperMeta[]> {
   const n = Math.min(10, Math.max(1, limit));
   const q = query.slice(0, 300);
 
@@ -325,7 +342,9 @@ export async function searchPapers(query: string, limit = 6, fromYear?: number):
   // Fallback: arXiv (authoritative for preprints) + OpenAlex (broad), deduplicated by title.
   const terms = norm(q).split(" ").filter((t) => t.length > 2).slice(0, 8);
   const [arxiv, oa] = await Promise.all([
-    terms.length ? arxivQuery(`search_query=${encodeURIComponent(terms.map((t) => `all:${t}`).join(" AND "))}&max_results=${n}&sortBy=relevance`) : [],
+    terms.length && opts.arxiv !== false
+      ? arxivQuery(`search_query=${encodeURIComponent(terms.map((t) => `all:${t}`).join(" AND "))}&max_results=${n}&sortBy=relevance`)
+      : [],
     getJson<{ results: OAWork[] }>(oaUrl("works", { search: q, per_page: String(n), ...(fromYear ? { filter: `from_publication_date:${fromYear}-01-01` } : {}) })),
   ]);
   const merged: PaperMeta[] = [];
@@ -333,6 +352,46 @@ export async function searchPapers(query: string, limit = 6, fromYear?: number):
     if (!merged.some((m) => sameTitle(m.title, p.title))) merged.push(p);
   }
   return merged.slice(0, n);
+}
+
+// Look up several arXiv papers in one request: Semantic Scholar's batch
+// endpoint, else arXiv itself (one id_list call). Returns what exists.
+export async function papersByArxivIds(ids: string[]): Promise<PaperMeta[]> {
+  const clean = [...new Set(ids.map((i) => i.trim().replace(/^arxiv:/i, "").replace(/v\d+$/, "")).filter((i) => ARXIV_NEW.test(i) || ARXIV_OLD.test(i)))].slice(0, 20);
+  if (!clean.length) return [];
+  const key = process.env.SEMANTIC_SCHOLAR_API_KEY;
+  if (key) {
+    try {
+      const res = await fetch(`https://api.semanticscholar.org/graph/v1/paper/batch?fields=${S2_FIELDS}`, {
+        method: "POST",
+        headers: { "User-Agent": UA, "x-api-key": key, "content-type": "application/json" },
+        body: JSON.stringify({ ids: clean.map((i) => `ARXIV:${i}`) }),
+        signal: AbortSignal.timeout(TIMEOUT),
+      });
+      if (res.ok) {
+        const found = ((await res.json()) as (S2Paper | null)[]).filter((p): p is S2Paper => Boolean(p?.title)).map(fromS2);
+        if (found.length) return found;
+      }
+    } catch {}
+  }
+  return arxivQuery(`id_list=${clean.join(",")}&max_results=${clean.length}`);
+}
+
+// Find one specific paper by its exact title (null if nothing matches).
+// General search first; then arXiv's title field and OpenAlex's title filter,
+// which find exact titles that relevance ranking buries under newer work.
+export async function findByTitle(title: string, opts: { arxiv?: boolean } = {}): Promise<PaperMeta | null> {
+  const hit = (list: PaperMeta[]) => list.find((p) => sameTitle(p.title, title)) ?? null;
+  const first = hit(await searchPapers(title, 4, undefined, opts).catch(() => []));
+  if (first) return first;
+  const words = norm(title).split(" ").filter((t) => t.length > 2).slice(0, 10);
+  const [arxiv, oa] = await Promise.all([
+    words.length && opts.arxiv !== false
+      ? arxivQuery(`search_query=${encodeURIComponent(words.map((w) => `ti:${w}`).join(" AND "))}&max_results=5`).catch(() => [])
+      : [],
+    getJson<{ results: OAWork[] }>(oaUrl("works", { filter: `title.search:${title.replace(/[,:]/g, " ")}`, per_page: "5" })),
+  ]);
+  return hit([...arxiv, ...(oa?.results ?? []).filter((w) => w.display_name).map(fromOpenAlex)]);
 }
 
 export async function findCitingPapers(

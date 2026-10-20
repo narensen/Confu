@@ -12,6 +12,7 @@ import { useExamPractice } from "@/components/exam/useExamPractice";
 import { addPaperFromMeta, type PaperMeta } from "@/lib/pdf/add-paper";
 import { attachPdfToDocument, uploadPdfToSession } from "@/lib/pdf/upload";
 import { AddPaperDialog } from "@/components/paper/AddPaperDialog";
+import { openRecommendPapers, RecommendPapers } from "@/components/paper/RecommendDialog";
 import { PaperCard } from "@/components/paper/PaperCard";
 import { currentTopic } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/client";
@@ -640,6 +641,7 @@ export function Workspace({
         onSelectDoc: selectDoc,
         onUpdate: updateReview,
         onResearchGoal: saveResearchGoal,
+        fetching: uploadStatus,
       }}
       exam={{ practice, examDate, onExamDate: saveExamDate }}
     />
@@ -718,9 +720,14 @@ export function Workspace({
                   : "Use “+ Add PDF” above. The tutor still works from your goal and outside resources meanwhile."}
               </p>
               {isPaper && (
-                <button onClick={() => setAddPaperOpen(true)} className="mt-3 rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-white transition hover:-translate-y-px hover:shadow-hard-sm">
-                  + Add papers
-                </button>
+                <div className="mt-3 flex flex-wrap justify-center gap-2">
+                  <button onClick={() => setAddPaperOpen(true)} className="rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-white transition hover:-translate-y-px hover:shadow-hard-sm">
+                    + Add papers
+                  </button>
+                  <button onClick={openRecommendPapers} className="rounded-lg border border-ink bg-panel px-4 py-2 text-sm font-medium transition hover:-translate-y-px hover:shadow-hard-sm">
+                    Suggest papers for my goal
+                  </button>
+                </div>
               )}
             </div>
           )}
@@ -732,6 +739,7 @@ export function Workspace({
         </div>
       </section>
 
+      {isPaper && <RecommendPapers sessionId={session.id} researchGoal={researchGoal} onAdd={(papers) => void addPapers(papers)} />}
       {addPaperOpen && <AddPaperDialog onClose={() => setAddPaperOpen(false)} onAdd={(papers) => void addPapers(papers)} onUpload={(files) => void addPdfs(files)} />}
 
       {!focusMode && (

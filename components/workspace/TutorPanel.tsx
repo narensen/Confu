@@ -26,6 +26,7 @@ export type PaperProps = {
   onSelectDoc: (docId: string) => void;
   onUpdate: (docId: string, patch: Partial<PaperReview>, persist?: boolean) => void;
   onResearchGoal: (goal: string) => void;
+  fetching: string | null; // papers still being fetched and added ("Adding … 2/4")
 };
 
 type Props = {
@@ -183,6 +184,7 @@ export function TutorPanel(props: Props) {
             onSelectDoc={props.paper.onSelectDoc}
             onUpdate={props.paper.onUpdate}
             onResearchGoal={props.paper.onResearchGoal}
+            fetching={props.paper.fetching}
             onSend={props.onSend}
           />
         )}

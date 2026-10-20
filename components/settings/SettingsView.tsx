@@ -24,6 +24,7 @@ export type SettingsData = {
   pendingEmail: string | null;
   createdAt: string | null;
   lastSignInAt: string | null;
+  providers: string[]; // how they can sign in: "email" (password), "google"…
   requestedAt: string | null; // when this Free account asked for Pro
   account: KeyInfo | null;
   sessionKeys: { id: string; sessionId: string; last4: string; title: string }[];
@@ -85,12 +86,28 @@ export function SettingsView(d: SettingsData) {
           </Section>
 
           <Section id="security" title="Sign-in & security">
-            <Row label="Password" hint="You'll need your current password to set a new one.">
-              <PasswordForm />
-            </Row>
-            <Row label="Forgot your password?" hint={<>We&apos;ll email a link to {d.user.email} so you can choose a new one.</>}>
-              <ResetLinkButton />
-            </Row>
+            {d.providers.includes("google") && (
+              <Row label="Google" hint="You can sign in with your Google account.">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-ok/50 px-2.5 py-0.5 text-xs text-ok">Connected</span>
+              </Row>
+            )}
+            {d.providers.includes("email") ? (
+              <>
+                <Row label="Password" hint="You'll need your current password to set a new one.">
+                  <PasswordForm />
+                </Row>
+                <Row label="Forgot your password?" hint={<>We&apos;ll email a link to {d.user.email} so you can choose a new one.</>}>
+                  <ResetLinkButton />
+                </Row>
+              </>
+            ) : (
+              <Row
+                label="Password"
+                hint={<>You sign in with Google, so there&apos;s no password yet. Set one to also sign in with {d.user.email} and a password.</>}
+              >
+                <ResetLinkButton label="Email me a link to set one" />
+              </Row>
+            )}
             {d.lastSignInAt && (
               <Row label="Last sign-in">
                 <span className="text-sm">

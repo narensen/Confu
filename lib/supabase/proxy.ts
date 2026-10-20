@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PROTECTED_PREFIXES = ["/dashboard", "/session", "/doc", "/settings", "/reset-password"];
+const PROTECTED_PREFIXES = ["/dashboard", "/session", "/doc", "/settings", "/reset-password", "/welcome"];
 const AUTH_PAGES = ["/login", "/signup"];
 
 // Refreshes the Supabase session cookie on every request and performs an
@@ -43,6 +43,19 @@ export async function updateSession(request: NextRequest) {
     response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
     return redirect;
   };
+
+  // A sign-in code that landed somewhere other than /auth/confirm (Supabase
+  // falls back to the Site URL when a redirect isn't allow-listed): finish
+  // the sign-in instead of dropping it.
+  const code = request.nextUrl.searchParams.get("code");
+  if (code && !pathname.startsWith("/auth/")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/auth/confirm";
+    url.search = "";
+    url.searchParams.set("code", code);
+    url.searchParams.set("next", "/welcome");
+    return NextResponse.redirect(url);
+  }
 
   if (!signedIn && PROTECTED_PREFIXES.some((p) => pathname.startsWith(p))) {
     return redirectTo("/login");

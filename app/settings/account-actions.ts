@@ -37,7 +37,7 @@ export async function changeEmail(raw: string): Promise<ActionResult> {
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ email: email.data }, { emailRedirectTo: `${await origin()}/auth/confirm?next=/settings` });
   if (error) return { ok: false, error: error.message };
-  return { ok: true, message: `Check ${email.data} (and your current inbox) for a confirmation link. The change applies once you confirm.` };
+  return { ok: true, message: `Check ${email.data} (and your current inbox) for a confirmation link. The change applies once you confirm. Not there in a minute? Check your Spam or Promotions folder.` };
 }
 
 export async function changePassword(current: string, next: string, confirm: string): Promise<ActionResult> {
@@ -63,7 +63,7 @@ export async function sendPasswordResetLink(): Promise<ActionResult> {
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(user.email, { redirectTo: `${await origin()}/auth/confirm?next=/reset-password` });
   if (error) return { ok: false, error: error.message };
-  return { ok: true, message: `We've sent a reset link to ${user.email}.` };
+  return { ok: true, message: `We've sent a reset link to ${user.email}. Not there in a minute? Check your Spam or Promotions folder.` };
 }
 
 export async function signOutEverywhere() {

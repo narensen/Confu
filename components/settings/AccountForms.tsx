@@ -166,13 +166,13 @@ export function PasswordForm() {
   );
 }
 
-export function ResetLinkButton() {
+export function ResetLinkButton({ label = "Email me a reset link" }: { label?: string }) {
   const [result, setResult] = useState<ActionResult | null>(null);
   const [pending, start] = useTransition();
   return (
     <div>
       <button type="button" disabled={pending} onClick={() => start(async () => setResult(await sendPasswordResetLink()))} className={`${ghostButtonClass} py-1 text-xs`}>
-        {pending ? "Sending…" : "Email me a reset link"}
+        {pending ? "Sending…" : label}
       </button>
       <Feedback result={result} />
     </div>

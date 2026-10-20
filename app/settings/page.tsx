@@ -79,6 +79,7 @@ async function SettingsContent() {
       pendingEmail={me?.new_email ?? null}
       createdAt={me?.created_at ?? null}
       lastSignInAt={me?.last_sign_in_at ?? null}
+      providers={(me?.app_metadata?.providers as string[] | undefined) ?? [me?.app_metadata?.provider ?? "email"]}
       requestedAt={(profile.data as { pro_requested_at?: string | null } | null)?.pro_requested_at ?? null}
       account={account}
       sessionKeys={sessionKeys}

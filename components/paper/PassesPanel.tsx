@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { buttonClass, eyebrowClass, inputClass } from "@/components/ui";
+import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
+import { openRecommendPapers } from "./RecommendDialog";
 import { JSON_HEADERS, notifyAiUsed, readAiError } from "@/lib/ai-errors";
 import { passDef, passNotes, PASSES, type PaperReview, type PassNumber } from "@/lib/paper";
 import type { SessionDoc, TutorAction } from "@/lib/types";
@@ -17,6 +18,7 @@ type Props = {
   onSelectDoc: (docId: string) => void;
   onUpdate: (docId: string, patch: Partial<PaperReview>, persist?: boolean) => void;
   onResearchGoal: (goal: string) => void;
+  fetching: string | null;
   onSend: (req: SendRequest) => void;
 };
 
@@ -83,7 +85,7 @@ export function PassesPanel(props: Props) {
   );
 }
 
-function ResearchGoal({ sessionId, researchGoal, docs, busy, onResearchGoal, onUpdate }: Props) {
+function ResearchGoal({ sessionId, researchGoal, docs, busy, fetching, onResearchGoal, onUpdate }: Props) {
   const [goal, setGoal] = useState(researchGoal);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -124,10 +126,38 @@ function ResearchGoal({ sessionId, researchGoal, docs, busy, onResearchGoal, onU
       />
       {error && <p className="animate-pop mt-2 rounded-lg border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</p>}
       <div className="mt-3 flex items-center gap-3">
-        <button onClick={triage} disabled={pending || busy || goal.trim().length < 5 || !docs.length} className={`${buttonClass} py-1.5 text-xs`}>
-          {pending ? "Reading abstracts…" : "Suggest a pass for each paper"}
+        <button
+          onClick={triage}
+          disabled={pending || busy || Boolean(fetching) || goal.trim().length < 5 || !docs.length}
+          className={`${buttonClass} py-1.5 text-xs`}
+        >
+          {(pending || fetching) && <span aria-hidden className="size-3 animate-spin rounded-full border-2 border-white/30 border-t-white" />}
+          {pending ? "Reading abstracts…" : fetching ? "Waiting for papers…" : "Suggest a pass for each paper"}
         </button>
-        <span className="text-xs text-muted">AI suggestion; change any target yourself.</span>
+        <span className="text-xs text-muted">{fetching ? "It runs once every paper is in." : "AI suggestion; change any target yourself."}</span>
+      </div>
+      {fetching && (
+        <div role="status" className="animate-fade mt-3 flex items-center gap-3 rounded-lg border border-line bg-paper px-3 py-2 text-xs">
+          <div className="indeterminate h-[3px] w-12 shrink-0 rounded-full bg-line" />
+          <span className="min-w-0 truncate text-muted">{fetching}</span>
+        </div>
+      )}
+      <div className="mt-4 flex items-center justify-between gap-3 rounded-lg border border-dashed border-ink/40 bg-paper px-4 py-3">
+        <p className="text-sm leading-snug">
+          <span className="font-medium">Not sure what to read?</span>{" "}
+          <span className="text-muted">Get a reading path for your goal, from landmark papers to the frontier.</span>
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            if (goal !== researchGoal) onResearchGoal(goal);
+            openRecommendPapers();
+          }}
+          disabled={Boolean(fetching)}
+          className={`${ghostButtonClass} shrink-0 py-1.5 text-xs`}
+        >
+          Suggest papers
+        </button>
       </div>
     </section>
   );

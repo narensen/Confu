@@ -73,7 +73,7 @@ export async function signup(_: AuthState, formData: FormData): Promise<AuthStat
 
   // With email confirmation disabled, Supabase returns a session immediately.
   if (data.session) redirect("/dashboard");
-  return { message: "Check your email for a confirmation link to finish signing up." };
+  return { message: "Check your email for a confirmation link to finish signing up.", values };
 }
 
 export async function requestPasswordReset(_: AuthState, formData: FormData): Promise<AuthState> {
@@ -85,7 +85,7 @@ export async function requestPasswordReset(_: AuthState, formData: FormData): Pr
     redirectTo: `${await origin()}/auth/confirm?next=/reset-password`,
   });
   if (error) return { error: error.message };
-  return { message: "If an account exists for that email, a reset link is on its way." };
+  return { message: "If an account exists for that email, a reset link is on its way. Not there in a minute? Check your Spam or Promotions folder." };
 }
 
 export async function updatePassword(_: AuthState, formData: FormData): Promise<AuthState> {
