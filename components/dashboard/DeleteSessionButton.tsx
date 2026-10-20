@@ -14,8 +14,9 @@ export function DeleteSessionButton({ id, title }: { id: string; title: string }
       onClick={() => {
         if (!confirm(`Delete “${title}”? Its PDFs, plan, highlights and conversation will be removed.`)) return;
         start(async () => {
-          await deleteSession(id);
-          router.refresh();
+          const res = await deleteSession(id);
+          if (res.error) alert(res.error);
+          else router.refresh();
         });
       }}
       className="rounded-md px-2 py-1 text-xs text-muted transition hover:bg-danger/10 hover:text-danger disabled:opacity-50"

@@ -50,6 +50,7 @@ type Props = {
   // Regular users bring their own Groq key; admins use the server's.
   needsKey: boolean;
   initialKey: KeyInfo | null;
+  trial: boolean; // no key yet, but free-trial tokens left on Confu's keys
   // Paper sessions: three-pass notes per paper.
   initialReviews: PaperReview[];
   // Exam sessions: past practice answers.
@@ -82,6 +83,7 @@ export function Workspace({
   initialMessages,
   needsKey,
   initialKey,
+  trial,
   initialReviews,
   initialAttempts,
 }: Props) {
@@ -115,13 +117,15 @@ export function Workspace({
   const rootRef = useRef<HTMLDivElement>(null);
   const [keyInfo, setKeyInfo] = useState(initialKey);
   const [keyNotice, setKeyNotice] = useState<string | null>(null);
-  const locked = needsKey && !keyInfo;
+  const [onTrial, setOnTrial] = useState(trial);
+  const locked = needsKey && !keyInfo && !onTrial;
 
   // An AI request reported a missing or rejected key: ask for one again.
   useEffect(() => {
     const onKeyError = (e: Event) => {
       setKeyNotice((e as CustomEvent<{ message: string }>).detail.message);
       setKeyInfo(null);
+      setOnTrial(false); // the trial ran out (or there never was one)
       setDrawerOpen(true);
       setMobileView("tutor");
     };
@@ -444,7 +448,8 @@ export function Workspace({
     (files: File[]) =>
       addDocs(
         files.map((file) => async (userId, position) => {
-          const { id } = await uploadPdfToSession(supabase, { userId, sessionId: session.id, file, position, onStatus: setUploadStatus });
+          const { id, ocrNote } = await uploadPdfToSession(supabase, { userId, sessionId: session.id, file, position, onStatus: setUploadStatus });
+          if (ocrNote) alert(ocrNote);
           return id;
         }),
       ),
@@ -490,6 +495,8 @@ export function Workspace({
   const removePdf = useCallback(
     async (doc: SessionDoc) => {
       if (!confirm(`Remove “${doc.title}” from this session? Its highlights are deleted too. Plan topics that use it stay, without page links.`)) return;
+      const res = await deleteDocument(doc.id);
+      if (res.error) return alert(res.error);
       const remaining = relabel(docs.filter((d) => d.id !== doc.id));
       setDocs(remaining);
       setHighlights((list) => list.filter((h) => h.document_id !== doc.id));
@@ -498,7 +505,6 @@ export function Workspace({
         setGoTo(null);
         setActiveDocId(remaining[0]?.id ?? null);
       }
-      await deleteDocument(doc.id);
     },
     [activeDoc?.id, docs],
   );

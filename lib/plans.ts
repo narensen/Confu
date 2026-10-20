@@ -16,7 +16,7 @@ export const PLANS: Record<Plan, { name: string; tagline: string; features: stri
     features: [
       "Study, exam prep and paper sessions",
       "Highlight-to-ask, figure reading, practice questions",
-      "Bring your own Groq key (Groq has a free tier)",
+      "10 free prompts on our keys, then your own Groq key (Groq has a free tier)",
       "Usage meter for your key",
     ],
   },

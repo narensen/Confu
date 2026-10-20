@@ -67,7 +67,8 @@ export function ChatPanel({ messages, busy, plan, docs, activeTopic, onSend, onJ
           </button>
           {activeTopic.source === "pdf" && activeTopic.page_start && topicDoc ? (
             <button onClick={() => onJump(activeTopic.page_start!, topicDoc.id)} className="shrink-0 font-mono text-muted transition hover:text-ink">
-              {docs.length > 1 ? `${topicDoc.label} ` : ""}pp. {activeTopic.page_start}–{activeTopic.page_end}
+              {docs.length > 1 ? `${topicDoc.label} ` : ""}
+              {activeTopic.page_start === activeTopic.page_end ? `p. ${activeTopic.page_start}` : `pp. ${activeTopic.page_start}–${activeTopic.page_end}`}
             </button>
           ) : (
             <span className="shrink-0 font-mono text-muted">beyond PDFs</span>

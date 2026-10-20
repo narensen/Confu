@@ -6,6 +6,7 @@ import { loadKey } from "@/lib/groq-keys";
 import { poolFetch, poolSize } from "@/lib/groq-pool";
 import { planOf, type Role } from "@/lib/plans";
 import { createMeter, type Feature, type KeyRef, type Meter } from "@/lib/usage";
+import { logError } from "@/lib/log";
 
 // Pro accounts get this many tokens per rolling 24 hours on Confu's keys
 // (owners are unlimited). Tune it to what your key pool can carry.
@@ -14,6 +15,30 @@ export const PRO_DAILY_TOKENS = Number(process.env.PRO_DAILY_TOKENS) || 200_000;
 // Usage is tracked per actual key: 'pro' for the plan's pool, 'key:<id>' for
 // a user's own stored key (replacing a key creates a new id).
 export const PRO_KEY_REF: KeyRef = "pro";
+export const TRIAL_KEY_REF: KeyRef = "trial";
+
+// Free accounts with no key of their own can try the AI on Confu's keys:
+// 10 prompts, plus 20 scanned pages read, once. The database counts them
+// (use_trial in migration 0014); these numbers are only for display.
+export const TRIAL_PROMPTS = 10;
+export const TRIAL_PAGES = 20;
+
+export type TrialState = { promptsUsed: number; pagesUsed: number };
+
+// null when the trial isn't set up (migration 0014) or there are no server keys.
+export async function trialState(supabase: SupabaseClient, userId: string): Promise<TrialState | null> {
+  if (!poolSize()) return null;
+  const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+  const row = data as { trial_prompts_used?: number; trial_pages_used?: number } | null;
+  if (error || !row || row.trial_prompts_used === undefined) return null;
+  return { promptsUsed: row.trial_prompts_used, pagesUsed: row.trial_pages_used ?? 0 };
+}
+
+export async function trialPromptsLeft(supabase: SupabaseClient, userId: string): Promise<number> {
+  const t = await trialState(supabase, userId);
+  return t ? Math.max(0, TRIAL_PROMPTS - t.promptsUsed) : 0;
+}
+
 export const userKeyRef = (keyId: string): KeyRef => `key:${keyId}`;
 
 export async function getRole(supabase: SupabaseClient, userId: string): Promise<Role> {
@@ -64,8 +89,27 @@ export async function resolveGroq(
 
   const found = await loadKey(supabase, userId, sessionId);
   if (!found) {
+    // No key yet: each request uses one free-trial prompt (or scanned page)
+    // on Confu's keys, until they're gone.
+    const allowed = poolSize() > 0 && (await supabase.rpc("use_trial", { kind: feature === "ocr" ? "page" : "prompt" })).data === true;
+    if (allowed) {
+      const meter = createMeter(supabase, { userId, sessionId, keyRef: TRIAL_KEY_REF, feature, baseFetch: poolFetch, trackQuota: false });
+      return { groq: groqClient("gsk_pool", meter.fetch), meter };
+    }
+    const tried = (await trialState(supabase, userId)) !== null;
     return {
-      error: Response.json({ error: "Add your Groq API key to use the tutor.", code: KEY_ERRORS.required }, { status: 428 }),
+      error: Response.json(
+        {
+          error: tried
+            ? feature === "ocr"
+              ? "You've used the free scanned-page reading. Add your own Groq API key (it's free) to read more."
+              : `You've used your ${TRIAL_PROMPTS} free prompts. Add your own Groq API key (it's free) to keep going.`
+            : "Add your Groq API key to use the tutor.",
+          // Out of free pages only: not a reason to ask for a key in the middle of a session.
+          code: tried && feature === "ocr" ? "TRIAL_PAGES_USED" : KEY_ERRORS.required,
+        },
+        { status: 428 },
+      ),
     };
   }
   const meter = createMeter(supabase, { userId, sessionId, keyRef: userKeyRef(found.id), feature });
@@ -92,6 +136,6 @@ export function groqErrorResponse(err: unknown, fallback: string): Response {
     }
     return Response.json({ error: "Groq's per-minute limit was reached. Wait a minute and try again." }, { status: 429 });
   }
-  console.error(fallback, err);
+  logError(fallback, err);
   return Response.json({ error: fallback }, { status: 502 });
 }

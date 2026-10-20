@@ -3,6 +3,7 @@ import { z } from "zod";
 import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
 import { createClient } from "@/lib/supabase/server";
 import { draftFirstPass } from "@/lib/tutor/paper-ai";
+import { logError } from "@/lib/log";
 
 export const maxDuration = 60;
 
@@ -28,7 +29,7 @@ export async function POST(request: Request) {
     return Response.json({ draft: await draftFirstPass(supabase, access.groq, parsed.data.documentId) });
   } catch (err) {
     if ((err as { status?: number })?.status) return groqErrorResponse(err, "Couldn't draft the first pass. Try again.");
-    console.error("pass1 draft failed", err);
+    logError("pass1 draft failed", err);
     return Response.json({ error: "Couldn't draft the first pass. Try again." }, { status: 502 });
   }
 }

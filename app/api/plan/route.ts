@@ -3,6 +3,7 @@ import { z } from "zod";
 import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
 import { createClient } from "@/lib/supabase/server";
 import { generatePlan } from "@/lib/tutor/plan";
+import { logError } from "@/lib/log";
 
 export const maxDuration = 60;
 
@@ -40,7 +41,7 @@ export async function POST(request: Request) {
     return Response.json({ planId });
   } catch (err) {
     if ((err as { status?: number })?.status) return groqErrorResponse(err, "Could not generate a plan. Try again.");
-    console.error("plan generation failed", err);
+    logError("plan generation failed", err);
     return Response.json({ error: err instanceof Error ? err.message : "Could not generate a plan. Try again." }, { status: 502 });
   }
 }

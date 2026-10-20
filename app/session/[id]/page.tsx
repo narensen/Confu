@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { SessionTitle } from "@/components/workspace/SessionTitle";
 import { Workspace } from "@/components/workspace/Workspace";
+import { trialPromptsLeft } from "@/lib/ai-access";
 import { getCurrentRole, requireUser } from "@/lib/dal";
 import { getKeyInfo } from "@/lib/groq-keys";
 import { planOf } from "@/lib/plans";
@@ -58,9 +59,10 @@ async function SessionWorkspace({ params }: { params: Promise<{ id: string }> })
   const user = await requireUser();
   const supabase = await createClient();
 
-  const [role, keyInfo, session, docs, plan, memory, messages] = await Promise.all([
+  const [role, keyInfo, trial, session, docs, plan, memory, messages] = await Promise.all([
     getCurrentRole(),
     getKeyInfo(supabase, user.id, id),
+    trialPromptsLeft(supabase, user.id),
     supabase.from("study_sessions").select("id, title, kind, research_goal, exam_date").eq("id", id).maybeSingle(),
     supabase
       .from("documents")
@@ -151,6 +153,7 @@ async function SessionWorkspace({ params }: { params: Promise<{ id: string }> })
         initialMessages={((messages.data ?? []) as ChatMessage[]).reverse()}
         needsKey={planOf(role) !== "pro"}
         initialKey={keyInfo}
+        trial={trial > 0}
         initialReviews={(reviews.data ?? []) as PaperReview[]}
         initialAttempts={(attempts.data ?? []) as Attempt[]}
       />

@@ -1,6 +1,6 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getRole, PRO_DAILY_TOKENS, proUsedLast24h, resolveGroq, userKeyRef } from "@/lib/ai-access";
+import { getRole, PRO_DAILY_TOKENS, proUsedLast24h, resolveGroq, TRIAL_PROMPTS, trialState, userKeyRef } from "@/lib/ai-access";
 import { MODELS } from "@/lib/groq";
 import { getKeyInfo } from "@/lib/groq-keys";
 import { planOf } from "@/lib/plans";
@@ -8,7 +8,7 @@ import { FREE_TIER_DAILY_TOKENS, usageSummary, type KeyUsage, type ModelUsage } 
 
 // What the usage meters show for a user (and session).
 export type MeterUsage = {
-  plan: "free" | "pro";
+  plan: "free" | "pro" | "trial";
   status: ModelUsage["status"];
   used24h: number;
   dailyLimit: number | null;
@@ -86,7 +86,21 @@ export async function meterUsage(
     };
   }
   const keyRef = await ownKeyRef(supabase, userId, sessionId);
-  if (!keyRef) return null;
+  if (!keyRef) {
+    // No key: show what's left of the free trial, counted in prompts (one-off, not daily).
+    const trial = await trialState(supabase, userId);
+    if (!trial) return null;
+    const used = trial.promptsUsed;
+    return {
+      plan: "trial",
+      status: used >= TRIAL_PROMPTS ? "blocked" : used ? "ok" : "none",
+      used24h: used,
+      dailyLimit: TRIAL_PROMPTS,
+      dailyLimitEstimated: false,
+      checkedAt: new Date().toISOString(),
+      blockedSince: null,
+    };
+  }
   const usage = await freshUsage(supabase, userId, sessionId, keyRef, opts);
   const main = usage?.models.find((m) => m.model === MODELS.chat);
   if (!main) {

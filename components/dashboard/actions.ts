@@ -15,7 +15,17 @@ async function storagePathsFor(supabase: Awaited<ReturnType<typeof createClient>
   );
 }
 
-export async function deleteSession(sessionId: string) {
+// Files go first, and a failure stops the delete: removing the rows would
+// leave the files behind with nothing pointing at them.
+const FILES_FAILED = "Couldn't delete the stored files, so nothing was deleted. Try again.";
+
+async function removeFiles(supabase: Awaited<ReturnType<typeof createClient>>, files: string[]): Promise<boolean> {
+  if (!files.length) return true;
+  const { error } = await supabase.storage.from("documents").remove(files);
+  return !error;
+}
+
+export async function deleteSession(sessionId: string): Promise<{ error?: string }> {
   await requireUser();
   const supabase = await createClient();
   const { data: docs } = await supabase.from("documents").select("id").eq("session_id", sessionId);
@@ -23,15 +33,17 @@ export async function deleteSession(sessionId: string) {
     supabase,
     (docs ?? []).map((d) => d.id as string),
   );
-  if (files.length) await supabase.storage.from("documents").remove(files);
+  if (!(await removeFiles(supabase, files))) return { error: FILES_FAILED };
   // Documents, plan, memory and messages cascade.
-  await supabase.from("study_sessions").delete().eq("id", sessionId);
+  const { error } = await supabase.from("study_sessions").delete().eq("id", sessionId);
+  return error ? { error: error.message } : {};
 }
 
-export async function deleteDocument(documentId: string) {
+export async function deleteDocument(documentId: string): Promise<{ error?: string }> {
   await requireUser();
   const supabase = await createClient();
   const files = await storagePathsFor(supabase, [documentId]);
-  if (files.length) await supabase.storage.from("documents").remove(files);
-  await supabase.from("documents").delete().eq("id", documentId);
+  if (!(await removeFiles(supabase, files))) return { error: FILES_FAILED };
+  const { error } = await supabase.from("documents").delete().eq("id", documentId);
+  return error ? { error: error.message } : {};
 }

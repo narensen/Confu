@@ -6,7 +6,7 @@ import { signOut } from "@/app/(auth)/actions";
 import { ago, formatTokens } from "@/lib/format-usage";
 
 type Usage = {
-  plan: "free" | "pro";
+  plan: "free" | "pro" | "trial";
   status: "blocked" | "ok" | "stale" | "none";
   used24h: number;
   dailyLimit: number | null;
@@ -113,7 +113,7 @@ export function AccountMenu({ name, email, plan, owner, keyLast4 }: Props) {
           {/* Usage: Free only (Pro runs on Confu's keys) */}
           {!pro && (
             <div className="border-b border-line px-4 py-3.5">
-              <p className="font-mono text-[10px] tracking-widest text-muted uppercase">Groq usage today</p>
+              <p className="font-mono text-[10px] tracking-widest text-muted uppercase">{usage !== "loading" && usage?.plan === "trial" ? "Free trial" : "Groq usage today"}</p>
               <UsageBlock usage={usage} />
             </div>
           )}
@@ -181,6 +181,8 @@ function UsageBlock({ usage }: { usage: Usage | null | "loading" }) {
     );
   }
 
+  if (usage.plan === "trial") return <TrialBlock used={usage.used24h} total={usage.dailyLimit ?? 0} />;
+
   const blocked = usage.status === "blocked";
   const stale = usage.status === "stale";
   const limit = usage.dailyLimit;
@@ -227,6 +229,40 @@ function UsageBlock({ usage }: { usage: Usage | null | "loading" }) {
         {usage.dailyLimitEstimated && !blocked ? " ~ = Groq free-tier estimate." : ""}{" "}
         <Link href="/settings#usage" className="underline underline-offset-2 hover:text-ink">
           Details
+        </Link>
+      </p>
+    </div>
+  );
+}
+
+// Free trial: counted in prompts, once (not a daily allowance).
+function TrialBlock({ used, total }: { used: number; total: number }) {
+  const left = Math.max(0, total - used);
+  const share = total ? left / total : 0;
+  const tone = left === 0 ? "bg-danger" : left <= 3 ? "bg-warn" : "bg-ink";
+  return (
+    <div className="mt-2">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className={`font-serif text-2xl leading-none ${left === 0 ? "text-danger" : left <= 3 ? "text-warn" : ""}`}>
+          {left}
+          <span className="ml-1.5 font-sans text-xs text-muted">of {total} free prompts left</span>
+        </span>
+        <span className="font-mono text-[11px] text-muted">{Math.round(share * 100)}%</span>
+      </div>
+      <div
+        role="progressbar"
+        aria-label="Free prompts left"
+        aria-valuemin={0}
+        aria-valuemax={total}
+        aria-valuenow={left}
+        className="mt-2 h-2 overflow-hidden rounded-full bg-line"
+      >
+        <div className={`h-full rounded-full transition-[width] duration-700 ease-fluid ${tone}`} style={{ width: `${share * 100}%` }} />
+      </div>
+      <p className="mt-2 text-[11px] text-muted">
+        {left === 0 ? "Add your own Groq key (it's free) to keep going." : "On Confu's keys, no setup. Add your own Groq key any time."}{" "}
+        <Link href="/settings#api-key" className="underline underline-offset-2 hover:text-ink">
+          Add key
         </Link>
       </p>
     </div>

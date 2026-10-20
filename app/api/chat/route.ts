@@ -15,6 +15,7 @@ import { daysUntil, topicStats, type Attempt } from "@/lib/exam";
 import { PAPER_TOOLS, runPaperTool, type Source } from "@/lib/tutor/tools";
 import { buildSystemPrompt, buildUserInstruction } from "@/lib/tutor/prompts";
 import { TUTOR_ACTIONS } from "@/lib/types";
+import { logError } from "@/lib/log";
 
 export const maxDuration = 60;
 
@@ -295,7 +296,7 @@ export async function POST(request: Request) {
         assistantReply: reply,
       });
     } catch (err) {
-      console.error("memory update failed", err);
+      logError("memory update failed", err);
     }
     await access.meter.flush();
   });

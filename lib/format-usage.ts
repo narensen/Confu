@@ -22,6 +22,7 @@ export const FEATURE_LABELS: Record<string, string> = {
   triage: "Paper triage",
   pass1: "First-pass drafts",
   probe: "Usage checks",
+  ocr: "Scanned-page reading",
 };
 
 export function ago(iso: string | null): string {

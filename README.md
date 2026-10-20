@@ -17,7 +17,7 @@ An AI tutor that works from your own material. Study toward a goal with a phased
 
 | Role | Plan | AI runs on |
 | --- | --- | --- |
-| `NULL` | Free | The user's own Groq key, saved encrypted in Settings (or per session) |
+| `NULL` | Free | 10 free prompts on Confu's keys (migration 0014), then the user's own Groq key, saved encrypted in Settings (or per session) |
 | `'pro'` | Pro | Confu's keys (`GROQ_API_KEYS`), up to `PRO_DAILY_TOKENS` per rolling 24 hours |
 | `'admin'` | Owner | Confu's keys with no allowance, plus Settings → Pro members |
 

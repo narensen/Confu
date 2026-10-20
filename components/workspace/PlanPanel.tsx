@@ -195,7 +195,7 @@ function TopicRow({ topic: t, active, today, docs, busy, onJump, onFocusTopic, o
           <span className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted">
             {inPdf ? (
               <span className="rounded border border-ink/60 px-1.5 py-px font-mono text-ink">
-                {docs.length > 1 ? doc!.label : "PDF"} pp. {t.page_start}–{t.page_end}
+                {docs.length > 1 ? doc!.label : "PDF"} {t.page_start === t.page_end ? `p. ${t.page_start}` : `pp. ${t.page_start}–${t.page_end}`}
               </span>
             ) : (
               <span className="rounded border border-dashed border-ink/60 px-1.5 py-px font-mono text-ink">

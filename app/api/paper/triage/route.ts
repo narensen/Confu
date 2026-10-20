@@ -3,6 +3,7 @@ import { z } from "zod";
 import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
 import { createClient } from "@/lib/supabase/server";
 import { triagePapers } from "@/lib/tutor/paper-ai";
+import { logError } from "@/lib/log";
 
 export const maxDuration = 60;
 
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
     return Response.json({ results: results.map((r) => ({ documentId: r.paper.id, pass: r.pass, reason: r.reason })) });
   } catch (err) {
     if ((err as { status?: number })?.status) return groqErrorResponse(err, "Couldn't triage the papers. Try again.");
-    console.error("triage failed", err);
+    logError("triage failed", err);
     return Response.json({ error: "Couldn't triage the papers. Try again." }, { status: 502 });
   }
 }

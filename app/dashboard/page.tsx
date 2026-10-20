@@ -4,6 +4,7 @@ import { Library, type LibrarySession } from "@/components/dashboard/Library";
 import { requireUser } from "@/lib/dal";
 import { createClient } from "@/lib/supabase/server";
 import type { SessionKind } from "@/lib/types";
+import { logError } from "@/lib/log";
 
 export default function DashboardPage() {
   return (
@@ -59,7 +60,7 @@ async function LibraryLoader() {
 
   // Never let a failed query masquerade as an empty library.
   if (error) {
-    console.error("dashboard query failed", error);
+    logError("dashboard query failed", error);
     const schemaOutdated = ["42703", "42P01", "PGRST200", "PGRST205"].includes(error.code ?? "");
     return (
       <div className="animate-enter rounded-xl border border-danger/50 bg-panel px-6 py-8">

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { Logo } from "@/components/AppHeader";
 import { AccountDeletedNotice } from "@/components/landing/AccountDeletedNotice";
+import { DemoVideo } from "@/components/landing/DemoVideo";
 import { LandingMotion, Words } from "@/components/landing/LandingMotion";
 import { ExamMock, PaperMock, PlanMock, WorkspaceMock } from "@/components/landing/Mocks";
 import { buttonClass, eyebrowClass, ghostButtonClass } from "@/components/ui";
@@ -81,7 +82,7 @@ const STEPS = [
 const FAQ: { q: string; a: ReactNode }[] = [
   {
     q: "Is Confu free?",
-    a: "Yes. On Free, the AI runs on Groq with your own Groq API key, and Groq has a free tier, so you can start without paying anyone. Pro, in early access, runs on our keys instead.",
+    a: "Yes. Every account starts with 10 free prompts on our keys, no setup. After that, Free runs on your own Groq API key, and Groq has a free tier, so you still don't pay anyone. Pro, in early access, keeps running on our keys.",
   },
   {
     q: "Why do I need a Groq API key?",
@@ -110,7 +111,7 @@ const FAQ: { q: string; a: ReactNode }[] = [
   },
   {
     q: "Which PDFs work?",
-    a: "Any PDF with selectable text: notes, textbooks, slides exported to PDF, papers. Scanned pages have no text, but you can still drag over them to have the vision model read them.",
+    a: "Any PDF: notes, textbooks, slides, papers, past papers. Scanned or phone-photographed pages, including handwriting, are read by a vision model when you upload them, so the tutor can search and cite them too. Very messy handwriting may come out partly illegible.",
   },
   {
     q: "Can the AI be wrong?",
@@ -133,6 +134,9 @@ export default function Home() {
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3.5">
           <Logo />
           <div className="hidden items-center gap-6 text-sm text-muted md:flex">
+            <a href="#demo" className="transition hover:text-ink">
+              Demo
+            </a>
             <a href="#modes" className="transition hover:text-ink">
               Modes
             </a>
@@ -194,6 +198,26 @@ export default function Home() {
               <WorkspaceMock />
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* The real product, in 20 seconds */}
+      <section id="demo" className="scroll-mt-16 border-b border-ink">
+        <div className="mx-auto max-w-6xl px-6 py-24">
+          <div className="max-w-2xl">
+            <p data-reveal className={eyebrowClass}>
+              See it work
+            </p>
+            <h2 data-split className="mt-2 font-serif text-4xl leading-tight tracking-tight sm:text-5xl">Highlight a line. Ask. Get the page.</h2>
+            <p data-reveal className="mt-4 text-lg leading-relaxed text-muted">
+              Select the sentence you don&apos;t get and ask why. The answer works from your own PDF, and the page it cites opens with a
+              click.
+            </p>
+          </div>
+          <div data-reveal className="mt-12">
+            <DemoVideo />
+          </div>
+          <p data-reveal className="mt-4 font-mono text-xs text-muted">The real Confu workspace. The tutor&apos;s reply is a sample answer.</p>
         </div>
       </section>
 
@@ -363,7 +387,7 @@ export default function Home() {
                     <Link href="/signup" className={`${buttonClass} px-5 py-2.5`}>
                       Create your free account
                     </Link>
-                    <p className="mt-3 text-xs text-muted">You&apos;ll need a Groq API key; Groq has a free tier.</p>
+                    <p className="mt-3 text-xs text-muted">Starts with 10 free prompts. After that, add a free Groq API key.</p>
                   </div>
                 )}
               </article>
@@ -469,8 +493,8 @@ async function HeroActions() {
           <Link data-magnetic href="/signup" className={`${buttonClass} px-6 py-3 text-base`}>
             Start learning, free
           </Link>
-          <a href="#modes" className={`${ghostButtonClass} px-6 py-3 text-base`}>
-            See how it works
+          <a href="#demo" className={`${ghostButtonClass} px-6 py-3 text-base`}>
+            Watch the 20-second demo
           </a>
         </>
       )}

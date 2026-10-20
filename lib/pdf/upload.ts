@@ -30,7 +30,7 @@ export async function uploadPdfToSession(
     meta?: Record<string, unknown>;
     sourceUrl?: string | null;
   },
-): Promise<{ id: string; lowText: boolean }> {
+): Promise<{ id: string; lowText: boolean; ocrNote: string | null }> {
   const { userId, sessionId, file, position, onStatus } = opts;
   const invalid = validatePdf(file);
   if (invalid) throw new Error(invalid);
@@ -69,11 +69,31 @@ export async function uploadPdfToSession(
     }
     await supabase.from("documents").update({ status: "ready" }).eq("id", id);
 
+    const ocr = await readScannedPages(file, id, pages, short, onStatus);
     const textChars = pages.reduce((n, p) => n + p.length, 0);
-    return { id, lowText: textChars < pageCount * 40 };
+    return { id, lowText: !ocr.read && textChars < pageCount * 40, ocrNote: ocr.note };
   } catch (err) {
     await supabase.from("documents").update({ status: "failed" }).eq("id", id);
     throw err;
+  }
+}
+
+// Pages with (almost) no text are scans: have the vision model read them.
+async function readScannedPages(file: File, documentId: string, pages: string[], short: string, onStatus: (s: string) => void) {
+  const { ocrPages, SCANNED_BELOW_CHARS } = await import("@/lib/pdf/ocr");
+  const scanned = pages.flatMap((text, i) => (text.length < SCANNED_BELOW_CHARS ? [i + 1] : []));
+  if (!scanned.length) return { read: 0, note: null };
+  onStatus(`Reading scanned pages of ${short}…`);
+  try {
+    const { read, stopped } = await ocrPages(file, documentId, scanned, (done, total) => onStatus(`Reading scanned pages of ${short}: ${done}/${total}`));
+    const note = stopped
+      ? `Read ${read} of ${scanned.length} scanned pages, then stopped: ${stopped}`
+      : read < scanned.length
+        ? `Read ${read} of ${scanned.length} scanned pages; drag over the others to ask about them.`
+        : null;
+    return { read, note };
+  } catch {
+    return { read: 0, note: "Couldn't read the scanned pages; drag over a page to ask about it." };
   }
 }
 
@@ -110,4 +130,5 @@ export async function attachPdfToDocument(
     .update({ storage_path: path, page_count: pageCount, outline, status: "ready", last_page: 1 })
     .eq("id", documentId);
   if (upd.error) throw upd.error;
+  await readScannedPages(file, documentId, pages, "the PDF", onStatus);
 }

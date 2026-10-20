@@ -6,7 +6,7 @@ import { AI_USED_EVENT } from "@/lib/ai-errors";
 import { ago, formatTokens } from "@/lib/format-usage";
 
 type Main = {
-  plan: "free" | "pro";
+  plan: "free" | "pro" | "trial";
   status: "blocked" | "ok" | "stale" | "none";
   used24h: number;
   dailyLimit: number | null;
@@ -48,7 +48,7 @@ export function UsageMeter({ sessionId, keyId, keyLast4 }: { sessionId: string; 
   // While Groq is refusing the key, keep checking so "limit reached" clears
   // as soon as tokens free up (each result reschedules the next check).
   useEffect(() => {
-    if (main?.status !== "blocked") return;
+    if (main?.status !== "blocked" || main.plan === "trial") return;
     const next = window.setTimeout(load, 65_000);
     return () => window.clearTimeout(next);
   }, [main, load]);
@@ -58,14 +58,20 @@ export function UsageMeter({ sessionId, keyId, keyLast4 }: { sessionId: string; 
   const blocked = main?.status === "blocked";
 
   let label: string | null = null;
-  if (blocked) label = main?.plan === "pro" ? "allowance used" : "limit reached";
+  if (main?.plan === "trial") {
+    const n = Math.max(0, (main.dailyLimit ?? 0) - main.used24h);
+    label = blocked ? "free prompts used" : `${n} free prompt${n === 1 ? "" : "s"} left`;
+  }
+  else if (blocked) label = main?.plan === "pro" ? "allowance used" : "limit reached";
   else if (main && main.status !== "none") label = left !== null ? `${stale ? "~" : ""}${Math.round(left * 100)}% left` : `${formatTokens(main.used24h)} today`;
   else if (keyLast4) label = "no usage yet";
 
   const tone = blocked ? "text-danger" : stale ? "text-muted/70" : left !== null && left < 0.1 ? "text-danger" : left !== null && left < 0.3 ? "text-warn" : "text-muted";
   const title = !main
     ? "Usage"
-    : main.plan === "pro"
+    : main.plan === "trial"
+      ? `Free trial on Confu's keys: ${main.used24h} of ${main.dailyLimit} prompts used. Add your own Groq key (it's free) to keep going after that.`
+      : main.plan === "pro"
       ? `${main.dailyLimit === null ? "Admin" : "Pro"}: ${formatTokens(main.used24h)} tokens used in the last 24 h${main.dailyLimit ? ` of ${formatTokens(main.dailyLimit)}` : " (unlimited)"}.`
       : blocked
       ? `Groq refused this key at ${new Date(main.blockedSince!).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} for its daily limit. Re-checking every minute; it frees up gradually.`
@@ -78,7 +84,9 @@ export function UsageMeter({ sessionId, keyId, keyLast4 }: { sessionId: string; 
       title={title}
       className="my-2.5 mr-1 flex items-center gap-2 rounded-md border border-line px-2 font-mono text-[11px] text-muted transition hover:border-ink hover:text-ink"
     >
-      {main?.plan === "pro" ? (
+      {main?.plan === "trial" ? (
+        <span className="rounded border border-ink/40 px-1 text-[9px] font-bold text-ink uppercase">Trial</span>
+      ) : main?.plan === "pro" ? (
         <span className="rounded bg-yellow-400 px-1 text-[9px] font-bold text-ink uppercase">{main.dailyLimit === null ? "Admin" : "Pro"}</span>
       ) : (
         keyLast4 && <span>…{keyLast4}</span>

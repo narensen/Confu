@@ -7,8 +7,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 // call sites don't change. Call flush() once the route's work is done.
 
 // 'pro': Pro/owner usage on Confu's key pool. 'key:<id>': a user's own key.
-export type KeyRef = "pro" | `key:${string}`;
-export type Feature = "chat" | "plan" | "figure" | "quiz" | "grade" | "triage" | "pass1" | "probe";
+export type KeyRef = "pro" | "trial" | `key:${string}`;
+export type Feature = "chat" | "plan" | "figure" | "quiz" | "grade" | "triage" | "pass1" | "probe" | "ocr";
 
 type Usage = { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
 

@@ -436,7 +436,7 @@ export const GUIDE_STEPS: GuideStep[] = [
     id: "key",
     eyebrow: "Your Groq key",
     title: "Bring your own AI key",
-    intro: "Confu's AI runs on Groq, using your own Groq API key. Add it once in Settings and every session uses it.",
+    intro: "Your account starts with 10 free prompts on Confu's keys. After that, the AI runs on your own Groq API key: add it once in Settings and every session uses it.",
     points: [
       { label: "Get one", body: <>Sign in at <b>console.groq.com/keys</b> (there&apos;s a free tier), create a key and copy it. It starts with <code className="font-mono text-xs">gsk_</code>.</> },
       { label: "Add it", body: <>Paste it in <b>Settings → API key</b>, or in the panel that appears in a session. We check it with Groq first. A session can also have its own key that overrides your account key.</> },
