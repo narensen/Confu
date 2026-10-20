@@ -3,11 +3,22 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { friendlyAuthError } from "@/lib/auth-errors";
 import { HEARD_FROM, OCCUPATIONS, PURPOSES } from "@/lib/signup-survey";
 import { createClient } from "@/lib/supabase/server";
 
 // `values` hands the sign-up answers back on an error, so the form keeps them.
-export type AuthState = { error?: string; message?: string; values?: Record<string, string> } | undefined;
+// `action` offers the obvious next step ("resend the confirmation", "reset
+// your password"); `email` lets that step reuse what they typed.
+export type AuthState =
+  | { error?: string; message?: string; values?: Record<string, string>; action?: "resend" | "reset" | "signin" | "signup"; email?: string }
+  | undefined;
+
+// Present when CAPTCHA protection is on (see components/auth/Captcha.tsx).
+const captcha = (formData: FormData) => {
+  const token = formData.get("captchaToken");
+  return typeof token === "string" && token ? token : undefined;
+};
 
 function safeNext(value: FormDataEntryValue | null): string {
   const next = typeof value === "string" ? value : "";
@@ -30,8 +41,8 @@ export async function login(_: AuthState, formData: FormData): Promise<AuthState
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword(parsed.data);
-  if (error) return { error: error.message };
+  const { error } = await supabase.auth.signInWithPassword({ ...parsed.data, options: { captchaToken: captcha(formData) } });
+  if (error) return { ...friendlyAuthError(error, "signin"), email: parsed.data.email };
 
   redirect(safeNext(formData.get("next")));
 }
@@ -67,12 +78,23 @@ export async function signup(_: AuthState, formData: FormData): Promise<AuthStat
         purpose_detail: parsed.data.purposeDetail || null,
       },
       emailRedirectTo: `${await origin()}/auth/confirm?next=/dashboard`,
+      captchaToken: captcha(formData),
     },
   });
-  if (error) return { error: error.message, values };
+  if (error) return { ...friendlyAuthError(error, "signup"), values, email: parsed.data.email };
 
   // With email confirmation disabled, Supabase returns a session immediately.
   if (data.session) redirect("/dashboard");
+  // Signing up again with an existing email "succeeds" (Supabase hides which
+  // emails exist) but sends nothing: the user comes back with no identities.
+  if (data.user && data.user.identities?.length === 0) {
+    return {
+      error: "There's already an account with this email. Sign in instead, or reset your password if you've forgotten it.",
+      action: "signin",
+      values,
+      email: parsed.data.email,
+    };
+  }
   return { message: "Check your email for a confirmation link to finish signing up.", values };
 }
 
@@ -83,8 +105,9 @@ export async function requestPasswordReset(_: AuthState, formData: FormData): Pr
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email.data, {
     redirectTo: `${await origin()}/auth/confirm?next=/reset-password`,
+    captchaToken: captcha(formData),
   });
-  if (error) return { error: error.message };
+  if (error) return friendlyAuthError(error, "reset");
   return { message: "If an account exists for that email, a reset link is on its way. Not there in a minute? Check your Spam or Promotions folder." };
 }
 
@@ -95,8 +118,26 @@ export async function updatePassword(_: AuthState, formData: FormData): Promise<
 
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ password: password.data });
-  if (error) return { error: error.message };
+  if (error) {
+    // Opened the reset link in another browser: there's no session to update.
+    if (/session/i.test(error.message)) return { error: "This reset link has expired or was opened in a different browser. Ask for a new one.", action: "reset" };
+    return friendlyAuthError(error, "update");
+  }
   redirect("/dashboard");
+}
+
+// "Email not confirmed": send the confirmation link again.
+export async function resendConfirmation(_: AuthState, formData: FormData): Promise<AuthState> {
+  const email = z.email().safeParse(formData.get("email"));
+  if (!email.success) return { error: "Enter your email above first." };
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resend({
+    type: "signup",
+    email: email.data,
+    options: { emailRedirectTo: `${await origin()}/auth/confirm?next=/dashboard`, captchaToken: captcha(formData) },
+  });
+  if (error) return friendlyAuthError(error, "signup");
+  return { message: `Sent. Check ${email.data} (and your Spam folder) for the confirmation link.` };
 }
 
 export async function signOut() {

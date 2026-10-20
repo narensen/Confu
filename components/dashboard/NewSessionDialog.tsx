@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { buttonClass, eyebrowClass, ghostButtonClass, inputClass, labelClass } from "@/components/ui";
+import { isPowerPoint, PPT_CONVERTER_URL } from "@/lib/pdf/office";
 import { uploadPdfToSession, validatePdf } from "@/lib/pdf/upload";
 import { createClient } from "@/lib/supabase/client";
 import type { SessionKind } from "@/lib/types";
@@ -84,6 +85,7 @@ function NewSessionDialog({ initialKind, onClose }: { initialKind: SessionKind |
   const [files, setFiles] = useState<File[]>([]);
   const [progress, setProgress] = useState<FileState[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pptPicked, setPptPicked] = useState(false);
   const [busy, setBusy] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
@@ -139,6 +141,7 @@ function NewSessionDialog({ initialKind, onClose }: { initialKind: SessionKind |
   function addFiles(list: FileList | null) {
     const picked = Array.from(list ?? []);
     const bad = picked.map(validatePdf).find(Boolean);
+    setPptPicked(picked.some(isPowerPoint));
     if (bad) return setError(bad);
     setError(null);
     setFiles((cur) => [...cur, ...picked.filter((f) => !cur.some((c) => c.name === f.name && c.size === f.size))]);
@@ -293,7 +296,7 @@ function NewSessionDialog({ initialKind, onClose }: { initialKind: SessionKind |
                   <span className={labelClass}>
                     PDFs <span className="font-normal text-muted">(optional, you can add them later)</span>
                   </span>
-                  <input ref={fileInput} type="file" accept="application/pdf" multiple className="hidden" onChange={(e) => {
+                  <input ref={fileInput} type="file" accept="application/pdf,.pptx,.ppt" multiple className="hidden" onChange={(e) => {
                       addFiles(e.target.files);
                       e.target.value = "";
                     }}
@@ -345,7 +348,16 @@ function NewSessionDialog({ initialKind, onClose }: { initialKind: SessionKind |
                 </div>
               )}
 
-              {error && <p className="animate-pop rounded-lg border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</p>}
+              {error && (
+                <div className="animate-pop rounded-lg border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger">
+                  <p>{error}</p>
+                  {pptPicked && (
+                    <a href={PPT_CONVERTER_URL} target="_blank" rel="noreferrer" className="mt-2 inline-flex rounded-md border border-danger/50 bg-panel px-2.5 py-1 text-xs font-medium text-danger hover:bg-danger hover:text-white">
+                      Open the free converter ↗
+                    </a>
+                  )}
+                </div>
+              )}
             </form>
           )}
         </div>

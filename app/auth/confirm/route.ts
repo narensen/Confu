@@ -1,5 +1,6 @@
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
+import { friendlyAuthError } from "@/lib/auth-errors";
 import { createClient } from "@/lib/supabase/server";
 
 // Landing route for links in Supabase auth emails (confirm sign-up, reset
@@ -14,14 +15,18 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get("type") as EmailOtpType | null;
   const code = searchParams.get("code");
 
-  let error: string | null = "Invalid or expired link";
+  let failure: { code?: string; message?: string } | null = { message: "Invalid or expired link" };
   if (tokenHash && type) {
     const res = await supabase.auth.verifyOtp({ type, token_hash: tokenHash });
-    error = res.error?.message ?? null;
+    failure = res.error;
   } else if (code) {
     const res = await supabase.auth.exchangeCodeForSession(code);
-    error = res.error?.message ?? null;
+    failure = res.error;
   }
+  // A link tapped twice, or one that finished in another tab, fails here even
+  // though they're signed in already: just carry on.
+  if (failure && (await supabase.auth.getClaims()).data?.claims) failure = null;
+  const error = failure ? friendlyAuthError(failure, "link").error : null;
 
   const url = request.nextUrl.clone();
   url.search = "";

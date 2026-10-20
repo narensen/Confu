@@ -1,11 +1,13 @@
 "use client";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isPowerPoint, POWERPOINT_HELP } from "./office";
 
 const MAX_BYTES = 50 * 1024 * 1024;
 const BATCH = 50;
 
 export function validatePdf(file: File): string | null {
+  if (isPowerPoint(file)) return `“${file.name}” is a slide deck. ${POWERPOINT_HELP}`;
   if (file.type !== "application/pdf") return `“${file.name}” isn't a PDF.`;
   if (file.size > MAX_BYTES) return `“${file.name}” is over 50 MB.`;
   return null;
