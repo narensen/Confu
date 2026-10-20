@@ -147,6 +147,7 @@ Judge their level from the history (don't re-teach what they've shown they under
 - 2 "start": the foundational or seminal papers and a good survey for this goal, at their level.
 - 2 "core": the main methods/ideas someone in this area must know.
 - 2 "frontier": recent work and open problems (set "recent": true).
+If the goal names specific methods, models or techniques (e.g. an acronym), at least one query must search for each by its full name, so the paper that introduced it is found.
 Also list up to 8 "classics": the specific, well-known papers a researcher in this exact area is expected to have read, including the papers that introduced the methods named in the goal and the recent landmark results. Recall each by its first author, lab and year, then give its exact published title and, if it's on arXiv, its arXiv ID (e.g. "1707.06347"). No generic or descriptive titles: every paper is checked against arXiv and the literature, and any whose ID and title don't match are discarded.
 Return ONLY JSON: {"level": "one sentence on where they are", "queries": [{"q": "string", "stage": "start" | "core" | "frontier", "recent": boolean}], "classics": [{"title": "string", "year": number, "arxiv": "string or null", "stage": "start" | "core" | "frontier"}]}`,
     "medium",
@@ -203,8 +204,19 @@ Return ONLY JSON: {"level": "one sentence on where they are", "queries": [{"q": 
 
   // 3. Pick and order a reading path from those papers only.
   opts.onStatus?.(`Choosing your reading path from ${pool.length} papers…`);
-  // Kept small: Groq's free tier allows 8k tokens a minute, and one request must fit.
-  const candidates = pool.slice(0, 30).map((c, i) => ({ ...c, id: `P${i + 1}` }));
+  // Kept small: Groq's free tier allows 8k tokens a minute, and one request
+  // must fit. So choose the 30 most promising: every landmark, then per stage
+  // the most cited (the frontier: the most cited of the last three years),
+  // keeping search relevance as a tiebreak (the pool is in relevance order).
+  const cites = (p: PaperMeta) => p.cited_by ?? -1;
+  const ranked = (stage: Stage) =>
+    pool
+      .filter((c) => !c.classic && c.stage === stage && (stage !== "frontier" || (c.paper.year ?? 0) >= year - 3))
+      .sort((a, b) => cites(b.paper) - cites(a.paper));
+  const landmarkPool = pool.filter((c) => c.classic);
+  const perStage = Math.max(4, Math.floor((30 - landmarkPool.length) / 3));
+  const chosen = [...landmarkPool, ...ranked("start").slice(0, perStage), ...ranked("core").slice(0, perStage), ...ranked("frontier").slice(0, perStage)];
+  const candidates = chosen.slice(0, 30).map((c, i) => ({ ...c, id: `P${i + 1}` }));
   const list = candidates
     .map(
       (c) =>

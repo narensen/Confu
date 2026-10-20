@@ -1,5 +1,6 @@
 import "server-only";
 import { lookup } from "node:dns/promises";
+import { createClient as createSupabase, type SupabaseClient } from "@supabase/supabase-js";
 import net from "node:net";
 
 // Scholarly lookups for paper sessions.
@@ -224,17 +225,53 @@ type S2Paper = {
 
 const S2_FIELDS = "title,year,venue,abstract,citationCount,authors,externalIds,openAccessPdf";
 
-async function s2<T>(path: string): Promise<T | null> {
-  const key = process.env.SEMANTIC_SCHOLAR_API_KEY;
-  try {
-    const res = await fetch(`https://api.semanticscholar.org/graph/v1/${path}`, {
-      headers: { "User-Agent": UA, ...(key ? { "x-api-key": key } : {}) },
-      signal: AbortSignal.timeout(TIMEOUT),
-    });
-    return res.ok ? ((await res.json()) as T) : null; // 429 (rate limit) -> fall back
-  } catch {
-    return null;
+// A Semantic Scholar key allows one request per second across all of
+// Confu's servers. Each request reserves a slot in a queue shared through the
+// database (take_s2_slot, migration 0016) and waits its turn, so concurrent
+// users are served ~1.1 s apart instead of being refused. Without that
+// migration, requests are spaced per server instance instead. Without a key
+// the shared anonymous pool is used as-is, and a 429 just means "fall back".
+let queue: SupabaseClient | null = null;
+let localNext = 0;
+
+// Milliseconds to wait for our slot, or null to skip Semantic Scholar now
+// (queue over 15 s long: another source is faster than making someone wait).
+async function s2Slot(): Promise<number | null> {
+  queue ??= createSupabase(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data, error } = await queue.rpc("take_s2_slot");
+  if (!error && typeof data === "number") return data < 0 ? null : data;
+  const wait = Math.max(0, localNext - Date.now());
+  localNext = Math.max(Date.now(), localNext) + 1100;
+  return wait;
+}
+
+async function s2Fetch(path: string, init: RequestInit = {}): Promise<Response | null> {
+  const key = process.env.SEMANTIC_SCHOLAR_API_KEY?.trim();
+  for (let attempt = 0; attempt < (key ? 2 : 1); attempt++) {
+    if (key) {
+      const wait = await s2Slot().catch(() => 0);
+      if (wait === null) return null; // long queue: use the fallback sources
+      if (wait) await new Promise((r) => setTimeout(r, wait));
+    }
+    try {
+      const res = await fetch(`https://api.semanticscholar.org/graph/v1/${path}`, {
+        ...init,
+        headers: { "User-Agent": UA, ...(key ? { "x-api-key": key } : {}), ...(init.headers as Record<string, string> | undefined) },
+        signal: AbortSignal.timeout(TIMEOUT),
+      });
+      if (res.status !== 429) return res;
+    } catch {
+      return null;
+    }
   }
+  return null;
+}
+
+async function s2<T>(path: string): Promise<T | null> {
+  const res = await s2Fetch(path);
+  return res?.ok ? ((await res.json()) as T) : null; // still limited -> callers fall back
 }
 
 function fromS2(p: S2Paper): PaperMeta {
@@ -359,16 +396,14 @@ export async function searchPapers(query: string, limit = 6, fromYear?: number, 
 export async function papersByArxivIds(ids: string[]): Promise<PaperMeta[]> {
   const clean = [...new Set(ids.map((i) => i.trim().replace(/^arxiv:/i, "").replace(/v\d+$/, "")).filter((i) => ARXIV_NEW.test(i) || ARXIV_OLD.test(i)))].slice(0, 20);
   if (!clean.length) return [];
-  const key = process.env.SEMANTIC_SCHOLAR_API_KEY;
-  if (key) {
+  if (process.env.SEMANTIC_SCHOLAR_API_KEY) {
     try {
-      const res = await fetch(`https://api.semanticscholar.org/graph/v1/paper/batch?fields=${S2_FIELDS}`, {
+      const res = await s2Fetch(`paper/batch?fields=${S2_FIELDS}`, {
         method: "POST",
-        headers: { "User-Agent": UA, "x-api-key": key, "content-type": "application/json" },
+        headers: { "content-type": "application/json" },
         body: JSON.stringify({ ids: clean.map((i) => `ARXIV:${i}`) }),
-        signal: AbortSignal.timeout(TIMEOUT),
       });
-      if (res.ok) {
+      if (res?.ok) {
         const found = ((await res.json()) as (S2Paper | null)[]).filter((p): p is S2Paper => Boolean(p?.title)).map(fromS2);
         if (found.length) return found;
       }
