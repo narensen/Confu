@@ -191,7 +191,12 @@ function NewSessionDialog({ initialKind, onClose }: { initialKind: SessionKind |
           setProgress([...states]);
         }
       }
+      // The dashboard stays mounted (hidden) while the session is open, so
+      // close the dialog now, or it's still there, "Creating…", on the way back.
+      // Refresh first so the library lists the new session when you return.
+      router.refresh();
       router.push(`/session/${session.id}`);
+      onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't create the session.");
       setBusy(false);
