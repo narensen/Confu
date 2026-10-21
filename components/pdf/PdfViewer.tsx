@@ -33,6 +33,7 @@ type Popover =
 
 type Draft = { page: number; x0: number; y0: number; x1: number; y1: number };
 
+const MAX_PAGE_WIDTH = 820;
 const ZOOMS = [0.5, 0.67, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3];
 const MAX_CAPTURE_SIDE = 2000;
 
@@ -106,11 +107,22 @@ export default function PdfViewer(props: Props) {
     return map;
   }, [highlights]);
 
-  // Fit-to-width sizing.
+  // 100% is a comfortable reading width (like a printed page on screen), not
+  // the full width of the panel, which in full screen made pages huge.
+  // While the panel resizes (entering full screen, dragging the divider) the
+  // scroll position is meaningless until the pages re-lay out, so page
+  // tracking pauses and the reading position is restored afterwards.
+  const resizing = useRef(false);
   useLayoutEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(([entry]) => setFitWidth(Math.max(240, Math.min(1400, entry.contentRect.width - 48))));
+    const ro = new ResizeObserver(([entry]) => {
+      const next = Math.round(Math.max(240, Math.min(MAX_PAGE_WIDTH, entry.contentRect.width - 48)));
+      setFitWidth((prev) => {
+        if (prev !== next) resizing.current = true;
+        return next;
+      });
+    });
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
@@ -135,18 +147,20 @@ export default function PdfViewer(props: Props) {
     else pendingJump.current = goTo.page;
   }, [goTo, numPages, scrollToPage]);
 
-  // Keep the reading position when zooming.
+  // Keep the reading position when zooming or resizing.
   const pageRef = useRef(initialPage);
   useLayoutEffect(() => {
     if (numPages) scrollToPage(pageRef.current);
-  }, [zoom, numPages, scrollToPage]);
+    const id = requestAnimationFrame(() => requestAnimationFrame(() => (resizing.current = false)));
+    return () => cancelAnimationFrame(id);
+  }, [zoom, fitWidth, numPages, scrollToPage]);
 
   const onScroll = useCallback(() => {
     setPopover(null);
     const root = scrollRef.current;
     // While the document reloads its pages are unmounted and the scroll resets
     // to the top; don't mistake that for the student scrolling to page 1.
-    if (!root || !slotRefs.current[0]?.isConnected) return;
+    if (!root || !slotRefs.current[0]?.isConnected || resizing.current) return;
     const line = root.scrollTop + root.clientHeight * 0.35;
     let inView = 1;
     for (let i = 0; i < numPages; i++) {
@@ -333,7 +347,7 @@ export default function PdfViewer(props: Props) {
               requestAnimationFrame(() => scrollToPage(target));
             }}
             onItemClick={({ pageNumber }) => scrollToPage(pageNumber, true)}
-            className="flex flex-col items-center gap-4 px-6 py-6"
+            className="flex w-max min-w-full flex-col items-center gap-4 px-6 py-6"
           >
             {Array.from({ length: numPages }, (_, i) => {
               const n = i + 1;

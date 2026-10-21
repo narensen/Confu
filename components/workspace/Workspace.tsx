@@ -669,6 +669,14 @@ export function Workspace({
         </>
       )}
 
+      {/* Full screen: the tutor sits beside the PDF (not over it), and the PDF
+          refits to the space that's left. */}
+      {focusMode && drawerOpen && (
+        <aside className="animate-slide-in flex w-[min(480px,40%)] min-w-80 shrink-0 flex-col border-r border-ink bg-panel">
+          {panel}
+        </aside>
+      )}
+
       <section className={`relative min-w-0 flex-1 flex-col md:flex ${focusMode || mobileView === "pdf" ? "flex" : "hidden"}`}>
         <DocTabs
           docs={docs}
@@ -729,11 +737,6 @@ export function Workspace({
                   </button>
                 </div>
               )}
-            </div>
-          )}
-          {focusMode && drawerOpen && (
-            <div className="animate-slide-in absolute inset-y-0 top-12 left-0 z-30 flex w-[min(480px,92%)] flex-col border-r border-ink bg-panel shadow-[6px_0_0_0_rgba(13,13,12,0.08)]">
-              {panel}
             </div>
           )}
         </div>
