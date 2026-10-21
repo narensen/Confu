@@ -63,6 +63,22 @@ export function useExamPractice(sessionId: string, initialAttempts: Attempt[]) {
         .select("topic, score, created_at")
         .single();
       if (data) setAttempts((list) => [data as Attempt, ...list]);
+      // Missed or partly right: it comes back in spaced review, with its answer.
+      if (answer.score < 1) {
+        const model = q.kind === "mcq" && q.options && q.correct !== undefined ? q.options[q.correct] : (q.answer ?? "");
+        await supabase.from("review_items").upsert(
+          {
+            session_id: sessionId,
+            document_id: q.documentId,
+            page_number: q.page,
+            source: "mistake",
+            source_key: q.question.trim().toLowerCase().slice(0, 500),
+            prompt: q.question.slice(0, 2000),
+            answer: [model, q.explanation].filter(Boolean).join("\n\n").slice(0, 4000),
+          },
+          { onConflict: "user_id,source,source_key", ignoreDuplicates: true },
+        );
+      }
     },
     [sessionId, supabase],
   );

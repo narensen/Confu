@@ -5,6 +5,7 @@ import { eyebrowClass } from "@/components/ui";
 import { ACTION_LABELS } from "@/lib/tutor/format";
 import type { ChatMessage, PlanTopic, SessionDoc, SessionKind, StudyPlan } from "@/lib/types";
 import { Markdown } from "./Markdown";
+import { StartHere } from "./StartHere";
 import type { SendRequest } from "./Workspace";
 
 type Props = {
@@ -13,6 +14,7 @@ type Props = {
   plan: StudyPlan | null;
   docs: SessionDoc[];
   activeTopic: PlanTopic | null;
+  topics: PlanTopic[];
   onSend: (req: SendRequest) => void;
   onJump: (page: number, docId?: string | null) => void;
   onCite: (page: number, docLabel?: string) => void;
@@ -21,7 +23,7 @@ type Props = {
   paperFocus: { label: string; title: string; done: number; target: number } | null;
 };
 
-export function ChatPanel({ messages, busy, plan, docs, activeTopic, onSend, onJump, onCite, onOpenPlan, kind, paperFocus }: Props) {
+export function ChatPanel({ messages, busy, plan, docs, activeTopic, topics, onSend, onJump, onCite, onOpenPlan, kind, paperFocus }: Props) {
   const topicDoc = docs.find((d) => d.id === activeTopic?.document_id);
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -91,7 +93,22 @@ export function ChatPanel({ messages, busy, plan, docs, activeTopic, onSend, onJ
           ) : kind === "exam" ? (
             <ExamEmptyState onOpenPractice={onOpenPlan} />
           ) : (
-            <EmptyState hasPlan={Boolean(plan)} onOpenPlan={onOpenPlan} />
+            <>
+              {plan && activeTopic && activeTopic.status !== "completed" && (
+                <StartHere
+                  topic={activeTopic}
+                  topics={topics}
+                  docs={docs}
+                  busy={Boolean(busy)}
+                  onOpen={(t) => {
+                    const d = docs.find((x) => x.id === t.document_id);
+                    if (t.source === "pdf" && t.page_start !== null && d) onJump(t.page_start, d.id);
+                  }}
+                  onTeach={() => onSend({ action: "teach" })}
+                />
+              )}
+              <EmptyState hasPlan={Boolean(plan)} onOpenPlan={onOpenPlan} />
+            </>
           ))}
         {messages.map((m, i) => {
           const isNew = i >= initialCount;

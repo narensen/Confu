@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { eyebrowClass } from "@/components/ui";
-import { formatMinutes, scheduleStatus, toISODate } from "@/lib/schedule";
+import { currentTopic, formatMinutes, scheduleStatus, toISODate } from "@/lib/schedule";
 import type { PlanTopic, Resource, SessionDoc, StudyPlan, TopicStatus } from "@/lib/types";
 import { GoalSetup } from "./GoalSetup";
 import { Markdown } from "./Markdown";
+import { resourceHref, StartHere } from "./StartHere";
 
 type Props = {
   sessionId: string;
@@ -34,13 +35,6 @@ const RESOURCE_LABEL: Record<Resource["type"], string> = {
   practice: "Practice",
 };
 
-function resourceHref(r: Resource) {
-  const q = encodeURIComponent(r.search);
-  return r.type === "lecture" || r.type === "video"
-    ? `https://www.youtube.com/results?search_query=${q}`
-    : `https://www.google.com/search?q=${q}`;
-}
-
 export function PlanPanel(props: Props) {
   const { sessionId, docs, plan, topics, activeTopic, onPlanCreated } = props;
   const [editing, setEditing] = useState(false);
@@ -68,6 +62,7 @@ export function PlanPanel(props: Props) {
   const pct = status.total ? Math.round((status.completed / status.total) * 100) : 0;
   const phases = plan.phases?.length ? plan.phases : [{ title: "Plan", description: "" }];
   const external = topics.filter((t) => t.source === "external" || !t.document_id).length;
+  const next = activeTopic && activeTopic.status !== "completed" ? activeTopic : currentTopic(topics);
 
   return (
     <div className="h-full overflow-y-auto">
@@ -134,6 +129,24 @@ export function PlanPanel(props: Props) {
           </p>
         )}
       </section>
+
+      {/* The next thing to do */}
+      {next && (
+        <section className="border-b border-line px-6 py-5">
+          <StartHere
+            topic={next}
+            topics={topics}
+            docs={docs}
+            busy={props.busy}
+            onOpen={(t) => {
+              props.onFocusTopic(t);
+              const d = docs.find((x) => x.id === t.document_id);
+              if (t.source === "pdf" && t.page_start !== null && d) props.onJump(t.page_start, d.id);
+            }}
+            onTeach={props.onTeach}
+          />
+        </section>
+      )}
 
       {/* Phases */}
       {phases.map((phase, pi) => {

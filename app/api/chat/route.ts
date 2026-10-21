@@ -35,6 +35,9 @@ const Body = z.object({
 
 const HISTORY_TURNS = 8;
 
+// Text actions on a selected passage that send it to spaced review.
+const ASKED_ACTIONS = new Set<string>(["ask", "summarize", "context", "simplify"]);
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
@@ -282,6 +285,27 @@ export async function POST(request: Request) {
     };
     await supabase.from("messages").insert({ ...base, role: "user", content: display });
     await supabase.from("messages").insert({ ...base, role: "assistant", content: reply });
+
+    // A passage the student asked about comes back in spaced review, with
+    // their question and the explanation they got.
+    if (sel && ASKED_ACTIONS.has(action) && sel.text.trim().length >= 25) {
+      const passage = sel.text.replace(/\s+/g, " ").trim();
+      const { error } = await supabase.from("review_items").upsert(
+        {
+          user_id: userId,
+          session_id: sessionId,
+          document_id: sel.documentId,
+          page_number: sel.page,
+          source: "asked",
+          source_key: `${sel.documentId}:${sel.page}:${passage.toLowerCase().slice(0, 400)}`,
+          prompt: passage.slice(0, 1200),
+          question: action === "ask" ? (message ?? "").trim().slice(0, 1000) : "",
+          answer: reply.split("\n\n**Sources**")[0].trim().slice(0, 4000),
+        },
+        { onConflict: "user_id,source,source_key", ignoreDuplicates: true },
+      );
+      if (error) logError("review item (asked) not saved", error);
+    }
 
     if (topic?.status === "not_started") {
       await supabase.from("plan_topics").update({ status: "in_progress" }).eq("id", topic.id);

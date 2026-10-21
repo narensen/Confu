@@ -113,6 +113,13 @@ export function Workspace({
   const [activeTopicId, setActiveTopicId] = useState<string | null>(null);
   const [focusMode, setFocusMode] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // In full screen, a short tip under the Tutor button explains it toggles.
+  const [tutorTip, setTutorTip] = useState(false);
+  useEffect(() => {
+    if (!tutorTip) return;
+    const id = setTimeout(() => setTutorTip(false), 5000);
+    return () => clearTimeout(id);
+  }, [tutorTip]);
   const [mobileView, setMobileView] = useState<"tutor" | "pdf">("pdf");
   const [split, setSplit] = useState(40);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -174,6 +181,19 @@ export function Workspace({
     [docs, jumpTo],
   );
 
+  // Deep links from the review page: /session/:id?doc=…&page=…
+  const deepLinked = useRef(false);
+  useEffect(() => {
+    if (deepLinked.current) return;
+    deepLinked.current = true;
+    const q = new URLSearchParams(window.location.search);
+    const doc = q.get("doc");
+    const p = Number(q.get("page"));
+    if (!q.has("page")) return;
+    window.history.replaceState(null, "", window.location.pathname);
+    if (doc && p >= 1 && docs.some((d) => d.id === doc)) jumpTo(p, doc);
+  }, [docs, jumpTo]);
+
   // Restore the panel split.
   useEffect(() => {
     try {
@@ -212,7 +232,8 @@ export function Workspace({
       if (document.fullscreenElement) void document.exitFullscreen();
     } else {
       setFocusMode(true);
-      setDrawerOpen(false);
+      setDrawerOpen(true); // the tutor starts open in full screen
+      setTutorTip(true);
       rootRef.current?.requestFullscreen?.().catch(() => {});
     }
   }, [focusMode]);
@@ -707,15 +728,31 @@ export function Workspace({
               onRegion={onRegion}
               toolbarStart={
                 focusMode ? (
-                  <button
-                    type="button"
-                    onClick={() => setDrawerOpen((v) => !v)}
-                    className={`mr-1 flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition duration-200 ${
-                      drawerOpen ? "border-ink bg-ink text-white" : "border-ink hover:bg-paper"
-                    }`}
-                  >
-                    Tutor{busy ? " ·" : ""}
-                  </button>
+                  <div className="relative mr-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDrawerOpen((v) => !v);
+                        setTutorTip(false);
+                      }}
+                      aria-pressed={drawerOpen}
+                      title={drawerOpen ? "Hide the tutor" : "Show the tutor"}
+                      className="flex h-7 items-center gap-1.5 rounded-md border border-ink bg-ink px-2.5 text-xs font-medium text-white shadow-[2px_2px_0_0_#facc15] transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[3px_3px_0_0_#facc15] active:translate-y-0 active:shadow-[1px_1px_0_0_#facc15]"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                        <rect x="3" y="4" width="18" height="16" rx="2" />
+                        <path d="M9 4v16" />
+                        {drawerOpen ? <path d="M15 10l-2 2 2 2" /> : <path d="M13 10l2 2-2 2" />}
+                      </svg>
+                      Tutor{busy ? " ·" : ""}
+                    </button>
+                    {tutorTip && (
+                      <div role="status" className="animate-pop absolute top-full left-0 z-40 mt-2.5 w-max max-w-60 origin-top-left rounded-lg border border-ink bg-ink px-3 py-2 text-xs text-white shadow-[3px_3px_0_0_#facc15]">
+                        <span className="absolute -top-1.5 left-4 size-2.5 rotate-45 border-t border-l border-ink bg-ink" />
+                        Press <b className="text-yellow-400">Tutor</b> anytime to hide or show the tutor.
+                      </div>
+                    )}
+                  </div>
                 ) : null
               }
             />

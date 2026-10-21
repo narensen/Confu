@@ -151,6 +151,7 @@ export function TutorPanel(props: Props) {
             plan={plan}
             docs={props.docs}
             activeTopic={props.activeTopic}
+            topics={topics}
             onSend={props.onSend}
             onJump={props.onJump}
             onCite={props.onCite}
