@@ -47,3 +47,4 @@ audio/
 
 # noise recordings (large); public/noise has the loops made from them
 /assets/noise/
+/supabase

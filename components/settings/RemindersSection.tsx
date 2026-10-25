@@ -66,7 +66,7 @@ export function RemindersSection() {
 
   return (
     <Section id="reminders" title="Reminders & calendar" description="Gentle nudges to keep your reviews and plan on track. Everything here is optional.">
-      <Row label="Weekly summary email" hint="Sundays: time studied, topics done and what's due.">
+      <Row label="Weekly summary email" hint="Once a week: time studied, topics done and what's due.">
         <Toggle on={prefs?.email_digest ?? false} disabled={!prefs} onChange={(v) => save({ email_digest: v })} label="Weekly summary email" />
       </Row>
       <Row label="Review reminder emails" hint="When reviews have been waiting for a while. At most one every three days.">

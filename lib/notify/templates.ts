@@ -1,38 +1,110 @@
 import "server-only";
 import { SITE } from "@/lib/site";
 
-// Plain, branded emails that read well in any client (inline styles only).
+// Branded emails that hold up in any client: tables and inline styles only,
+// no images, a light colour scheme. The card's hard shadow is a dark table
+// behind it, which works where box-shadow doesn't (Gmail, Outlook).
+
+const INK = "#0d0d0c";
+const MUTED = "#62625d";
+const LINE = "#e4e3de";
+const PAPER = "#f4f3ee";
+const YELLOW = "#facc15";
+const SERIF = "Georgia,'Times New Roman',serif";
+const SANS = "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif";
+const MONO = "ui-monospace,SFMono-Regular,Menlo,Consolas,monospace";
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
-const first = (name: string | null) => (name?.trim().split(/\s+/)[0] ? esc(name.trim().split(/\s+/)[0]) : "there");
+const firstName = (name: string | null) => name?.trim().split(/\s+/)[0] || "";
+const hello = (name: string | null) => (firstName(name) ? esc(firstName(name)) : "there");
+const duration = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m} min`);
 
-function layout(body: string, unsubscribe: string, why: string) {
-  return `<!doctype html><html><body style="margin:0;background:#f6f6f3;padding:24px 12px;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#0d0d0c">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#fff;border:1px solid #0d0d0c;border-radius:14px">
-<tr><td style="padding:26px 28px 8px;font-family:Georgia,serif;font-size:22px;font-weight:600">Confu<span style="color:#eab308">.</span></td></tr>
-<tr><td style="padding:8px 28px 26px;font-size:15px;line-height:1.6">${body}</td></tr>
-</table>
-<p style="max-width:520px;font-size:12px;line-height:1.5;color:#62625d;margin:16px auto 0">${why} <a href="${unsubscribe}" style="color:#62625d">Unsubscribe</a> · <a href="${SITE.url}/settings#reminders" style="color:#62625d">Email settings</a></p>
-</td></tr></table></body></html>`;
+function layout(o: { label: string; preheader: string; body: string; why: string; unsubscribe: string }) {
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light"><title>Confu</title></head>
+<body style="margin:0;padding:0;background:${PAPER};-webkit-text-size-adjust:100%">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:${PAPER}">${esc(o.preheader)}&#8199;&#65279;&#847;&#8199;&#65279;&#847;&#8199;&#65279;&#847;</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${PAPER}"><tr><td align="center" style="padding:28px 14px 36px">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">
+    <tr><td style="padding:0 4px 14px">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+        <td style="font-family:${SERIF};font-size:22px;font-weight:700;color:${INK}"><a href="${SITE.url}" style="color:${INK};text-decoration:none">Confu<span style="color:#eab308">.</span></a></td>
+        <td align="right" style="font-family:${MONO};font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:${MUTED}">${o.label}</td>
+      </tr></table>
+    </td></tr>
+    <tr><td style="background:${INK};border-radius:18px;padding:0 6px 6px 0">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;border:1px solid ${INK};border-radius:16px">
+        <tr><td style="padding:32px 32px 30px;font-family:${SANS};font-size:15px;line-height:1.6;color:${INK}">${o.body}</td></tr>
+      </table>
+    </td></tr>
+    <tr><td style="padding:18px 6px 0;font-family:${SANS};font-size:12px;line-height:1.6;color:${MUTED}">
+      ${o.why}<br><a href="${o.unsubscribe}" style="color:${MUTED}">Unsubscribe</a> &nbsp;·&nbsp; <a href="${SITE.url}/settings#reminders" style="color:${MUTED}">Email settings</a> &nbsp;·&nbsp; <a href="${SITE.url}" style="color:${MUTED}">confu.lol</a>
+    </td></tr>
+  </table>
+</td></tr></table>
+</body></html>`;
 }
 
+const eyebrow = (text: string) =>
+  `<p style="margin:0 0 8px;font-family:${MONO};font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:${MUTED}">${text}</p>`;
+const headline = (text: string) => `<h1 style="margin:0;font-family:${SERIF};font-size:30px;line-height:1.2;font-weight:400;color:${INK}">${text}</h1>`;
 const button = (href: string, label: string) =>
-  `<a href="${href}" style="display:inline-block;margin-top:14px;background:#0d0d0c;color:#fff;text-decoration:none;font-weight:600;padding:11px 18px;border-radius:9px">${label}</a>`;
+  `<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:18px"><tr><td style="background:${YELLOW};border-radius:10px;padding:0 4px 4px 0"><a href="${href}" style="display:inline-block;background:${INK};color:#ffffff;font-family:${SANS};font-size:15px;font-weight:600;text-decoration:none;padding:12px 22px;border-radius:9px;border:1px solid ${INK}">${label} &rarr;</a></td></tr></table>`;
+
+/* ------------------------------------------------------------ reminder */
 
 export function reminderEmail(o: { name: string | null; due: number; unsubscribe: string }) {
   const n = o.due;
-  const subject = `${n} reviews are due: about ${Math.max(2, Math.round(n * 0.75))} minutes`;
-  const html = layout(
-    `<p style="margin:0 0 10px">Hi ${first(o.name)},</p>
-<p style="margin:0">You have <b>${n} things to review</b>: topics you finished, passages you asked about and questions you missed. Recalling them now, just as they start to fade, is what makes them stick.</p>
+  const minutes = Math.max(2, Math.round(n * 0.75));
+  const subject = `${n} reviews are waiting (about ${minutes} minutes)`;
+  const html = layout({
+    label: "Review",
+    preheader: `About ${minutes} minutes. Recall them now, just as they start to fade.`,
+    body: `${eyebrow(`Hi ${hello(o.name)}`)}
+${headline(`${n} reviews are waiting.`)}
+<p style="margin:14px 0 0">Topics you finished, passages you asked about and questions you missed. Recalling them now, just as they start to fade, is what makes them stick.</p>
+<p style="margin:10px 0 0;color:${MUTED}">About ${minutes} minutes. You answer from memory, then check.</p>
 ${button(`${SITE.url}/review`, "Start review")}`,
-    o.unsubscribe,
-    "You get this when reviews have been waiting for a while.",
-  );
-  const text = `Hi ${o.name?.split(" ")[0] ?? "there"},\n\nYou have ${n} things to review. Start here: ${SITE.url}/review\n\nUnsubscribe: ${o.unsubscribe}`;
+    why: "You get this when reviews have been waiting a while, at most every few days.",
+    unsubscribe: o.unsubscribe,
+  });
+  const text = `Hi ${firstName(o.name) || "there"},
+
+${n} reviews are waiting: about ${minutes} minutes. Recalling them now, just as they start to fade, is what makes them stick.
+
+Start review: ${SITE.url}/review
+
+Unsubscribe: ${o.unsubscribe}`;
   return { subject, html, text };
 }
+
+/* -------------------------------------------------------------- digest */
+
+// Minutes per day as bars (one series, ink; only the best day is labelled).
+function weekChart(days: { day: string; minutes: number }[]) {
+  if (!days.length) return "";
+  const H = 72;
+  const max = Math.max(...days.map((d) => d.minutes));
+  const best = max > 0 ? days.findIndex((d) => d.minutes === max) : -1;
+  const letter = (iso: string) => {
+    const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+    return "SMTWTFS"[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+  };
+  const bars = days
+    .map((d, i) => {
+      const h = d.minutes > 0 && max > 0 ? Math.max(6, Math.round((d.minutes / max) * H)) : 3;
+      const label = i === best ? `<div style="font-family:${MONO};font-size:11px;color:${INK};padding-bottom:4px">${duration(d.minutes)}</div>` : "";
+      return `<td valign="bottom" align="center" style="padding:0 3px;height:${H + 22}px">${label}<div style="width:26px;height:${h}px;background:${d.minutes > 0 ? INK : LINE};border-radius:4px 4px 1px 1px;font-size:0;line-height:0">&nbsp;</div></td>`;
+    })
+    .join("");
+  const labels = days
+    .map((d, i) => `<td align="center" style="padding:6px 3px 0;font-family:${MONO};font-size:11px;color:${i === days.length - 1 ? INK : MUTED}">${letter(d.day)}</td>`)
+    .join("");
+  return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:18px" aria-label="Minutes studied each day this week"><tr>${bars}</tr><tr>${labels}</tr></table>`;
+}
+
+const stat = (value: string, label: string, first = false) =>
+  `<td width="33%" style="padding:12px 0 2px ${first ? "0" : "16px"};${first ? "" : `border-left:1px solid ${LINE};`}vertical-align:top"><div style="font-family:${SERIF};font-size:26px;line-height:1.1;color:${INK}">${value}</div><div style="font-size:12px;color:${MUTED};padding-top:3px">${label}</div></td>`;
 
 export function digestEmail(o: {
   name: string | null;
@@ -42,26 +114,71 @@ export function digestEmail(o: {
   reviews: number;
   due: number;
   sessions: { id: string; title: string }[];
+  days: { day: string; minutes: number }[];
   unsubscribe: string;
 }) {
-  const time = o.minutes >= 60 ? `${Math.floor(o.minutes / 60)}h ${o.minutes % 60}m` : `${o.minutes} min`;
-  const stat = (v: string, l: string) =>
-    `<td style="padding:10px 8px;border:1px solid #e4e3de;border-radius:10px;text-align:center"><div style="font-size:22px;font-weight:700">${v}</div><div style="font-size:12px;color:#62625d">${l}</div></td>`;
-  const quiet = o.minutes === 0 && o.reviews === 0 && o.topicsDone === 0;
-  const subject = quiet ? "Your week in Confu: pick up where you left off" : `Your week in Confu: ${time} studied, ${o.activeDays} ${o.activeDays === 1 ? "day" : "days"} active`;
-  const sessions = o.sessions.length
-    ? `<p style="margin:18px 0 6px;font-size:13px;color:#62625d">Pick up where you left off</p>${o.sessions
-        .map((s) => `<a href="${SITE.url}/session/${s.id}" style="display:block;color:#0d0d0c;font-weight:600;padding:4px 0">${esc(s.title)} →</a>`)
-        .join("")}`
+  const quiet = o.minutes === 0 && o.reviews === 0 && o.topicsDone === 0 && o.activeDays === 0;
+  const name = firstName(o.name);
+  const top = o.sessions[0];
+  const range = (() => {
+    if (o.days.length < 2) return "Your week";
+    const fmt = (iso: string) => {
+      const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
+      return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+    };
+    return `${fmt(o.days[0].day)} – ${fmt(o.days[o.days.length - 1].day)}`;
+  })();
+
+  const subject = quiet
+    ? `${name ? `${name}, ` : ""}ten minutes today keeps it going`
+    : `Your week: ${duration(o.minutes)} studied, ${o.activeDays} ${o.activeDays === 1 ? "day" : "days"} active`;
+
+  const summary = quiet
+    ? `${headline(`A quiet week${name ? `, ${esc(name)}` : ""}.`)}
+<p style="margin:14px 0 0">Nothing logged this week, and that's fine. Ten minutes today is enough to pick the thread back up${top ? ` in <b>${esc(top.title)}</b>` : ""}.</p>
+${top ? button(`${SITE.url}/session/${top.id}`, "Continue") : button(`${SITE.url}/dashboard`, "Open Confu")}`
+    : `${headline(`Your week${name ? `, ${esc(name)}` : ""}.`)}
+<p style="margin:18px 0 0;font-family:${SERIF};font-size:44px;line-height:1;color:${INK}">${duration(o.minutes)}</p>
+<p style="margin:6px 0 0;font-size:13px;color:${MUTED}">studied this week</p>
+${weekChart(o.days)}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:20px;border-top:1px solid ${LINE}"><tr>
+${stat(`${o.activeDays}<span style="font-size:15px;color:${MUTED}">/7</span>`, "days active", true)}${stat(String(o.topicsDone), o.topicsDone === 1 ? "topic done" : "topics done")}${stat(String(o.reviews), o.reviews === 1 ? "review" : "reviews")}
+</tr></table>`;
+
+  const due = o.due
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;background:#fef9c3;border:1px solid ${INK};border-radius:12px"><tr><td style="padding:18px 20px">
+<p style="margin:0;font-weight:600">${o.due} ${o.due === 1 ? "review is" : "reviews are"} due by tomorrow</p>
+<p style="margin:4px 0 0;font-size:14px;color:#3f3f3b">About ${Math.max(2, Math.round(o.due * 0.75))} minutes. Recall them before they fade.</p>
+${button(`${SITE.url}/review`, "Review now")}
+</td></tr></table>`
     : "";
-  const html = layout(
-    `<p style="margin:0 0 12px">Hi ${first(o.name)}, here's your week.</p>
-<table role="presentation" width="100%" cellpadding="0" cellspacing="6"><tr>${stat(time, "studied")}${stat(String(o.activeDays), "active days")}${stat(String(o.topicsDone), "topics done")}${stat(String(o.reviews), "reviews")}</tr></table>
-${o.due ? `<p style="margin:14px 0 0">${o.due} reviews are due by tomorrow.</p>${button(`${SITE.url}/review`, "Review now")}` : ""}
-${sessions}`,
-    o.unsubscribe,
-    "Your weekly summary, sent on Sundays.",
-  );
-  const text = `Your week in Confu: ${time} studied, ${o.activeDays} active days, ${o.topicsDone} topics done, ${o.reviews} reviews. ${o.due ? `${o.due} reviews due: ${SITE.url}/review` : ""}\n\nUnsubscribe: ${o.unsubscribe}`;
+
+  const sessions =
+    !quiet && o.sessions.length
+      ? `<p style="margin:26px 0 4px;font-family:${MONO};font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:${MUTED}">Pick up where you left off</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${o.sessions
+          .map(
+            (s) =>
+              `<tr><td style="border-top:1px solid ${LINE};padding:11px 0"><a href="${SITE.url}/session/${s.id}" style="color:${INK};text-decoration:none;font-weight:600">${esc(s.title)}</a></td><td align="right" style="border-top:1px solid ${LINE};padding:11px 0;width:24px"><a href="${SITE.url}/session/${s.id}" style="color:${INK};text-decoration:none">&rarr;</a></td></tr>`,
+          )
+          .join("")}</table>`
+      : "";
+
+  const html = layout({
+    label: "Weekly summary",
+    preheader: quiet ? "Ten minutes today is enough to get going again." : `${duration(o.minutes)} studied, ${o.activeDays} of 7 days active.`,
+    body: `${eyebrow(range)}${summary}${due}${sessions}`,
+    why: "Your weekly summary from Confu, sent once a week.",
+    unsubscribe: o.unsubscribe,
+  });
+
+  const text = [
+    quiet ? `A quiet week${name ? `, ${name}` : ""}. Ten minutes today is enough to pick the thread back up.` : `Your week${name ? `, ${name}` : ""}: ${duration(o.minutes)} studied, ${o.activeDays} of 7 days active, ${o.topicsDone} topics done, ${o.reviews} reviews.`,
+    o.due ? `${o.due} reviews are due by tomorrow: ${SITE.url}/review` : "",
+    top ? `Continue ${top.title}: ${SITE.url}/session/${top.id}` : "",
+    `Unsubscribe: ${o.unsubscribe}`,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
   return { subject, html, text };
 }
