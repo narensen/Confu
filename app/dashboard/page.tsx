@@ -39,6 +39,7 @@ type Row = {
   kind: SessionKind;
   exam_date: string | null;
   updated_at: string;
+  archived_at?: string | null;
   documents: { id: string; title: string; page_count: number; status: string }[];
   study_plans: { goal: string; goal_title: string; deadline: string; plan_topics: { status: string }[] } | null;
   paper_reviews: { target_pass: number; passes_done: number }[];
@@ -48,15 +49,19 @@ type Row = {
 async function LibraryLoader() {
   const user = await requireUser();
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("study_sessions")
-    .select(
-      "id, title, kind, exam_date, updated_at, documents(id, title, page_count, status), study_plans(goal, goal_title, deadline, plan_topics(status)), paper_reviews(target_pass, passes_done), exam_attempts(score)",
-    )
-    .order("updated_at", { ascending: false })
-    .order("position", { referencedTable: "documents" })
-    .order("created_at", { referencedTable: "exam_attempts", ascending: false })
-    .limit(200, { referencedTable: "exam_attempts" });
+  const load = (archive: boolean) =>
+    supabase
+      .from("study_sessions")
+      .select(
+        `id, title, kind, exam_date, updated_at,${archive ? " archived_at," : ""} documents(id, title, page_count, status), study_plans(goal, goal_title, deadline, plan_topics(status)), paper_reviews(target_pass, passes_done), exam_attempts(score)`,
+      )
+      .order("updated_at", { ascending: false })
+      .order("position", { referencedTable: "documents" })
+      .order("created_at", { referencedTable: "exam_attempts", ascending: false })
+      .limit(200, { referencedTable: "exam_attempts" });
+  let { data, error } = await load(true);
+  // Before migration 0021 there's no archive column: show the library without it.
+  if (error?.code === "42703" && error.message.includes("archived_at")) ({ data, error } = await load(false));
 
   // Never let a failed query masquerade as an empty library.
   if (error) {
@@ -88,6 +93,7 @@ async function LibraryLoader() {
       title: r.title,
       kind: r.kind,
       updatedAt: r.updated_at,
+      archived: Boolean(r.archived_at),
       docs: r.documents.map((d) => ({ id: d.id, title: d.title, pages: d.page_count, ready: d.status === "ready" })),
       study: r.study_plans
         ? {

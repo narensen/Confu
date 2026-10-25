@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { eyebrowClass } from "@/components/ui";
 import { currentTopic, formatMinutes, scheduleStatus, toISODate } from "@/lib/schedule";
+import { PAPER_MAX_PAGES, type PaperReview } from "@/lib/paper";
 import type { PlanTopic, Resource, SessionDoc, StudyPlan, TopicStatus } from "@/lib/types";
 import { GoalSetup } from "./GoalSetup";
 import { Markdown } from "./Markdown";
@@ -20,6 +21,11 @@ type Props = {
   onTopicStatus: (t: PlanTopic, s: TopicStatus) => void;
   onTeach: (t: PlanTopic) => void;
   onPlanCreated: () => void;
+  // Topics on a research paper link to its three passes.
+  papers: Set<string>;
+  reviews: Record<string, PaperReview>;
+  onOpenPaper: (docId: string) => void;
+  onMarkPaper: (docId: string) => void;
 };
 
 function formatDate(iso: string) {
@@ -182,12 +188,27 @@ export function PlanPanel(props: Props) {
   );
 }
 
-function TopicRow({ topic: t, active, today, docs, busy, onJump, onFocusTopic, onTopicStatus, onTeach }: Props & { topic: PlanTopic; active: boolean; today: string }) {
+function TopicRow({
+  topic: t,
+  active,
+  today,
+  docs,
+  busy,
+  onJump,
+  onFocusTopic,
+  onTopicStatus,
+  onTeach,
+  papers,
+  reviews,
+  onOpenPaper,
+  onMarkPaper,
+}: Props & { topic: PlanTopic; active: boolean; today: string }) {
   const [open, setOpen] = useState(active);
   const overdue = t.status !== "completed" && t.due_date < today;
   const completed = t.status === "completed";
   const doc = docs.find((d) => d.id === t.document_id);
   const inPdf = t.source === "pdf" && t.page_start !== null && Boolean(doc);
+  const paper = doc && papers.has(doc.id) ? reviews[doc.id] : undefined;
 
   return (
     <li
@@ -213,6 +234,11 @@ function TopicRow({ topic: t, active, today, docs, busy, onJump, onFocusTopic, o
             ) : (
               <span className="rounded border border-dashed border-ink/60 px-1.5 py-px font-mono text-ink">
                 {t.source === "pdf" ? "PDF removed" : "Beyond the PDFs"}
+              </span>
+            )}
+            {paper && (
+              <span className="rounded bg-ink px-1.5 py-px font-mono text-white">
+                Paper · {paper.passes_done >= paper.target_pass ? "read" : `pass ${Math.min(3, paper.passes_done + 1)}/${paper.target_pass}`}
               </span>
             )}
             <span className={overdue ? "font-medium text-warn" : ""}>Due {formatDate(t.due_date)}</span>
@@ -286,6 +312,12 @@ function TopicRow({ topic: t, active, today, docs, busy, onJump, onFocusTopic, o
                 <SmallButton onClick={() => onJump(t.page_start!, doc!.id)}>
                   Open {docs.length > 1 ? `${doc!.label} ` : ""}p. {t.page_start}
                 </SmallButton>
+              )}
+              {paper ? (
+                <SmallButton onClick={() => onOpenPaper(doc!.id)}>Read with the passes</SmallButton>
+              ) : (
+                inPdf &&
+                doc!.pageCount <= PAPER_MAX_PAGES && <SmallButton onClick={() => onMarkPaper(doc!.id)}>It&apos;s a paper: read with passes</SmallButton>
               )}
               {!active && !completed && <SmallButton onClick={() => onFocusTopic(t)}>Focus on this</SmallButton>}
               {completed ? (

@@ -7,18 +7,25 @@ import { useEffect, useRef, useState } from "react";
 // interaction (INP), and they look nothing like Confu.
 //
 //   if (!(await ask({ title: "Delete this?", danger: true }))) return;
+//   const c = await choose({ title: "Delete?", alternative: "Archive instead" }); // "confirm" | "alternative" | "cancel"
 //   toast("Saved");  toast("Couldn't save", "error");
 //
 // <DialogHost /> (mounted once in the root layout) renders them.
 
 type AskOptions = { title: string; body?: string; confirm?: string; cancel?: string; danger?: boolean };
-type Pending = AskOptions & { resolve: (ok: boolean) => void };
+export type Choice = "confirm" | "alternative" | "cancel";
+type Pending = AskOptions & { alternative?: string; resolve: (choice: Choice) => void };
 type Toast = { id: number; message: string; tone: "info" | "error" };
 
 const ASK_EVENT = "confu:ask";
 const TOAST_EVENT = "confu:toast";
 
 export function ask(options: AskOptions): Promise<boolean> {
+  return choose(options).then((c) => c === "confirm");
+}
+
+// Like ask, with a third, safer way out (e.g. "Archive instead" of deleting).
+export function choose(options: AskOptions & { alternative?: string }): Promise<Choice> {
   return new Promise((resolve) => window.dispatchEvent(new CustomEvent(ASK_EVENT, { detail: { ...options, resolve } })));
 }
 
@@ -50,9 +57,9 @@ export function DialogHost() {
     };
   }, []);
 
-  function answer(ok: boolean) {
+  function answer(choice: Choice) {
     if (!current) return;
-    current.resolve(ok);
+    current.resolve(choice);
     setQueue((q) => q.slice(1));
   }
 
@@ -63,7 +70,7 @@ export function DialogHost() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         e.preventDefault();
-        current.resolve(false);
+        current.resolve("cancel");
         setQueue((q) => q.slice(1));
       }
     };
@@ -76,7 +83,7 @@ export function DialogHost() {
       {current && (
         <div
           className="animate-fade fixed inset-0 z-[70] flex items-center justify-center bg-ink/40 p-4 backdrop-blur-[2px]"
-          onMouseDown={(e) => e.target === e.currentTarget && answer(false)}
+          onMouseDown={(e) => e.target === e.currentTarget && answer("cancel")}
         >
           <div
             role="alertdialog"
@@ -88,11 +95,20 @@ export function DialogHost() {
               {current.title}
             </p>
             {current.body && <p className="mt-2 text-sm leading-relaxed text-muted">{current.body}</p>}
-            <div className="mt-5 flex justify-end gap-2">
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              {current.alternative && (
+                <button
+                  type="button"
+                  onClick={() => answer("alternative")}
+                  className="mr-auto rounded-lg border border-ink bg-yellow-300 px-3.5 py-2 text-sm font-medium transition hover:-translate-y-px hover:shadow-hard-sm"
+                >
+                  {current.alternative}
+                </button>
+              )}
               <button
                 ref={cancelRef}
                 type="button"
-                onClick={() => answer(false)}
+                onClick={() => answer("cancel")}
                 className="rounded-lg border border-ink bg-panel px-3.5 py-2 text-sm font-medium transition hover:-translate-y-px hover:shadow-hard-sm"
               >
                 {current.cancel ?? "Cancel"}
@@ -100,7 +116,7 @@ export function DialogHost() {
               <button
                 ref={confirmRef}
                 type="button"
-                onClick={() => answer(true)}
+                onClick={() => answer("confirm")}
                 className={`rounded-lg border px-3.5 py-2 text-sm font-medium text-white transition hover:-translate-y-px hover:shadow-hard-sm ${
                   current.danger ? "border-danger bg-danger" : "border-ink bg-ink"
                 }`}

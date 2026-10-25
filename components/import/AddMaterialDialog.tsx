@@ -36,26 +36,20 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "zotero", label: "Zotero" },
 ];
 
-async function errorOf(res: Response) {
-  try {
-    return ((await res.json()) as { error?: string }).error ?? `Request failed (${res.status}).`;
-  } catch {
-    return `Request failed (${res.status}).`;
-  }
-}
-
 export function AddMaterialDialog({
   onClose,
   onFiles,
   onImported,
   onPapers,
   initialTab = "upload",
+  onFindPaper,
 }: {
   onClose: () => void;
   onFiles: (files: File[]) => void;
   onImported: (items: ImportedFile[]) => void;
   onPapers: (papers: PaperMeta[]) => void;
   initialTab?: Tab;
+  onFindPaper?: () => void; // study sessions: add a research paper by arXiv ID, DOI or title
 }) {
   const [tab, setTab] = useState<Tab>(initialTab);
   const [busy, setBusy] = useState<string | null>(null);
@@ -117,12 +111,27 @@ export function AddMaterialDialog({
 
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
           {tab === "upload" && (
-            <UploadTab
-              onFiles={(files) => {
-                onFiles(files);
-                onClose();
-              }}
-            />
+            <>
+              <UploadTab
+                onFiles={(files) => {
+                  onFiles(files);
+                  onClose();
+                }}
+              />
+              {onFindPaper && (
+                <button
+                  type="button"
+                  onClick={onFindPaper}
+                  className="mt-4 flex w-full items-center justify-between gap-3 rounded-xl border border-ink bg-paper px-4 py-3 text-left transition hover:-translate-y-px hover:shadow-hard-sm"
+                >
+                  <span className="text-sm">
+                    <span className="font-medium">Adding a research paper?</span>{" "}
+                    <span className="text-muted">Find it by arXiv ID, DOI or title, and read it with the three passes.</span>
+                  </span>
+                  <span aria-hidden>→</span>
+                </button>
+              )}
+            </>
           )}
           {tab === "web" && <WebTab {...shared} />}
           {tab === "youtube" && <YouTubeTab {...shared} />}
@@ -210,9 +219,18 @@ type Article = { kind: "article"; url: string; title: string; byline: string; bl
 type Links = { kind: "links"; url: string; title: string; links: { url: string; title: string; inCourse: boolean }[] };
 const MAX_COURSE_PAGES = 40;
 
+// The site turned Confu away (a bot check or a login): offer pasting instead.
+class BlockedError extends Error {}
+
+async function webError(res: Response) {
+  const body = (await res.json().catch(() => ({}))) as { error?: string; blocked?: boolean };
+  const message = body.error ?? `Request failed (${res.status}).`;
+  return body.blocked ? new BlockedError(message) : new Error(message);
+}
+
 async function fetchArticle(url: string): Promise<Article | { pdf: File }> {
   const res = await fetch("/api/import/web", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ url, mode: "page" }) });
-  if (!res.ok) throw new Error(await errorOf(res));
+  if (!res.ok) throw await webError(res);
   if (res.headers.get("content-type")?.includes("application/pdf")) {
     const name = decodeURIComponent(res.headers.get("x-confu-filename") ?? "document.pdf");
     return { pdf: new File([await res.blob()], name.endsWith(".pdf") ? name : `${name}.pdf`, { type: "application/pdf" }) };
@@ -226,6 +244,7 @@ function WebTab({ busy, setBusy, setError, done }: Shared) {
   const [course, setCourse] = useState<Links | null>(null);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [title, setTitle] = useState("");
+  const [paste, setPaste] = useState(false);
 
   async function importPage() {
     setError(null);
@@ -237,6 +256,7 @@ function WebTab({ busy, setBusy, setError, done }: Shared) {
       const file = await buildPdfFile({ kind: "Web page", title: got.title, byline: got.byline, sourceUrl: got.url, chapters: [{ title: got.title, blocks: got.blocks }] });
       done([{ file, title: got.title, sourceUrl: got.url, meta: { source: "web", words: got.words } }], "web_page");
     } catch (err) {
+      if (err instanceof BlockedError) setPaste(true);
       setError(err instanceof Error ? err.message : "Couldn't import that page.");
     } finally {
       setBusy(null);
@@ -248,12 +268,13 @@ function WebTab({ busy, setBusy, setError, done }: Shared) {
     setBusy("Finding the course's pages…");
     try {
       const res = await fetch("/api/import/web", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ url, mode: "links" }) });
-      if (!res.ok) throw new Error(await errorOf(res));
+      if (!res.ok) throw await webError(res);
       const found = (await res.json()) as Links;
       setCourse(found);
       setTitle(found.title.split(/\s+[|—–-]\s+/)[0]);
       setPicked(new Set(found.links.filter((l) => l.inCourse).slice(0, MAX_COURSE_PAGES).map((l) => l.url)));
     } catch (err) {
+      if (err instanceof BlockedError) setPaste(true);
       setError(err instanceof Error ? err.message : "Couldn't read that page.");
     } finally {
       setBusy(null);
@@ -339,9 +360,16 @@ function WebTab({ busy, setBusy, setError, done }: Shared) {
         <p className="text-xs leading-relaxed text-muted">
           {mode === "page"
             ? "The article's text, headings, lists, code and maths become a clean PDF. A link to a PDF imports the PDF itself."
-            : "Paste the course's first page. Confu lists its pages from the site's menu; pick which to import as one document with a chapter per page."}
+            : "Paste the course's first page. Confu lists its pages from the site's menu; pick which to import as one document with a chapter per page."}{" "}
+          {!paste && (
+            <button type="button" onClick={() => setPaste(true)} className="underline underline-offset-2 hover:text-ink">
+              Site won&apos;t load? Paste the page instead.
+            </button>
+          )}
         </p>
       </form>
+
+      {paste && <PastePage url={url} busy={busy} setBusy={setBusy} setError={setError} done={done} />}
 
       {course && (
         <div className="animate-enter space-y-3 rounded-xl border border-line p-3">
@@ -394,6 +422,93 @@ function WebTab({ busy, setBusy, setError, done }: Shared) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Some sites (behind Anubis, Cloudflare or a login) only open in a real
+// browser. The student has the page open anyway: they copy it, Confu cleans
+// it up the same way, and nothing is fetched from the site.
+function PastePage({ url, busy, setBusy, setError, done }: Shared & { url: string }) {
+  const [text, setText] = useState("");
+  const [html, setHtml] = useState<string | null>(null);
+  const [title, setTitle] = useState("");
+  const link = /^https?:\/\//i.test(url.trim()) ? url.trim() : url.trim() ? `https://${url.trim()}` : "";
+  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+
+  async function importPasted() {
+    setError(null);
+    setBusy("Cleaning up the page…");
+    try {
+      const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const body =
+        html ??
+        text
+          .split(/\n{2,}/)
+          .map((p) => `<p>${esc(p.trim()).replace(/\n/g, "<br>")}</p>`)
+          .join("");
+      if (body.length > 3_900_000) throw new Error("That's too much to import at once. Paste one article or chapter at a time.");
+      const res = await fetch("/api/import/web", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ mode: "paste", url: link, html: body, title: title.trim() || undefined }) });
+      if (!res.ok) throw await webError(res);
+      const got = (await res.json()) as Article;
+      setBusy(`Typesetting “${got.title}”…`);
+      const file = await buildPdfFile({ kind: "Web page", title: got.title, byline: got.byline, sourceUrl: got.url || undefined, chapters: [{ title: got.title, blocks: got.blocks }] });
+      done([{ file, title: got.title, sourceUrl: got.url || null, meta: { source: "web_paste", words: got.words } }], "web_paste");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't import that.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <div className="animate-enter space-y-3 rounded-xl border border-ink bg-paper p-4">
+      <div>
+        <p className="text-sm font-medium">Paste the page instead</p>
+        <ol className="mt-1.5 list-decimal space-y-0.5 pl-5 text-xs leading-relaxed text-muted">
+          <li>
+            {link ? (
+              <a href={link} target="_blank" rel="noreferrer" className="font-medium text-ink underline underline-offset-2">
+                Open the page
+              </a>
+            ) : (
+              "Open the page"
+            )}{" "}
+            in your browser and let it load.
+          </li>
+          <li>Select the article (Ctrl+A or ⌘A) and copy it (Ctrl+C or ⌘C).</li>
+          <li>Paste it below. Headings, lists, code and maths come along.</li>
+        </ol>
+      </div>
+      <textarea
+        rows={6}
+        value={text}
+        onPaste={(e) => {
+          const rich = e.clipboardData.getData("text/html");
+          if (!rich) return; // plain text pastes normally
+          e.preventDefault();
+          // Inline images can be megabytes of base64; the PDF is text only.
+          setHtml(rich.replace(/src="data:[^"]*"/gi, 'src=""'));
+          setText(e.clipboardData.getData("text/plain") || rich.replace(/<[^>]+>/g, " "));
+        }}
+        onChange={(e) => {
+          setText(e.target.value);
+          setHtml(null); // edited by hand: use the text as typed
+        }}
+        placeholder="Paste here"
+        aria-label="Pasted page"
+        className={`${inputClass} resize-y text-[13px] leading-relaxed`}
+      />
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="min-w-48 flex-1">
+          <span className="mb-1 block text-xs font-medium">Title (optional)</span>
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Taken from the first heading" className={`${inputClass} py-1.5`} />
+        </label>
+        <button type="button" onClick={importPasted} disabled={Boolean(busy) || words < 40} className={`${buttonClass} py-1.5`}>
+          Import pasted page
+        </button>
+      </div>
+      {words > 0 && words < 40 && <p className="text-xs text-muted">That&apos;s only {words} words: copy the whole article.</p>}
     </div>
   );
 }

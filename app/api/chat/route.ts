@@ -15,6 +15,7 @@ import { daysUntil, topicStats, type Attempt } from "@/lib/exam";
 import { PAPER_TOOLS, runPaperTool, type Source } from "@/lib/tutor/tools";
 import { buildSystemPrompt, buildUserInstruction } from "@/lib/tutor/prompts";
 import { TUTOR_ACTIONS } from "@/lib/types";
+import { emptyReview } from "@/lib/paper";
 import { logError } from "@/lib/log";
 
 export const maxDuration = 60;
@@ -81,8 +82,10 @@ export async function POST(request: Request) {
   const focus = sel ? { docId: sel.documentId, page: sel.page } : figure ? { docId: figure.docId, page: figure.page } : null;
 
   const paperId = sel?.documentId ?? figure?.docId ?? documentId;
-  const paper = isPaper ? materials.find((m) => m.id === paperId) : undefined;
-  const review = paper ? state.reviews.get(paper.id) : undefined;
+  // In a study session, the pass coaching works on whichever paper is open.
+  const passAction = action.startsWith("pass");
+  const paper = isPaper || passAction ? materials.find((m) => m.id === paperId) : undefined;
+  const review = paper ? (state.reviews.get(paper.id) ?? emptyReview(paper.id)) : undefined;
 
   // Each pass reads different parts of the paper: pass 1 the abstract,
   // introduction and conclusion; later passes the setup plus whatever matches.
@@ -158,7 +161,7 @@ export async function POST(request: Request) {
         current: current ? { label: current.label, page: current.page } : null,
       });
   const instruction =
-    (isPaper && buildPaperInstruction(action, paper, review, message)) ||
+    ((isPaper || passAction) && buildPaperInstruction(action, paper, review, message)) ||
     buildUserInstruction({ action, message, materials, selection: sel, topic, figure });
   const multi = materials.length > 1;
   const display = displayUserTurn({
@@ -167,7 +170,7 @@ export async function POST(request: Request) {
     selection: sel,
     figurePage: figure?.page,
     docLabel: multi ? (sel?.label ?? figure?.label) : undefined,
-    topicTitle: isPaper ? paper?.title : topic?.title,
+    topicTitle: isPaper || (passAction && paper) ? paper?.title : topic?.title,
   });
 
   const pastTurns = ((history.data ?? []) as { role: "user" | "assistant"; content: string }[])

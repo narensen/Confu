@@ -10,7 +10,11 @@ import type { SendRequest } from "@/components/workspace/Workspace";
 
 type Props = {
   sessionId: string;
+  // Inside a study session: only its papers, under the study goal (no research goal or triage).
+  inStudy?: boolean;
   docs: SessionDoc[];
+  otherDocs?: SessionDoc[]; // study material short enough to be a paper
+  onMarkPaper?: (docId: string) => void;
   activeDocId: string | null;
   reviews: Record<string, PaperReview>;
   researchGoal: string;
@@ -35,12 +39,23 @@ const PASS_ACTIONS: Record<PassNumber, { action: TutorAction; label: string; pri
 };
 
 export function PassesPanel(props: Props) {
-  const { docs, activeDocId, reviews, busy, onSelectDoc } = props;
-  const active = docs.find((d) => d.id === activeDocId) ?? docs[0];
+  const { docs, activeDocId, reviews, busy, onSelectDoc, inStudy } = props;
+  // In a study session the viewer may be on a textbook: then no paper is open.
+  const active = docs.find((d) => d.id === activeDocId) ?? (inStudy ? undefined : docs[0]);
 
   return (
     <div className="h-full overflow-y-auto">
-      <ResearchGoal {...props} />
+      {inStudy ? (
+        <section className="animate-enter border-b border-ink px-6 pt-6 pb-5">
+          <p className={eyebrowClass}>Papers in this study · three-pass method</p>
+          <h2 className="mt-1 font-serif text-2xl leading-tight">Read papers like a researcher</h2>
+          <p className="mt-1.5 text-sm leading-relaxed text-muted">
+            Give each paper one pass to know what it says, two to understand its evidence, or three to rebuild it. Pick how deep each one goes for your goal.
+          </p>
+        </section>
+      ) : (
+        <ResearchGoal {...props} />
+      )}
 
       {/* Reading list */}
       <section className="border-b border-ink px-6 py-5">
@@ -78,8 +93,35 @@ export function PassesPanel(props: Props) {
         )}
       </section>
 
-      {active && reviews[active.id] && (
+      {active && reviews[active.id] ? (
         <PaperWorkspace key={active.id} doc={active} review={reviews[active.id]} busy={busy} onUpdate={props.onUpdate} onSend={props.onSend} />
+      ) : (
+        inStudy &&
+        docs.length > 0 && <p className="px-6 py-5 text-sm text-muted">Pick a paper above to open it beside its passes.</p>
+      )}
+
+      {inStudy && props.otherDocs && props.otherDocs.length > 0 && (
+        <section className="border-t border-line px-6 py-5">
+          <p className={eyebrowClass}>Is another PDF a paper?</p>
+          <ul className="mt-3 space-y-1.5">
+            {props.otherDocs.map((d) => (
+              <li key={d.id} className="flex items-center gap-3 rounded-lg border border-line px-3 py-2">
+                <span className="shrink-0 rounded border border-ink/30 px-1 font-mono text-[10px] text-muted">{d.label}</span>
+                <span className="min-w-0 flex-1 truncate text-sm">{d.title}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    props.onMarkPaper?.(d.id);
+                    onSelectDoc(d.id);
+                  }}
+                  className="shrink-0 rounded-md border border-ink px-2.5 py-1 text-xs font-medium transition hover:bg-ink hover:text-white"
+                >
+                  Read as a paper
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
     </div>
   );

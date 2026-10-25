@@ -13,7 +13,7 @@ import { countdownLabel, daysUntil } from "@/lib/exam";
 import { ago } from "@/lib/format-usage";
 import type { SessionKind } from "@/lib/types";
 import { useToday } from "@/lib/use-today";
-import { DeleteSessionButton } from "./DeleteSessionButton";
+import { SessionActions } from "./SessionActions";
 import { KINDS, NewSessionLauncher, openNewSession } from "./NewSessionDialog";
 
 gsap.registerPlugin(useGSAP, Flip);
@@ -23,6 +23,7 @@ export type LibrarySession = {
   title: string;
   kind: SessionKind;
   updatedAt: string;
+  archived: boolean;
   docs: { id: string; title: string; pages: number; ready: boolean }[];
   study: { goal: string; done: number; total: number; deadline: string } | null;
   exam: { examDate: string | null; answered: number; accuracy: number | null } | null;
@@ -40,7 +41,11 @@ function useGreeting(name: string | null) {
   return first ? `${part}, ${first}` : part;
 }
 
-export function Library({ name, sessions }: { name: string | null; sessions: LibrarySession[] }) {
+export function Library({ name, sessions: all }: { name: string | null; sessions: LibrarySession[] }) {
+  // Archived sessions are kept (streak included) but sit apart, at the bottom.
+  const sessions = useMemo(() => all.filter((s) => !s.archived), [all]);
+  const archived = useMemo(() => all.filter((s) => s.archived), [all]);
+  const [showArchived, setShowArchived] = useState(false);
   const greeting = useGreeting(name);
   const today = useToday();
   const [filter, setFilter] = useState<Filter>("all");
@@ -114,7 +119,7 @@ export function Library({ name, sessions }: { name: string | null; sessions: Lib
             {greeting}
           </h1>
           <p data-intro className="mt-2 text-sm text-muted">
-            {sessions.length ? "Pick up where you left off, or start something new." : "Start your first session: it takes a minute."}
+            {sessions.length || archived.length ? "Pick up where you left off, or start something new." : "Start your first session: it takes a minute."}
           </p>
         </div>
         <div data-intro>
@@ -228,6 +233,31 @@ export function Library({ name, sessions }: { name: string | null; sessions: Lib
           )}
         </>
       )}
+
+      {archived.length > 0 && (
+        <section className="mt-12 border-t border-ink/15 pt-5">
+          <button
+            type="button"
+            onClick={() => setShowArchived((v) => !v)}
+            aria-expanded={showArchived}
+            className="flex items-center gap-2 text-sm text-muted transition hover:text-ink"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden className={`transition-transform duration-300 ease-fluid ${showArchived ? "rotate-90" : ""}`}>
+              <path d="m9 6 6 6-6 6" />
+            </svg>
+            Archived <span className="font-mono text-[10px]">{archived.length}</span>
+          </button>
+          {showArchived && (
+            <ul className="animate-enter mt-4 grid gap-4 opacity-80 sm:grid-cols-2 lg:grid-cols-3">
+              {archived.map((s) => (
+                <li key={s.id}>
+                  <SessionCard s={s} today={today} />
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
     </div>
   );
 }
@@ -271,7 +301,7 @@ function SessionCard({ s, today }: { s: LibrarySession; today: string | null }) 
       <div className="flex items-center justify-between gap-3">
         <span className="rounded border border-ink/30 px-1.5 py-px font-mono text-[10px] tracking-wider text-muted uppercase">{KIND_LABEL[s.kind]}</span>
         <div className="relative z-10 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
-          <DeleteSessionButton id={s.id} title={s.title} />
+          <SessionActions id={s.id} title={s.title} archived={s.archived} />
         </div>
       </div>
       <Link href={`/session/${s.id}`} className="mt-3 font-serif text-xl leading-snug after:absolute after:inset-0">

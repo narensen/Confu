@@ -7,7 +7,7 @@ import { ExamProgress } from "@/components/exam/ExamProgress";
 import { PracticePanel } from "@/components/exam/PracticePanel";
 import type { ExamPractice } from "@/components/exam/useExamPractice";
 import type { KeyInfo } from "@/lib/groq-keys";
-import type { PaperReview } from "@/lib/paper";
+import { PAPER_MAX_PAGES, type PaperReview } from "@/lib/paper";
 import type { ChatMessage, Highlight, LearnerMemory, PlanTopic, SessionDoc, SessionKind, StudyPlan, TopicStatus } from "@/lib/types";
 import { ChatPanel } from "./ChatPanel";
 import type { HighlightColor } from "@/lib/highlights";
@@ -28,6 +28,9 @@ export type PaperProps = {
   onUpdate: (docId: string, patch: Partial<PaperReview>, persist?: boolean) => void;
   onResearchGoal: (goal: string) => void;
   fetching: string | null; // papers still being fetched and added ("Adding … 2/4")
+  // Study sessions: which materials are research papers (read with the passes).
+  paperIds: Set<string>;
+  onMarkPaper: (docId: string) => void;
 };
 
 type Props = {
@@ -60,6 +63,12 @@ type Props = {
 export function TutorPanel(props: Props) {
   const { tab, onTab, plan, topics, highlights } = props;
   const done = topics.filter((t) => t.status === "completed").length;
+  // Papers inside a study session get the paper session's three-pass tools.
+  const studyPapers = props.kind === "study" ? props.docs.filter((d) => props.paper.paperIds.has(d.id)) : [];
+  const passDocs = props.kind === "paper" ? props.docs : studyPapers;
+  const passesBadge = passDocs.length
+    ? `${passDocs.filter((d) => (props.paper.reviews[d.id]?.passes_done ?? 0) >= (props.paper.reviews[d.id]?.target_pass ?? 1)).length}/${passDocs.length}`
+    : undefined;
   const answered = props.exam.practice.attempts.length;
   // Exam sessions keep it simple: ask, practise, see progress.
   const tabs: { id: Tab; label: string; badge?: string }[] =
@@ -72,17 +81,13 @@ export function TutorPanel(props: Props) {
       : [
           { id: "chat", label: "Tutor" },
           props.kind === "paper"
-            ? {
-                id: "passes",
-                label: "Passes",
-                badge: props.docs.length
-                  ? `${props.docs.filter((d) => (props.paper.reviews[d.id]?.passes_done ?? 0) >= (props.paper.reviews[d.id]?.target_pass ?? 1)).length}/${props.docs.length}`
-                  : undefined,
-              }
+            ? { id: "passes", label: "Passes", badge: passesBadge }
             : { id: "plan", label: "Plan", badge: plan ? `${done}/${topics.length}` : "Set goal" },
+          ...(studyPapers.length ? [{ id: "passes" as const, label: "Papers", badge: passesBadge }] : []),
           { id: "highlights", label: "Highlights", badge: highlights.length ? String(highlights.length) : undefined },
           { id: "memory", label: "Progress" },
         ];
+  const activePaper = props.docs.find((d) => d.id === props.paper.activeDocId && (props.kind === "paper" || props.paper.paperIds.has(d.id)));
 
   // Sliding underline under the active tab.
   const navRef = useRef<HTMLDivElement>(null);
@@ -158,11 +163,11 @@ export function TutorPanel(props: Props) {
             onJump={props.onJump}
             onCite={props.onCite}
             onOpenPlan={() => onTab(props.kind === "paper" ? "passes" : props.kind === "exam" ? "practice" : "plan")}
+            onOpenPaper={() => onTab("passes")}
             kind={props.kind}
             paperFocus={(() => {
-              const doc = props.docs.find((d) => d.id === props.paper.activeDocId);
-              const r = doc ? props.paper.reviews[doc.id] : undefined;
-              return props.kind === "paper" && doc && r ? { label: doc.label, title: doc.title, done: r.passes_done, target: r.target_pass } : null;
+              const r = activePaper ? props.paper.reviews[activePaper.id] : undefined;
+              return activePaper && r ? { label: activePaper.label, title: activePaper.title, done: r.passes_done, target: r.target_pass } : null;
             })()}
           />
         )}
@@ -179,7 +184,10 @@ export function TutorPanel(props: Props) {
         {tab === "passes" && (
           <PassesPanel
             sessionId={props.sessionId}
-            docs={props.docs}
+            inStudy={props.kind === "study"}
+            docs={passDocs}
+            otherDocs={props.kind === "study" ? props.docs.filter((d) => !props.paper.paperIds.has(d.id) && d.hasPdf && d.pageCount <= PAPER_MAX_PAGES) : []}
+            onMarkPaper={props.paper.onMarkPaper}
             activeDocId={props.paper.activeDocId}
             reviews={props.paper.reviews}
             researchGoal={props.paper.researchGoal}
@@ -202,6 +210,17 @@ export function TutorPanel(props: Props) {
             onJump={props.onJump}
             onFocusTopic={props.onFocusTopic}
             onTopicStatus={props.onTopicStatus}
+            papers={props.paper.paperIds}
+            reviews={props.paper.reviews}
+            onOpenPaper={(docId) => {
+              props.paper.onSelectDoc(docId);
+              onTab("passes");
+            }}
+            onMarkPaper={(docId) => {
+              props.paper.onMarkPaper(docId);
+              props.paper.onSelectDoc(docId);
+              onTab("passes");
+            }}
             onTeach={(t) => {
               props.onFocusTopic(t);
               if (t.source === "pdf" && t.page_start && t.document_id) props.onJump(t.page_start, t.document_id);

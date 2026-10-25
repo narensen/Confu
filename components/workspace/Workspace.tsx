@@ -6,7 +6,7 @@ import { deleteDocument } from "@/components/dashboard/actions";
 import type { RegionCapture, TextSelection } from "@/components/pdf/PdfViewer";
 import { JSON_HEADERS, KEY_ERROR_EVENT, notifyAiUsed, readAiError } from "@/lib/ai-errors";
 import type { KeyInfo } from "@/lib/groq-keys";
-import { emptyReview, type PaperReview } from "@/lib/paper";
+import { emptyReview, isPaperDoc, type PaperReview } from "@/lib/paper";
 import type { Attempt } from "@/lib/exam";
 import { useExamPractice } from "@/components/exam/useExamPractice";
 import { addPaperFromMeta, type PaperMeta } from "@/lib/pdf/add-paper";
@@ -462,13 +462,13 @@ export function Workspace({
 
   // Shared by "+ Add PDF" uploads and papers added by arXiv ID / DOI.
   const addDocs = useCallback(
-    async (adders: ((userId: string, position: number) => Promise<string>)[]) => {
-      if (uploadStatus) return;
+    async (adders: ((userId: string, position: number) => Promise<string>)[]): Promise<SessionDoc[]> => {
+      if (uploadStatus) return [];
+      const added: SessionDoc[] = [];
       try {
         const { data: auth } = await supabase.auth.getUser();
         if (!auth.user) throw new Error("Your session expired. Sign in again.");
         let position = Math.max(-1, ...docs.map((d) => d.position)) + 1;
-        const added: SessionDoc[] = [];
         for (const add of adders) {
           const doc = await loadDoc(await add(auth.user.id, position++));
           if (doc) added.push(doc);
@@ -480,6 +480,7 @@ export function Workspace({
       } finally {
         setUploadStatus(null);
       }
+      return added;
     },
     [docs, loadDoc, selectDoc, supabase, uploadStatus],
   );
@@ -521,7 +522,7 @@ export function Workspace({
   const addPapers = useCallback(
     async (papers: PaperMeta[]) => {
       const skipped: string[] = [];
-      await addDocs(
+      const added = await addDocs(
         papers.map((paper) => async (userId, position) => {
           const res = await addPaperFromMeta(supabase, { userId, sessionId: session.id, position, paper, onStatus: setUploadStatus });
           if (!res.hasPdf) skipped.push(`• ${paper.title}${res.note ? ` (${res.note})` : ""}`);
@@ -531,8 +532,9 @@ export function Workspace({
       if (skipped.length) {
         toast(`Added without a PDF (abstract only):\n${skipped.join("\n")}\n\nYou can still do a first pass, and the tutor can look these up. Upload the PDF later for a deeper read.`);
       }
+      if (added.length && !isPaper) setTab("passes");
     },
-    [addDocs, session.id, supabase],
+    [addDocs, isPaper, session.id, supabase],
   );
 
   // Give a metadata-only paper its PDF, keeping its id (and so its notes).
@@ -652,6 +654,24 @@ export function Workspace({
     [session.id, supabase],
   );
 
+  // Study sessions can hold papers too: they get the three passes.
+  const paperIds = useMemo(
+    () => new Set(isExam ? [] : docs.filter((d) => isPaper || isPaperDoc(d, storedReviews)).map((d) => d.id)),
+    [docs, isExam, isPaper, storedReviews],
+  );
+  const markPaper = useCallback((docId: string) => updateReview(docId, {}), [updateReview]);
+
+  // Uploaded through "Add paper" in a study session: mark them as papers.
+  const addPaperPdfs = useCallback(
+    async (files: File[]) => {
+      const added = await addPdfs(files);
+      if (isPaper || !added.length) return;
+      for (const d of added) markPaper(d.id);
+      setTab("passes");
+    },
+    [addPdfs, isPaper, markPaper],
+  );
+
   const saveExamDate = useCallback(
     (date: string | null) => {
       setExamDate(date);
@@ -710,6 +730,8 @@ export function Workspace({
         onUpdate: updateReview,
         onResearchGoal: saveResearchGoal,
         fetching: uploadStatus,
+        paperIds,
+        onMarkPaper: markPaper,
       }}
       exam={{ practice, examDate, onExamDate: saveExamDate }}
     />
@@ -834,7 +856,7 @@ export function Workspace({
         <AddPaperDialog
           onClose={() => setAddPaperOpen(false)}
           onAdd={(papers) => void addPapers(papers)}
-          onUpload={(files) => void addPdfs(files)}
+          onUpload={(files) => void addPaperPdfs(files)}
           onMoreSources={() => {
             setAddPaperOpen(false);
             setAddMaterialOpen(true);
@@ -848,6 +870,14 @@ export function Workspace({
           onFiles={(files) => void addPdfs(files)}
           onImported={(items) => void addImported(items)}
           onPapers={(papers) => void addPapers(papers)}
+          onFindPaper={
+            isPaper
+              ? undefined
+              : () => {
+                  setAddMaterialOpen(false);
+                  setAddPaperOpen(true);
+                }
+          }
         />
       )}
 

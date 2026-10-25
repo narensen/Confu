@@ -8,7 +8,28 @@ import net from "node:net";
 // Remaining gap: DNS could change between our check and the connection
 // (rebinding); the window is small and we never send credentials.
 
-export class ImportError extends Error {}
+// blocked: the site turned us away (a login, or a bot check). The student
+// can still bring the page in by pasting it from their own browser.
+export class ImportError extends Error {
+  constructor(
+    message: string,
+    readonly blocked = false,
+  ) {
+    super(message);
+  }
+}
+
+const BLOCKED = "That site only lets people in through a browser (it blocks automated reading or needs a login), so Confu can't fetch it.";
+
+// Bot checks that answer with a normal-looking page: Anubis, Cloudflare,
+// DDoS-Guard, Vercel. We don't try to get past them; they're the site's call.
+export function isBotCheck(html: string) {
+  return (
+    html.length < 400_000 &&
+    /id="anubis_challenge"|\/\.within\.website\/x\/cmd\/anubis|Making sure you(?:&#39;|'|’)re not a bot|cf-chl-|challenge-platform\/h\/|<title>Just a moment\.\.\.<\/title>|Checking your browser before accessing|ddos-guard|Vercel Security Checkpoint/i.test(html)
+  );
+}
+export const botCheckError = () => new ImportError(BLOCKED, true);
 
 const PRIVATE_V4: [string, number][] = [
   ["0.0.0.0", 8], ["10.0.0.0", 8], ["100.64.0.0", 10], ["127.0.0.0", 8], ["169.254.0.0", 16], ["172.16.0.0", 12],
@@ -68,7 +89,9 @@ export async function safeFetch(
       url = new URL(next, url);
       continue;
     }
-    if (res.status === 401 || res.status === 403) throw new ImportError("That page needs a login, or blocks automated reading. Try saving it as a PDF and uploading that.");
+    if (res.status === 401 || res.status === 403) throw botCheckError();
+    // Cloudflare and DDoS-Guard challenges also come back as 429/503.
+    if ((res.status === 429 || res.status === 503) && (res.headers.has("cf-mitigated") || /cloudflare|ddos-guard/i.test(res.headers.get("server") ?? ""))) throw botCheckError();
     if (res.status === 404) throw new ImportError("That page wasn't found (404). Check the link.");
     if (!res.ok || !res.body) throw new ImportError(`That website answered with an error (${res.status}).`);
 

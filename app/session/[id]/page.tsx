@@ -110,7 +110,8 @@ async function SessionWorkspace({ params }: { params: Promise<{ id: string }> })
     docIds.length
       ? supabase.from("highlights").select("*").in("document_id", docIds).order("page_number").order("created_at")
       : Promise.resolve({ data: [] }),
-    isPaper ? supabase.from("paper_reviews").select("*").eq("session_id", id) : Promise.resolve({ data: [] }),
+    // Study sessions can hold papers too.
+    !isExam ? supabase.from("paper_reviews").select("*").eq("session_id", id) : Promise.resolve({ data: [] }),
     isExam
       ? supabase.from("exam_attempts").select("topic, score, created_at").eq("session_id", id).order("created_at", { ascending: false }).limit(500)
       : Promise.resolve({ data: [] }),

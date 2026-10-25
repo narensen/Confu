@@ -31,10 +31,11 @@ export async function loadTutorState(supabase: SupabaseClient, sessionId: string
 
   const sessionRow = session.data as { id: string; title: string; kind: SessionKind; research_goal: string; exam_date: string | null } | null;
   const reviews = new Map<string, PaperReview>();
-  if (sessionRow?.kind === "paper") {
+  // Paper sessions: every document is a paper. Study sessions: the ones with notes.
+  if (sessionRow && sessionRow.kind !== "exam") {
     const { data } = await supabase.from("paper_reviews").select("*").eq("session_id", sessionId);
     for (const r of (data ?? []) as PaperReview[]) reviews.set(r.document_id, r);
-    for (const m of materials) if (!reviews.has(m.id)) reviews.set(m.id, emptyReview(m.id));
+    if (sessionRow.kind === "paper") for (const m of materials) if (!reviews.has(m.id)) reviews.set(m.id, emptyReview(m.id));
   }
 
   const m = memory.data as LearnerMemory | null;

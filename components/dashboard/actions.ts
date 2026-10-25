@@ -39,6 +39,18 @@ export async function deleteSession(sessionId: string): Promise<{ error?: string
   return error ? { error: error.message } : {};
 }
 
+// Archive hides a session from the library and keeps everything in it,
+// including the days it counts toward the streak.
+export async function setSessionArchived(sessionId: string, archived: boolean): Promise<{ error?: string }> {
+  await requireUser();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("study_sessions")
+    .update({ archived_at: archived ? new Date().toISOString() : null })
+    .eq("id", sessionId);
+  return error ? { error: error.code === "42703" ? "Archiving needs the newest database update (migration 0021)." : error.message } : {};
+}
+
 export async function deleteDocument(documentId: string): Promise<{ error?: string }> {
   await requireUser();
   const supabase = await createClient();

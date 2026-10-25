@@ -21,9 +21,10 @@ type Props = {
   onOpenPlan: () => void;
   kind: SessionKind;
   paperFocus: { label: string; title: string; done: number; target: number } | null;
+  onOpenPaper?: () => void;
 };
 
-export function ChatPanel({ messages, busy, plan, docs, activeTopic, topics, onSend, onJump, onCite, onOpenPlan, kind, paperFocus }: Props) {
+export function ChatPanel({ messages, busy, plan, docs, activeTopic, topics, onSend, onJump, onCite, onOpenPlan, onOpenPaper, kind, paperFocus }: Props) {
   const topicDoc = docs.find((d) => d.id === activeTopic?.document_id);
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -51,7 +52,7 @@ export function ChatPanel({ messages, busy, plan, docs, activeTopic, topics, onS
       {paperFocus && (
         <div className="flex shrink-0 items-center gap-3 border-b border-line bg-paper px-5 py-2.5 text-xs">
           <span className={eyebrowClass}>Reading</span>
-          <button onClick={onOpenPlan} className="min-w-0 flex-1 truncate text-left font-medium hover:underline" title={paperFocus.title}>
+          <button onClick={onOpenPaper ?? onOpenPlan} className="min-w-0 flex-1 truncate text-left font-medium hover:underline" title={paperFocus.title}>
             {paperFocus.label} · {paperFocus.title}
           </button>
           <span className="shrink-0 font-mono text-muted">

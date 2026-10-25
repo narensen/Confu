@@ -19,6 +19,15 @@ export function emptyReview(documentId: string): PaperReview {
   return { document_id: documentId, target_pass: 1, passes_done: 0, triage_reason: "", pass1: {}, pass2: {}, pass3: {} };
 }
 
+// Study sessions can mix papers with other material. A document counts as a
+// paper once it has review notes or was added by arXiv ID / DOI; anything up
+// to this many pages can be marked as one by hand.
+export const PAPER_MAX_PAGES = 80;
+
+export function isPaperDoc(doc: { id: string; meta?: { doi?: string | null; arxiv_id?: string | null } | null }, reviews: Record<string, unknown>) {
+  return doc.id in reviews || Boolean(doc.meta?.doi || doc.meta?.arxiv_id);
+}
+
 export type PassField = { key: string; label: string; hint: string; rows?: number };
 
 export type PassDef = {

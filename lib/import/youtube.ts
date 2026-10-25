@@ -1,8 +1,11 @@
 import "server-only";
+import { Innertube, Log } from "youtubei.js";
+import { logError } from "@/lib/log";
 import { cleanText, clock, type Block } from "./blocks";
 
 // YouTube lectures -> a timestamped transcript. Uses the captions YouTube
-// already has (made by the creator, or automatic). Each section links back to
+// already has (made by the creator, or automatic), trying several of
+// YouTube's own app clients in turn. Each section links back to
 // that moment in the video; the video's own chapters are used when it has them.
 
 export class YouTubeError extends Error {
@@ -44,16 +47,75 @@ const decode = (s: string) =>
     .replace(/&gt;/g, ">")
     .replace(/&amp;/g, "&");
 
-function parseCaptions(xml: string): Segment[] {
+const tidy = (segments: Segment[]) =>
+  segments
+    .map((s) => ({ start: s.start, text: cleanText(s.text.replace(/\n/g, " ")) }))
+    .filter((s) => s.text && !/^\[(music|applause|laughter)\]$/i.test(s.text));
+
+function parseXml(xml: string): Segment[] {
   const out: Segment[] = [];
   // Format 3: <p t="4220" d="1180">text</p>; older: <text start="4.22" dur="1.18">text</text>
   for (const m of xml.matchAll(/<p t="(\d+)"[^>]*>([\s\S]*?)<\/p>/g)) out.push({ start: Number(m[1]) / 1000, text: decode(m[2]) });
   if (!out.length) for (const m of xml.matchAll(/<text start="([\d.]+)"[^>]*>([\s\S]*?)<\/text>/g)) out.push({ start: Number(m[1]), text: decode(m[2]) });
-  return out.map((s) => ({ start: s.start, text: cleanText(s.text.replace(/\n/g, " ")) })).filter((s) => s.text && !/^\[(music|applause|laughter)\]$/i.test(s.text));
+  return tidy(out);
 }
 
-export async function fetchLecture(id: string): Promise<Lecture> {
-  // The Android app's player endpoint returns caption tracks without extra tokens.
+// A caption track's text: JSON (json3) first, the XML formats as a fallback.
+async function readTrack(baseUrl: string): Promise<Segment[]> {
+  const url = new URL(baseUrl);
+  url.searchParams.set("fmt", "json3");
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+    const j = (await res.json()) as { events?: { tStartMs?: number; segs?: { utf8?: string }[] }[] };
+    const segments = tidy(
+      (j.events ?? []).filter((e) => e.segs?.length).map((e) => ({ start: (e.tStartMs ?? 0) / 1000, text: e.segs!.map((x) => x.utf8 ?? "").join("") })),
+    );
+    if (segments.length) return segments;
+  } catch {}
+  const xml = await (await fetch(baseUrl, { signal: AbortSignal.timeout(15_000) }).catch(() => null))?.text().catch(() => "");
+  return xml ? parseXml(xml) : [];
+}
+
+type Track = { url: string; lang: string; asr: boolean };
+type Player = {
+  status: string; // OK, ERROR, LOGIN_REQUIRED, UNPLAYABLE, LIVE_STREAM_OFFLINE…
+  reason: string;
+  title: string;
+  author: string;
+  lengthSeconds: number;
+  description: string;
+  tracks: Track[];
+};
+
+// YouTube.js keeps the app clients' versions current as YouTube changes them.
+// Its own transcript call is broken (YouTube answers 400), so it's used to
+// find the caption tracks, which are then read directly.
+let tube: Promise<Innertube> | null = null;
+function innertube() {
+  Log.setLevel(Log.Level.NONE); // its parser warns about every new YouTube UI element
+  tube ??= Innertube.create({ retrieve_player: false, generate_session_locally: true, lang: "en", location: "US" }).catch((err) => {
+    tube = null;
+    throw err;
+  });
+  return tube;
+}
+
+async function viaLibrary(id: string, client: "ANDROID" | "IOS"): Promise<Player> {
+  const info = await (await innertube()).getBasicInfo(id, { client });
+  return {
+    status: info.playability_status?.status ?? "OK",
+    reason: info.playability_status?.reason ?? "",
+    title: info.basic_info.title ?? "",
+    author: info.basic_info.author ?? "",
+    lengthSeconds: info.basic_info.duration ?? 0,
+    description: info.basic_info.short_description ?? "",
+    tracks: (info.captions?.caption_tracks ?? []).map((t) => ({ url: t.base_url, lang: t.language_code, asr: t.kind === "asr" })),
+  };
+}
+
+// Without the library: the Android app's player endpoint, which returns
+// caption tracks without extra tokens. The last resort if YouTube.js breaks.
+async function viaPlayer(id: string): Promise<Player> {
   const res = await fetch("https://www.youtube.com/youtubei/v1/player?prettyPrint=false", {
     method: "POST",
     signal: AbortSignal.timeout(15_000),
@@ -64,37 +126,71 @@ export async function fetchLecture(id: string): Promise<Lecture> {
       "X-YouTube-Client-Version": "20.10.38",
     },
     body: JSON.stringify({ context: { client: { clientName: "ANDROID", clientVersion: "20.10.38", androidSdkVersion: 30, hl: "en", gl: "US" } }, videoId: id }),
-  }).catch(() => null);
-  if (!res?.ok) throw new YouTubeError("YouTube didn't answer. Try again, or paste the transcript instead.", "BLOCKED");
+  });
+  if (!res.ok) throw new Error(`player answered ${res.status}`);
   const j = (await res.json()) as {
     playabilityStatus?: { status?: string; reason?: string };
     videoDetails?: { title?: string; author?: string; lengthSeconds?: string; shortDescription?: string };
     captions?: { playerCaptionsTracklistRenderer?: { captionTracks?: { baseUrl: string; languageCode: string; kind?: string }[] } };
   };
-  const status = j.playabilityStatus?.status;
-  if (status === "ERROR") throw new YouTubeError("That video doesn't exist or was removed.", "NOT_FOUND");
-  if (status && status !== "OK") throw new YouTubeError("YouTube wouldn't share this video's captions with Confu. Paste the transcript instead.", "BLOCKED");
-  const tracks = j.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
-  if (!tracks.length) throw new YouTubeError("This video has no captions, so there's no transcript to import. If it has a transcript elsewhere, paste it instead.", "NO_CAPTIONS");
-  // Prefer English made by the creator, then automatic English, then the video's own language.
-  const track =
-    tracks.find((t) => t.languageCode.startsWith("en") && t.kind !== "asr") ??
-    tracks.find((t) => t.languageCode.startsWith("en")) ??
-    tracks.find((t) => t.kind !== "asr") ??
-    tracks[0];
-  const xml = await (await fetch(track.baseUrl, { signal: AbortSignal.timeout(15_000) }).catch(() => null))?.text();
-  const segments = xml ? parseCaptions(xml) : [];
-  if (!segments.length) throw new YouTubeError("Couldn't read this video's captions. Paste the transcript instead.", "BLOCKED");
   return {
-    id,
-    title: cleanText(j.videoDetails?.title ?? "YouTube lecture"),
-    author: cleanText(j.videoDetails?.author ?? ""),
+    status: j.playabilityStatus?.status ?? "OK",
+    reason: j.playabilityStatus?.reason ?? "",
+    title: j.videoDetails?.title ?? "",
+    author: j.videoDetails?.author ?? "",
     lengthSeconds: Number(j.videoDetails?.lengthSeconds ?? 0),
     description: j.videoDetails?.shortDescription ?? "",
-    segments,
-    language: track.languageCode,
-    automatic: track.kind === "asr",
+    tracks: (j.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? []).map((t) => ({ url: t.baseUrl, lang: t.languageCode, asr: t.kind === "asr" })),
   };
+}
+
+// Prefer English made by the creator, then automatic English, then the video's own language.
+const pickTrack = (tracks: Track[]) =>
+  tracks.find((t) => t.lang.startsWith("en") && !t.asr) ?? tracks.find((t) => t.lang.startsWith("en")) ?? tracks.find((t) => !t.asr) ?? tracks[0];
+
+export async function fetchLecture(id: string): Promise<Lecture> {
+  const attempts: [string, () => Promise<Player>][] = [
+    ["android", () => viaLibrary(id, "ANDROID")],
+    ["ios", () => viaLibrary(id, "IOS")],
+    ["player", () => viaPlayer(id)],
+  ];
+  const tried: string[] = [];
+  let found: Player | null = null;
+  for (const [name, attempt] of attempts) {
+    let player: Player;
+    try {
+      player = await attempt();
+    } catch (err) {
+      tried.push(`${name}: ${err instanceof Error ? err.message.slice(0, 80) : "failed"}`);
+      continue;
+    }
+    tried.push(`${name}: ${player.status}${player.reason ? ` (${player.reason.slice(0, 60)})` : ""}, ${player.tracks.length} tracks`);
+    if (player.status === "ERROR") throw new YouTubeError("That video doesn't exist or was removed.", "NOT_FOUND");
+    if (player.status !== "OK" || !player.tracks.length) {
+      found ??= player.status === "OK" ? player : null;
+      continue;
+    }
+    const track = pickTrack(player.tracks);
+    const segments = await readTrack(track.url);
+    if (!segments.length) {
+      tried.push(`${name}: empty track`);
+      continue;
+    }
+    return {
+      id,
+      title: cleanText(player.title || "YouTube lecture"),
+      author: cleanText(player.author),
+      lengthSeconds: player.lengthSeconds,
+      description: player.description,
+      segments,
+      language: track.lang,
+      automatic: track.asr,
+    };
+  }
+  // Every route failed: say why, and keep the details for the admin dashboard.
+  logError(`youtube transcript failed for ${id}`, new Error(tried.join(" | ")));
+  if (found) throw new YouTubeError("This video has no captions, so there's no transcript to import. If it has a transcript elsewhere, paste it instead.", "NO_CAPTIONS");
+  throw new YouTubeError("YouTube wouldn't share this video's captions with Confu right now. Paste the transcript instead: it takes a few seconds.", "BLOCKED");
 }
 
 // Title and channel only (works even when captions are refused).

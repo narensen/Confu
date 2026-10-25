@@ -7,6 +7,7 @@ import "react-pdf/dist/Page/TextLayer.css";
 import { COLOR_ORDER, colorOf, HIGHLIGHT_COLORS, type HighlightColor } from "@/lib/highlights";
 import { resolveOutline } from "@/lib/pdf/extract";
 import { useReadingTime } from "@/lib/reading-time";
+import { FocusSound } from "./FocusSound";
 import { FocusTimer } from "./FocusTimer";
 import { ReadAloudBar, useReadAloud } from "./ReadAloud";
 import { ReadingMap } from "./ReadingMap";
@@ -553,6 +554,7 @@ export default function PdfViewer(props: Props) {
         </button>
         <div className="flex-1" />
         <span className="hidden truncate px-2 text-xs text-muted @4xl:inline">Select text to ask about it</span>
+        <FocusSound />
         <FocusTimer />
         <ToolButton
           label={focusMode ? "Exit full screen" : "Full screen"}
