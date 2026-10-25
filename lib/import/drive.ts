@@ -73,16 +73,60 @@ function script(src: string) {
   return loaded.get(src)!;
 }
 
-async function token(): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const client = window.google!.accounts.oauth2.initTokenClient({
+// Browsers only allow the sign-in popup straight from a click, so everything
+// it needs is loaded beforehand (prepareDrive, when the Drive tab opens) and
+// the click asks for the token before any await. The token lasts an hour, so
+// later imports skip the popup.
+type TokenClient = { requestAccessToken(o?: Record<string, unknown>): void };
+let tokenClient: TokenClient | null = null;
+let pending: { resolve: (t: string) => void; reject: (e: Error) => void } | null = null;
+let cachedToken: { value: string; expires: number } | null = null;
+let ready: Promise<void> | null = null;
+
+export function prepareDrive(): Promise<void> {
+  ready ??= (async () => {
+    await Promise.all([script("https://accounts.google.com/gsi/client"), script("https://apis.google.com/js/api.js")]);
+    await new Promise<void>((resolve) => window.gapi!.load("picker", resolve));
+    tokenClient = window.google!.accounts.oauth2.initTokenClient({
       client_id: CLIENT_ID,
       scope: "https://www.googleapis.com/auth/drive.file",
-      callback: (r: { access_token?: string; error?: string }) => (r.access_token ? resolve(r.access_token) : reject(new Error(r.error ?? "Google sign-in failed."))),
-      error_callback: (e: { type?: string; message?: string }) => reject(new Error(e.type === "popup_closed" ? "CANCELLED" : (e.message ?? "Google sign-in failed."))),
+      callback: (r: { access_token?: string; expires_in?: number; error?: string }) => {
+        if (r.access_token) {
+          cachedToken = { value: r.access_token, expires: Date.now() + ((r.expires_in ?? 3600) - 120) * 1000 };
+          pending?.resolve(r.access_token);
+        } else pending?.reject(new Error(r.error ?? "Google sign-in failed."));
+        pending = null;
+      },
+      error_callback: (e: { type?: string; message?: string }) => {
+        pending?.reject(
+          new Error(
+            e.type === "popup_closed"
+              ? "CANCELLED"
+              : e.type === "popup_failed_to_open"
+                ? "Your browser blocked Google's sign-in window. Allow pop-ups for this site, then try again."
+                : (e.message ?? "Google sign-in failed."),
+          ),
+        );
+        pending = null;
+      },
     });
-    client.requestAccessToken({ prompt: "" });
+  })().catch((err) => {
+    ready = null;
+    throw err;
   });
+  return ready;
+}
+
+export const driveReady = () => Boolean(tokenClient);
+
+// Must run synchronously inside the click handler.
+function token(): Promise<string> {
+  if (cachedToken && cachedToken.expires > Date.now()) return Promise.resolve(cachedToken.value);
+  if (!tokenClient) return Promise.reject(new Error("Google Drive is still loading. Try again in a moment."));
+  pending?.reject(new Error("CANCELLED"));
+  const promise = new Promise<string>((resolve, reject) => (pending = { resolve, reject }));
+  tokenClient.requestAccessToken({ prompt: "" });
+  return promise;
 }
 
 function pick(accessToken: string): Promise<Picked[]> {
@@ -132,10 +176,9 @@ export type DriveFile = { file: File; title: string; sourceUrl: string | null };
 
 export async function importFromDrive(onStatus: (s: string) => void): Promise<{ files: DriveFile[]; failed: string[] }> {
   if (!driveConfigured) throw new Error("Google Drive import isn't set up yet.");
+  const signIn = token(); // first, while this is still the click
   onStatus("Opening Google Drive…");
-  await Promise.all([script("https://accounts.google.com/gsi/client"), script("https://apis.google.com/js/api.js")]);
-  await new Promise<void>((resolve) => window.gapi!.load("picker", resolve));
-  const accessToken = await token();
+  const accessToken = await signIn;
   const picked = await pick(accessToken);
   const files: DriveFile[] = [];
   const failed: string[] = [];

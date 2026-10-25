@@ -5,7 +5,7 @@ import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/compo
 import { JSON_HEADERS } from "@/lib/ai-errors";
 import type { Block } from "@/lib/import/blocks";
 import { buildPdfFile } from "@/lib/import/build-pdf";
-import { driveConfigured, importFromDrive } from "@/lib/import/drive";
+import { driveConfigured, driveReady, importFromDrive, prepareDrive } from "@/lib/import/drive";
 import {
   connectZotero,
   parseBibtex,
@@ -601,7 +601,7 @@ function YouTubeTab({ busy, setBusy, setError, done }: Shared) {
 
 /* -------------------------------------------------------------- drive */
 
-function DriveTab({ busy, setBusy, setError, done }: Shared) {
+function DriveTab(props: Shared) {
   if (!driveConfigured) {
     return (
       <div className="rounded-xl border border-dashed border-ink/30 p-5 text-sm leading-relaxed">
@@ -612,6 +612,24 @@ function DriveTab({ busy, setBusy, setError, done }: Shared) {
       </div>
     );
   }
+  return <DrivePicker {...props} />;
+}
+
+function DrivePicker({ busy, setBusy, setError, done }: Shared) {
+  // Load Google's sign-in and picker now: the popup has to open straight
+  // from the click, with nothing left to download.
+  const [ready, setReady] = useState(driveReady);
+  useEffect(() => {
+    let live = true;
+    prepareDrive().then(
+      () => live && setReady(true),
+      (err: unknown) => live && setError(err instanceof Error ? err.message : "Couldn't load Google Drive."),
+    );
+    return () => {
+      live = false;
+    };
+  }, [setError]);
+
   async function choose() {
     setError(null);
     try {
@@ -633,8 +651,8 @@ function DriveTab({ busy, setBusy, setError, done }: Shared) {
       <p className="text-sm leading-relaxed text-muted">
         Pick PDFs, Google Docs, Slides and Sheets, or Word and PowerPoint files. Docs and slides are turned into PDFs. Confu only gets access to the files you pick.
       </p>
-      <button type="button" onClick={choose} disabled={Boolean(busy)} className={`${buttonClass} py-2`}>
-        Choose from Google Drive
+      <button type="button" onClick={choose} disabled={Boolean(busy) || !ready} className={`${buttonClass} py-2`}>
+        {ready ? "Choose from Google Drive" : "Loading Google Drive…"}
       </button>
     </div>
   );
