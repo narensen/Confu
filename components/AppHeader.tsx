@@ -23,7 +23,7 @@ async function UserMenu() {
   return (
     <div className="animate-fade flex items-center">
       {/* No button: opens by itself for new accounts, or from Settings. */}
-      <Guide firstTime={firstTime} needsKey={planOf(role) !== "pro"} />
+      <Guide userId={user.id} firstTime={firstTime} needsKey={planOf(role) !== "pro"} />
       <Link href="/review" className="mr-3 rounded-md px-2 py-1 text-sm font-medium text-muted transition hover:bg-paper hover:text-ink">
         Review
       </Link>

@@ -1,6 +1,7 @@
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { friendlyAuthError } from "@/lib/auth-errors";
+import { safeNext } from "@/lib/safe-next";
 import { createClient } from "@/lib/supabase/server";
 
 // Landing route for links in Supabase auth emails (confirm sign-up, reset
@@ -35,6 +36,20 @@ export async function GET(request: NextRequest) {
     url.searchParams.set("error", error);
   } else {
     url.pathname = next;
+    // Returning Google users have answered the sign-up questions already:
+    // skip /welcome and go straight on, so they never see it flash past.
+    if (next === "/welcome") {
+      const { data: auth } = await supabase.auth.getClaims();
+      const userId = auth?.claims?.sub;
+      const { data } = userId ? await supabase.from("profiles").select("*").eq("id", userId).maybeSingle() : { data: null };
+      const answered = !data || (data as { occupation?: string | null }).occupation != null;
+      if (answered) {
+        url.pathname = safeNext(decodeURIComponent(request.cookies.get("confu_next")?.value ?? ""));
+        const res = NextResponse.redirect(url);
+        res.cookies.delete("confu_next");
+        return res;
+      }
+    }
   }
   return NextResponse.redirect(url);
 }

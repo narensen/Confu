@@ -6,7 +6,9 @@ import { eyebrowClass } from "@/components/ui";
 import { completeOnboarding } from "./actions";
 import { GUIDE_STEPS } from "./steps";
 
-const SEEN_KEY = "confu:guide-seen";
+// Per account: a new account on a browser where someone else saw the guide
+// still gets it.
+const seenKey = (userId: string) => `confu:guide-seen:${userId}`;
 const OPEN_EVENT = "confu:open-guide";
 
 // Lets other components (e.g. the empty dashboard) open the guide.
@@ -17,7 +19,7 @@ export function openGuide() {
 // Local fallback so the guide doesn't reopen if the server write fails or the
 // onboarding migration hasn't been run. Server render assumes "seen" so the
 // modal never flashes before hydration.
-function useSeenLocally() {
+function useSeenLocally(userId: string) {
   return useSyncExternalStore(
     (cb) => {
       window.addEventListener("storage", cb);
@@ -25,7 +27,7 @@ function useSeenLocally() {
     },
     () => {
       try {
-        return localStorage.getItem(SEEN_KEY) === "1";
+        return localStorage.getItem(seenKey(userId)) === "1";
       } catch {
         return false;
       }
@@ -34,9 +36,9 @@ function useSeenLocally() {
   );
 }
 
-export function Guide({ firstTime, needsKey }: { firstTime: boolean; needsKey: boolean }) {
+export function Guide({ userId, firstTime, needsKey }: { userId: string; firstTime: boolean; needsKey: boolean }) {
   const steps = useMemo(() => GUIDE_STEPS.filter((s) => !s.onlyForKeyUsers || needsKey), [needsKey]);
-  const seenLocally = useSeenLocally();
+  const seenLocally = useSeenLocally(userId);
   const [dismissed, setDismissed] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [index, setIndex] = useState(0);
@@ -51,10 +53,10 @@ export function Guide({ firstTime, needsKey }: { firstTime: boolean; needsKey: b
     setManualOpen(false);
     setDismissed(true);
     try {
-      localStorage.setItem(SEEN_KEY, "1");
+      localStorage.setItem(seenKey(userId), "1");
     } catch {}
     void completeOnboarding();
-  }, []);
+  }, [userId]);
 
   const go = useCallback(
     (delta: 1 | -1) => {
