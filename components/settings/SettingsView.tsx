@@ -12,6 +12,7 @@ import { PLANS, type Plan } from "@/lib/plans";
 import { SITE } from "@/lib/site";
 import { DeleteAccount, EmailField, NameField, PasswordForm, RequestProButton, ResetLinkButton, SignOutEverywhereButton } from "./AccountForms";
 import { ProMembers, type ProMember } from "./ProMembers";
+import { RemindersSection } from "./RemindersSection";
 import { Row, Section } from "./Section";
 import { SettingsNav, type NavItem } from "./SettingsNav";
 
@@ -43,6 +44,7 @@ export function SettingsView(d: SettingsData) {
     { id: "plan", label: "Plan" },
     ...(pro ? [] : [{ id: "api-key", label: "API key" }]),
     { id: "usage", label: "Usage" },
+    { id: "reminders", label: "Reminders & calendar" },
     ...(d.members ? [{ id: "members", label: "Pro members", badge: d.members.filter((m) => m.role !== "pro").length }] : []),
     { id: "help", label: "Help & legal" },
     { id: "data", label: "Your data" },
@@ -150,6 +152,8 @@ export function SettingsView(d: SettingsData) {
               <ProMembers members={d.members} unavailable={d.membersError} />
             </Section>
           )}
+
+          <RemindersSection />
 
           <Section id="help" title="Help & legal">
             <Row label="Guide" hint="A two-minute walkthrough: sessions, highlighting, figure capture, the tutor, paper sessions and exam prep.">

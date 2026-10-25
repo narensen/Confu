@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Newsreader } from "next/font/google";
 import "katex/dist/katex.min.css";
 import { Suspense } from "react";
 import "./globals.css";
+import { AppShell } from "@/components/AppShell";
 import { DialogHost } from "@/components/dialogs";
 import { FeedbackHost } from "@/components/Feedback";
 import { Telemetry } from "@/components/Telemetry";
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {children}
         <DialogHost />
         <FeedbackHost />
+        <AppShell />
         <Suspense fallback={null}>
           <Telemetry />
         </Suspense>

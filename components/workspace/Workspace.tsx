@@ -31,6 +31,7 @@ import {
   type TopicStatus,
   type TutorAction,
 } from "@/lib/types";
+import type { HighlightColor } from "@/lib/highlights";
 import { DocTabs } from "./DocTabs";
 import { KeyGate } from "./KeyGate";
 import { TutorPanel, type Tab } from "./TutorPanel";
@@ -346,7 +347,7 @@ export function Workspace({
   );
 
   const saveHighlight = useCallback(
-    async (selection: TextSelection) => {
+    async (selection: TextSelection, color: HighlightColor = "yellow", note?: string) => {
       if (!activeDoc) return;
       const { data, error } = await supabase
         .from("highlights")
@@ -356,7 +357,8 @@ export function Workspace({
           page_number: selection.page,
           selected_text: selection.text,
           rects: selection.rects,
-          color: "yellow",
+          color,
+          note: note ?? null,
         })
         .select("*")
         .single();
@@ -408,6 +410,19 @@ export function Workspace({
       if (highlight) await send({ action: "figure", message, highlightId: highlight.id, figure: { page: capture.page, documentId } });
     },
     [activeDoc, locked, revealGate, send],
+  );
+
+  // Change a highlight's colour or note (optimistic; restored on failure).
+  const updateHighlight = useCallback(
+    async (h: Highlight, patch: { color?: HighlightColor; note?: string | null }) => {
+      setHighlights((list) => list.map((x) => (x.id === h.id ? { ...x, ...patch } : x)));
+      const { error } = await supabase.from("highlights").update(patch).eq("id", h.id);
+      if (error) {
+        setHighlights((list) => list.map((x) => (x.id === h.id ? h : x)));
+        toast("Couldn't save that change.", "error");
+      }
+    },
+    [supabase],
   );
 
   const deleteHighlight = useCallback(
@@ -682,6 +697,7 @@ export function Workspace({
       onFocusTopic={(t) => setActiveTopicId(t.id)}
       onTopicStatus={setTopicStatus}
       onDeleteHighlight={deleteHighlight}
+      onUpdateHighlight={updateHighlight}
       onPlanCreated={reloadPlan}
       onClose={focusMode ? () => setDrawerOpen(false) : undefined}
       keyInfo={needsKey ? keyInfo : null}
@@ -757,6 +773,8 @@ export function Workspace({
               onPageChange={onPageChange}
               onTextAction={onTextAction}
               onSaveHighlight={saveHighlight}
+              onUpdateHighlight={updateHighlight}
+              onDeleteHighlight={deleteHighlight}
               onRegion={onRegion}
               toolbarStart={
                 focusMode ? (

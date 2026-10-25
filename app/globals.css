@@ -225,3 +225,6 @@ html { scroll-behavior: smooth; }
 [data-reader="sepia"] .pdf-page canvas { filter: sepia(0.42) saturate(1.15) brightness(0.97); }
 [data-reader="night"] .pdf-scroll { background: #141413; }
 [data-reader="night"] .pdf-page { filter: invert(0.88) hue-rotate(180deg); box-shadow: none; }
+
+/* Margin notes stay their own colour in night mode (the page is inverted). */
+[data-reader="night"] .pdf-page .pdf-note { filter: invert(0.88) hue-rotate(180deg); }

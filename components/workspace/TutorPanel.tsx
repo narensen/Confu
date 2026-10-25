@@ -10,6 +10,7 @@ import type { KeyInfo } from "@/lib/groq-keys";
 import type { PaperReview } from "@/lib/paper";
 import type { ChatMessage, Highlight, LearnerMemory, PlanTopic, SessionDoc, SessionKind, StudyPlan, TopicStatus } from "@/lib/types";
 import { ChatPanel } from "./ChatPanel";
+import type { HighlightColor } from "@/lib/highlights";
 import { HighlightsPanel } from "./HighlightsPanel";
 import { MemoryPanel } from "./MemoryPanel";
 import { PlanPanel } from "./PlanPanel";
@@ -47,6 +48,7 @@ type Props = {
   onFocusTopic: (topic: PlanTopic) => void;
   onTopicStatus: (topic: PlanTopic, status: TopicStatus) => void;
   onDeleteHighlight: (h: Highlight) => void;
+  onUpdateHighlight: (h: Highlight, patch: { color?: HighlightColor; note?: string | null }) => void;
   onPlanCreated: () => void;
   onClose?: () => void;
   keyInfo?: KeyInfo | null; // the user's own Groq key in use here (never the key itself)
@@ -215,6 +217,7 @@ export function TutorPanel(props: Props) {
             busy={Boolean(props.busy)}
             onJump={props.onJump}
             onDelete={props.onDeleteHighlight}
+            onUpdate={props.onUpdateHighlight}
             onSend={props.onSend}
           />
         )}

@@ -4,7 +4,12 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
+import { COLOR_ORDER, colorOf, HIGHLIGHT_COLORS, type HighlightColor } from "@/lib/highlights";
 import { resolveOutline } from "@/lib/pdf/extract";
+import { useReadingTime } from "@/lib/reading-time";
+import { FocusTimer } from "./FocusTimer";
+import { ReadAloudBar, useReadAloud } from "./ReadAloud";
+import { ReadingMap } from "./ReadingMap";
 import { createClient } from "@/lib/supabase/client";
 import { track } from "@/lib/telemetry";
 import type { Highlight, OutlineItem, Rect, TutorAction } from "@/lib/types";
@@ -29,7 +34,9 @@ type Props = {
   onToggleFocus: () => void;
   onPageChange: (page: number) => void;
   onTextAction: (action: TutorAction, selection: TextSelection, message?: string) => void;
-  onSaveHighlight: (selection: TextSelection) => void;
+  onSaveHighlight: (selection: TextSelection, color: HighlightColor, note?: string) => void;
+  onUpdateHighlight?: (h: Highlight, patch: { color?: HighlightColor; note?: string | null }) => void;
+  onDeleteHighlight?: (h: Highlight) => void;
   onRegion: (capture: RegionCapture, message?: string) => void;
 };
 
@@ -156,7 +163,8 @@ export default function PdfViewer(props: Props) {
   }
 
   // Side panels: search (Ctrl/Cmd+F) and the PDF's table of contents.
-  const [panel, setPanel] = useState<"search" | "contents" | null>(null);
+  const [panel, setPanel] = useState<"search" | "contents" | "map" | null>(null);
+  const [noteText, setNoteText] = useState<string | null>(null);
   const [outline, setOutline] = useState<OutlineItem[] | null>(null);
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState<Search | null>(null);
@@ -167,12 +175,12 @@ export default function PdfViewer(props: Props) {
     setPanel("search");
     requestAnimationFrame(() => searchInput.current?.select());
   }, []);
-  const togglePanel = (p: "search" | "contents") => {
+  const togglePanel = (p: "search" | "contents" | "map") => {
     if (panel === p) return setPanel(null);
     if (p === "search") openSearch();
     else {
       setPanel(p);
-      track("reader.contents");
+      track(p === "map" ? "reader.reading_map" : "reader.contents");
     }
   };
 
@@ -222,6 +230,18 @@ export default function PdfViewer(props: Props) {
     if (numPages) scrollToPage(Math.min(Math.max(1, goTo.page), numPages), true);
     else pendingJump.current = goTo.page;
   }, [goTo, numPages, scrollToPage]);
+
+  // Time per page for "Where it got hard".
+  useReadingTime(documentId, current);
+
+  // Read aloud: the page's text from the PDF itself.
+  const pageText = useCallback(async (n: number) => {
+    const pdf = pdfRef.current;
+    if (!pdf) return "";
+    const content = await (await pdf.getPage(n)).getTextContent();
+    return content.items.map((it) => ("str" in it ? it.str + (it.hasEOL ? " " : "") : "")).join("");
+  }, []);
+  const readAloud = useReadAloud({ pageText, numPages, onPage: (n) => scrollToPage(n, true) });
 
   // Keep the reading position when zooming or resizing.
   const pageRef = useRef(initialPage);
@@ -414,6 +434,7 @@ export default function PdfViewer(props: Props) {
     setPopover(null);
     setDraft(null);
     setAskText(null);
+    setNoteText(null);
     window.getSelection()?.removeAllRanges();
   }, []);
 
@@ -496,6 +517,21 @@ export default function PdfViewer(props: Props) {
             </svg>
           )}
         </ToolButton>
+        <ToolButton
+          label={readAloud.state === "idle" ? "Read aloud from this page" : "Stop reading aloud"}
+          aria-pressed={readAloud.state !== "idle"}
+          onClick={() => (readAloud.state === "idle" ? void readAloud.start(current) : readAloud.stop())}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="M11 5 6 9H2v6h4l5 4V5z" />
+            <path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14" />
+          </svg>
+        </ToolButton>
+        <ToolButton label="Where it got hard" aria-pressed={panel === "map"} onClick={() => togglePanel("map")}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+          </svg>
+        </ToolButton>
         <div className="mx-1.5 h-5 w-px bg-ink/20" />
         <button
           type="button"
@@ -517,6 +553,7 @@ export default function PdfViewer(props: Props) {
         </button>
         <div className="flex-1" />
         <span className="hidden truncate px-2 text-xs text-muted @4xl:inline">Select text to ask about it</span>
+        <FocusTimer />
         <ToolButton
           label={focusMode ? "Exit full screen" : "Full screen"}
           onClick={() => {
@@ -538,6 +575,19 @@ export default function PdfViewer(props: Props) {
 
       {/* Pages, with the contents drawer and search bar over them */}
       <div className="relative flex min-h-0 flex-1">
+        {panel === "map" && (
+          <ReadingMap
+            documentId={documentId}
+            numPages={numPages}
+            current={current}
+            highlights={highlights}
+            onPick={(page) => {
+              scrollToPage(page, true);
+              if ((scrollRef.current?.clientWidth ?? 0) < 760) setPanel(null);
+            }}
+            onClose={() => setPanel(null)}
+          />
+        )}
         {panel === "contents" && (
           <ContentsPanel
             outline={outline}
@@ -627,7 +677,7 @@ export default function PdfViewer(props: Props) {
                             top: `${r.y * 100}%`,
                             width: `${r.w * 100}%`,
                             height: `${r.h * 100}%`,
-                            background: h.kind === "region" ? "var(--hl-region)" : "var(--hl-yellow)",
+                            background: h.kind === "region" ? "var(--hl-region)" : HIGHLIGHT_COLORS[colorOf(h.color)].fill,
                           }}
                         />
                       )),
@@ -644,6 +694,13 @@ export default function PdfViewer(props: Props) {
                       />
                     )}
                   </div>
+
+                  {/* Margin notes */}
+                  {pageHighlights
+                    .filter((h) => h.note)
+                    .map((h) => (
+                      <NoteMarker key={`note-${h.id}`} h={h} onUpdate={props.onUpdateHighlight} onDelete={props.onDeleteHighlight} />
+                    ))}
 
                   {/* Region capture surface */}
                   {regionMode && (
@@ -685,6 +742,7 @@ export default function PdfViewer(props: Props) {
           </Document>
         )}
       </div>
+        <ReadAloudBar ctl={readAloud} />
         {panel === "search" && (
           <SearchPanel
             inputRef={searchInput}
@@ -702,7 +760,7 @@ export default function PdfViewer(props: Props) {
       {popover && (
         <SelectionPopover popover={popover} onClose={closePopover}>
           {popover.kind === "text" ? (
-            askText === null ? (
+            askText === null && noteText === null ? (
               <div className="flex flex-wrap items-center gap-0.5">
                 <PopButton primary disabled={busy} onClick={() => setAskText("")}>
                   Ask a doubt
@@ -717,22 +775,52 @@ export default function PdfViewer(props: Props) {
                   Simplify
                 </PopButton>
                 <span className="mx-0.5 h-4 w-px bg-line" />
-                <PopButton
-                  onClick={() => {
-                    props.onSaveHighlight(popover.selection);
-                    closePopover();
-                  }}
-                >
-                  <span className="inline-block size-2.5 rounded-sm bg-yellow-300" /> Highlight
+                <span className="flex items-center gap-0.5 pl-1" role="group" aria-label="Highlight">
+                  {COLOR_ORDER.map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        props.onSaveHighlight(popover.selection, c);
+                        track("reader.highlight", { color: c });
+                        closePopover();
+                      }}
+                      title={`Highlight: ${HIGHLIGHT_COLORS[c].label}`}
+                      aria-label={`Highlight as ${HIGHLIGHT_COLORS[c].label}`}
+                      className="flex size-7 items-center justify-center rounded-md transition hover:bg-paper"
+                    >
+                      <span className="size-3.5 rounded-full border border-ink/20" style={{ background: HIGHLIGHT_COLORS[c].swatch }} />
+                    </button>
+                  ))}
+                </span>
+                <PopButton onClick={() => setNoteText("")}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                    <path d="M4 4h16v12H8l-4 4z" />
+                  </svg>
+                  Note
                 </PopButton>
               </div>
+            ) : noteText !== null && askText === null ? (
+              <AskInput
+                placeholder="Your note on this passage…"
+                value={noteText}
+                onChange={setNoteText}
+                submitLabel="Save"
+                onSubmit={() => {
+                  if (!noteText.trim()) return;
+                  props.onSaveHighlight(popover.selection, "yellow", noteText.trim().slice(0, 2000));
+                  track("reader.note");
+                  closePopover();
+                }}
+              />
             ) : (
               <AskInput
                 placeholder="What's confusing about this?"
-                value={askText}
+                value={askText ?? ""}
                 onChange={setAskText}
                 disabled={busy}
-                onSubmit={() => runText("ask", askText)}
+                onSubmit={() => runText("ask", askText ?? "")}
               />
             )
           ) : (
@@ -750,6 +838,76 @@ export default function PdfViewer(props: Props) {
             </div>
           )}
         </SelectionPopover>
+      )}
+    </div>
+  );
+}
+
+// A note pinned in the page margin, next to its passage.
+function NoteMarker({
+  h,
+  onUpdate,
+  onDelete,
+}: {
+  h: Highlight;
+  onUpdate?: (h: Highlight, patch: { note?: string | null }) => void;
+  onDelete?: (h: Highlight) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(h.note ?? "");
+  const top = Math.max(0, Math.min(0.97, h.rects[0]?.y ?? 0));
+  return (
+    <div className="pdf-note absolute z-[5]" style={{ top: `${top * 100}%`, right: -30 }}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Note"
+        title={h.note ?? ""}
+        className="flex size-6 items-center justify-center rounded-md border border-ink bg-yellow-300 shadow-[2px_2px_0_0_#0d0d0c] transition hover:-translate-y-px"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
+          <path d="M4 4h16v12H8l-4 4z" />
+        </svg>
+      </button>
+      {open && (
+        <div className="animate-pop absolute top-7 right-0 w-64 rounded-xl border border-ink bg-panel p-3 text-left shadow-hard">
+          {editing ? (
+            <textarea
+              autoFocus
+              rows={4}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              className="w-full resize-y rounded-md border border-ink/30 p-2 text-sm outline-none focus:border-ink"
+            />
+          ) : (
+            <p className="text-sm leading-relaxed whitespace-pre-wrap">{h.note}</p>
+          )}
+          <div className="mt-2 flex justify-end gap-1.5 text-xs">
+            {editing ? (
+              <button
+                type="button"
+                onClick={() => {
+                  onUpdate?.(h, { note: text.trim() || null });
+                  setEditing(false);
+                  setOpen(false);
+                }}
+                className="rounded-md bg-ink px-2.5 py-1 font-medium text-white"
+              >
+                Save
+              </button>
+            ) : (
+              <>
+                <button type="button" onClick={() => setEditing(true)} className="rounded-md border border-ink/30 px-2.5 py-1 hover:border-ink">
+                  Edit
+                </button>
+                <button type="button" onClick={() => onDelete?.(h)} className="rounded-md px-2.5 py-1 text-muted hover:text-danger">
+                  Delete
+                </button>
+              </>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

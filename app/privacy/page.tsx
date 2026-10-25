@@ -60,6 +60,11 @@ export default function PrivacyPage() {
             <>
               <b>Feedback you send us</b> from the app, with the page you sent it from.
             </>,
+            <>
+              <b>Reminders, if you keep them on:</b> your time zone, your email and notification choices, and, if you turn on
+              notifications, your browser&apos;s push address. Turn any of them off in Settings, or with the unsubscribe link in
+              every email.
+            </>,
           ]}
         />
         <p>We don&apos;t collect your location, contacts, or browsing activity outside Confu.</p>
@@ -103,6 +108,10 @@ export default function PrivacyPage() {
             <>To run the app: store your PDFs, build your plan, answer your questions and remember your progress.</>,
             <>To keep your account secure and the service working.</>,
             <>To understand which features help people learn, and to find and fix what breaks.</>,
+            <>
+              To send the reminders and weekly summaries you&apos;ve chosen (through our email provider, Resend), and your study
+              plan&apos;s calendar feed, which is only reachable with your private link.
+            </>,
           ]}
         />
         <p>That&apos;s it. We don&apos;t use your data for advertising or sell it to anyone.</p>

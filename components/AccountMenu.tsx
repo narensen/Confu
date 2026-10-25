@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { signOut } from "@/app/(auth)/actions";
 import { openFeedback } from "@/components/Feedback";
+import { canInstall, promptInstall, subscribeInstall } from "@/lib/pwa/install";
 import { ago, formatTokens } from "@/lib/format-usage";
 
 type Usage = {
@@ -31,6 +32,7 @@ export function AccountMenu({ name, email, plan, owner, keyLast4 }: Props) {
   const root = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const display = name?.trim() || email || "Account";
+  const installable = useSyncExternalStore(subscribeInstall, canInstall, () => false);
 
   // Usage is fetched when the menu opens, so normal page loads cost nothing.
   const loadUsage = useCallback(async () => {
@@ -164,6 +166,22 @@ export function AccountMenu({ name, email, plan, owner, keyLast4 }: Props) {
               </svg>
               Settings
             </Link>
+            {installable && (
+              <button
+                role="menuitem"
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  void promptInstall();
+                }}
+                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition hover:bg-paper"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                  <path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14" />
+                </svg>
+                Install Confu app
+              </button>
+            )}
             <button
               role="menuitem"
               type="button"
