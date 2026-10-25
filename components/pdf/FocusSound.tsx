@@ -3,24 +3,26 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { track } from "@/lib/telemetry";
 
-// White, pink and brown noise in the reader's toolbar, made in the browser
-// with Web Audio (nothing to download). Like the focus timer, it lives
-// outside React so it keeps playing when you switch PDFs, and stops shortly
-// after you leave the reader.
+// White, pink and brown noise in the reader's toolbar: 60-second recorded
+// loops in public/noise/ (made by scripts/noise-loops.py), played gaplessly
+// with Web Audio. A colour without a recording is generated in the browser
+// instead. Like the focus timer, it lives outside React so it keeps playing
+// when you switch PDFs, and stops shortly after you leave the reader.
 
 export type Noise = "white" | "pink" | "brown";
-type Sound = { playing: Noise | null; volume: number };
+type Sound = { playing: Noise | null; volume: number; loading: boolean };
 
 const NOISES: { id: Noise; name: string; hint: string }[] = [
   { id: "white", name: "White noise", hint: "Even hiss, like a fan. Masks voices best." },
   { id: "pink", name: "Pink noise", hint: "Softer and balanced, like steady rain." },
   { id: "brown", name: "Brown noise", hint: "Deep rumble, like a distant waterfall." },
 ];
+const FILES: Record<Noise, string> = { white: "/noise/White_Noise.mp3", pink: "/noise/Pink_Noise.mp3", brown: "/noise/Brown_Noise.mp3" };
 const PREFS = "confu:focus-sound";
 const SECONDS = 12;
 const FADE = 0.4;
 
-let sound: Sound = { playing: null, volume: 0.5 };
+let sound: Sound = { playing: null, volume: 0.5, loading: false };
 const listeners = new Set<() => void>();
 const set = (s: Sound) => {
   sound = s;
@@ -34,7 +36,9 @@ const subscribe = (l: () => void) => {
 let ctx: AudioContext | null = null;
 let gain: GainNode | null = null;
 let source: AudioBufferSourceNode | null = null;
-const buffers = new Map<Noise, AudioBuffer>();
+type Loop = { buffer: AudioBuffer; start: number; end: number };
+let cached: { kind: Noise; loop: Loop } | null = null; // one at a time: a decoded minute is ~20 MB
+let request = 0;
 
 // Seamless loop: render a little extra and cross-fade it into the start.
 function render(kind: Noise, ac: AudioContext) {
@@ -47,7 +51,7 @@ function render(kind: Noise, ac: AudioContext) {
     let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0, last = 0;
     for (let i = 0; i < raw.length; i++) {
       const w = Math.random() * 2 - 1;
-      if (kind === "white") raw[i] = w * 0.25;
+      if (kind === "white") raw[i] = w * 0.17;
       else if (kind === "pink") {
         // Paul Kellet's pink filter.
         b0 = 0.99886 * b0 + w * 0.0555179;
@@ -74,6 +78,32 @@ function render(kind: Noise, ac: AudioContext) {
   return buf;
 }
 
+// MP3 adds a few milliseconds of silence at each end; loop only the sound.
+function trimmed(buffer: AudioBuffer): Loop {
+  const chans = Array.from({ length: buffer.numberOfChannels }, (_, c) => buffer.getChannelData(c));
+  const loud = (i: number) => chans.some((d) => Math.abs(d[i]) > 1e-4);
+  let a = 0;
+  let b = buffer.length - 1;
+  while (a < b && !loud(a)) a++;
+  while (b > a && !loud(b)) b--;
+  return { buffer, start: a / buffer.sampleRate, end: (b + 1) / buffer.sampleRate };
+}
+
+async function load(kind: Noise, ac: AudioContext): Promise<Loop> {
+  if (cached?.kind === kind) return cached.loop;
+  let loop: Loop;
+  try {
+    const res = await fetch(FILES[kind]);
+    if (!res.ok) throw new Error(String(res.status));
+    loop = trimmed(await ac.decodeAudioData(await res.arrayBuffer()));
+  } catch {
+    const buffer = render(kind, ac);
+    loop = { buffer, start: 0, end: buffer.duration };
+  }
+  cached = { kind, loop };
+  return loop;
+}
+
 function stopSource(at: number) {
   if (!source || !gain || !ctx) return;
   const old = source;
@@ -84,17 +114,20 @@ function stopSource(at: number) {
   source = null;
 }
 
-function play(kind: Noise | null, volume = sound.volume) {
+async function play(kind: Noise | null, volume = sound.volume) {
+  const mine = ++request;
   try {
     if (!kind) {
       stopSource(FADE);
-      set({ ...sound, playing: null });
+      set({ ...sound, playing: null, loading: false });
       return;
     }
     ctx ??= new AudioContext();
     void ctx.resume();
     const ac = ctx;
-    if (!buffers.has(kind)) buffers.set(kind, render(kind, ac));
+    set({ ...sound, playing: kind, loading: true });
+    const loop = await load(kind, ac);
+    if (mine !== request) return; // another choice came in while this one loaded
     const wasPlaying = Boolean(source);
     stopSource(wasPlaying ? 0.15 : 0);
     gain = ac.createGain();
@@ -102,13 +135,15 @@ function play(kind: Noise | null, volume = sound.volume) {
     gain.gain.linearRampToValueAtTime(volume, ac.currentTime + FADE + (wasPlaying ? 0.15 : 0));
     gain.connect(ac.destination);
     source = ac.createBufferSource();
-    source.buffer = buffers.get(kind)!;
+    source.buffer = loop.buffer;
     source.loop = true;
+    source.loopStart = loop.start;
+    source.loopEnd = loop.end;
     source.connect(gain);
-    source.start();
-    set({ playing: kind, volume });
+    source.start(0, loop.start);
+    set({ playing: kind, volume, loading: false });
   } catch {
-    set({ ...sound, playing: null });
+    if (mine === request) set({ ...sound, playing: null, loading: false });
   }
 }
 
@@ -136,7 +171,7 @@ export function FocusSound() {
     } catch {}
     return () => {
       mounted--;
-      leaveTimer = window.setTimeout(() => mounted === 0 && play(null), 1500);
+      leaveTimer = window.setTimeout(() => mounted === 0 && void play(null), 1500);
     };
   }, []);
 
@@ -175,7 +210,7 @@ export function FocusSound() {
           <rect x="3" y="14" width="4" height="7" rx="1.5" />
           <rect x="17" y="14" width="4" height="7" rx="1.5" />
         </svg>
-        {current && <span className="capitalize">{current.id}</span>}
+        {current && <span className="capitalize">{s.loading ? "…" : current.id}</span>}
       </button>
       {menu && (
         <div role="menu" className="animate-pop absolute top-full right-0 z-30 mt-1.5 w-64 rounded-xl border border-ink bg-panel p-1.5 shadow-hard">
@@ -189,7 +224,7 @@ export function FocusSound() {
                 aria-checked={on}
                 type="button"
                 onClick={() => {
-                  play(on ? null : n.id);
+                  void play(on ? null : n.id);
                   if (!on) track("reader.sound", { kind: n.id });
                 }}
                 className={`flex w-full items-start gap-2.5 rounded-lg px-2 py-1.5 text-left transition ${on ? "bg-ink text-white" : "hover:bg-paper"}`}
@@ -200,7 +235,10 @@ export function FocusSound() {
                   style={!on ? { background: n.id === "white" ? "#fff" : n.id === "pink" ? "#f9a8d4" : "#92400e" } : undefined}
                 />
                 <span className="min-w-0">
-                  <span className="block text-sm font-medium">{n.name}</span>
+                  <span className="block text-sm font-medium">
+                    {n.name}
+                    {on && s.loading && <span className="ml-1.5 text-[11px] font-normal text-white/70">loading…</span>}
+                  </span>
                   <span className={`block text-[11px] leading-snug ${on ? "text-white/70" : "text-muted"}`}>{n.hint}</span>
                 </span>
               </button>
@@ -223,7 +261,7 @@ export function FocusSound() {
               role="menuitem"
               type="button"
               onClick={() => {
-                play(null);
+                void play(null);
                 setMenu(false);
               }}
               className="w-full rounded-lg px-2 py-1.5 text-left text-sm hover:bg-paper"

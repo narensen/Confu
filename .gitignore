@@ -44,3 +44,6 @@ next-env.d.ts
 # marketing assets (videos, audio) stay out of the repo
 marketing/
 audio/
+
+# noise recordings (large); public/noise has the loops made from them
+/assets/noise/
