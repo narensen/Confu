@@ -7,6 +7,7 @@ import { Markdown } from "@/components/workspace/Markdown";
 import { JSON_HEADERS, notifyAiUsed, readAiError } from "@/lib/ai-errors";
 import { cueFor, endOfToday, nextIn, REVIEW_SELECT, revealFor, sessionLink, type ReviewItem, type ReviewRating } from "@/lib/review";
 import { createClient } from "@/lib/supabase/client";
+import { track } from "@/lib/telemetry";
 
 type Check = { score: number; feedback: string };
 
@@ -58,6 +59,7 @@ export function ReviewSession() {
     setSaving(false);
     if (err) return setError("Couldn't save that. Check your connection and try again.");
     setTally((t) => ({ ...t, [rating]: t[rating] + 1 }));
+    track("review.rate", { rating, source: item.source });
     advance();
   }
 
@@ -76,6 +78,7 @@ export function ReviewSession() {
 
   async function checkAnswer() {
     if (!item || !text.trim()) return;
+    track("review.check");
     setChecking(true);
     setError(null);
     try {

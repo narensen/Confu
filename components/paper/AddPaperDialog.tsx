@@ -11,10 +11,12 @@ export function AddPaperDialog({
   onClose,
   onAdd,
   onUpload,
+  onMoreSources,
 }: {
   onClose: () => void;
   onAdd: (papers: PaperMeta[]) => void;
   onUpload: (files: File[]) => void;
+  onMoreSources?: () => void;
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Result[] | null>(null);
@@ -164,9 +166,16 @@ export function AddPaperDialog({
               }
             }}
           />
-          <button type="button" onClick={() => fileInput.current?.click()} className={`${ghostButtonClass} py-1.5 text-xs`}>
-            Upload PDFs instead
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => fileInput.current?.click()} className={`${ghostButtonClass} py-1.5 text-xs`}>
+              Upload PDFs instead
+            </button>
+            {onMoreSources && (
+              <button type="button" onClick={onMoreSources} className={`${ghostButtonClass} py-1.5 text-xs`}>
+                Zotero, web, YouTube…
+              </button>
+            )}
+          </div>
           <button
             disabled={!chosen.length}
             onClick={() => {

@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { setPro, type ActionResult } from "@/app/settings/account-actions";
 import { LocalTime } from "@/components/LocalTime";
 import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
+import { ask } from "@/components/dialogs";
 
 export type ProMember = {
   id: string;
@@ -77,8 +78,9 @@ export function ProMembers({ members, unavailable }: { members: ProMember[]; una
             <button
               type="button"
               disabled={busy !== null}
-              onClick={() => {
-                if (confirm(`Move ${m.email} back to Free? They'll need their own Groq key again.`)) change(m.email, false, m.id);
+              onClick={async () => {
+                if (await ask({ title: `Move ${m.email} back to Free?`, body: "They'll need their own Groq key again.", confirm: "Remove Pro", danger: true }))
+                  change(m.email, false, m.id);
               }}
               className="rounded-lg px-3 py-1 text-xs text-muted transition hover:bg-danger/10 hover:text-danger"
             >

@@ -14,6 +14,7 @@ import {
 } from "@/app/settings/account-actions";
 import { LocalTime } from "@/components/LocalTime";
 import { buttonClass, ghostButtonClass, inputClass } from "@/components/ui";
+import { ask } from "@/components/dialogs";
 
 function Feedback({ result }: { result: ActionResult | null }) {
   if (!result) return null;
@@ -185,8 +186,9 @@ export function SignOutEverywhereButton() {
     <button
       type="button"
       disabled={pending}
-      onClick={() => {
-        if (confirm("Sign out of Confu on every device, including this one?")) start(() => signOutEverywhere());
+      onClick={async () => {
+        if (await ask({ title: "Sign out everywhere?", body: "You'll be signed out of Confu on every device, including this one.", confirm: "Sign out everywhere" }))
+          start(() => signOutEverywhere());
       }}
       className={`${ghostButtonClass} py-1 text-xs`}
     >

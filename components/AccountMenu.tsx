@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { signOut } from "@/app/(auth)/actions";
+import { openFeedback } from "@/components/Feedback";
 import { ago, formatTokens } from "@/lib/format-usage";
 
 type Usage = {
@@ -138,6 +139,19 @@ export function AccountMenu({ name, email, plan, owner, keyLast4 }: Props) {
 
           {/* Actions */}
           <div className="p-1.5">
+            {owner && (
+              <Link
+                role="menuitem"
+                href="/admin"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition hover:bg-paper"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                  <path d="M3 3v18h18M7 15l4-4 3 3 5-6" />
+                </svg>
+                Admin dashboard
+              </Link>
+            )}
             <Link
               role="menuitem"
               href="/settings"
@@ -150,6 +164,20 @@ export function AccountMenu({ name, email, plan, owner, keyLast4 }: Props) {
               </svg>
               Settings
             </Link>
+            <button
+              role="menuitem"
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                openFeedback();
+              }}
+              className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition hover:bg-paper"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              Send feedback
+            </button>
             <form action={signOut}>
               <button
                 role="menuitem"

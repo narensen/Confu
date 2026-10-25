@@ -13,6 +13,7 @@ export default function PrivacyPage() {
     <LegalPage
       eyebrow="Privacy"
       title="Privacy Policy"
+      updated="October 25, 2026"
       summary={
         <Bullets
           items={[
@@ -22,6 +23,10 @@ export default function PrivacyPage() {
               else, never share or sell it, never log it, and store it encrypted.
             </>,
             <>We don&apos;t sell your data, show ads, or use tracking or analytics cookies.</>,
+            <>
+              We measure how Confu is used with our own analytics, kept in our own database. No third-party trackers, and
+              we honour Do Not Track.
+            </>,
             <>We don&apos;t train AI models on your PDFs, questions or study data.</>,
             <>You can delete your sessions and your key at any time.</>,
           ]}
@@ -44,6 +49,16 @@ export default function PrivacyPage() {
             </>,
             <>
               <b>Your Groq API key</b>, if you add one (see below).
+            </>,
+            <>
+              <b>Usage and diagnostics:</b> which Confu pages and features are used, how fast pages load and respond, and
+              error reports when something breaks. Page addresses are stored without ids (for example /session/:id), and
+              never with the text of your PDFs, questions or notes. This stays in our own database; there are no
+              third-party trackers. If your browser sends Do Not Track or Global Privacy Control, we don&apos;t record
+              usage (error reports, which contain no personal content, still help us fix bugs).
+            </>,
+            <>
+              <b>Feedback you send us</b> from the app, with the page you sent it from.
             </>,
           ]}
         />
@@ -87,6 +102,7 @@ export default function PrivacyPage() {
           items={[
             <>To run the app: store your PDFs, build your plan, answer your questions and remember your progress.</>,
             <>To keep your account secure and the service working.</>,
+            <>To understand which features help people learn, and to find and fix what breaks.</>,
           ]}
         />
         <p>That&apos;s it. We don&apos;t use your data for advertising or sell it to anyone.</p>
@@ -115,7 +131,8 @@ export default function PrivacyPage() {
       <Section title="Cookies and local storage">
         <p>
           We use cookies only to keep you signed in. Your browser also stores a few interface preferences, like your
-          panel width and whether you&apos;ve seen the guide. We don&apos;t use advertising or analytics cookies.
+          panel width, your reading theme and whether you&apos;ve seen the guide, plus a random anonymous id that lets us
+          count visits before you sign up. We don&apos;t use advertising or analytics cookies.
         </p>
       </Section>
 
@@ -128,6 +145,7 @@ export default function PrivacyPage() {
               conversation and progress notes.
             </>,
             <>Removing a PDF from a session deletes that file and its highlights.</>,
+            <>Deleting your account also deletes your usage records and the feedback you sent.</>,
             <>
               To delete your whole account and everything in it, email us at{" "}
               <a href={`mailto:${SITE.contactEmail}`} className="underline underline-offset-4">

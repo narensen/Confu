@@ -6,6 +6,7 @@ import { deleteGroqKey } from "@/app/settings/actions";
 import { eyebrowClass, ghostButtonClass } from "@/components/ui";
 import type { KeyInfo } from "@/lib/groq-keys";
 import { GroqKeyForm } from "./GroqKeyForm";
+import { ask } from "@/components/dialogs";
 
 type Override = { sessionId: string; title: string; last4: string };
 
@@ -15,8 +16,8 @@ export function KeyManager({ initialAccount, initialOverrides }: { initialAccoun
   const [replacing, setReplacing] = useState(false);
   const [pending, start] = useTransition();
 
-  function removeAccountKey() {
-    if (!confirm("Remove your account's Groq key? Sessions without their own key will ask for one again.")) return;
+  async function removeAccountKey() {
+    if (!(await ask({ title: "Remove your account's Groq key?", body: "Sessions without their own key will ask for one again.", confirm: "Remove key", danger: true }))) return;
     start(async () => {
       await deleteGroqKey(null);
       setAccount(null);
@@ -24,8 +25,8 @@ export function KeyManager({ initialAccount, initialOverrides }: { initialAccoun
     });
   }
 
-  function removeOverride(o: Override) {
-    if (!confirm(`Remove the key for “${o.title}”? That session will use your account key instead.`)) return;
+  async function removeOverride(o: Override) {
+    if (!(await ask({ title: `Remove the key for “${o.title}”?`, body: "That session will use your account key instead.", confirm: "Remove key", danger: true }))) return;
     start(async () => {
       await deleteGroqKey(o.sessionId);
       setOverrides((list) => list.filter((x) => x.sessionId !== o.sessionId));

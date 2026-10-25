@@ -1,0 +1,771 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
+import { JSON_HEADERS } from "@/lib/ai-errors";
+import type { Block } from "@/lib/import/blocks";
+import { buildPdfFile } from "@/lib/import/build-pdf";
+import { driveConfigured, importFromDrive } from "@/lib/import/drive";
+import {
+  connectZotero,
+  parseBibtex,
+  parseRis,
+  zoteroCollections,
+  zoteroItems,
+  zoteroPdf,
+  type ZoteroAccount,
+  type ZoteroCollection,
+  type ZoteroItem,
+} from "@/lib/import/zotero";
+import { metaFor, type PaperMeta } from "@/lib/pdf/add-paper";
+import { track } from "@/lib/telemetry";
+
+// "Add material": PDFs, web pages and whole courses, YouTube lectures, Google
+// Drive and Zotero. Everything except papers becomes a PDF (imports are
+// typeset in the browser), so it gets search, highlights, contents, plans,
+// the tutor and spaced review like any upload.
+
+export type ImportedFile = { file: File; title?: string; sourceUrl?: string | null; meta?: Record<string, unknown> };
+type Tab = "upload" | "web" | "youtube" | "drive" | "zotero";
+
+const TABS: { id: Tab; label: string }[] = [
+  { id: "upload", label: "Upload" },
+  { id: "web", label: "Web page" },
+  { id: "youtube", label: "YouTube" },
+  { id: "drive", label: "Google Drive" },
+  { id: "zotero", label: "Zotero" },
+];
+
+async function errorOf(res: Response) {
+  try {
+    return ((await res.json()) as { error?: string }).error ?? `Request failed (${res.status}).`;
+  } catch {
+    return `Request failed (${res.status}).`;
+  }
+}
+
+export function AddMaterialDialog({
+  onClose,
+  onFiles,
+  onImported,
+  onPapers,
+  initialTab = "upload",
+}: {
+  onClose: () => void;
+  onFiles: (files: File[]) => void;
+  onImported: (items: ImportedFile[]) => void;
+  onPapers: (papers: PaperMeta[]) => void;
+  initialTab?: Tab;
+}) {
+  const [tab, setTab] = useState<Tab>(initialTab);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && !busy && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose, busy]);
+
+  const done = (items: ImportedFile[], source: string) => {
+    if (!items.length) return;
+    track("import.done", { source, count: items.length });
+    onImported(items);
+    onClose();
+  };
+
+  const shared = { busy, setBusy, setError, done };
+
+  return (
+    <div
+      className="animate-fade fixed inset-0 z-60 flex items-center justify-center bg-ink/40 p-3 backdrop-blur-[2px] sm:p-6"
+      onMouseDown={(e) => e.target === e.currentTarget && !busy && onClose()}
+    >
+      <div role="dialog" aria-modal="true" aria-labelledby="add-material-title" className="animate-pop flex max-h-full w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
+        <div className="flex items-start justify-between gap-4 px-6 pt-5">
+          <div>
+            <p className={eyebrowClass}>Add material</p>
+            <h2 id="add-material-title" className="mt-1 font-serif text-2xl">
+              Study from anything
+            </h2>
+            <p className="mt-1 text-sm text-muted">PDFs, web pages and whole courses, lecture videos, Google Drive and Zotero.</p>
+          </div>
+          <button onClick={onClose} disabled={Boolean(busy)} aria-label="Close" className="flex size-8 items-center justify-center rounded-md text-muted hover:bg-paper disabled:opacity-30">
+            ✕
+          </button>
+        </div>
+
+        <div role="tablist" aria-label="Source" className="mt-4 flex gap-1 overflow-x-auto border-b border-ink px-5 [scrollbar-width:none]">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              role="tab"
+              type="button"
+              aria-selected={tab === t.id}
+              disabled={Boolean(busy)}
+              onClick={() => {
+                setTab(t.id);
+                setError(null);
+              }}
+              className={`relative shrink-0 px-3 pt-1 pb-2.5 text-sm font-medium whitespace-nowrap transition ${tab === t.id ? "text-ink" : "text-muted hover:text-ink"}`}
+            >
+              {t.label}
+              {tab === t.id && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-ink" />}
+            </button>
+          ))}
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+          {tab === "upload" && (
+            <UploadTab
+              onFiles={(files) => {
+                onFiles(files);
+                onClose();
+              }}
+            />
+          )}
+          {tab === "web" && <WebTab {...shared} />}
+          {tab === "youtube" && <YouTubeTab {...shared} />}
+          {tab === "drive" && <DriveTab {...shared} />}
+          {tab === "zotero" && (
+            <ZoteroTab
+              {...shared}
+              onPapers={(papers) => {
+                if (papers.length) {
+                  track("import.done", { source: "zotero_papers", count: papers.length });
+                  onPapers(papers);
+                }
+              }}
+              close={onClose}
+            />
+          )}
+
+          {error && <p className="animate-pop mt-4 rounded-lg border border-danger/40 bg-danger/5 px-3 py-2 text-sm whitespace-pre-line text-danger">{error}</p>}
+        </div>
+
+        {busy && (
+          <div className="flex items-center gap-2.5 border-t border-ink bg-paper px-6 py-3 text-sm" role="status">
+            <span className="size-2 animate-pulse rounded-full bg-ink" />
+            <span className="truncate">{busy}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+type Shared = {
+  busy: string | null;
+  setBusy: (s: string | null) => void;
+  setError: (s: string | null) => void;
+  done: (items: ImportedFile[], source: string) => void;
+};
+
+/* ------------------------------------------------------------- upload */
+
+function UploadTab({ onFiles }: { onFiles: (files: File[]) => void }) {
+  const input = useRef<HTMLInputElement>(null);
+  const [over, setOver] = useState(false);
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => input.current?.click()}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setOver(true);
+        }}
+        onDragLeave={() => setOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setOver(false);
+          const files = Array.from(e.dataTransfer.files);
+          if (files.length) onFiles(files);
+        }}
+        className={`flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-12 text-center transition ${over ? "border-ink bg-paper" : "border-ink/30 hover:border-ink"}`}
+      >
+        <span className="font-serif text-xl">Drop PDFs here</span>
+        <span className="text-sm text-muted">or click to choose files. Scanned pages are read too.</span>
+      </button>
+      <input
+        ref={input}
+        type="file"
+        accept="application/pdf,.pptx,.ppt"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          const files = Array.from(e.target.files ?? []);
+          e.target.value = "";
+          if (files.length) onFiles(files);
+        }}
+      />
+      <p className="mt-3 text-xs text-muted">Slides? Use the Google Drive tab to convert PowerPoint, or export them as PDF first.</p>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- web */
+
+type Article = { kind: "article"; url: string; title: string; byline: string; blocks: Block[]; words: number };
+type Links = { kind: "links"; url: string; title: string; links: { url: string; title: string; inCourse: boolean }[] };
+const MAX_COURSE_PAGES = 40;
+
+async function fetchArticle(url: string): Promise<Article | { pdf: File }> {
+  const res = await fetch("/api/import/web", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ url, mode: "page" }) });
+  if (!res.ok) throw new Error(await errorOf(res));
+  if (res.headers.get("content-type")?.includes("application/pdf")) {
+    const name = decodeURIComponent(res.headers.get("x-confu-filename") ?? "document.pdf");
+    return { pdf: new File([await res.blob()], name.endsWith(".pdf") ? name : `${name}.pdf`, { type: "application/pdf" }) };
+  }
+  return (await res.json()) as Article;
+}
+
+function WebTab({ busy, setBusy, setError, done }: Shared) {
+  const [url, setUrl] = useState("");
+  const [mode, setMode] = useState<"page" | "course">("page");
+  const [course, setCourse] = useState<Links | null>(null);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [title, setTitle] = useState("");
+
+  async function importPage() {
+    setError(null);
+    setBusy("Reading the page…");
+    try {
+      const got = await fetchArticle(url);
+      if ("pdf" in got) return done([{ file: got.pdf, title: got.pdf.name.replace(/\.pdf$/i, ""), sourceUrl: url, meta: { source: "web" } }], "web_pdf");
+      setBusy(`Typesetting “${got.title}”…`);
+      const file = await buildPdfFile({ kind: "Web page", title: got.title, byline: got.byline, sourceUrl: got.url, chapters: [{ title: got.title, blocks: got.blocks }] });
+      done([{ file, title: got.title, sourceUrl: got.url, meta: { source: "web", words: got.words } }], "web_page");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't import that page.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function findPages() {
+    setError(null);
+    setBusy("Finding the course's pages…");
+    try {
+      const res = await fetch("/api/import/web", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ url, mode: "links" }) });
+      if (!res.ok) throw new Error(await errorOf(res));
+      const found = (await res.json()) as Links;
+      setCourse(found);
+      setTitle(found.title.split(/\s+[|—–-]\s+/)[0]);
+      setPicked(new Set(found.links.filter((l) => l.inCourse).slice(0, MAX_COURSE_PAGES).map((l) => l.url)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't read that page.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function importCourse() {
+    if (!course) return;
+    const pages = course.links.filter((l) => picked.has(l.url));
+    setError(null);
+    const chapters: { title: string; url: string; blocks: Block[] }[] = [];
+    const failed: string[] = [];
+    try {
+      for (const [i, p] of pages.entries()) {
+        setBusy(`Reading ${i + 1} of ${pages.length}: ${p.title}`);
+        try {
+          const got = await fetchArticle(p.url);
+          if ("pdf" in got) failed.push(`${p.title} (a PDF; add it separately)`);
+          else chapters.push({ title: p.title || got.title, url: got.url, blocks: got.blocks });
+        } catch (err) {
+          failed.push(`${p.title}: ${err instanceof Error ? err.message : "failed"}`);
+        }
+      }
+      if (!chapters.length) throw new Error(`None of those pages could be read.\n${failed.join("\n")}`);
+      setBusy(`Typesetting ${chapters.length} pages…`);
+      const name = title.trim() || course.title;
+      const host = new URL(course.url).hostname.replace(/^www\./, "");
+      const file = await buildPdfFile({ kind: "Web course", title: name, byline: `${host} · ${chapters.length} pages`, sourceUrl: course.url, chapters });
+      if (failed.length) setError(`Skipped ${failed.length}:\n${failed.join("\n")}`);
+      done([{ file, title: name, sourceUrl: course.url, meta: { source: "web_course", pages: chapters.length } }], "web_course");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't import that course.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (url.trim().length > 3) void (mode === "page" ? importPage() : findPages());
+        }}
+        className="space-y-3"
+      >
+        <input
+          autoFocus
+          value={url}
+          onChange={(e) => {
+            setUrl(e.target.value);
+            setCourse(null);
+          }}
+          placeholder="https://spinningup.openai.com/en/latest/"
+          aria-label="Web page address"
+          className={`${inputClass} font-mono text-[13px]`}
+        />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex rounded-lg border border-ink p-0.5 text-xs">
+            {(
+              [
+                ["page", "This page"],
+                ["course", "Whole course or docs"],
+              ] as const
+            ).map(([m, label]) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => {
+                  setMode(m);
+                  setCourse(null);
+                }}
+                className={`rounded-md px-2.5 py-1 font-medium transition ${mode === m ? "bg-ink text-white" : "text-muted hover:text-ink"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <button className={`${buttonClass} py-1.5`} disabled={Boolean(busy) || url.trim().length < 4}>
+            {mode === "page" ? "Import page" : "Find pages"}
+          </button>
+        </div>
+        <p className="text-xs leading-relaxed text-muted">
+          {mode === "page"
+            ? "The article's text, headings, lists, code and maths become a clean PDF. A link to a PDF imports the PDF itself."
+            : "Paste the course's first page. Confu lists its pages from the site's menu; pick which to import as one document with a chapter per page."}
+        </p>
+      </form>
+
+      {course && (
+        <div className="animate-enter space-y-3 rounded-xl border border-line p-3">
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium">Document title</span>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} className={`${inputClass} py-1.5`} />
+          </label>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted">
+              {picked.size} of {course.links.length} pages{picked.size > MAX_COURSE_PAGES ? ` · up to ${MAX_COURSE_PAGES} at a time` : ""}
+            </span>
+            <span className="flex gap-3">
+              <button type="button" className="underline-offset-2 hover:underline" onClick={() => setPicked(new Set(course.links.slice(0, MAX_COURSE_PAGES).map((l) => l.url)))}>
+                Select all
+              </button>
+              <button type="button" className="underline-offset-2 hover:underline" onClick={() => setPicked(new Set())}>
+                None
+              </button>
+            </span>
+          </div>
+          <ul className="max-h-64 space-y-0.5 overflow-y-auto">
+            {course.links.map((l) => (
+              <li key={l.url}>
+                <label className="flex cursor-pointer items-start gap-2.5 rounded-md px-2 py-1.5 text-sm hover:bg-paper">
+                  <input
+                    type="checkbox"
+                    checked={picked.has(l.url)}
+                    onChange={() =>
+                      setPicked((s) => {
+                        const next = new Set(s);
+                        if (next.has(l.url)) next.delete(l.url);
+                        else if (next.size < MAX_COURSE_PAGES) next.add(l.url);
+                        return next;
+                      })
+                    }
+                    className="mt-0.5 size-4 shrink-0 accent-[var(--ink)]"
+                  />
+                  <span className="min-w-0">
+                    <span className="block leading-snug">{l.title}</span>
+                    <span className="block truncate font-mono text-[10px] text-muted">{l.url.replace(/^https?:\/\//, "")}</span>
+                  </span>
+                </label>
+              </li>
+            ))}
+          </ul>
+          <div className="flex justify-end">
+            <button type="button" onClick={importCourse} disabled={Boolean(busy) || !picked.size} className={`${buttonClass} py-1.5`}>
+              Import {picked.size} page{picked.size === 1 ? "" : "s"} as one document
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------ youtube */
+
+function YouTubeTab({ busy, setBusy, setError, done }: Shared) {
+  const [url, setUrl] = useState("");
+  const [paste, setPaste] = useState(false);
+  const [transcript, setTranscript] = useState("");
+  const [title, setTitle] = useState("");
+
+  async function importLecture(withTranscript: boolean) {
+    setError(null);
+    setBusy(withTranscript ? "Reading the transcript…" : "Fetching the lecture's transcript…");
+    try {
+      const res = await fetch("/api/import/youtube", {
+        method: "POST",
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ url, ...(withTranscript ? { transcript, title: title || undefined } : {}) }),
+      });
+      if (!res.ok) {
+        const j = (await res.json().catch(() => ({}))) as { error?: string; code?: string };
+        if (j.code === "BLOCKED" || j.code === "NO_CAPTIONS") setPaste(true);
+        throw new Error(j.error ?? "Couldn't import that lecture.");
+      }
+      const got = (await res.json()) as { title: string; byline: string; sourceUrl?: string; blocks: Block[]; automatic: boolean };
+      setBusy(`Typesetting “${got.title}”…`);
+      const file = await buildPdfFile({ kind: "YouTube lecture", title: got.title, byline: got.byline, sourceUrl: got.sourceUrl, chapters: [{ title: got.title, blocks: got.blocks }] });
+      done([{ file, title: got.title, sourceUrl: got.sourceUrl ?? null, meta: { source: "youtube", automatic_captions: got.automatic } }], withTranscript ? "youtube_pasted" : "youtube");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't import that lecture.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (url.trim()) void importLecture(false);
+        }}
+        className="space-y-3"
+      >
+        <input
+          autoFocus
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="https://www.youtube.com/watch?v=…"
+          aria-label="YouTube link"
+          className={`${inputClass} font-mono text-[13px]`}
+        />
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs leading-relaxed text-muted">The transcript becomes a document with timestamps. Each section links back to that moment in the video.</p>
+          <button className={`${buttonClass} shrink-0 py-1.5`} disabled={Boolean(busy) || !url.trim()}>
+            Import lecture
+          </button>
+        </div>
+      </form>
+
+      <button type="button" onClick={() => setPaste((v) => !v)} className="text-xs font-medium underline-offset-4 hover:underline">
+        {paste ? "Hide" : "Paste a transcript instead"}
+      </button>
+      {paste && (
+        <div className="animate-enter space-y-3 rounded-xl border border-line p-3">
+          <p className="text-xs leading-relaxed text-muted">
+            On YouTube, open the video, click <b>…more</b> under it, then <b>Show transcript</b>. Select the whole transcript, copy it, and paste it here. Transcripts from
+            other lecture sites work too.
+          </p>
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Lecture title (optional with a YouTube link)" className={`${inputClass} py-1.5`} />
+          <textarea
+            rows={6}
+            value={transcript}
+            onChange={(e) => setTranscript(e.target.value)}
+            placeholder={"0:00\nWelcome to the course…\n0:12\nToday we look at…"}
+            className={`${inputClass} resize-y font-mono text-[12px]`}
+          />
+          <div className="flex justify-end">
+            <button type="button" disabled={Boolean(busy) || !transcript.trim() || (!url.trim() && !title.trim())} onClick={() => importLecture(true)} className={`${buttonClass} py-1.5`}>
+              Import transcript
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------- drive */
+
+function DriveTab({ busy, setBusy, setError, done }: Shared) {
+  if (!driveConfigured) {
+    return (
+      <div className="rounded-xl border border-dashed border-ink/30 p-5 text-sm leading-relaxed">
+        <p className="font-medium">Google Drive import isn&apos;t switched on yet.</p>
+        <p className="mt-1 text-muted">
+          For now, download the file from Drive and upload it. Google Docs and Slides: <b>File → Download → PDF</b>.
+        </p>
+      </div>
+    );
+  }
+  async function choose() {
+    setError(null);
+    try {
+      const { files, failed } = await importFromDrive((s) => setBusy(s));
+      if (failed.length) setError(`Couldn't import:\n${failed.join("\n")}`);
+      done(
+        files.map((f) => ({ file: f.file, title: f.title, sourceUrl: f.sourceUrl, meta: { source: "google_drive" } })),
+        "google_drive",
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Couldn't open Google Drive.";
+      if (msg !== "CANCELLED") setError(msg);
+    } finally {
+      setBusy(null);
+    }
+  }
+  return (
+    <div className="space-y-4">
+      <p className="text-sm leading-relaxed text-muted">
+        Pick PDFs, Google Docs, Slides and Sheets, or Word and PowerPoint files. Docs and slides are turned into PDFs. Confu only gets access to the files you pick.
+      </p>
+      <button type="button" onClick={choose} disabled={Boolean(busy)} className={`${buttonClass} py-2`}>
+        Choose from Google Drive
+      </button>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------- zotero */
+
+const ZOTERO_KEY = "confu:zotero-key";
+
+function ZoteroTab({ busy, setBusy, setError, done, onPapers, close }: Shared & { onPapers: (p: PaperMeta[]) => void; close: () => void }) {
+  const [key, setKey] = useState(() => {
+    try {
+      return localStorage.getItem(ZOTERO_KEY) ?? "";
+    } catch {
+      return "";
+    }
+  });
+  const [remember, setRemember] = useState(() => Boolean(key));
+  const [account, setAccount] = useState<ZoteroAccount | null>(null);
+  const [collections, setCollections] = useState<ZoteroCollection[]>([]);
+  const [collection, setCollection] = useState("");
+  const [q, setQ] = useState("");
+  const [items, setItems] = useState<ZoteroItem[] | null>(null);
+  const [filePapers, setFilePapers] = useState<PaperMeta[] | null>(null);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const fileInput = useRef<HTMLInputElement>(null);
+
+  async function connect() {
+    setError(null);
+    setBusy("Connecting to Zotero…");
+    try {
+      const acc = await connectZotero(key);
+      try {
+        if (remember) localStorage.setItem(ZOTERO_KEY, acc.apiKey);
+        else localStorage.removeItem(ZOTERO_KEY);
+      } catch {}
+      setAccount(acc);
+      setCollections(await zoteroCollections(acc));
+      await load(acc, "", "");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't connect to Zotero.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function load(acc: ZoteroAccount, coll: string, query: string) {
+    setBusy("Loading your library…");
+    try {
+      setItems(await zoteroItems(acc, { collection: coll || undefined, q: query }));
+      setPicked(new Set());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't load your library.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function importItems() {
+    if (!account || !items) return;
+    const chosen = items.filter((i) => picked.has(i.key));
+    const files: ImportedFile[] = [];
+    const papers: PaperMeta[] = [];
+    for (const [n, it] of chosen.entries()) {
+      setBusy(`Getting ${n + 1} of ${chosen.length}: ${it.paper.title}`);
+      const pdf = it.pdf ? await zoteroPdf(account, it) : null;
+      if (pdf) files.push({ file: pdf, title: it.paper.title, sourceUrl: it.paper.url || null, meta: { ...metaFor(it.paper), source: "zotero" } });
+      else papers.push(it.paper);
+    }
+    setBusy(null);
+    onPapers(papers);
+    if (files.length) done(files, "zotero_pdf");
+    else close();
+  }
+
+  const list = useMemo(
+    () => (filePapers ? filePapers.map((p, i) => ({ key: `f${i}`, paper: p, pdf: null as ZoteroItem["pdf"], type: "file" })) : (items ?? [])),
+    [filePapers, items],
+  );
+
+  return (
+    <div className="space-y-4">
+      {!account && !filePapers && (
+        <>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void connect();
+            }}
+            className="space-y-3"
+          >
+            <p className="text-sm leading-relaxed text-muted">
+              Create a read-only key at{" "}
+              <a href="https://www.zotero.org/settings/keys/new" target="_blank" rel="noreferrer" className="font-medium text-ink underline underline-offset-2">
+                zotero.org/settings/keys
+              </a>{" "}
+              : tick only <b>Allow library access</b>, and leave write access and groups off. Your key goes straight from your browser to Zotero.
+            </p>
+            <input
+              value={key}
+              onChange={(e) => setKey(e.target.value)}
+              placeholder="Zotero API key"
+              aria-label="Zotero API key"
+              autoComplete="off"
+              spellCheck={false}
+              className={`${inputClass} font-mono text-[13px]`}
+            />
+            <div className="flex items-center justify-between gap-3">
+              <label className="flex items-center gap-2 text-xs text-muted">
+                <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} className="size-3.5 accent-[var(--ink)]" />
+                Remember on this device
+              </label>
+              <button className={`${buttonClass} py-1.5`} disabled={Boolean(busy) || key.trim().length < 20}>
+                Connect
+              </button>
+            </div>
+          </form>
+          <div className="flex items-center gap-3 text-xs text-muted">
+            <span className="h-px flex-1 bg-line" />
+            or
+            <span className="h-px flex-1 bg-line" />
+          </div>
+          <div>
+            <button type="button" onClick={() => fileInput.current?.click()} className={`${ghostButtonClass} py-1.5 text-xs`}>
+              Import a .bib or .ris file
+            </button>
+            <p className="mt-1.5 text-xs text-muted">Exported from Zotero, Mendeley, EndNote or Google Scholar.</p>
+            <input
+              ref={fileInput}
+              type="file"
+              accept=".bib,.ris,.txt,application/x-bibtex,application/x-research-info-systems"
+              className="hidden"
+              onChange={async (e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (!f) return;
+                const text = await f.text();
+                const papers = /^\s*TY\s{2}-/m.test(text) ? parseRis(text) : parseBibtex(text);
+                if (!papers.length) return setError("No references found in that file.");
+                setError(null);
+                setFilePapers(papers);
+                setPicked(new Set(papers.map((_, i) => `f${i}`)));
+              }}
+            />
+          </div>
+        </>
+      )}
+
+      {account && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted">
+            Connected as <b className="text-ink">{account.username}</b>
+          </span>
+          <select
+            value={collection}
+            onChange={(e) => {
+              setCollection(e.target.value);
+              void load(account, e.target.value, q);
+            }}
+            className="h-8 rounded-md border border-ink/30 bg-panel px-2 text-xs"
+            aria-label="Collection"
+          >
+            <option value="">All items</option>
+            {collections.map((c) => (
+              <option key={c.key} value={c.key}>
+                {"  ".repeat(c.depth)}
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <form
+            className="flex min-w-40 flex-1 gap-1"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void load(account, collection, q);
+            }}
+          >
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search title, author, year" className="h-8 min-w-0 flex-1 rounded-md border border-ink/30 bg-panel px-2 text-xs outline-none focus:border-ink" />
+          </form>
+        </div>
+      )}
+
+      {(account || filePapers) && (
+        <>
+          {list.length === 0 ? (
+            <p className="py-6 text-center text-sm text-muted">Nothing here.</p>
+          ) : (
+            <ul className="max-h-80 space-y-1.5 overflow-y-auto">
+              {list.map((it) => (
+                <li key={it.key}>
+                  <label className={`flex cursor-pointer gap-3 rounded-lg border p-2.5 transition ${picked.has(it.key) ? "border-ink" : "border-line hover:border-ink/40"}`}>
+                    <input
+                      type="checkbox"
+                      checked={picked.has(it.key)}
+                      onChange={() =>
+                        setPicked((s) => {
+                          const next = new Set(s);
+                          if (next.has(it.key)) next.delete(it.key);
+                          else next.add(it.key);
+                          return next;
+                        })
+                      }
+                      className="mt-1 size-4 shrink-0 accent-[var(--ink)]"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-serif leading-snug">{it.paper.title}</span>
+                      <span className="mt-0.5 block truncate text-xs text-muted">
+                        {[it.paper.authors.slice(0, 3).join(", ") + (it.paper.authors.length > 3 ? " et al." : ""), it.paper.venue, it.paper.year].filter(Boolean).join(" · ")}
+                      </span>
+                      <span className="mt-1 inline-block rounded border border-ink/30 px-1.5 py-px font-mono text-[10px] text-muted">
+                        {it.pdf && account?.files ? "PDF in Zotero" : it.paper.pdf_url ? "arXiv PDF" : it.paper.abstract ? "Abstract only" : "Details only"}
+                      </span>
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setAccount(null);
+                setFilePapers(null);
+                setItems(null);
+              }}
+              className="text-xs text-muted underline-offset-4 hover:text-ink hover:underline"
+            >
+              {filePapers ? "Choose another file" : "Disconnect"}
+            </button>
+            <button
+              type="button"
+              disabled={Boolean(busy) || !picked.size}
+              onClick={() => {
+                if (filePapers) {
+                  onPapers(filePapers.filter((_, i) => picked.has(`f${i}`)));
+                  close();
+                } else void importItems();
+              }}
+              className={`${buttonClass} py-1.5`}
+            >
+              Add {picked.size || ""} {picked.size === 1 ? "item" : "items"}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

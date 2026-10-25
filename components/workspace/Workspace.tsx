@@ -12,6 +12,7 @@ import { useExamPractice } from "@/components/exam/useExamPractice";
 import { addPaperFromMeta, type PaperMeta } from "@/lib/pdf/add-paper";
 import { attachPdfToDocument, uploadPdfToSession } from "@/lib/pdf/upload";
 import { AddPaperDialog } from "@/components/paper/AddPaperDialog";
+import { AddMaterialDialog, type ImportedFile } from "@/components/import/AddMaterialDialog";
 import { openRecommendPapers, RecommendPapers } from "@/components/paper/RecommendDialog";
 import { PaperCard } from "@/components/paper/PaperCard";
 import { currentTopic } from "@/lib/schedule";
@@ -33,6 +34,7 @@ import {
 import { DocTabs } from "./DocTabs";
 import { KeyGate } from "./KeyGate";
 import { TutorPanel, type Tab } from "./TutorPanel";
+import { ask, toast } from "@/components/dialogs";
 
 const PdfViewer = dynamic(() => import("@/components/pdf/PdfViewer"), {
   ssr: false,
@@ -93,6 +95,7 @@ export function Workspace({
   const [activeDocId, setActiveDocId] = useState(initialDocId);
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [addPaperOpen, setAddPaperOpen] = useState(false);
+  const [addMaterialOpen, setAddMaterialOpen] = useState(false);
   const [plan, setPlan] = useState(initialPlan);
   const [topics, setTopics] = useState(initialTopics);
   const [memory, setMemory] = useState(initialMemory);
@@ -458,7 +461,7 @@ export function Workspace({
         setDocs((list) => relabel([...list, ...added]));
         if (added.length) selectDoc(added[added.length - 1].id);
       } catch (err) {
-        alert(err instanceof Error ? err.message : "Couldn't add that.");
+        toast(err instanceof Error ? err.message : "Couldn't add that.", "error");
       } finally {
         setUploadStatus(null);
       }
@@ -471,7 +474,29 @@ export function Workspace({
       addDocs(
         files.map((file) => async (userId, position) => {
           const { id, ocrNote } = await uploadPdfToSession(supabase, { userId, sessionId: session.id, file, position, onStatus: setUploadStatus });
-          if (ocrNote) alert(ocrNote);
+          if (ocrNote) toast(ocrNote);
+          return id;
+        }),
+      ),
+    [addDocs, session.id, supabase],
+  );
+
+  // Imported material (web pages, courses, lectures, Drive, Zotero PDFs):
+  // PDFs built or downloaded in the browser, with their title and source.
+  const addImported = useCallback(
+    (items: ImportedFile[]) =>
+      addDocs(
+        items.map((it) => async (userId, position) => {
+          const { id } = await uploadPdfToSession(supabase, {
+            userId,
+            sessionId: session.id,
+            file: it.file,
+            position,
+            onStatus: setUploadStatus,
+            title: it.title,
+            meta: it.meta,
+            sourceUrl: it.sourceUrl ?? null,
+          });
           return id;
         }),
       ),
@@ -489,7 +514,7 @@ export function Workspace({
         }),
       );
       if (skipped.length) {
-        alert(`Added without a PDF (abstract only):\n${skipped.join("\n")}\n\nYou can still do a first pass, and the tutor can look these up. Upload the PDF later for a deeper read.`);
+        toast(`Added without a PDF (abstract only):\n${skipped.join("\n")}\n\nYou can still do a first pass, and the tutor can look these up. Upload the PDF later for a deeper read.`);
       }
     },
     [addDocs, session.id, supabase],
@@ -506,7 +531,7 @@ export function Workspace({
         const fresh = await loadDoc(docId);
         if (fresh) setDocs((list) => relabel(list.map((d) => (d.id === docId ? fresh : d))));
       } catch (err) {
-        alert(err instanceof Error ? err.message : "Couldn't attach the PDF.");
+        toast(err instanceof Error ? err.message : "Couldn't attach the PDF.", "error");
       } finally {
         setUploadStatus(null);
       }
@@ -516,9 +541,15 @@ export function Workspace({
 
   const removePdf = useCallback(
     async (doc: SessionDoc) => {
-      if (!confirm(`Remove “${doc.title}” from this session? Its highlights are deleted too. Plan topics that use it stay, without page links.`)) return;
+      const ok = await ask({
+        title: `Remove “${doc.title}”?`,
+        body: "Its highlights are deleted too. Plan topics that use it stay, without page links.",
+        confirm: "Remove PDF",
+        danger: true,
+      });
+      if (!ok) return;
       const res = await deleteDocument(doc.id);
-      if (res.error) return alert(res.error);
+      if (res.error) return toast(res.error, "error");
       const remaining = relabel(docs.filter((d) => d.id !== doc.id));
       setDocs(remaining);
       setHighlights((list) => list.filter((h) => h.document_id !== doc.id));
@@ -706,8 +737,8 @@ export function Workspace({
           onSelect={selectDoc}
           onAdd={addPdfs}
           onRemove={removePdf}
-          onAddClick={isPaper ? () => setAddPaperOpen(true) : undefined}
-          addLabel={isPaper ? "+ Add paper" : "+ Add PDF"}
+          onAddClick={isPaper ? () => setAddPaperOpen(true) : () => setAddMaterialOpen(true)}
+          addLabel={isPaper ? "+ Add paper" : "+ Add material"}
         />
         <div className="relative min-h-0 flex-1">
           {activeDoc && !activeDoc.hasPdf ? (
@@ -716,6 +747,7 @@ export function Workspace({
             <PdfViewer
               key={activeDoc.id}
               url={activeDoc.url}
+              documentId={activeDoc.id}
               initialPage={activeDoc.lastPage}
               goTo={goTo}
               highlights={docHighlights}
@@ -762,7 +794,7 @@ export function Workspace({
               <p className="max-w-sm text-sm text-muted">
                 {isPaper
                   ? "Add papers by arXiv ID, DOI, link or title. No PDF needed."
-                  : "Use “+ Add PDF” above. The tutor still works from your goal and outside resources meanwhile."}
+                  : "Use “+ Add material” above: PDFs, web pages and courses, YouTube lectures, Google Drive or Zotero. The tutor still works from your goal meanwhile."}
               </p>
               {isPaper && (
                 <div className="mt-3 flex flex-wrap justify-center gap-2">
@@ -780,7 +812,26 @@ export function Workspace({
       </section>
 
       {isPaper && <RecommendPapers sessionId={session.id} researchGoal={researchGoal} onAdd={(papers) => void addPapers(papers)} />}
-      {addPaperOpen && <AddPaperDialog onClose={() => setAddPaperOpen(false)} onAdd={(papers) => void addPapers(papers)} onUpload={(files) => void addPdfs(files)} />}
+      {addPaperOpen && (
+        <AddPaperDialog
+          onClose={() => setAddPaperOpen(false)}
+          onAdd={(papers) => void addPapers(papers)}
+          onUpload={(files) => void addPdfs(files)}
+          onMoreSources={() => {
+            setAddPaperOpen(false);
+            setAddMaterialOpen(true);
+          }}
+        />
+      )}
+      {addMaterialOpen && (
+        <AddMaterialDialog
+          initialTab={isPaper ? "zotero" : "upload"}
+          onClose={() => setAddMaterialOpen(false)}
+          onFiles={(files) => void addPdfs(files)}
+          onImported={(items) => void addImported(items)}
+          onPapers={(papers) => void addPapers(papers)}
+        />
+      )}
 
       {!focusMode && (
         <button

@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Newsreader } from "next/font/google";
 import "katex/dist/katex.min.css";
+import { Suspense } from "react";
 import "./globals.css";
+import { DialogHost } from "@/components/dialogs";
+import { FeedbackHost } from "@/components/Feedback";
+import { Telemetry } from "@/components/Telemetry";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,7 +35,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${newsreader.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        {children}
+        <DialogHost />
+        <FeedbackHost />
+        <Suspense fallback={null}>
+          <Telemetry />
+        </Suspense>
+      </body>
     </html>
   );
 }

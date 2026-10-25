@@ -4,6 +4,7 @@ import gsap from "gsap";
 import { Flip } from "gsap/Flip";
 import { useGSAP } from "@gsap/react";
 import { ReviewDue } from "@/components/review/ReviewDue";
+import { TrySample } from "./TrySample";
 import Link from "next/link";
 import { useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { eyebrowClass } from "@/components/ui";
@@ -125,6 +126,7 @@ export function Library({ name, sessions }: { name: string | null; sessions: Lib
       </div>
 
       {sessions.length === 0 ? (
+        <>
         <section className="mt-10 grid gap-4 md:grid-cols-3">
           {KINDS.map((k) => (
             <button
@@ -142,6 +144,8 @@ export function Library({ name, sessions }: { name: string | null; sessions: Lib
             </button>
           ))}
         </section>
+        <TrySample />
+        </>
       ) : (
         <>
           {/* Continue */}

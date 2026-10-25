@@ -7,6 +7,7 @@ import { addDays, toISODate } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/client";
 import { chaptersOf, starterGoal, type Chapter, type StarterDoc, type StarterKind } from "@/lib/tutor/goal-starters";
 import type { Level, OutlineItem, StudyPlan } from "@/lib/types";
+import { track } from "@/lib/telemetry";
 
 const STEPS = [
   "Reading your goal…",
@@ -82,6 +83,7 @@ export function GoalSetup({
 
   function choose(k: StarterKind) {
     setKind(k);
+    track("goal.starter", { kind: k });
     setGoal(k === "own" ? (existing?.goal ?? "") : starterGoal(k, starterDocs, chapters.filter((c) => picked.includes(c.key))));
   }
 

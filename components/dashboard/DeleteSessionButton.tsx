@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { deleteSession } from "./actions";
+import { ask, toast } from "@/components/dialogs";
 
 export function DeleteSessionButton({ id, title }: { id: string; title: string }) {
   const router = useRouter();
@@ -11,11 +12,17 @@ export function DeleteSessionButton({ id, title }: { id: string; title: string }
     <button
       type="button"
       disabled={pending}
-      onClick={() => {
-        if (!confirm(`Delete “${title}”? Its PDFs, plan, highlights and conversation will be removed.`)) return;
+      onClick={async () => {
+        const ok = await ask({
+          title: `Delete “${title}”?`,
+          body: "Its PDFs, plan, highlights and conversation will be removed. This can't be undone.",
+          confirm: "Delete session",
+          danger: true,
+        });
+        if (!ok) return;
         start(async () => {
           const res = await deleteSession(id);
-          if (res.error) alert(res.error);
+          if (res.error) toast(res.error, "error");
           else router.refresh();
         });
       }}

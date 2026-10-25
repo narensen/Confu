@@ -205,5 +205,23 @@ html { scroll-behavior: smooth; }
 
 /* ---------------------------------------------------------------- viewer */
 
-.pdf-page .react-pdf__Page__textContent ::selection { background: rgba(253, 216, 53, 0.55); }
+/* The text layer is an invisible copy of the page text, laid over the
+   rendered page so it can be selected. Keep it invisible when selected too:
+   the global ::selection colour would draw a second, slightly offset copy of
+   every selected word (it looked bold and overlapping). */
+.pdf-page .react-pdf__Page__textContent { mix-blend-mode: multiply; } /* yellow behind the ink, like a real highlighter */
+.pdf-page .react-pdf__Page__textContent ::selection { background: rgba(253, 216, 53, 0.6); color: transparent; }
 .pdf-page.region-mode .react-pdf__Page__textContent { pointer-events: none; }
+
+/* Search matches inside the page text layer (multiply keeps the ink crisp);
+   the page with the current match is orange. */
+.pdf-page .react-pdf__Page__textContent mark.pdf-hit { background: rgba(253, 216, 53, 0.9); color: transparent; border-radius: 2px; padding: 0; margin: 0; }
+.pdf-page[data-hit="current"] .react-pdf__Page__textContent mark.pdf-hit { background: rgba(255, 149, 0, 0.8); }
+
+/* Reading themes: only the page changes; the app around it stays light.
+   Night inverts the page and rotates hue back, so highlights stay yellow-ish
+   and figures keep their colours' meaning. */
+[data-reader="sepia"] .pdf-scroll { background: #e6dcc6; }
+[data-reader="sepia"] .pdf-page canvas { filter: sepia(0.42) saturate(1.15) brightness(0.97); }
+[data-reader="night"] .pdf-scroll { background: #141413; }
+[data-reader="night"] .pdf-page { filter: invert(0.88) hue-rotate(180deg); box-shadow: none; }

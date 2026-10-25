@@ -11,7 +11,7 @@ type RawOutline = Awaited<ReturnType<PDFDocument["getOutline"]>>;
 // Postgres text cannot hold NUL bytes, and PDFs sometimes contain them.
 const clean = (s: string) => s.replace(/\u0000/g, "").replace(/[ \t]+\n/g, "\n").trim();
 
-async function resolveOutline(pdf: PDFDocument, items: RawOutline, level = 0, out: OutlineItem[] = []) {
+export async function resolveOutline(pdf: PDFDocument, items: RawOutline, level = 0, out: OutlineItem[] = []) {
   for (const item of items ?? []) {
     if (out.length >= 300) break;
     try {
