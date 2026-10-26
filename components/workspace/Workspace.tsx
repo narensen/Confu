@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { deleteDocument } from "@/components/dashboard/actions";
 import type { RegionCapture, TextSelection } from "@/components/pdf/PdfViewer";
 import { JSON_HEADERS, KEY_ERROR_EVENT, notifyAiUsed, readAiError } from "@/lib/ai-errors";
@@ -91,6 +91,7 @@ export type SendRequest = {
 };
 
 const SPLIT_KEY = "confu:split";
+const noSubscribe = () => () => {};
 const URL_TTL = 60 * 60 * 6;
 
 // Labels follow the order of the tabs: D1, D2, …
@@ -183,6 +184,36 @@ export function Workspace({
     docIds.current = docs.map((d) => d.id);
   }, [docs]);
   const activeDoc = openDocs.find((d) => d.id === activeDocId) ?? openDocs[0] ?? null;
+  // The open tabs are only known in the browser. Until then, don't start
+  // loading a PDF: the server's pick (the most recently changed file) is often
+  // not an open tab, and loading it first meant loading two PDFs.
+  const tabsKnown = useSyncExternalStore(
+    noSubscribe,
+    () => true,
+    () => false,
+  );
+
+  // Background work (adding the goal's and plan's papers and lectures: each is
+  // downloaded and read in this browser) waits until the PDF being read is
+  // open, so it never slows that down. At most 8 seconds.
+  const viewer = useRef<{ ready: boolean; waiters: (() => void)[] }>({ ready: false, waiters: [] });
+  const viewerLoaded = useCallback(() => {
+    viewer.current.ready = true;
+    for (const done of viewer.current.waiters.splice(0)) done();
+  }, []);
+  const viewerReady = useCallback(
+    () =>
+      new Promise<void>((resolve) => {
+        if (viewer.current.ready) return resolve();
+        viewer.current.waiters.push(resolve);
+        window.setTimeout(resolve, 8000);
+      }),
+    [],
+  );
+  // Nothing to load (no open file, or one without a PDF): don't keep anyone waiting.
+  useEffect(() => {
+    if (tabsKnown && (!activeDoc || !activeDoc.hasPdf)) viewerLoaded();
+  }, [activeDoc, tabsKnown, viewerLoaded]);
   const page = activeDoc?.lastPage ?? 1;
   const multi = docs.length > 1;
   const labelOf = useCallback((id: string | null | undefined) => docs.find((d) => d.id === id)?.label, [docs]);
@@ -890,6 +921,8 @@ export function Workspace({
     let live = true;
     const id = window.setTimeout(async () => {
       try {
+        await viewerReady(); // the PDF being read loads first
+        if (!live) return;
         const res = await fetch("/api/paper/detect", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ sessionId: session.id }) });
         if (!res.ok || !live) return;
         const { papers } = (await res.json()) as { papers: { id: string; title: string; meta: SessionDoc["meta"] }[] };
@@ -1022,21 +1055,30 @@ export function Workspace({
   // added straight away; papers that couldn't be found open the paper search
   // (and, like other links, wait in "To add" until they're dealt with).
   const goalKey = !isPaper && !isExam && plan ? `confu:goal-papers2:${session.id}:${hashText(`${plan.goal_title}\n${plan.goal}\n${plan.materials}`)}` : null;
-  const goalActions = useRef({ addPaperMetas, importLinks, uploadsSettled, openGoalSearch });
+  const goalActions = useRef({ addPaperMetas, importLinks, uploadsSettled, openGoalSearch, viewerReady });
   useEffect(() => {
-    goalActions.current = { addPaperMetas, importLinks, uploadsSettled, openGoalSearch };
+    goalActions.current = { addPaperMetas, importLinks, uploadsSettled, openGoalSearch, viewerReady };
   });
   useEffect(() => {
-    if (!goalKey || locked) return;
+    // Once per goal per visit (effects can run twice); its own work runs to the end.
+    if (!goalKey || locked || goalRunFor.current === goalKey) return;
+    goalRunFor.current = goalKey;
     try {
       if (localStorage.getItem(goalKey) === "done") return;
+      // A failed attempt (the AI busy, offline) waits ten minutes before the next.
+      if (Date.now() - Number(localStorage.getItem(`${goalKey}:tried`) ?? 0) < 600_000) return;
     } catch {}
-    let live = true;
     // The plan's own papers wait for this to finish (see below), so nothing is added twice.
     goalJob.current = (async () => {
+      await goalActions.current.viewerReady(); // the PDF being read loads first
       const res = await fetch("/api/paper/from-goal", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ sessionId: session.id }) }).catch(() => null);
       notifyAiUsed();
-      if (!res?.ok || !live) return;
+      if (!res?.ok) {
+        try {
+          localStorage.setItem(`${goalKey}:tried`, String(Date.now()));
+        } catch {}
+        return;
+      }
       try {
         localStorage.setItem(goalKey, "done");
       } catch {}
@@ -1048,6 +1090,7 @@ export function Workspace({
       addLater(session.id, { papers: unsure, links: found.links.filter((l) => l.kind !== "youtube") });
 
       const act = goalActions.current;
+      await act.viewerReady();
       await act.uploadsSettled();
       const squash = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, "");
       const notes: string[] = [];
@@ -1065,15 +1108,13 @@ export function Workspace({
       if (notes.length) toast(`Added ${notes.join(" and ")} from your goal.`);
       if (unsure.length) act.openGoalSearch();
     })();
-    return () => {
-      live = false;
-    };
   }, [goalKey, locked, session.id]);
 
   // The papers the plan itself recommends ("Go deeper"), added the same way:
   // found for sure, added; not sure, waiting in Files to be searched for. Once
   // per plan, after the goal's papers are in, skipping any already in Files.
   const goalJob = useRef<Promise<unknown>>(Promise.resolve());
+  const goalRunFor = useRef<string | null>(null);
   const docsNow = useRef(docs);
   useEffect(() => {
     docsNow.current = docs;
@@ -1085,11 +1126,13 @@ export function Workspace({
     const key = `confu:plan-papers:${plan.id}`;
     try {
       if (localStorage.getItem(key)) return;
+      if (Date.now() - Number(localStorage.getItem(`${key}:tried`) ?? 0) < 600_000) return;
     } catch {}
     planPapersFor.current = plan.id;
     const titles = [...new Map(topics.flatMap((t) => t.resources ?? []).filter(isPaperResource).map((r) => [r.title.toLowerCase(), r])).values()];
     void (async () => {
       await goalJob.current;
+      await goalActions.current.viewerReady(); // the PDF being read loads first
       const wanted = titles.filter((r) => !docForResource(r, docsNow.current) && !laterNow.current.papers.some((p) => p.name === r.title)).slice(0, 12);
       if (wanted.length) {
         const res = await fetch("/api/paper/resolve-titles", {
@@ -1097,10 +1140,17 @@ export function Workspace({
           headers: JSON_HEADERS,
           body: JSON.stringify({ sessionId: session.id, titles: wanted.map((r) => r.title), field: plan.goal_title ?? "" }),
         }).catch(() => null);
-        if (!res?.ok) return; // try again next time
+        if (!res?.ok) {
+          // Try again on a later visit, not straight away.
+          try {
+            localStorage.setItem(`${key}:tried`, String(Date.now()));
+          } catch {}
+          return;
+        }
         const { papers } = (await res.json()) as { papers: GoalPaper[] };
         addLater(session.id, { papers: papers.filter((p) => !p.paper).map((p) => ({ name: p.name, title: p.title })) });
         const act = goalActions.current;
+        await act.viewerReady();
         await act.uploadsSettled();
         const sure = papers.flatMap((p) => (p.paper && !docsNow.current.some((d) => d.title.toLowerCase() === p.paper!.title.toLowerCase()) ? [p.paper] : []));
         if (sure.length) {
@@ -1379,6 +1429,8 @@ export function Workspace({
             <PendingSourceCard key={activeDoc.id} doc={activeDoc} busy={Boolean(uploadStatus)} onAttach={attachPdf} />
           ) : activeDoc && !activeDoc.hasPdf ? (
             <PaperCard key={activeDoc.id} doc={activeDoc} busy={Boolean(uploadStatus)} onAttach={(file) => void attachPdf(activeDoc.id, file)} />
+          ) : activeDoc && !tabsKnown ? (
+            <div className="h-full bg-viewer" />
           ) : activeDoc ? (
             <PdfViewer
               key={activeDoc.id}
@@ -1391,6 +1443,7 @@ export function Workspace({
               focusMode={focusMode}
               onToggleFocus={toggleFocus}
               onPageChange={onPageChange}
+              onLoaded={viewerLoaded}
               onTextAction={onTextAction}
               onSaveHighlight={saveHighlight}
               onUpdateHighlight={updateHighlight}

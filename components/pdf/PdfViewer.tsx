@@ -18,6 +18,48 @@ import type { Highlight, OutlineItem, Rect, TutorAction } from "@/lib/types";
 // Must be set in the same module that renders <Document>/<Page>.
 pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
 
+// Opening big PDFs fast. Supabase serves byte ranges, but its CORS doesn't
+// expose Accept-Ranges, so pdf.js can't tell and downloads the whole file
+// before showing anything (a 40 MB textbook took ~10 s). Here the ranges are
+// fetched for it: the start of the file first, then whatever pdf.js asks for,
+// in chunks big enough that a slow round trip isn't paid too often. If the
+// server doesn't do ranges, the plain URL is used as before.
+const FIRST_CHUNK = 512 * 1024;
+const PDF_OPTIONS = { rangeChunkSize: 512 * 1024 };
+type PdfSource = string | { range: InstanceType<typeof pdfjs.PDFDataRangeTransport> };
+
+async function rangedSource(url: string): Promise<PdfSource> {
+  try {
+    const head = await fetch(url, { method: "HEAD" });
+    const length = Number(head.headers.get("content-length"));
+    if (!head.ok || !length) return url;
+    const first = await fetch(url, { headers: { Range: `bytes=0-${Math.min(length, FIRST_CHUNK) - 1}` } });
+    if (first.status !== 206) return url;
+    const transport = new pdfjs.PDFDataRangeTransport(length, new Uint8Array(await first.arrayBuffer()));
+    transport.requestDataRange = (begin: number, end: number) => {
+      void fetch(url, { headers: { Range: `bytes=${begin}-${end - 1}` } })
+        .then((r) => r.arrayBuffer())
+        .then((buf) => transport.onDataRange(begin, new Uint8Array(buf)))
+        .catch(() => {});
+    };
+    return { range: transport };
+  } catch {
+    return url;
+  }
+}
+
+function usePdfSource(url: string): PdfSource | null {
+  const [source, setSource] = useState<{ url: string; source: PdfSource } | null>(null);
+  useEffect(() => {
+    let live = true;
+    void rangedSource(url).then((s) => live && setSource({ url, source: s }));
+    return () => {
+      live = false;
+    };
+  }, [url]);
+  return source?.url === url ? source.source : null;
+}
+
 export type TextSelection = { text: string; page: number; rects: Rect[] };
 export type RegionCapture = { page: number; rect: Rect; image: string };
 
@@ -34,6 +76,7 @@ type Props = {
   toolbarStart?: ReactNode;
   onToggleFocus: () => void;
   onPageChange: (page: number) => void;
+  onLoaded?: () => void; // the PDF is open (its first page measured)
   onTextAction: (action: TutorAction, selection: TextSelection, message?: string) => void;
   onSaveHighlight: (selection: TextSelection, color: HighlightColor, note?: string) => void;
   onUpdateHighlight?: (h: Highlight, patch: { color?: HighlightColor; note?: string | null }) => void;
@@ -125,6 +168,7 @@ function cropCanvas(pageEl: HTMLElement, rect: Rect): string | null {
 
 export default function PdfViewer(props: Props) {
   const { url, documentId, initialPage, goTo, highlights, busy, focusMode, toolbarStart, onToggleFocus, onPageChange } = props;
+  const source = usePdfSource(url);
   const scrollRef = useRef<HTMLDivElement>(null);
   const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [numPages, setNumPages] = useState(0);
@@ -614,9 +658,12 @@ export default function PdfViewer(props: Props) {
               Reload
             </button>
           </div>
+        ) : !source ? (
+          <p className="p-8 text-center text-sm text-muted">Loading PDF…</p>
         ) : (
           <Document
-            file={url}
+            file={source}
+            options={PDF_OPTIONS}
             suspense={false}
             loading={<p className="p-8 text-center text-sm text-muted">Loading PDF…</p>}
             onLoadError={(e) => {
@@ -641,6 +688,7 @@ export default function PdfViewer(props: Props) {
               setCurrent(target);
               setPageInput(String(target));
               requestAnimationFrame(() => scrollToPage(target));
+              props.onLoaded?.();
             }}
             onItemClick={({ pageNumber }) => scrollToPage(pageNumber, true)}
             externalLinkTarget="_blank"
