@@ -14,6 +14,8 @@ import { addPaperFromMeta, type PaperMeta } from "@/lib/pdf/add-paper";
 import { attachPdfToDocument, uploadPdfToSession } from "@/lib/pdf/upload";
 import { AddPaperDialog } from "@/components/paper/AddPaperDialog";
 import { AddMaterialDialog, type ImportedFile } from "@/components/import/AddMaterialDialog";
+import { ConvertFiles } from "@/components/import/ConvertFiles";
+import { needsConversion } from "@/lib/import/drive";
 import { openRecommendPapers, RecommendPapers } from "@/components/paper/RecommendDialog";
 import { PaperCard } from "@/components/paper/PaperCard";
 import { GoalPapers } from "@/components/paper/GoalPapers";
@@ -487,15 +489,22 @@ export function Workspace({
     [docs, loadDoc, selectDoc, supabase, uploadStatus],
   );
 
+  // Slides and Word files are turned into PDFs through Google first (ConvertFiles).
+  const [converting, setConverting] = useState<File[] | null>(null);
   const addPdfs = useCallback(
-    (files: File[]) =>
-      addDocs(
-        files.map((file) => async (userId, position) => {
+    async (files: File[]) => {
+      const office = files.filter(needsConversion);
+      if (office.length) setConverting(office);
+      const pdfs = files.filter((f) => !needsConversion(f));
+      if (!pdfs.length) return [];
+      return addDocs(
+        pdfs.map((file) => async (userId, position) => {
           const { id, ocrNote } = await uploadPdfToSession(supabase, { userId, sessionId: session.id, file, position, onStatus: setUploadStatus });
           if (ocrNote) toast(ocrNote);
           return id;
         }),
-      ),
+      );
+    },
     [addDocs, session.id, supabase],
   );
 
@@ -987,6 +996,7 @@ export function Workspace({
           }}
         />
       )}
+      {converting && <ConvertFiles files={converting} onDone={(pdfs) => void addPdfs(pdfs)} onClose={() => setConverting(null)} />}
       {addMaterialOpen && (
         <AddMaterialDialog
           initialTab={isPaper ? "zotero" : "upload"}

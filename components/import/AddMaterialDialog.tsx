@@ -199,7 +199,7 @@ function UploadTab({ onFiles }: { onFiles: (files: File[]) => void }) {
       <input
         ref={input}
         type="file"
-        accept="application/pdf,.pptx,.ppt"
+        accept="application/pdf,.pptx,.ppt,.odp,.docx,.doc,.odt,.rtf"
         multiple
         className="hidden"
         onChange={(e) => {
@@ -208,7 +208,7 @@ function UploadTab({ onFiles }: { onFiles: (files: File[]) => void }) {
           if (files.length) onFiles(files);
         }}
       />
-      <p className="mt-3 text-xs text-muted">Slides? Use the Google Drive tab to convert PowerPoint, or export them as PDF first.</p>
+      <p className="mt-3 text-xs text-muted">PowerPoint and Word files are turned into PDFs through Google Drive.</p>
     </div>
   );
 }

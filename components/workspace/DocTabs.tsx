@@ -64,7 +64,7 @@ export function DocTabs({ docs, activeId, uploadStatus, onSelect, onAdd, onRemov
       <input
         ref={input}
         type="file"
-        accept="application/pdf,.pptx,.ppt"
+        accept="application/pdf,.pptx,.ppt,.odp,.docx,.doc,.odt,.rtf"
         multiple
         className="hidden"
         onChange={(e) => {

@@ -2,7 +2,8 @@
 // browser. Asks only for drive.file, which covers just the files the student
 // picks. PDFs come as they are; Google Docs/Slides/Sheets are exported to PDF;
 // Word and PowerPoint files are converted through a temporary Google copy
-// (deleted right after).
+// (deleted right after). The same conversion turns slides and Word files
+// uploaded from the computer into PDFs (convertWithGoogle).
 //
 // Needs, in Google Cloud: the Picker API and Drive API enabled, an API key,
 // the OAuth client's JavaScript origins, and these public env vars:
@@ -193,4 +194,59 @@ export async function importFromDrive(onStatus: (s: string) => void): Promise<{ 
     }
   }
   return { files, failed };
+}
+
+/* ------------------------------------------- converting uploaded files */
+
+// Uploaded slides and documents Google can turn into a PDF (not Keynote).
+const UPLOAD_TARGET: [RegExp, string][] = [
+  [/\.(pptx?|odp)$/i, "application/vnd.google-apps.presentation"],
+  [/\.(docx?|odt|rtf)$/i, "application/vnd.google-apps.document"],
+];
+export const convertTarget = (f: File) => UPLOAD_TARGET.find(([re]) => re.test(f.name))?.[1] ?? null;
+export const needsConversion = (f: File) => f.type !== "application/pdf" && Boolean(convertTarget(f));
+
+// Upload to the student's Drive as Google Slides/Docs, export a PDF, delete
+// the copy. Call it straight from a click (the sign-in may open a popup), and
+// after prepareDrive() has finished.
+export async function convertWithGoogle(files: File[], onStatus: (s: string) => void): Promise<{ pdfs: File[]; failed: string[] }> {
+  if (!driveConfigured) throw new Error("Google Drive isn't set up yet.");
+  const signIn = token(); // first, while this is still the click
+  onStatus("Connecting to Google…");
+  const accessToken = await signIn;
+  const pdfs: File[] = [];
+  const failed: string[] = [];
+  for (const [i, file] of files.entries()) {
+    const target = convertTarget(file);
+    if (!target) {
+      failed.push(`${file.name}: Google can't convert this kind of file.`);
+      continue;
+    }
+    onStatus(`Converting ${i + 1} of ${files.length}: ${file.name}`);
+    let id: string | null = null;
+    try {
+      // Resumable upload: simple uploads stop at 5 MB.
+      const start = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json; charset=UTF-8", "X-Upload-Content-Type": file.type || "application/octet-stream" },
+        body: JSON.stringify({ name: `${file.name} (Confu temp)`, mimeType: target }),
+      });
+      const location = start.ok ? start.headers.get("location") : null;
+      if (!location) throw new Error(`Google Drive error (${start.status}).`);
+      const put = await fetch(location, { method: "PUT", body: file });
+      if (!put.ok) throw new Error(put.status === 400 ? "Google couldn't read this file." : `Google Drive error (${put.status}).`);
+      id = ((await put.json()) as { id: string }).id;
+      const res = await fetch(`https://www.googleapis.com/drive/v3/files/${id}/export?mimeType=${encodeURIComponent(PDF)}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (!res.ok) throw new Error(res.status === 403 ? "It's too big for Google to export (10 MB limit). Export it as PDF yourself." : `Google Drive error (${res.status}).`);
+      const name = file.name.replace(/\.[^.]+$/, "");
+      pdfs.push(new File([await res.blob()], `${name}.pdf`, { type: PDF }));
+    } catch (err) {
+      failed.push(`${file.name}: ${err instanceof Error ? err.message : "failed"}`);
+    } finally {
+      if (id) await api(accessToken, `files/${id}`, { method: "DELETE" }).catch(() => {});
+    }
+  }
+  return { pdfs, failed };
 }

@@ -7,6 +7,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { buttonClass, eyebrowClass, ghostButtonClass, inputClass, labelClass } from "@/components/ui";
 import { isPowerPoint, PPT_CONVERTER_URL } from "@/lib/pdf/office";
+import { needsConversion } from "@/lib/import/drive";
+import { ConvertFiles } from "@/components/import/ConvertFiles";
 import { uploadPdfToSession, validatePdf } from "@/lib/pdf/upload";
 import { createClient } from "@/lib/supabase/client";
 import type { SessionKind } from "@/lib/types";
@@ -138,8 +140,13 @@ function NewSessionDialog({ initialKind, onClose }: { initialKind: SessionKind |
     { scope: root, dependencies: [step] },
   );
 
-  function addFiles(list: FileList | null) {
-    const picked = Array.from(list ?? []);
+  // Slides and Word files go through Google first; the PDFs come back to this list.
+  const [converting, setConverting] = useState<File[] | null>(null);
+  function addFiles(list: FileList | File[] | null) {
+    const all = Array.from(list ?? []);
+    const office = all.filter(needsConversion);
+    if (office.length) setConverting(office);
+    const picked = all.filter((f) => !needsConversion(f));
     const bad = picked.map(validatePdf).find(Boolean);
     setPptPicked(picked.some(isPowerPoint));
     if (bad) return setError(bad);
@@ -296,7 +303,7 @@ function NewSessionDialog({ initialKind, onClose }: { initialKind: SessionKind |
                   <span className={labelClass}>
                     PDFs <span className="font-normal text-muted">(optional: add web pages, courses, YouTube lectures, Google Drive or Zotero inside the session)</span>
                   </span>
-                  <input ref={fileInput} type="file" accept="application/pdf,.pptx,.ppt" multiple className="hidden" onChange={(e) => {
+                  <input ref={fileInput} type="file" accept="application/pdf,.pptx,.ppt,.odp,.docx,.doc,.odt,.rtf" multiple className="hidden" onChange={(e) => {
                       addFiles(e.target.files);
                       e.target.value = "";
                     }}
@@ -373,6 +380,13 @@ function NewSessionDialog({ initialKind, onClose }: { initialKind: SessionKind |
           </div>
         )}
       </div>
+      {converting && (
+        <ConvertFiles
+          files={converting}
+          onDone={(pdfs) => setFiles((cur) => [...cur, ...pdfs.filter((f) => !cur.some((c) => c.name === f.name && c.size === f.size))])}
+          onClose={() => setConverting(null)}
+        />
+      )}
     </div>
   );
 }
