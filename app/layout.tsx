@@ -8,7 +8,6 @@ import { AppShell } from "@/components/AppShell";
 import { DialogHost } from "@/components/dialogs";
 import { FeedbackHost } from "@/components/Feedback";
 import { FlashToast } from "@/components/FlashToast";
-import { RoomDock } from "@/components/rooms/RoomDock";
 import { Telemetry } from "@/components/Telemetry";
 import { THEME_SCRIPT } from "@/lib/theme";
 
@@ -52,9 +51,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <FeedbackHost />
         <AppShell />
         <FlashToast />
-        <Suspense fallback={null}>
-          <RoomDock />
-        </Suspense>
         <Suspense fallback={null}>
           <Telemetry />
         </Suspense>

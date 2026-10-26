@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/client";
 
 // Study rooms (migration 0025): the room you're in, kept across pages so a
-// small dock can follow you into your library and sessions. Presence is a
+// header can show it (and its timer) all over the app. Presence is a
 // check-in every 30 seconds; changes (someone joins, the timer starts) are
 // announced on a Realtime channel so everyone refreshes at once.
 
@@ -116,7 +116,7 @@ export function ping(slug: string) {
   const channel = channels.get(slug);
   if (channel) void channel.send({ type: "broadcast", event: "refresh", payload: {} });
   else {
-    // Not watching the room (e.g. leaving from the dock): a one-off message.
+    // Not watching the room (e.g. leaving from the header): a one-off message.
     const supabase = createClient();
     const once = supabase.channel(`room:${slug}`);
     once.subscribe((status) => {

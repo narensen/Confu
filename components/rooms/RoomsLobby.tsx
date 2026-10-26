@@ -48,8 +48,12 @@ export function RoomsLobby() {
       if (error) throw new Error(error.message.includes("up to 5") ? "You can have up to 5 rooms. Delete one first." : error.message);
       track("room.create", { focus });
       router.push(`/rooms/${data as string}`);
+      // This page stays mounted (hidden) while the room is open: reset it, or
+      // it's still "Creating…" on the way back.
+      setName("");
     } catch (err) {
       toast(err instanceof Error ? err.message : "Couldn't create the room.", "error");
+    } finally {
       setPending(false);
     }
   }

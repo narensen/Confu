@@ -22,16 +22,13 @@ export type FilesProps = {
   onOpen: (docId: string) => void;
   onCloseTab: (doc: SessionDoc) => void;
   onDelete: (doc: SessionDoc) => void;
-  // Study sessions: read a PDF as a paper, or not.
-  paperIds?: Set<string>;
-  onPaper?: (docId: string) => void;
-  onNotPaper?: (docId: string) => void;
+  paperIds?: Set<string>; // study sessions: which files are papers (shown, not switched)
 };
 
 // Every file in the session (PDFs, and slides or documents converted to
 // PDF), open as a tab or not. The tabs above the viewer are only what's
 // open; this is where files are opened, closed and deleted.
-export function FilesPanel({ docs, activeId, open, addLabel, onAdd, onAddPapers, uploads, onRetry, onDismiss, later, onOpen, onCloseTab, onDelete, paperIds, onPaper, onNotPaper }: FilesProps) {
+export function FilesPanel({ docs, activeId, open, addLabel, onAdd, onAddPapers, uploads, onRetry, onDismiss, later, onOpen, onCloseTab, onDelete, paperIds }: FilesProps) {
   const openCount = docs.filter((d) => open.has(d.id)).length;
   return (
     <div className="h-full overflow-y-auto px-6 py-6">
@@ -115,16 +112,6 @@ export function FilesPanel({ docs, activeId, open, addLabel, onAdd, onAddPapers,
                         .join(" · ")}
                     </span>
                     <span className="-mr-1.5 flex items-center">
-                      {onPaper && onNotPaper && (
-                        <button
-                          type="button"
-                          onClick={() => (isPaperDoc ? onNotPaper(d.id) : onPaper(d.id))}
-                          title={isPaperDoc ? "Read it as a regular document (its pass notes are kept)" : "Read it with the three-pass method"}
-                          className="rounded px-1.5 py-0.5 text-muted transition hover:bg-paper hover:text-ink"
-                        >
-                          {isPaperDoc ? "Not a paper" : "Read as paper"}
-                        </button>
-                      )}
                       {isOpen ? (
                         <button type="button" onClick={() => onCloseTab(d)} title="Close its tab (it stays here)" className="rounded px-1.5 py-0.5 text-muted transition hover:bg-paper hover:text-ink">
                           Close tab

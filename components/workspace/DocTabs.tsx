@@ -13,16 +13,15 @@ type Props = {
   // Paper sessions open the "Add papers" dialog instead of a file picker.
   onAddClick?: () => void;
   addLabel?: string;
-  // Study sessions: which PDFs are research papers, and the switch to read one as a paper.
+  // Study sessions: which files are papers (recognised automatically), and the way to their passes.
   paperIds?: Set<string>;
   onPaper?: (docId: string) => void;
-  onNotPaper?: (docId: string) => void; // undo "Read as a paper"
   onShortcuts?: () => void;
 };
 
 // The PDFs open as tabs above the viewer. Closing one only hides it: every
 // PDF is in the Files tab, where they're opened again or deleted.
-export function DocTabs({ docs, activeId, uploadStatus, onSelect, onAdd, onClose, onAddClick, addLabel = "+ Add PDF", paperIds, onPaper, onNotPaper, onShortcuts }: Props) {
+export function DocTabs({ docs, activeId, uploadStatus, onSelect, onAdd, onClose, onAddClick, addLabel = "+ Add PDF", paperIds, onPaper, onShortcuts }: Props) {
   const input = useRef<HTMLInputElement>(null);
   const active = docs.find((d) => d.id === activeId);
   const activeIsPaper = Boolean(active && paperIds?.has(active.id));
@@ -82,29 +81,18 @@ export function DocTabs({ docs, activeId, uploadStatus, onSelect, onAdd, onClose
           if (files.length) onAdd(files);
         }}
       />
-      {onPaper && active && (
+      {/* A paper (recognised automatically) gets a shortcut to its three passes. */}
+      {onPaper && active && activeIsPaper && (
         <button
           type="button"
           onClick={() => onPaper(active.id)}
-          title={activeIsPaper ? "Open this paper's three passes" : "Read it with the three-pass method: notes, checklists and a coach"}
-          className={`hidden shrink-0 items-center gap-1.5 border-l border-ink px-3 text-xs font-medium transition duration-200 sm:flex ${
-            activeIsPaper ? "bg-yellow-300 hover:bg-yellow-400" : "hover:bg-yellow-100"
-          }`}
+          title="Open this paper's three passes"
+          className="hidden shrink-0 items-center gap-1.5 border-l border-ink bg-yellow-300 px-3 text-xs font-medium transition duration-200 hover:bg-yellow-400 sm:flex"
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
             <path d="M6 2h9l5 5v15H6zM14 2v6h6M9 13h7M9 17h5" />
           </svg>
-          {activeIsPaper ? "Open its passes" : "Read as a paper"}
-        </button>
-      )}
-      {onNotPaper && active && activeIsPaper && (
-        <button
-          type="button"
-          onClick={() => onNotPaper(active.id)}
-          title="Not a paper: read it as a regular document (its pass notes are kept)"
-          className="hidden shrink-0 items-center border-l border-ink px-2.5 text-xs text-muted transition duration-200 hover:bg-paper hover:text-ink sm:flex"
-        >
-          Not a paper
+          Open its passes
         </button>
       )}
       <button

@@ -41,7 +41,7 @@ export type PaperDocMeta = {
   doi?: string | null;
   arxiv_id?: string | null;
   abstract?: string | null;
-  // "yes" once found to be a paper; "off" when the student said it isn't one.
+  // "yes" once found to be a paper, "no" if the databases didn't know it.
   paper_check?: string;
 };
 

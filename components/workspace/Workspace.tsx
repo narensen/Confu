@@ -878,33 +878,9 @@ export function Workspace({
     () => new Set(isExam ? [] : docs.filter((d) => isPaper || isPaperDoc(d, storedReviews)).map((d) => d.id)),
     [docs, isExam, isPaper, storedReviews],
   );
-  // A study session's PDF read as a paper, or not. "Not a paper" keeps its
-  // pass notes (marking it again brings them back), and detection leaves it be.
-  const setPaperCheck = useCallback(
-    (docId: string, value: "yes" | "off") => {
-      const doc = docs.find((d) => d.id === docId);
-      if (!doc) return;
-      const meta = { ...(doc.meta ?? {}), paper_check: value };
-      setDocs((list) => list.map((d) => (d.id === docId ? { ...d, meta } : d)));
-      fire(supabase.from("documents").update({ meta }).eq("id", docId), "whether it's a paper");
-    },
-    [docs, supabase],
-  );
-  const markPaper = useCallback(
-    (docId: string) => {
-      if (docs.find((d) => d.id === docId)?.meta?.paper_check === "off") setPaperCheck(docId, "yes");
-      updateReview(docId, {});
-    },
-    [docs, setPaperCheck, updateReview],
-  );
-  const unmarkPaper = useCallback(
-    (docId: string) => {
-      setPaperCheck(docId, "off");
-      if (tab === "passes" && paperIds.size <= 1) setTab(plan ? "plan" : "chat");
-      toast("Not read as a paper any more. Its pass notes are kept, if you change your mind.");
-    },
-    [paperIds, plan, setPaperCheck, tab],
-  );
+  // Papers added through the paper search (or the goal and plan) are papers;
+  // the rest are recognised automatically (see /api/paper/detect).
+  const markPaper = useCallback((docId: string) => updateReview(docId, {}), [updateReview]);
 
   // Study sessions: spot the PDFs that are research papers (Semantic Scholar,
   // OpenAlex and the goal; see /api/paper/detect) whenever PDFs or the goal change.
@@ -1295,10 +1271,14 @@ export function Workspace({
                 busy: false,
                 onFind: openGoalSearch,
                 onRemovePaper: (name) => removeLater(session.id, { papers: [name] }),
+                // They leave this list at once for "Coming in" (with progress); any that fail come back.
                 onImport: async (links) => {
-                  const { done, failed } = await importLinks(links);
-                  removeLater(session.id, { links: done });
-                  if (failed.length) toast(`Couldn't bring in:\n${failed.map((l) => l.url).join("\n")}\n\nThey stay in Files; try them from + Add material too.`, "error");
+                  removeLater(session.id, { links: links.map((l) => l.url) });
+                  const { failed } = await importLinks(links);
+                  if (failed.length) {
+                    addLater(session.id, { links: failed });
+                    toast(`Couldn't bring in:\n${failed.map((l) => l.url).join("\n")}\n\nThey're back under “From your goal”; try them from + Add material too.`, "error");
+                  }
                 },
                 onPlaylist: (url) => {
                   setMaterialStart({ tab: "youtube", url });
@@ -1313,13 +1293,7 @@ export function Workspace({
         },
         onCloseTab: closeDocTab,
         onDelete: removePdf,
-        ...(isPaper || isExam
-          ? {}
-          : {
-              paperIds,
-              onPaper: (docId: string) => markPaper(docId),
-              onNotPaper: unmarkPaper,
-            }),
+        paperIds: isPaper || isExam ? undefined : paperIds,
       }}
       draftGoal={session.draftGoal ?? ""}
       setup={{ upload: uploading, incoming, settled: uploadsSettled, job: planJob, setJob: setPlanJob }}
@@ -1388,14 +1362,12 @@ export function Workspace({
           onAddClick={isPaper ? () => setAddPaperOpen(true) : () => setAddMaterialOpen(true)}
           addLabel={isPaper ? "+ Add paper" : "+ Add material"}
           paperIds={isPaper || isExam ? undefined : paperIds}
-          onNotPaper={isPaper || isExam ? undefined : unmarkPaper}
           onShortcuts={() => setShortcutsOpen(true)}
           onPaper={
             isPaper || isExam
               ? undefined
-              : (docId) => {
-                  // Mark it (keeps any notes), then open its passes beside the PDF.
-                  if (!paperIds.has(docId)) markPaper(docId);
+              : () => {
+                  // Its passes, beside the PDF.
                   setTab("passes");
                   setDrawerOpen(true);
                   setMobileView("tutor");

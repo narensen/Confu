@@ -10,8 +10,13 @@ import { parseDuration } from "@/lib/usage";
 // Requests rotate across the keys. When Groq rate-limits a key for a model
 // (per-minute or per-day), that key is skipped for that model until Groq says
 // it frees up, and the request is retried on the next key, before any answer
-// streams, so the user doesn't notice. State is per server instance; a fresh
-// instance relearns it from Groq's responses (a refused request costs nothing).
+// streams, so the user doesn't notice. When every key is limited:
+//   - a per-minute limit frees within seconds, so the request waits for it
+//     (up to WAIT_BUDGET) instead of failing; heavy requests (a paper's text
+//     is thousands of tokens) easily pass a free key's tokens-per-minute;
+//   - still limited, it falls back to a smaller model with its own limits.
+// State is per server instance; a fresh instance relearns it from Groq's
+// responses (a refused request costs nothing).
 
 const keys = [
   ...new Set(
@@ -37,6 +42,11 @@ function waitMs(res: Response, body: string): number {
   return (m && parseDuration(m[1])) || 60_000;
 }
 
+const WAIT_BUDGET = 20_000; // ms a request may wait for a key to free up
+// Same API and parameters, separate rate limits: used when the first is exhausted.
+const FALLBACK: Record<string, string> = { "openai/gpt-oss-120b": "openai/gpt-oss-20b" };
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 const json = (status: number, message: string) =>
   new Response(JSON.stringify({ error: { message, type: "pool" } }), { status, headers: { "content-type": "application/json" } });
 
@@ -47,10 +57,35 @@ export const poolFetch: typeof fetch = async (input, init) => {
   try {
     model = (JSON.parse(String(init?.body ?? "{}")) as { model?: string }).model ?? "*";
   } catch {}
-  // Only string bodies can be resent to another key.
+  // Only string bodies can be resent to another key (or another model).
   const retryable = typeof init?.body === "string" || init?.body == null;
 
-  let refused = false;
+  const started = Date.now();
+  for (;;) {
+    const res = await tryKeys(input, init, model, retryable);
+    if (res) return res;
+    if (!retryable) break;
+    // Every key is limited for this model: wait if one frees up soon enough.
+    const wait = soonestFree(model) - Date.now();
+    if (wait > WAIT_BUDGET - (Date.now() - started)) break;
+    await sleep(Math.max(250, wait + 250));
+  }
+  // Still limited: the smaller model, which has limits of its own.
+  const fallback = FALLBACK[model];
+  if (retryable && fallback && typeof init?.body === "string") {
+    const body = init.body.replace(`"model":"${model}"`, `"model":"${fallback}"`);
+    if (body !== init.body) {
+      const res = await tryKeys(input, { ...init, body }, fallback, true);
+      if (res) return res;
+    }
+  }
+  // Report the pool's state, not one key's (its message would talk about "your key").
+  return json(429, "All of Confu's keys are busy right now. Try again in a minute.");
+};
+
+// One pass over the keys not benched for this model: the first answer that
+// isn't a rate limit or a refused key, or null if there's none.
+async function tryKeys(input: Parameters<typeof fetch>[0], init: Parameters<typeof fetch>[1], model: string, retryable: boolean): Promise<Response | null> {
   for (let i = 0; i < keys.length; i++) {
     const k = keys[(cursor + i) % keys.length];
     const now = Date.now();
@@ -68,11 +103,18 @@ export const poolFetch: typeof fetch = async (input, init) => {
       cursor = (cursor + i + 1) % keys.length; // spread load across keys
       return res;
     }
-    refused = true;
     if (!retryable) break;
   }
-  // Report the pool's state, not one key's (its message would talk about "your key").
-  return refused || keys.length
-    ? json(429, "All of Confu's keys are busy right now. Try again in a minute.")
-    : json(500, "No server Groq keys are configured (GROQ_API_KEYS).");
-};
+  return null;
+}
+
+// When the first key usable for this model frees up (a key refused outright doesn't count).
+function soonestFree(model: string) {
+  const now = Date.now();
+  let soonest = Infinity;
+  for (const k of keys) {
+    if ((benchedUntil.get(`${k.fp}|*`) ?? 0) > now) continue;
+    soonest = Math.min(soonest, Math.max(now, benchedUntil.get(`${k.fp}|${model}`) ?? 0));
+  }
+  return soonest;
+}

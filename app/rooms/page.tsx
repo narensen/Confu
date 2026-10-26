@@ -15,7 +15,7 @@ export default function RoomsPage() {
           <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">Study alongside others</h1>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
             A shared focus timer and a few people quietly working with you. No chat, no camera: just the gentle pressure of not being alone. Join a room,
-            then go back to your library; a small dock keeps the timer with you.
+            then go back to your library; the room and its timer stay at the top of the page.
           </p>
         </div>
         <RoomsLobby />
