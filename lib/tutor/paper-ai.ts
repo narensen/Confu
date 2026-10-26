@@ -24,14 +24,11 @@ const Triage = z.object({
 });
 
 // Suggest how deep each paper deserves to be read, given the research goal.
-export async function triagePapers(supabase: SupabaseClient, groq: Groq, sessionId: string, researchGoal: string) {
-  const { data } = await supabase
-    .from("documents")
-    .select("id, title, page_count")
-    .eq("session_id", sessionId)
-    .eq("status", "ready")
-    .order("position")
-    .order("created_at");
+// onlyIds: just these documents (a study session's papers, not its textbooks).
+export async function triagePapers(supabase: SupabaseClient, groq: Groq, sessionId: string, researchGoal: string, onlyIds?: string[]) {
+  let query = supabase.from("documents").select("id, title, page_count").eq("session_id", sessionId).eq("status", "ready");
+  if (onlyIds) query = query.in("id", onlyIds);
+  const { data } = await query.order("position").order("created_at");
   const papers = ((data ?? []) as PaperRow[]).map((p, i) => ({ ...p, label: docLabel(i) }));
   if (!papers.length) return [];
 

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { deleteDocument } from "@/components/dashboard/actions";
 import type { RegionCapture, TextSelection } from "@/components/pdf/PdfViewer";
 import { JSON_HEADERS, KEY_ERROR_EVENT, notifyAiUsed, readAiError } from "@/lib/ai-errors";
+import { hashText } from "@/lib/hash";
 import type { KeyInfo } from "@/lib/groq-keys";
 import { emptyReview, isPaperDoc, type PaperReview } from "@/lib/paper";
 import type { Attempt } from "@/lib/exam";
@@ -15,6 +16,7 @@ import { AddPaperDialog } from "@/components/paper/AddPaperDialog";
 import { AddMaterialDialog, type ImportedFile } from "@/components/import/AddMaterialDialog";
 import { openRecommendPapers, RecommendPapers } from "@/components/paper/RecommendDialog";
 import { PaperCard } from "@/components/paper/PaperCard";
+import { GoalPapers } from "@/components/paper/GoalPapers";
 import { currentTopic } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/client";
 import { displayUserTurn } from "@/lib/tutor/format";
@@ -532,9 +534,9 @@ export function Workspace({
       if (skipped.length) {
         toast(`Added without a PDF (abstract only):\n${skipped.join("\n")}\n\nYou can still do a first pass, and the tutor can look these up. Upload the PDF later for a deeper read.`);
       }
-      if (added.length && !isPaper) setTab("passes");
+      return added;
     },
-    [addDocs, isPaper, session.id, supabase],
+    [addDocs, session.id, supabase],
   );
 
   // Give a metadata-only paper its PDF, keeping its id (and so its notes).
@@ -661,6 +663,50 @@ export function Workspace({
   );
   const markPaper = useCallback((docId: string) => updateReview(docId, {}), [updateReview]);
 
+  // Study sessions: spot the PDFs that are research papers (Semantic Scholar,
+  // OpenAlex and the goal; see /api/paper/detect) whenever PDFs or the goal change.
+  const detectKey = isPaper || isExam ? "" : `${docs.map((d) => d.id).join(",")}|${plan?.id ?? ""}|${plan?.goal ?? ""}`;
+  useEffect(() => {
+    if (!detectKey || !docs.some((d) => d.hasPdf && !paperIds.has(d.id))) return;
+    let live = true;
+    const id = window.setTimeout(async () => {
+      try {
+        const res = await fetch("/api/paper/detect", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ sessionId: session.id }) });
+        if (!res.ok || !live) return;
+        const { papers } = (await res.json()) as { papers: { id: string; title: string; meta: SessionDoc["meta"] }[] };
+        if (!papers.length || !live) return;
+        const found = new Map(papers.map((p) => [p.id, p]));
+        setDocs((list) => list.map((d) => (found.has(d.id) ? { ...d, title: found.get(d.id)!.title, meta: found.get(d.id)!.meta } : d)));
+        // Already saved by the server.
+        for (const p of papers) updateReview(p.id, {}, false);
+        toast(
+          papers.length === 1
+            ? `“${papers[0].title}” is a research paper. Open it to read it with the three passes.`
+            : `Found ${papers.length} research papers. Open one to read it with the three passes.`,
+        );
+      } catch {}
+    }, 1500);
+    return () => {
+      live = false;
+      window.clearTimeout(id);
+    };
+    // Runs when the PDFs or the goal change, not on every edit to the list.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detectKey]);
+
+  // Opening a paper in a study session brings up its passes; leaving papers goes back to the plan.
+  const openDocTab = useCallback(
+    (docId: string) => {
+      selectDoc(docId);
+      if (isPaper || isExam) return;
+      if (paperIds.has(docId)) {
+        setTab("passes");
+        setDrawerOpen(true);
+      } else setTab((t) => (t === "passes" ? (plan ? "plan" : "chat") : t));
+    },
+    [isExam, isPaper, paperIds, plan, selectDoc],
+  );
+
   // Uploaded through "Add paper" in a study session: mark them as papers.
   const addPaperPdfs = useCallback(
     async (files: File[]) => {
@@ -671,6 +717,57 @@ export function Workspace({
     },
     [addPdfs, isPaper, markPaper],
   );
+
+  // Papers found by arXiv ID, DOI, title, Zotero or a suggestion. In a study
+  // session they're marked as papers (some have no DOI or arXiv ID to tell).
+  const addPaperMetas = useCallback(
+    async (papers: PaperMeta[]) => {
+      const added = await addPapers(papers);
+      if (isPaper || !added.length) return;
+      for (const d of added) markPaper(d.id);
+      setTab("passes");
+    },
+    [addPapers, isPaper, markPaper],
+  );
+
+  // The papers a study goal names, offered once per goal (see /api/paper/from-goal).
+  const [goalPapers, setGoalPapers] = useState<{ papers: PaperMeta[]; unresolved: string[] } | null>(null);
+  const goalKey = !isPaper && !isExam && plan ? `confu:goal-papers:${session.id}:${hashText(`${plan.goal_title}\n${plan.goal}`)}` : null;
+  useEffect(() => {
+    if (!goalKey || locked) return;
+    let saved: string | null = null;
+    try {
+      saved = localStorage.getItem(goalKey);
+    } catch {}
+    if (saved === "done") return;
+    if (saved) {
+      try {
+        setGoalPapers(JSON.parse(saved));
+        return;
+      } catch {}
+    }
+    let live = true;
+    void (async () => {
+      const res = await fetch("/api/paper/from-goal", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ sessionId: session.id }) }).catch(() => null);
+      notifyAiUsed();
+      if (!res?.ok) return;
+      const found = (await res.json()) as { papers: PaperMeta[]; unresolved: string[] };
+      const any = found.papers.length || found.unresolved.length;
+      try {
+        localStorage.setItem(goalKey, any ? JSON.stringify(found) : "done");
+      } catch {}
+      if (live && any) setGoalPapers(found);
+    })();
+    return () => {
+      live = false;
+    };
+  }, [goalKey, locked, session.id]);
+  const closeGoalPapers = useCallback(() => {
+    setGoalPapers(null);
+    try {
+      if (goalKey) localStorage.setItem(goalKey, "done");
+    } catch {}
+  }, [goalKey]);
 
   const saveExamDate = useCallback(
     (date: string | null) => {
@@ -688,7 +785,7 @@ export function Workspace({
     [session.id, supabase],
   );
 
-  const panel = locked ? (
+  const tutor = locked ? (
     <KeyGate
       sessionId={session.id}
       notice={keyNotice}
@@ -732,10 +829,31 @@ export function Workspace({
         fetching: uploadStatus,
         paperIds,
         onMarkPaper: markPaper,
+        onAddPapers: () => setAddPaperOpen(true),
+        studyGoal: plan ? plan.goal_title || plan.goal : "",
       }}
       exam={{ practice, examDate, onExamDate: saveExamDate }}
     />
   );
+  const panel =
+    goalPapers && !locked ? (
+      <div className="flex h-full min-h-0 flex-col">
+        <GoalPapers
+          key={goalKey}
+          papers={goalPapers.papers}
+          unresolved={goalPapers.unresolved}
+          busy={Boolean(uploadStatus)}
+          onAdd={(papers) => {
+            closeGoalPapers();
+            void addPaperMetas(papers);
+          }}
+          onDismiss={closeGoalPapers}
+        />
+        <div className="min-h-0 flex-1">{tutor}</div>
+      </div>
+    ) : (
+      tutor
+    );
 
   return (
     <div ref={rootRef} className={`flex min-h-0 flex-1 bg-paper ${focusMode ? "fixed inset-0 z-40" : "relative"}`}>
@@ -772,7 +890,7 @@ export function Workspace({
           docs={docs}
           activeId={activeDoc?.id ?? null}
           uploadStatus={uploadStatus}
-          onSelect={selectDoc}
+          onSelect={openDocTab}
           onAdd={addPdfs}
           onRemove={removePdf}
           onAddClick={isPaper ? () => setAddPaperOpen(true) : () => setAddMaterialOpen(true)}
@@ -851,11 +969,17 @@ export function Workspace({
         </div>
       </section>
 
-      {isPaper && <RecommendPapers sessionId={session.id} researchGoal={researchGoal} onAdd={(papers) => void addPapers(papers)} />}
+      {!isExam && (
+        <RecommendPapers
+          sessionId={session.id}
+          researchGoal={researchGoal || (plan ? plan.goal_title || plan.goal : "")}
+          onAdd={(papers) => void addPaperMetas(papers)}
+        />
+      )}
       {addPaperOpen && (
         <AddPaperDialog
           onClose={() => setAddPaperOpen(false)}
-          onAdd={(papers) => void addPapers(papers)}
+          onAdd={(papers) => void addPaperMetas(papers)}
           onUpload={(files) => void addPaperPdfs(files)}
           onMoreSources={() => {
             setAddPaperOpen(false);
@@ -869,7 +993,7 @@ export function Workspace({
           onClose={() => setAddMaterialOpen(false)}
           onFiles={(files) => void addPdfs(files)}
           onImported={(items) => void addImported(items)}
-          onPapers={(papers) => void addPapers(papers)}
+          onPapers={(papers) => void addPaperMetas(papers)}
           onFindPaper={
             isPaper
               ? undefined

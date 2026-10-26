@@ -7,7 +7,11 @@ import { logError } from "@/lib/log";
 
 export const maxDuration = 60;
 
-const Body = z.object({ sessionId: z.uuid(), researchGoal: z.string().trim().min(5).max(4000) });
+const Body = z.object({
+  sessionId: z.uuid(),
+  researchGoal: z.string().trim().min(5).max(4000),
+  documentIds: z.array(z.uuid()).max(40).optional(), // study sessions: only their papers
+});
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -17,7 +21,7 @@ export async function POST(request: Request) {
 
   const parsed = Body.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: "Describe your research goal first (at least a sentence)." }, { status: 400 });
-  const { sessionId, researchGoal } = parsed.data;
+  const { sessionId, researchGoal, documentIds } = parsed.data;
 
   const access = await resolveGroq(supabase, userId, sessionId, "triage");
   if ("error" in access) return access.error;
@@ -26,7 +30,7 @@ export async function POST(request: Request) {
   await supabase.from("study_sessions").update({ research_goal: researchGoal }).eq("id", sessionId);
 
   try {
-    const results = await triagePapers(supabase, access.groq, sessionId, researchGoal);
+    const results = await triagePapers(supabase, access.groq, sessionId, researchGoal, documentIds);
     if (results.length) {
       // Only the target and reason change; existing notes and progress are kept.
       const { error } = await supabase.from("paper_reviews").upsert(

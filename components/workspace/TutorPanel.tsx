@@ -31,6 +31,8 @@ export type PaperProps = {
   // Study sessions: which materials are research papers (read with the passes).
   paperIds: Set<string>;
   onMarkPaper: (docId: string) => void;
+  onAddPapers: () => void;
+  studyGoal: string; // the study plan's goal, the default for triage and suggestions
 };
 
 type Props = {
@@ -188,6 +190,8 @@ export function TutorPanel(props: Props) {
             docs={passDocs}
             otherDocs={props.kind === "study" ? props.docs.filter((d) => !props.paper.paperIds.has(d.id) && d.hasPdf && d.pageCount <= PAPER_MAX_PAGES) : []}
             onMarkPaper={props.paper.onMarkPaper}
+            onAddPapers={props.paper.onAddPapers}
+            studyGoal={props.paper.studyGoal}
             activeDocId={props.paper.activeDocId}
             reviews={props.paper.reviews}
             researchGoal={props.paper.researchGoal}

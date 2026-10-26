@@ -15,6 +15,8 @@ type Props = {
   docs: SessionDoc[];
   otherDocs?: SessionDoc[]; // study material short enough to be a paper
   onMarkPaper?: (docId: string) => void;
+  onAddPapers?: () => void;
+  studyGoal?: string;
   activeDocId: string | null;
   reviews: Record<string, PaperReview>;
   researchGoal: string;
@@ -45,17 +47,7 @@ export function PassesPanel(props: Props) {
 
   return (
     <div className="h-full overflow-y-auto">
-      {inStudy ? (
-        <section className="animate-enter border-b border-ink px-6 pt-6 pb-5">
-          <p className={eyebrowClass}>Papers in this study · three-pass method</p>
-          <h2 className="mt-1 font-serif text-2xl leading-tight">Read papers like a researcher</h2>
-          <p className="mt-1.5 text-sm leading-relaxed text-muted">
-            Give each paper one pass to know what it says, two to understand its evidence, or three to rebuild it. Pick how deep each one goes for your goal.
-          </p>
-        </section>
-      ) : (
-        <ResearchGoal {...props} />
-      )}
+      <ResearchGoal {...props} />
 
       {/* Reading list */}
       <section className="border-b border-ink px-6 py-5">
@@ -127,8 +119,9 @@ export function PassesPanel(props: Props) {
   );
 }
 
-function ResearchGoal({ sessionId, researchGoal, docs, busy, fetching, onResearchGoal, onUpdate }: Props) {
-  const [goal, setGoal] = useState(researchGoal);
+function ResearchGoal({ sessionId, researchGoal, docs, busy, fetching, onResearchGoal, onUpdate, inStudy, studyGoal, onAddPapers }: Props) {
+  // In a study session the study goal stands in until they write a research goal.
+  const [goal, setGoal] = useState(researchGoal || (inStudy ? (studyGoal ?? "") : ""));
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -137,7 +130,12 @@ function ResearchGoal({ sessionId, researchGoal, docs, busy, fetching, onResearc
     setError(null);
     try {
       onResearchGoal(goal);
-      const res = await fetch("/api/paper/triage", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ sessionId, researchGoal: goal }) });
+      const res = await fetch("/api/paper/triage", {
+        method: "POST",
+        headers: JSON_HEADERS,
+        // A study session's textbooks aren't triaged, only its papers.
+        body: JSON.stringify({ sessionId, researchGoal: goal, documentIds: inStudy ? docs.map((d) => d.id) : undefined }),
+      });
       if (!res.ok) throw new Error(await readAiError(res));
       const json = (await res.json()) as { results: { documentId: string; pass: PassNumber; reason: string }[] };
       // Already saved by the server.
@@ -152,8 +150,8 @@ function ResearchGoal({ sessionId, researchGoal, docs, busy, fetching, onResearc
 
   return (
     <section className="animate-enter border-b border-ink px-6 pt-6 pb-5">
-      <p className={eyebrowClass}>Paper session · three-pass method</p>
-      <h2 className="mt-1 font-serif text-2xl leading-tight">What are you researching?</h2>
+      <p className={eyebrowClass}>{inStudy ? "Papers in this study" : "Paper session"} · three-pass method</p>
+      <h2 className="mt-1 font-serif text-2xl leading-tight">{inStudy ? "Read papers like a researcher" : "What are you researching?"}</h2>
       <p className="mt-1.5 text-sm leading-relaxed text-muted">
         Not every paper deserves a deep read. Your goal decides which ones get one pass, two, or a full re-implementation.
       </p>
@@ -201,6 +199,11 @@ function ResearchGoal({ sessionId, researchGoal, docs, busy, fetching, onResearc
           Suggest papers
         </button>
       </div>
+      {onAddPapers && (
+        <button type="button" onClick={onAddPapers} disabled={Boolean(fetching)} className={`${ghostButtonClass} mt-2 w-full justify-center py-1.5 text-xs`}>
+          + Add papers by arXiv ID, DOI, link or title
+        </button>
+      )}
     </section>
   );
 }
