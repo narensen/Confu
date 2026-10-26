@@ -5,6 +5,22 @@ export type Release = { date: string; title: string; summary: string; items: str
 
 export const CHANGELOG: Release[] = [
   {
+    date: "2026-10-27",
+    title: "Lock it in, listen ahead, take it with you",
+    summary: "Recall checks, audio overviews, playlists, exports and dark mode.",
+    items: [
+      "Quick recall check: mark a topic done and answer three questions from memory. What you miss comes back in review.",
+      "Listen (2 min): a spoken preview of any topic, what it's about and what to watch for, before you read it.",
+      "Import a whole YouTube playlist: pick the lectures and they come in one by one, each with its own progress.",
+      "Export a session as Markdown (for Obsidian, Notion or any editor), or your review cards for Anki.",
+      "Dark mode: Auto, Light or Dark under Appearance in your account menu.",
+      "Behind schedule? Re-pace from today with one tap, and spin the Custom pace dial to fit your week.",
+      "Watch your plan take shape: topics appear as they're written.",
+      "Files shows what's coming in, with Retry if something fails, and what your goal names that isn't added yet.",
+      "Open your goal prompt straight in ChatGPT or Claude. Keyboard shortcuts in the workspace: press ?.",
+    ],
+  },
+  {
     date: "2026-10-26",
     title: "Your whole literature, connected",
     summary: "One map of every paper you've read, and a plan that starts while your PDFs upload.",

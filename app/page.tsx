@@ -25,8 +25,8 @@ const MODES = [
   {
     tag: "Study",
     title: "Learn toward a goal",
-    body: "Tell Confu what you want to be able to do and by when. It maps your PDFs into a phased plan, uses them where they help, and fills the gaps with lectures and readings.",
-    points: ["Phased plan paced to your deadline", "Topics beyond your PDFs, with resources", "Teach me / check my understanding"],
+    body: "Tell Confu what you want to be able to do and by when. It maps your files into a phased plan, uses them where they help, and fills the gaps with lectures and readings.",
+    points: ["Phased plan paced to your deadline", "Topics beyond your files, with resources", "Teach me / check my understanding"],
     mock: <PlanMock />,
   },
   {
@@ -67,7 +67,7 @@ const FEATURES: { title: string; body: string; icon: ReactNode }[] = [
     icon: <path d="M12 3a7 7 0 0 0-4 12.7V19h8v-3.3A7 7 0 0 0 12 3ZM9 22h6" />,
   },
   {
-    title: "Many PDFs, one place",
+    title: "Many files, one place",
     body: "Bring a textbook, lecture slides and a paper together. The tutor searches across all of them.",
     icon: <path d="M8 3h10v14H8zM5 6v15h11" />,
   },
@@ -94,7 +94,7 @@ const FEATURES: { title: string; body: string; icon: ReactNode }[] = [
 ];
 
 const STEPS = [
-  { title: "Bring your material", body: "Upload PDFs (notes, textbooks, slides), or add papers by arXiv ID or DOI." },
+  { title: "Bring your material", body: "Upload PDFs, slides or Word docs (notes, textbooks, lectures), or add papers by arXiv ID or DOI." },
   { title: "Say what you're aiming for", body: "A learning goal, an exam date, or a research question. That's what keeps the tutor focused." },
   { title: "Learn actively", body: "Highlight, ask, practise and explain back. Confu tracks your progress as you go." },
 ];
@@ -130,8 +130,8 @@ const FAQ: { q: string; a: ReactNode }[] = [
     ),
   },
   {
-    q: "Which PDFs work?",
-    a: "Any PDF: notes, textbooks, slides, papers, past papers. Scanned or phone-photographed pages, including handwriting, are read by a vision model when you upload them, so the tutor can search and cite them too. Very messy handwriting may come out partly illegible.",
+    q: "Which files work?",
+    a: "Any PDF, plus PowerPoint and Word files (converted through your Google Drive): notes, textbooks, slides, papers, past papers. Scanned or phone-photographed pages, including handwriting, are read by a vision model when you upload them, so the tutor can search and cite them too. Very messy handwriting may come out partly illegible.",
   },
   {
     q: "Can the AI be wrong?",
@@ -191,7 +191,7 @@ export default function Home() {
             </p>
             <h1 className="mt-4 font-serif text-5xl leading-[1.04] tracking-tight sm:text-6xl">
               <Words text="Understand it deeply," />{" "}
-              <span data-hero="mark" className="bg-[linear-gradient(transparent_62%,#fde047_62%)] bg-no-repeat">
+              <span data-hero="mark" className="bg-[linear-gradient(transparent_62%,var(--marker)_62%)] bg-no-repeat">
                 <Words text="not just skim it." />
               </span>
             </h1>
@@ -393,7 +393,7 @@ export default function Home() {
               ["Grounded, and honest about limits", "Answers cite the page they came from. When something isn't in your material, it says so. AI can still be wrong, so check what matters."],
               ["Your key is yours", "Your Groq key is encrypted, used only for your requests, and never shared, sold or logged."],
               ["No ads, no tracking", "No advertising, no analytics cookies, and we don't train AI models on your notes."],
-              ["Your data, your call", "Delete a session and its PDFs, notes and conversations go with it. Export everything, or delete your account, from Settings."],
+              ["Your data, your call", "Delete a session and its files, notes and conversations go with it. Export everything, or delete your account, from Settings."],
             ].map(([title, body]) => (
               <li key={title} data-slide-item className="bg-panel p-6">
                 <p className="font-medium">{title}</p>
@@ -503,7 +503,7 @@ export default function Home() {
             <h2 data-split className="max-w-2xl font-serif text-4xl leading-tight tracking-tight sm:text-5xl">
               Your notes already have the answers. <span className="text-yellow-400">Learn them properly.</span>
             </h2>
-            <p data-reveal className="mt-4 text-white/60">Free to start. Bring a PDF, a paper ID, or an exam date.</p>
+            <p data-reveal className="mt-4 text-white/60">Free to start. Bring a file, a paper ID, or an exam date.</p>
           </div>
           <div data-reveal>
             <Suspense fallback={<div className="h-12 w-44" />}>

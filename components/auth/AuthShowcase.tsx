@@ -67,7 +67,7 @@ export function AuthShowcase() {
           <p className="font-mono text-[10px] text-muted">D1 · p. 12</p>
           <p className="mt-1.5 text-[13px] leading-relaxed">
             PCA keeps the directions of{" "}
-            <span className="bg-[linear-gradient(transparent_55%,#fde047_55%)]">greatest variance in the data</span>, ordered by how much they
+            <span className="bg-[linear-gradient(transparent_55%,var(--marker)_55%)]">greatest variance in the data</span>, ordered by how much they
             explain.
           </p>
           <div className="mt-3 flex flex-wrap gap-1">

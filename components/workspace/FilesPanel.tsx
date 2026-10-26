@@ -1,15 +1,24 @@
 "use client";
 
-import { eyebrowClass } from "@/components/ui";
+import { eyebrowClass, ghostButtonClass } from "@/components/ui";
 import type { SessionDoc } from "@/lib/types";
+import { ToAddSection, type ToAddProps } from "./ToAddSection";
+
+// A file on its way in: waiting its turn, being read and indexed, or failed
+// (with Retry). Done ones simply appear in the list below.
+export type UploadItem = { key: string; name: string; status: "waiting" | "working" | "failed"; note?: string };
 
 export type FilesProps = {
   docs: SessionDoc[];
   activeId: string | null;
   open: Set<string>; // PDFs open as tabs above the viewer
-  busy: boolean;
   addLabel: string;
   onAdd: () => void;
+  onAddPapers?: () => void; // study sessions: the paper search too
+  uploads: UploadItem[];
+  onRetry: (key: string) => void;
+  onDismiss: (key: string) => void;
+  later?: ToAddProps; // study sessions: what the goal names that isn't in yet
   onOpen: (docId: string) => void;
   onCloseTab: (doc: SessionDoc) => void;
   onDelete: (doc: SessionDoc) => void;
@@ -19,9 +28,10 @@ export type FilesProps = {
   onNotPaper?: (docId: string) => void;
 };
 
-// Every PDF in the session, open as a tab or not. The tabs above the viewer
-// are only what's open; this is where PDFs are opened, closed and deleted.
-export function FilesPanel({ docs, activeId, open, busy, addLabel, onAdd, onOpen, onCloseTab, onDelete, paperIds, onPaper, onNotPaper }: FilesProps) {
+// Every file in the session (PDFs, and slides or documents converted to
+// PDF), open as a tab or not. The tabs above the viewer are only what's
+// open; this is where files are opened, closed and deleted.
+export function FilesPanel({ docs, activeId, open, addLabel, onAdd, onAddPapers, uploads, onRetry, onDismiss, later, onOpen, onCloseTab, onDelete, paperIds, onPaper, onNotPaper }: FilesProps) {
   const openCount = docs.filter((d) => open.has(d.id)).length;
   return (
     <div className="h-full overflow-y-auto px-6 py-6">
@@ -31,19 +41,59 @@ export function FilesPanel({ docs, activeId, open, busy, addLabel, onAdd, onOpen
           <h2 className="mt-1 font-serif text-2xl leading-tight">Everything in this session</h2>
           <p className="mt-1.5 text-sm leading-relaxed text-muted">
             {docs.length
-              ? `${docs.length} ${docs.length === 1 ? "PDF" : "PDFs"}, ${openCount} open as ${openCount === 1 ? "a tab" : "tabs"}. New PDFs land here: open one to read it. Closing a tab keeps the PDF here.`
+              ? `${docs.length} ${docs.length === 1 ? "file" : "files"}, ${openCount} open as ${openCount === 1 ? "a tab" : "tabs"}. New files land here: open one to read it. Closing a tab keeps the file here.`
               : "Nothing yet."}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onAdd}
-          disabled={busy}
-          className="shrink-0 rounded-md border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white transition hover:-translate-y-px disabled:opacity-40"
-        >
-          {addLabel}
-        </button>
+        <div className="flex shrink-0 flex-col items-end gap-1.5">
+          <button type="button" onClick={onAdd} className="rounded-md border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white transition hover:-translate-y-px">
+            {addLabel}
+          </button>
+          {onAddPapers && (
+            <button type="button" onClick={onAddPapers} className={`${ghostButtonClass} py-1 text-xs`}>
+              + Add papers
+            </button>
+          )}
+        </div>
       </header>
+
+      {uploads.length > 0 && (
+        <section className="mt-5" aria-live="polite">
+          <p className={eyebrowClass}>Coming in</p>
+          <ul className="mt-2 divide-y divide-line rounded-xl border border-line">
+            {uploads.map((u) => (
+              <li key={u.key} className="flex items-center gap-3 px-3 py-2.5">
+                <span
+                  aria-hidden
+                  className={`size-2 shrink-0 rounded-full ${u.status === "failed" ? "bg-danger" : u.status === "working" ? "animate-pulse bg-ink" : "bg-line"}`}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium">{u.name}</span>
+                  <span className={`block truncate text-xs ${u.status === "failed" ? "text-danger" : "text-muted"}`}>
+                    {u.status === "waiting" ? "Waiting its turn" : (u.note ?? (u.status === "failed" ? "Couldn't add it" : "Working…"))}
+                  </span>
+                </span>
+                {u.status === "failed" && (
+                  <span className="flex shrink-0 items-center gap-1 text-xs">
+                    <button type="button" onClick={() => onRetry(u.key)} className="rounded-md border border-ink px-2 py-0.5 font-medium transition hover:bg-ink hover:text-white">
+                      Retry
+                    </button>
+                    <button type="button" onClick={() => onDismiss(u.key)} className="rounded px-1.5 py-0.5 text-muted transition hover:text-ink">
+                      Dismiss
+                    </button>
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {later && (later.later.papers.length > 0 || later.later.links.length > 0) && (
+        <div className="mt-5">
+          <ToAddSection {...later} />
+        </div>
+      )}
 
       {docs.length > 0 && (
         <ul className="mt-5 divide-y divide-line rounded-xl border border-line">
@@ -69,7 +119,7 @@ export function FilesPanel({ docs, activeId, open, busy, addLabel, onAdd, onOpen
                         <button
                           type="button"
                           onClick={() => (isPaperDoc ? onNotPaper(d.id) : onPaper(d.id))}
-                          title={isPaperDoc ? "Read it as a regular PDF (its pass notes are kept)" : "Read it with the three-pass method"}
+                          title={isPaperDoc ? "Read it as a regular document (its pass notes are kept)" : "Read it with the three-pass method"}
                           className="rounded px-1.5 py-0.5 text-muted transition hover:bg-paper hover:text-ink"
                         >
                           {isPaperDoc ? "Not a paper" : "Read as paper"}

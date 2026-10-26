@@ -207,7 +207,7 @@ export function SettingsView(d: SettingsData) {
             id="danger"
             title="Delete account"
             danger
-            description="Permanently deletes your account and everything in it: sessions, PDFs, notes, highlights, conversations and saved keys. Export your data first if you want a copy."
+            description="Permanently deletes your account and everything in it: sessions, files, notes, highlights, conversations and saved keys. Export your data first if you want a copy."
           >
             <Row label="Delete your account" hint="This can't be undone.">
               <DeleteAccount />

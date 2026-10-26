@@ -16,6 +16,7 @@ import type { SendRequest } from "./Workspace";
 type Filter = "all" | HighlightColor | "notes" | "figures";
 
 type Props = {
+  sessionId: string;
   highlights: Highlight[];
   docs: SessionDoc[];
   busy: boolean;
@@ -25,7 +26,24 @@ type Props = {
   onSend: (req: SendRequest) => void;
 };
 
-export function HighlightsPanel({ highlights, docs, busy, onJump, onDelete, onUpdate, onSend }: Props) {
+// Download the whole session: Markdown (Obsidian, Notion, any editor) or Anki cards.
+function ExportLinks({ sessionId }: { sessionId: string }) {
+  const link = "underline-offset-4 transition hover:text-ink hover:underline";
+  return (
+    <p className="text-[11px] text-muted">
+      Take it with you:{" "}
+      <a href={`/api/export/session?id=${sessionId}&format=md`} download onClick={() => track("export.markdown")} className={link}>
+        whole session (Markdown)
+      </a>
+      {" · "}
+      <a href={`/api/export/session?id=${sessionId}&format=anki`} download onClick={() => track("export.anki")} className={link} title="In Anki: File → Import">
+        review cards (Anki)
+      </a>
+    </p>
+  );
+}
+
+export function HighlightsPanel({ sessionId, highlights, docs, busy, onJump, onDelete, onUpdate, onSend }: Props) {
   const [filter, setFilter] = useState<Filter>("all");
   const order = useMemo(() => new Map(docs.map((d, i) => [d.id, i])), [docs]);
   const labelOf = (id: string) => docs.find((d) => d.id === id)?.label;
@@ -69,6 +87,9 @@ export function HighlightsPanel({ highlights, docs, busy, onJump, onDelete, onUp
         <p className="mt-3 text-sm leading-relaxed text-muted">
           Add a <b className="font-medium text-ink">Note</b> to any passage, or use <b className="font-medium text-ink">Capture region</b> on a figure, table or equation.
         </p>
+        <div className="mt-5 border-t border-line pt-3">
+          <ExportLinks sessionId={sessionId} />
+        </div>
       </div>
     );
   }
@@ -125,9 +146,12 @@ export function HighlightsPanel({ highlights, docs, busy, onJump, onDelete, onUp
               </button>
             ))}
         </div>
-        <button type="button" onClick={copyNotes} className="mt-2 text-[11px] text-muted underline-offset-4 transition hover:text-ink hover:underline">
-          Copy as notes (Markdown)
-        </button>
+        <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <button type="button" onClick={copyNotes} className="text-[11px] text-muted underline-offset-4 transition hover:text-ink hover:underline">
+            Copy highlights (Markdown)
+          </button>
+          <ExportLinks sessionId={sessionId} />
+        </div>
       </div>
 
       {filter === "figures" ? (

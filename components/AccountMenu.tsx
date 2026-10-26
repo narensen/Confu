@@ -6,6 +6,7 @@ import { signOut } from "@/app/(auth)/actions";
 import { openFeedback } from "@/components/Feedback";
 import { canInstall, promptInstall, subscribeInstall } from "@/lib/pwa/install";
 import { ago, formatTokens } from "@/lib/format-usage";
+import { setTheme, useTheme, type Theme } from "@/lib/theme";
 
 type Usage = {
   plan: "free" | "pro" | "trial";
@@ -212,6 +213,7 @@ export function AccountMenu({ name, email, plan, owner, keyLast4 }: Props) {
               </svg>
               Literature map
             </Link>
+            <ThemeSwitch />
             <Link
               role="menuitem"
               href="/wrapped"
@@ -368,6 +370,35 @@ function TrialBlock({ used, total }: { used: number; total: number }) {
           Add key
         </Link>
       </p>
+    </div>
+  );
+}
+
+// Appearance: the system's setting, or always light or dark.
+function ThemeSwitch() {
+  const theme = useTheme();
+  return (
+    <div className="flex items-center justify-between gap-3 px-2.5 py-2 text-sm">
+      <span className="flex items-center gap-2.5">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+          <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />
+        </svg>
+        Appearance
+      </span>
+      <span className="flex rounded-md border border-ink/25 p-0.5 text-[11px]" role="radiogroup" aria-label="Appearance">
+        {(["system", "light", "dark"] as Theme[]).map((t) => (
+          <button
+            key={t}
+            type="button"
+            role="radio"
+            aria-checked={theme === t}
+            onClick={() => setTheme(t)}
+            className={`rounded px-1.5 py-0.5 capitalize transition ${theme === t ? "bg-ink text-white" : "text-muted hover:text-ink"}`}
+          >
+            {t === "system" ? "Auto" : t}
+          </button>
+        ))}
+      </span>
     </div>
   );
 }

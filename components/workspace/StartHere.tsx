@@ -52,7 +52,7 @@ export function StartHere({
             {pages}
           </span>
         )}
-        {!inPdf && <span className="rounded border border-dashed border-ink/60 px-1.5 py-px font-mono text-ink">Beyond the PDFs</span>}
+        {!inPdf && <span className="rounded border border-dashed border-ink/60 px-1.5 py-px font-mono text-ink">Beyond your files</span>}
         <span>~{formatMinutes(topic.est_minutes)}</span>
       </p>
       {topic.objectives[0] && (

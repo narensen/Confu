@@ -27,7 +27,7 @@ export const KINDS: { kind: SessionKind; name: string; body: string; example: st
   {
     kind: "study",
     name: "Study",
-    body: "Learn toward a goal with a phased plan, across your PDFs and beyond.",
+    body: "Learn toward a goal with a phased plan, across your files and beyond.",
     example: "e.g. Linear algebra for machine learning",
     icon: <path d="M4 19V5a2 2 0 0 1 2-2h12v16H6a2 2 0 0 0-2 2Zm0 0a2 2 0 0 0 2 2h12M9 7h6" />,
   },
@@ -277,7 +277,7 @@ function NewSessionDialog({ initialKind, onClose }: { initialKind: SessionKind |
               ) : (
                 <div>
                   <span className={labelClass}>
-                    PDFs <span className="font-normal text-muted">(optional: add web pages, YouTube lectures, Google Drive or Zotero inside the session)</span>
+                    Files <span className="font-normal text-muted">(optional: PDFs, slides or Word docs; add web pages, YouTube lectures, Google Drive or Zotero inside the session)</span>
                   </span>
                   <input ref={fileInput} type="file" accept="application/pdf,.pptx,.ppt,.odp,.docx,.doc,.odt,.rtf" multiple className="hidden" onChange={(e) => {
                       addFiles(e.target.files);
@@ -306,7 +306,7 @@ function NewSessionDialog({ initialKind, onClose }: { initialKind: SessionKind |
                       </ul>
                     )}
                     <button type="button" onClick={() => fileInput.current?.click()} className={`${ghostButtonClass} py-1.5 text-xs`}>
-                      {files.length ? "Add more PDFs" : "Choose PDFs"}
+                      {files.length ? "Add more files" : "Choose files"}
                     </button>
                     <p className="mt-2 text-xs text-muted">or drop them here · up to 50 MB each. They upload in the session while you write your goal.</p>
                   </div>

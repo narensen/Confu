@@ -74,7 +74,7 @@ export function ChatPanel({ messages, busy, plan, docs, activeTopic, topics, onS
               {activeTopic.page_start === activeTopic.page_end ? `p. ${activeTopic.page_start}` : `pp. ${activeTopic.page_start}–${activeTopic.page_end}`}
             </button>
           ) : (
-            <span className="shrink-0 font-mono text-muted">beyond PDFs</span>
+            <span className="shrink-0 font-mono text-muted">beyond your files</span>
           )}
           <span className="shrink-0 font-mono tabular-nums">{Math.round(activeTopic.mastery * 100)}%</span>
         </div>
@@ -169,6 +169,7 @@ export function ChatPanel({ messages, busy, plan, docs, activeTopic, topics, onS
           className="flex items-end gap-2 rounded-xl border border-ink bg-panel p-1.5 transition-shadow duration-200 focus-within:shadow-hard-sm"
         >
           <textarea
+            id="tutor-input"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
@@ -178,7 +179,7 @@ export function ChatPanel({ messages, busy, plan, docs, activeTopic, topics, onS
               }
             }}
             rows={Math.min(6, Math.max(1, draft.split("\n").length))}
-            placeholder="Ask anything — about your PDFs or beyond them…"
+            placeholder="Ask anything, about your files or beyond them…"
             className="max-h-40 min-h-9 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted"
           />
           <button

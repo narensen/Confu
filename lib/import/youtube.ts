@@ -36,6 +36,56 @@ export function videoIdFrom(input: string): string | null {
   return null;
 }
 
+// A playlist's id from its link (…/playlist?list=PL…, or a video in one).
+// Watch Later, Liked videos and auto-made mixes aren't real playlists.
+export function playlistIdFrom(input: string): string | null {
+  const s = input.trim();
+  let id = /^(PL|OL|UU|FL)[\w-]{10,}$/.test(s) ? s : null;
+  if (!id) {
+    try {
+      id = new URL(s).searchParams.get("list");
+    } catch {}
+  }
+  return id && /^[\w-]{10,}$/.test(id) && !/^(WL|LL|RD)/.test(id) ? id : null;
+}
+
+export type PlaylistVideo = { id: string; title: string; seconds: number };
+const MAX_PLAYLIST = 200;
+
+// A playlist's videos, in order (up to 200), for picking which lectures to import.
+export async function fetchPlaylist(id: string): Promise<{ title: string; author: string; videos: PlaylistVideo[] }> {
+  type Item = { id?: string; content_id?: string; title?: { toString(): string }; metadata?: { title?: { toString(): string } }; duration?: { seconds?: number } };
+  let page;
+  try {
+    page = await (await innertube()).getPlaylist(id);
+  } catch (err) {
+    logError("youtube playlist failed", err);
+    throw new YouTubeError("Couldn't open that playlist. Check it's public, or import its lectures one by one.", "NOT_FOUND");
+  }
+  const title = page.info.title ?? "Playlist";
+  const author = page.info.author?.name ?? "";
+  const videos: PlaylistVideo[] = [];
+  const take = (items: unknown[]) => {
+    for (const raw of items) {
+      const it = raw as Item;
+      const vid = it.id ?? it.content_id;
+      const name = (it.title ?? it.metadata?.title)?.toString().trim();
+      if (vid && /^[\w-]{11}$/.test(vid) && name && !videos.some((v) => v.id === vid)) videos.push({ id: vid, title: name, seconds: it.duration?.seconds ?? 0 });
+    }
+  };
+  take(page.items as unknown[]);
+  while (page.has_continuation && videos.length < MAX_PLAYLIST) {
+    try {
+      page = await page.getContinuation();
+    } catch {
+      break;
+    }
+    take(page.items as unknown[]);
+  }
+  if (!videos.length) throw new YouTubeError("That playlist has no videos we can read.", "NOT_FOUND");
+  return { title, author, videos: videos.slice(0, MAX_PLAYLIST) };
+}
+
 const decode = (s: string) =>
   s
     .replace(/<[^>]+>/g, "")

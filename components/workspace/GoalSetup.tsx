@@ -6,13 +6,14 @@ import { JSON_HEADERS, notifyAiUsed, readAiError } from "@/lib/ai-errors";
 import { deadlineFor, hoursADayFor, type PaceEstimate } from "@/lib/pace";
 import { addDays, toISODate } from "@/lib/schedule";
 import type { Level, StudyPlan } from "@/lib/types";
+import { track } from "@/lib/telemetry";
 import { PaceCalibrator } from "./PaceCalibrator";
-import type { PlanSetup } from "./PlanPanel";
+import type { PlanFound, PlanSetup } from "./PlanPanel";
 
 const STEPS = [
   "Reading your goal…",
-  "Mapping your PDFs…",
-  "Finding what the PDFs don't cover…",
+  "Mapping your files…",
+  "Finding what your files don't cover…",
   "Choosing lectures and resources…",
   "Sequencing phases…",
   "Pacing it to your deadline…",
@@ -32,8 +33,8 @@ What I need it for (exam, project, job, research…).
 What I already know and where I'm weak.
 
 ### Materials
-My PDFs are ${pdfs}. Then list everything else I'm using, precisely:
-- Research papers: for EVERY paper, its FULL title AND its DOI. The DOI is compulsory. For arXiv papers use arXiv's DOI, 10.48550/arXiv.<id> (for example 10.48550/arXiv.1707.06347). Never give only a nickname like "PPO" or "DAPO". Don't guess a DOI: if you can't find one, write "DOI: not found" so I can look it up.
+The files I've uploaded are ${pdfs}. Then list everything else I'm using, precisely:
+- Research papers: for EVERY paper, its FULL title, its AUTHORS (at least the first author, like "Schulman et al.") AND its DOI. The DOI is compulsory. For arXiv papers use arXiv's DOI, 10.48550/arXiv.<id> (for example 10.48550/arXiv.1707.06347). Never give only a nickname like "PPO" or "DAPO". Don't guess a DOI: if you can't find one, write "DOI: not found" so I can look it up.
 - Courses and lectures: the name AND the YouTube link of EACH lecture video I'll watch (each video's own link, not only the playlist). Only if it isn't on YouTube, say so and give its page URL.
 - Books, guides and articles: title, author, and a link if they're online.
 
@@ -69,7 +70,7 @@ export function checkGoal(text: string) {
 
 // Papers, lectures and books go in the goal's own ### Materials section.
 const MATERIALS_HEADING = /^\s*(?:#{1,6}\s*|\d+\.\s*|\*\*)?(?:other\s+)?materials\b/im;
-const MATERIAL_LINES = ["- Papers (full title and DOI): ", "- Lectures and courses (YouTube links): ", "- Books and articles: "];
+const MATERIAL_LINES = ["- Papers (full title, authors and DOI): ", "- Lectures and courses (YouTube links): ", "- Books and articles: "];
 const MATERIALS_SECTION = `### Materials\n${MATERIAL_LINES.join("\n")}`;
 // The goal always starts from this, the same sections the starter prompt asks for.
 const TEMPLATE = `### Outcome\n\n\n### Why\n\n\n### Background\n\n\n${MATERIALS_SECTION}\n\n### Scope\n\n\n### Success check\n`;
@@ -82,7 +83,8 @@ function ensureMaterials(goal: string) {
 
 // What the student actually wrote: the goal without the template's headings and prompts.
 function writtenPart(goal: string) {
-  const prompts = new Set(MATERIAL_LINES.map((l) => l.trim()));
+  // (Drafts from before authors were asked for have the older papers line.)
+  const prompts = new Set([...MATERIAL_LINES, "- Papers (full title and DOI): "].map((l) => l.trim()));
   return goal
     .split("\n")
     .filter((l) => !/^\s*#{1,6}\s/.test(l) && !prompts.has(l.trim()))
@@ -252,7 +254,30 @@ function GoalForm({ sessionId, docTitles, existing, draftGoal, setup, onCreated,
         headers: JSON_HEADERS,
         body: JSON.stringify({ sessionId, goal: final, level, startDate: today, ...(paceOpen ? { deadline, minutesPerDay } : {}) }),
       });
-      if (!res.ok) throw new Error(await readAiError(res));
+      if (!res.ok || !res.body) throw new Error(await readAiError(res));
+      // One JSON object a line: phases and topics as they're written, then the plan's id.
+      const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+      const found: PlanFound[] = [];
+      let planId: string | null = null;
+      let buffer = "";
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += value;
+        for (let nl = buffer.indexOf("\n"); nl >= 0; nl = buffer.indexOf("\n")) {
+          const line = buffer.slice(0, nl).trim();
+          buffer = buffer.slice(nl + 1);
+          if (!line) continue;
+          const msg = JSON.parse(line) as { phase?: string; topic?: string; planId?: string; error?: string; code?: string };
+          if (msg.error) throw new Error(await readAiError(new Response(JSON.stringify(msg), { status: 400 })));
+          if (msg.planId) planId = msg.planId;
+          else if (msg.phase || msg.topic) {
+            found.push(msg.phase ? { phase: msg.phase } : { topic: msg.topic! });
+            setJob({ state: "building", found: [...found] });
+          }
+        }
+      }
+      if (!planId) throw new Error("The plan didn't finish. Try again.");
       clearDraft(sessionId);
       setJob(null);
       onCreated();
@@ -275,7 +300,7 @@ function GoalForm({ sessionId, docTitles, existing, draftGoal, setup, onCreated,
     return (
       <div className="animate-enter flex min-h-[60vh] flex-col items-center justify-center gap-6 text-center">
         <p className={eyebrowClass}>Plan queued</p>
-        <p className="max-w-sm font-serif text-2xl leading-snug">Your plan builds as soon as your PDFs are in.</p>
+        <p className="max-w-sm font-serif text-2xl leading-snug">Your plan builds as soon as your files are in.</p>
         <div className="indeterminate h-[3px] w-56 rounded-full bg-line" />
         <p className="max-w-xs text-xs text-muted" aria-live="polite">
           {setup.upload}
@@ -286,6 +311,35 @@ function GoalForm({ sessionId, docTitles, existing, draftGoal, setup, onCreated,
   }
 
   if (building) {
+    const found = job.state === "building" ? (job.found ?? []) : [];
+    if (found.length) {
+      // The plan taking shape: each phase and topic as it's written.
+      const topics = found.filter((f) => "topic" in f).length;
+      return (
+        <div className="animate-enter py-4">
+          <p className={eyebrowClass}>Building your plan</p>
+          <p className="mt-1 font-serif text-2xl leading-tight">
+            {topics} {topics === 1 ? "topic" : "topics"} so far…
+          </p>
+          <ol className="mt-5 space-y-1.5" aria-live="polite">
+            {found.map((f, i) =>
+              "phase" in f ? (
+                <li key={i} className="animate-enter pt-3 font-mono text-[11px] tracking-wider text-muted uppercase first:pt-0">
+                  {f.phase}
+                </li>
+              ) : (
+                <li key={i} className="animate-enter flex items-start gap-2.5 text-sm">
+                  <span aria-hidden className="mt-1.5 size-1.5 shrink-0 rounded-full bg-ink" />
+                  {f.topic}
+                </li>
+              ),
+            )}
+          </ol>
+          <div className="indeterminate mt-6 h-[3px] w-40 rounded-full bg-line" />
+          <p className="mt-2 text-xs text-muted">Then pages, objectives and resources for each, and the schedule.</p>
+        </div>
+      );
+    }
     return (
       <div className="animate-enter flex min-h-[60vh] flex-col items-center justify-center gap-6 text-center">
         <p className={eyebrowClass}>Building your plan</p>
@@ -293,7 +347,7 @@ function GoalForm({ sessionId, docTitles, existing, draftGoal, setup, onCreated,
           {STEPS[step]}
         </p>
         <div className="indeterminate h-[3px] w-56 rounded-full bg-line" />
-        <p className="max-w-xs text-xs text-muted">This usually takes 15–30 seconds.</p>
+        <p className="max-w-xs text-xs text-muted">This usually takes 15–30 seconds; you&apos;ll see the topics appear as they&apos;re written.</p>
       </div>
     );
   }
@@ -305,7 +359,7 @@ function GoalForm({ sessionId, docTitles, existing, draftGoal, setup, onCreated,
         <h2 className="mt-1 font-serif text-2xl leading-tight">{existing ? "Change your goal" : "What do you want to learn?"}</h2>
         <p className="mt-2 text-sm leading-relaxed text-muted">
           Write your goal and Confu turns it into a plan: which pages to read, which papers and lectures, in what order,
-          at a pace that fits you.{setup.upload ? " Your PDFs keep uploading while you write; the plan waits for them." : ""}
+          at a pace that fits you.{setup.upload ? " Your files keep uploading while you write; the plan waits for them." : ""}
         </p>
       </header>
 
@@ -315,9 +369,28 @@ function GoalForm({ sessionId, docTitles, existing, draftGoal, setup, onCreated,
           A detailed goal makes a much better plan. Ask ChatGPT, Claude, Gemini or any other assistant to help you write one,
           then paste it below. The prompt asks for each paper&apos;s DOI and each course&apos;s YouTube link, so Confu can add them for you.
         </p>
-        <button type="button" onClick={copyPrompt} className={`${ghostButtonClass} mt-3 py-1.5 text-xs`}>
-          {copied ? "✓ Copied" : "Copy a starter prompt"}
-        </button>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {/* Both open a new chat with the prompt already in it. */}
+          {[
+            ["ChatGPT", "https://chatgpt.com/?q="],
+            ["Claude", "https://claude.ai/new?q="],
+          ].map(([name, base]) => (
+            <a
+              key={name}
+              href={`${base}${encodeURIComponent(starterPrompt(docTitles))}`}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => track("goal.open_assistant", { name })}
+              className="rounded-md border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white transition hover:-translate-y-px"
+            >
+              Open in {name} ↗
+            </a>
+          ))}
+          <button type="button" onClick={copyPrompt} className={`${ghostButtonClass} py-1.5 text-xs`}>
+            {copied ? "✓ Copied" : "Copy the prompt"}
+          </button>
+        </div>
+        <p className="mt-2 text-[11px] text-muted">Gemini or another assistant? Copy the prompt and paste it there.</p>
       </div>
 
       <div>

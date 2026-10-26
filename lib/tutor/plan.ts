@@ -87,6 +87,27 @@ async function documentMap(supabase: SupabaseClient, doc: Doc, budget: number) {
 
 const AUTO_MINUTES_PER_DAY = 60;
 
+export type PlanProgress = { phase: string } | { topic: string };
+
+// Picks phase and topic titles out of the plan's JSON while it streams in:
+// a "title" followed by "description" is a phase, by "source" a topic.
+class TitleScanner {
+  private from = 0;
+  private re = /"title"\s*:\s*"((?:[^"\\]|\\.)*)"\s*,\s*"(description|source)"/g;
+  constructor(private emit: (p: PlanProgress) => void) {}
+  scan(text: string) {
+    this.re.lastIndex = this.from;
+    for (let m = this.re.exec(text); m; m = this.re.exec(text)) {
+      this.from = this.re.lastIndex;
+      let title = m[1];
+      try {
+        title = JSON.parse(`"${m[1]}"`) as string;
+      } catch {}
+      this.emit(m[2] === "description" ? { phase: title } : { topic: title });
+    }
+  }
+}
+
 export async function generatePlan(
   supabase: SupabaseClient,
   groq: Groq,
@@ -101,9 +122,11 @@ export async function generatePlan(
     // day, and the student tunes the pace afterwards (Custom pace).
     deadline?: string;
     minutesPerDay?: number;
+    // Phases and topics as the model writes them, so the student watches the plan take shape.
+    onProgress?: (p: PlanProgress) => void;
   },
 ) {
-  const { userId, sessionId, goal, materials, level, startDate, deadline, minutesPerDay } = input;
+  const { userId, sessionId, goal, materials, level, startDate, deadline, minutesPerDay, onProgress } = input;
 
   const { data: docRows, error } = await supabase
     .from("documents")
@@ -176,23 +199,40 @@ Return ONLY JSON in this shape:
   ]
 }`;
 
-  const res = await groq.chat.completions.create({
-    model: MODELS.chat,
-    messages: [
-      {
-        role: "system",
-        content:
-          "You are an expert curriculum designer. You build focused, goal-driven study plans that use the student's own material where it helps and fill its gaps with well-chosen outside material.",
-      },
-      { role: "user", content: prompt },
-    ],
-    response_format: { type: "json_object" },
-    temperature: 0.3,
-    max_completion_tokens: 9000,
-    reasoning_effort: "medium",
-  });
+  const messages = [
+    {
+      role: "system" as const,
+      content:
+        "You are an expert curriculum designer. You build focused, goal-driven study plans that use the student's own material where it helps and fill its gaps with well-chosen outside material.",
+    },
+    { role: "user" as const, content: prompt },
+  ];
+  const settings = { model: MODELS.chat, messages, temperature: 0.3, max_completion_tokens: 9000, reasoning_effort: "medium" as const };
 
-  const parsed = PlanSchema.parse(parseJsonObject(res.choices[0]?.message?.content ?? ""));
+  // Streamed, so each phase and topic can be shown as it's written. Streaming
+  // goes without JSON mode (the prompt asks for JSON only); if that text
+  // doesn't parse, the plan is asked for again the usual way.
+  let parsed: z.infer<typeof PlanSchema> | null = null;
+  if (onProgress) {
+    let text = "";
+    const seen = new TitleScanner(onProgress);
+    const stream = await groq.chat.completions.create({ ...settings, stream: true });
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta?.content;
+      if (!delta) continue;
+      text += delta;
+      seen.scan(text);
+    }
+    try {
+      parsed = PlanSchema.parse(parseJsonObject(text));
+    } catch {
+      parsed = null;
+    }
+  }
+  if (!parsed) {
+    const res = await groq.chat.completions.create({ ...settings, response_format: { type: "json_object" } });
+    parsed = PlanSchema.parse(parseJsonObject(res.choices[0]?.message?.content ?? ""));
+  }
 
   // Models sometimes list one of the student's PDFs as a "resource"; the page badge already covers that.
   const titleKeys = docs.map((d) => d.title.toLowerCase());

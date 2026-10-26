@@ -19,13 +19,14 @@ const Named = z.object({
         title: z.string().catch(""), // as the goal writes it, or if the model is certain
         arxiv: z.string().catch(""), // only if the model is certain
         doi: z.string().catch(""), // as the goal writes it
+        authors: z.string().catch(""), // as the goal writes them: "Schulman et al."
       }),
     )
     .catch([]),
 });
 
 // What the goal says about the paper (to search by when it isn't found), and what was found.
-type GoalPaper = { name: string; title?: string; doi?: string; arxiv?: string; paper: PaperMeta | null; candidates: PaperMeta[] };
+type GoalPaper = { name: string; title?: string; doi?: string; arxiv?: string; authors?: string; paper: PaperMeta | null; candidates: PaperMeta[] };
 type GoalLink = { url: string; kind: "youtube" | "web" };
 
 // The papers a study goal names, by full title or by nickname ("PPO",
@@ -97,17 +98,18 @@ For each paper:
 - title: its full title as the goal writes it; if the goal gives only a nickname, its full published title ONLY if you are certain of it (many papers are newer than what you know), else ""
 - arxiv: its arXiv id (like 1707.06347) as the goal writes it, or ONLY if you are certain, else ""
 - doi: its DOI (like 10.48550/arXiv.1707.06347) exactly as the goal writes it, else ""
+- authors: its authors as the goal writes them (like "Schulman et al."), else ""
 
 Also give "field": the research area these papers belong to, in 3 to 8 plain words (for example "reinforcement learning for large language models").
 
-Return ONLY JSON: {"field": "", "papers": [{"name": "", "title": "", "arxiv": "", "doi": ""}]}`;
+Return ONLY JSON: {"field": "", "papers": [{"name": "", "title": "", "arxiv": "", "doi": "", "authors": ""}]}`;
 }
 
 // How well a search result matches what the goal names. The name often isn't
 // in the title ("Dr. GRPO" is "Understanding R1-Zero-Like Training"), so the
 // abstract counts too. Words from the goal's field must appear somewhere, which
 // keeps same-named papers from other fields out (a "ReLIFT converter").
-type Want = { name: string; title: string; arxiv: string; doi: string };
+type Want = { name: string; title: string; arxiv: string; doi: string; authors: string };
 
 const nameOf = (w: Want) => norm(w.name.replace(/\(.*?\)/g, " "));
 // arXiv's own DOIs (10.48550/arXiv.1707.06347) are looked up as arXiv ids.
@@ -226,6 +228,7 @@ export async function findNamed(wants: Want[], fieldText: string, haveTitles: st
       ...(w.title.trim() ? { title: w.title.trim() } : {}),
       ...(doiOf(w) ? { doi: doiOf(w) } : {}),
       ...(arxivOf(w) ? { arxiv: arxivOf(w) } : {}),
+      ...(w.authors.trim() ? { authors: w.authors.trim().slice(0, 120) } : {}),
       paper,
       candidates: paper ? [] : rank(found[i], w, field).slice(0, 3).map((r) => r.p),
     });

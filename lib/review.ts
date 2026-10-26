@@ -63,7 +63,8 @@ export function cueFor(item: Pick<ReviewItem, "source" | "prompt" | "question" |
     case "misconception":
       return { eyebrow: "A mix-up the tutor caught", question: "What's actually right here, and why?", quote: item.prompt };
     case "mistake":
-      return { eyebrow: `Exam question you missed${page}`, question: item.prompt };
+      // Exam questions leave `question` empty; a recall check's misses name themselves there.
+      return { eyebrow: `${item.question || "Exam question you missed"}${page}`, question: item.prompt };
   }
 }
 

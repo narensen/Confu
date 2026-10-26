@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
 import { JSON_HEADERS } from "@/lib/ai-errors";
 import { buildPdfFile } from "@/lib/import/build-pdf";
-import { BlockedError, lecturePdf, TranscriptError, webError, webPagePdf, type Article } from "@/lib/import/fetch-client";
+import { BlockedError, lecturePdf, playlistLectures, TranscriptError, webError, webPagePdf, type Article, type PlaylistLecture } from "@/lib/import/fetch-client";
 import { driveConfigured, driveReady, importFromDrive, prepareDrive } from "@/lib/import/drive";
 import {
   connectZotero,
@@ -42,14 +42,20 @@ export function AddMaterialDialog({
   onImported,
   onPapers,
   initialTab = "upload",
+  initialUrl,
   onFindPaper,
+  onLectures,
 }: {
   onClose: () => void;
   onFiles: (files: File[]) => void;
   onImported: (items: ImportedFile[]) => void;
   onPapers: (papers: PaperMeta[]) => void;
   initialTab?: Tab;
+  initialUrl?: string; // the YouTube tab, opened on a playlist
   onFindPaper?: () => void; // study sessions: add a research paper by arXiv ID, DOI or title
+  // A playlist's chosen lectures: fetched and added in the session (each
+  // with its own progress in Files), so this dialog can close right away.
+  onLectures: (lectures: { url: string; title: string }[]) => void;
 }) {
   const [tab, setTab] = useState<Tab>(initialTab);
   const [busy, setBusy] = useState<string | null>(null);
@@ -82,7 +88,7 @@ export function AddMaterialDialog({
             <h2 id="add-material-title" className="mt-1 font-serif text-2xl">
               Study from anything
             </h2>
-            <p className="mt-1 text-sm text-muted">PDFs, web pages, lecture videos, Google Drive and Zotero.</p>
+            <p className="mt-1 text-sm text-muted">PDFs, slides and Word docs, web pages, lecture videos, Google Drive and Zotero.</p>
           </div>
           <button onClick={onClose} disabled={Boolean(busy)} aria-label="Close" className="flex size-8 items-center justify-center rounded-md text-muted hover:bg-paper disabled:opacity-30">
             ✕
@@ -134,7 +140,17 @@ export function AddMaterialDialog({
             </>
           )}
           {tab === "web" && <WebTab {...shared} />}
-          {tab === "youtube" && <YouTubeTab {...shared} />}
+          {tab === "youtube" && (
+            <YouTubeTab
+              {...shared}
+              initialUrl={initialUrl}
+              onLectures={(list) => {
+                track("import.playlist", { count: list.length });
+                onLectures(list);
+                onClose();
+              }}
+            />
+          )}
           {tab === "drive" && <DriveTab {...shared} />}
           {tab === "zotero" && (
             <ZoteroTab
@@ -193,7 +209,7 @@ function UploadTab({ onFiles }: { onFiles: (files: File[]) => void }) {
         }}
         className={`flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-12 text-center transition ${over ? "border-ink bg-paper" : "border-ink/30 hover:border-ink"}`}
       >
-        <span className="font-serif text-xl">Drop PDFs here</span>
+        <span className="font-serif text-xl">Drop files here</span>
         <span className="text-sm text-muted">or click to choose files. Scanned pages are read too.</span>
       </button>
       <input
@@ -358,11 +374,38 @@ function PastePage({ url, busy, setBusy, setError, done }: Shared & { url: strin
 
 /* ------------------------------------------------------------ youtube */
 
-function YouTubeTab({ busy, setBusy, setError, done }: Shared) {
-  const [url, setUrl] = useState("");
+const minutes = (s: number) => (s ? `${Math.round(s / 60)} min` : "");
+const isPlaylistLink = (u: string) => /[?&]list=/.test(u) && !/[?&]list=(WL|LL|RD)/.test(u);
+const isVideoLink = (u: string) => /[?&]v=|youtu\.be\/|\/shorts\/|\/live\//.test(u);
+
+function YouTubeTab({ busy, setBusy, setError, done, initialUrl, onLectures }: Shared & { initialUrl?: string; onLectures: (list: { url: string; title: string }[]) => void }) {
+  const [url, setUrl] = useState(initialUrl ?? "");
   const [paste, setPaste] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [title, setTitle] = useState("");
+  // A playlist: its lectures, and which to import (all, to start with).
+  const [playlist, setPlaylist] = useState<{ title: string; author: string; videos: PlaylistLecture[] } | null>(null);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+
+  async function openPlaylist(link: string) {
+    setError(null);
+    setBusy("Reading the playlist…");
+    try {
+      const p = await playlistLectures(link);
+      setPlaylist(p);
+      setPicked(new Set(p.videos.map((v) => v.id)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't open that playlist.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  // Opened on a playlist (a goal's "Choose"): list its lectures straight away.
+  useEffect(() => {
+    if (initialUrl && isPlaylistLink(initialUrl)) void Promise.resolve().then(() => openPlaylist(initialUrl));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function importLecture(withTranscript: boolean) {
     setError(null);
@@ -382,25 +425,92 @@ function YouTubeTab({ busy, setBusy, setError, done }: Shared) {
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (url.trim()) void importLecture(false);
+          if (!url.trim()) return;
+          // A playlist link (not a video in one) lists its lectures to pick from.
+          if (isPlaylistLink(url) && !isVideoLink(url)) void openPlaylist(url.trim());
+          else void importLecture(false);
         }}
         className="space-y-3"
       >
         <input
           autoFocus
           value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://www.youtube.com/watch?v=…"
+          onChange={(e) => {
+            setUrl(e.target.value);
+            setPlaylist(null);
+          }}
+          placeholder="A lecture (youtube.com/watch?v=…) or a playlist (…/playlist?list=…)"
           aria-label="YouTube link"
           className={`${inputClass} font-mono text-[13px]`}
         />
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs leading-relaxed text-muted">The transcript becomes a document with timestamps. Each section links back to that moment in the video.</p>
           <button className={`${buttonClass} shrink-0 py-1.5`} disabled={Boolean(busy) || !url.trim()}>
-            Import lecture
+            {isPlaylistLink(url) && !isVideoLink(url) ? "Show lectures" : "Import lecture"}
           </button>
         </div>
+        {isPlaylistLink(url) && isVideoLink(url) && !playlist && (
+          <button type="button" onClick={() => openPlaylist(url.trim())} disabled={Boolean(busy)} className="text-xs font-medium underline-offset-4 hover:underline">
+            This video is in a playlist: choose lectures from the whole playlist instead
+          </button>
+        )}
       </form>
+
+      {playlist && (
+        <div className="animate-enter space-y-3 rounded-xl border border-line p-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium">{playlist.title}</p>
+              <p className="text-xs text-muted">
+                {[playlist.author, `${playlist.videos.length} videos`, `${picked.size} chosen`].filter(Boolean).join(" · ")}
+              </p>
+            </div>
+            <span className="flex shrink-0 gap-3 text-xs">
+              <button type="button" className="underline-offset-2 hover:underline" onClick={() => setPicked(new Set(playlist.videos.map((v) => v.id)))}>
+                All
+              </button>
+              <button type="button" className="underline-offset-2 hover:underline" onClick={() => setPicked(new Set())}>
+                None
+              </button>
+            </span>
+          </div>
+          <ul className="max-h-64 space-y-0.5 overflow-y-auto">
+            {playlist.videos.map((v, i) => (
+              <li key={v.id}>
+                <label className="flex cursor-pointer items-start gap-2.5 rounded-md px-2 py-1.5 text-sm hover:bg-paper">
+                  <input
+                    type="checkbox"
+                    checked={picked.has(v.id)}
+                    onChange={() =>
+                      setPicked((s) => {
+                        const next = new Set(s);
+                        if (next.has(v.id)) next.delete(v.id);
+                        else next.add(v.id);
+                        return next;
+                      })
+                    }
+                    className="mt-0.5 size-4 shrink-0 accent-[var(--ink)]"
+                  />
+                  <span className="w-6 shrink-0 text-right font-mono text-[11px] text-muted">{i + 1}</span>
+                  <span className="min-w-0 flex-1 leading-snug">{v.title}</span>
+                  {v.seconds > 0 && <span className="shrink-0 font-mono text-[11px] text-muted">{minutes(v.seconds)}</span>}
+                </label>
+              </li>
+            ))}
+          </ul>
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-muted">Each lecture becomes its own file. They come in one by one in Files, so you can keep working.</p>
+            <button
+              type="button"
+              disabled={!picked.size}
+              onClick={() => onLectures(playlist.videos.filter((v) => picked.has(v.id)).map((v) => ({ url: `https://www.youtube.com/watch?v=${v.id}`, title: v.title })))}
+              className={`${buttonClass} shrink-0 py-1.5`}
+            >
+              Import {picked.size} {picked.size === 1 ? "lecture" : "lectures"}
+            </button>
+          </div>
+        </div>
+      )}
 
       <button type="button" onClick={() => setPaste((v) => !v)} className="text-xs font-medium underline-offset-4 hover:underline">
         {paste ? "Hide" : "Paste a transcript instead"}

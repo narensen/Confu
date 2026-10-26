@@ -88,8 +88,8 @@ export function WorkspaceMock() {
               {/* a "captured" figure */}
               <div className="relative mt-2 h-20 border-[1.5px] border-dashed border-ink/70 bg-ink/[0.03]">
                 <svg viewBox="0 0 200 70" className="h-full w-full">
-                  <line x1="10" y1="62" x2="195" y2="62" stroke="#0d0d0c" strokeWidth="0.8" />
-                  <line x1="10" y1="62" x2="10" y2="4" stroke="#0d0d0c" strokeWidth="0.8" />
+                  <line x1="10" y1="62" x2="195" y2="62" stroke="var(--ink)" strokeWidth="0.8" />
+                  <line x1="10" y1="62" x2="10" y2="4" stroke="var(--ink)" strokeWidth="0.8" />
                   {[
                     [30, 50],
                     [45, 44],
@@ -102,9 +102,9 @@ export function WorkspaceMock() {
                     [170, 12],
                     [85, 42],
                   ].map(([x, y], i) => (
-                    <circle key={i} cx={x} cy={y} r="2.4" fill={i % 3 ? "#0d0d0c" : "#eab308"} />
+                    <circle key={i} cx={x} cy={y} r="2.4" fill={i % 3 ? "var(--ink)" : "#eab308"} />
                   ))}
-                  <line x1="20" y1="56" x2="185" y2="8" stroke="#0d0d0c" strokeDasharray="3 3" strokeWidth="0.8" />
+                  <line x1="20" y1="56" x2="185" y2="8" stroke="var(--ink)" strokeDasharray="3 3" strokeWidth="0.8" />
                 </svg>
               </div>
               <Line w="76%" />
@@ -142,7 +142,7 @@ export function PlanMock() {
       <p className="font-mono text-[9px] tracking-widest text-muted uppercase">Phase 01 · Foundations</p>
       {[
         { n: "✓", t: "Vectors and covariance", tag: <Chip>D1 pp. 3–8</Chip>, done: true },
-        { n: "2", t: "Python with NumPy", tag: <Chip dashed>Beyond the PDFs</Chip>, focus: true },
+        { n: "2", t: "Python with NumPy", tag: <Chip dashed>Beyond your files</Chip>, focus: true },
         { n: "3", t: "Eigen-decomposition", tag: <Chip>D2 pp. 21–26</Chip> },
       ].map((r) => (
         <div key={r.t} data-mock-item className={`flex items-center gap-2 rounded-lg border bg-panel px-2.5 py-2 ${r.focus ? "border-ink shadow-[2px_2px_0_0_var(--ink)]" : "border-line"}`}>

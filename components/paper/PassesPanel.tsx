@@ -60,7 +60,7 @@ export function PassesPanel(props: Props) {
           <p className="font-mono text-[11px] text-muted">target pass</p>
         </div>
         {docs.length === 0 ? (
-          <p className="mt-3 text-sm text-muted">Add papers with “+ Add PDF” above the viewer.</p>
+          <p className="mt-3 text-sm text-muted">Add papers with “+ Add paper” above the viewer, or from Files.</p>
         ) : (
           <ul className="mt-3 space-y-1.5">
             {docs.map((d) => {
@@ -98,7 +98,7 @@ export function PassesPanel(props: Props) {
 
       {inStudy && props.otherDocs && props.otherDocs.length > 0 && (
         <section className="border-t border-line px-6 py-5">
-          <p className={eyebrowClass}>Is another PDF a paper?</p>
+          <p className={eyebrowClass}>Is another file a paper?</p>
           <ul className="mt-3 space-y-1.5">
             {props.otherDocs.map((d) => (
               <li key={d.id} className="flex items-center gap-3 rounded-lg border border-line px-3 py-2">

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { clock } from "@/lib/import/blocks";
-import { chaptersFrom, fetchLecture, fetchOembed, lectureBlocks, parsePastedTranscript, videoIdFrom, YouTubeError } from "@/lib/import/youtube";
+import { chaptersFrom, fetchLecture, fetchOembed, fetchPlaylist, lectureBlocks, parsePastedTranscript, playlistIdFrom, videoIdFrom, YouTubeError } from "@/lib/import/youtube";
 import { createClient } from "@/lib/supabase/server";
 
 export const maxDuration = 60;
@@ -9,6 +9,7 @@ const Body = z.object({
   url: z.string().trim().max(500).default(""),
   transcript: z.string().max(2_000_000).optional(), // pasted from YouTube's "Show transcript"
   title: z.string().trim().max(300).optional(),
+  mode: z.enum(["lecture", "playlist"]).default("lecture"), // playlist: its videos, to pick from
 });
 
 // A lecture video's transcript as timestamped blocks (the browser typesets
@@ -20,7 +21,17 @@ export async function POST(request: Request) {
 
   const parsed = Body.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: "Paste a YouTube link." }, { status: 400 });
-  const { url, transcript, title } = parsed.data;
+  const { url, transcript, title, mode } = parsed.data;
+  if (mode === "playlist") {
+    const list = playlistIdFrom(url);
+    if (!list) return Response.json({ error: "That isn't a playlist link. It should have “list=” in it." }, { status: 400 });
+    try {
+      return Response.json(await fetchPlaylist(list));
+    } catch (err) {
+      if (err instanceof YouTubeError) return Response.json({ error: err.message, code: err.code }, { status: 404 });
+      throw err;
+    }
+  }
   const id = videoIdFrom(url);
   if (!id && !transcript) return Response.json({ error: "That isn't a YouTube link. Paste the video's address." }, { status: 400 });
   const sourceUrl = id ? `https://www.youtube.com/watch?v=${id}` : undefined;

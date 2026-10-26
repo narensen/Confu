@@ -75,7 +75,10 @@ export async function uploadPdfToSession(
     const textChars = pages.reduce((n, p) => n + p.length, 0);
     return { id, lowText: !ocr.read && textChars < pageCount * 40, ocrNote: ocr.note };
   } catch (err) {
-    await supabase.from("documents").update({ status: "failed" }).eq("id", id);
+    // Leave nothing half-made behind (Retry starts clean): the row, its pages
+    // (they go with it) and the stored file, if they got that far.
+    await supabase.from("documents").delete().eq("id", id);
+    await supabase.storage.from("documents").remove([`${userId}/${id}.pdf`]);
     throw err;
   }
 }

@@ -136,7 +136,7 @@ function MonthHeatmap({ w }: { w: Wrapped }) {
               onFocus={() => setHover(i)}
               onBlur={() => setHover(null)}
               className={`aspect-square rounded-md outline-none ${hover === i ? "ring-2 ring-yellow-400" : ""}`}
-              style={{ background: `rgba(13,13,12,${ALPHA[level(c)]})` }}
+              style={{ background: `color-mix(in srgb, var(--ink) ${ALPHA[level(c)] * 100}%, transparent)` }}
             />
           ) : (
             <span key={`pad-${i}`} />
@@ -146,7 +146,7 @@ function MonthHeatmap({ w }: { w: Wrapped }) {
       <div className="mt-3 flex items-center justify-end gap-1.5 font-mono text-[10px] text-muted" aria-hidden>
         Less
         {ALPHA.map((a) => (
-          <span key={a} className="size-3 rounded-sm" style={{ background: `rgba(13,13,12,${a})` }} />
+          <span key={a} className="size-3 rounded-sm" style={{ background: `color-mix(in srgb, var(--ink) ${a * 100}%, transparent)` }} />
         ))}
         More
       </div>
@@ -176,7 +176,7 @@ function HourChart({ hours }: { hours: number[] }) {
         )}
       </p>
       <div className="relative mt-3" style={{ height: H + 18 }}>
-        <div className="absolute inset-x-0 border-t border-[#e1e0d9]" style={{ top: H }} aria-hidden />
+        <div className="absolute inset-x-0 border-t border-line" style={{ top: H }} aria-hidden />
         <div className="absolute inset-x-0 top-0 flex items-end gap-[2px]" style={{ height: H }}>
           {hours.map((n, h) => (
             <div

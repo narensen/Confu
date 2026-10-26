@@ -36,7 +36,7 @@ export function SessionActions({ id, title, archived }: { id: string; title: str
         onClick={async () => {
           const choice = await choose({
             title: `Delete “${title}”?`,
-            body: `Its PDFs, plan, highlights and conversation will be removed, and your study streak loses the days you studied in it. This can't be undone.${
+            body: `Its files, plan, highlights and conversation will be removed, and your study streak loses the days you studied in it. This can't be undone.${
               archived ? "" : " To just hide it, archive it instead: everything, streak included, is kept."
             }`,
             confirm: "Delete session",

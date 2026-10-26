@@ -89,7 +89,7 @@ export function DialogHost() {
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="confu-ask-title"
-            className="animate-pop w-full max-w-sm rounded-xl border border-ink bg-panel p-5 shadow-[6px_6px_0_0_#0d0d0c]"
+            className="animate-pop w-full max-w-sm rounded-xl border border-ink bg-panel p-5 shadow-[6px_6px_0_0_var(--shadow)]"
           >
             <p id="confu-ask-title" className="font-serif text-xl leading-snug">
               {current.title}
@@ -133,7 +133,7 @@ export function DialogHost() {
           <div
             key={t.id}
             role={t.tone === "error" ? "alert" : "status"}
-            className={`animate-pop pointer-events-auto flex max-w-md items-start gap-3 rounded-xl border px-4 py-3 text-sm shadow-[4px_4px_0_0_#0d0d0c] ${
+            className={`animate-pop pointer-events-auto flex max-w-md items-start gap-3 rounded-xl border px-4 py-3 text-sm shadow-[4px_4px_0_0_var(--shadow)] ${
               t.tone === "error" ? "border-danger bg-panel text-ink" : "border-ink bg-ink text-white"
             }`}
           >

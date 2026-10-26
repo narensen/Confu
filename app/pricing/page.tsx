@@ -18,7 +18,7 @@ const FAQ: { q: string; a: ReactNode }[] = [
   { q: "Can I cancel anytime?", a: "Yes, from Settings → Plan → Manage billing, in two clicks. Pro stays on until the end of the month you paid for." },
   {
     q: "What happens when Pro ends?",
-    a: "You're back on Free. Nothing is deleted: your sessions, PDFs, notes and progress stay exactly as they are. To keep using the AI, add a free Groq key in Settings.",
+    a: "You're back on Free. Nothing is deleted: your sessions, files, notes and progress stay exactly as they are. To keep using the AI, add a free Groq key in Settings.",
   },
   {
     q: "Why ₹299 in India?",
@@ -55,7 +55,7 @@ export default function PricingPage({ searchParams }: PageProps<"/pricing">) {
           <div className="mx-auto max-w-6xl px-6 pt-16 pb-14 sm:pt-20">
             <p className={eyebrowClass}>Pricing</p>
             <h1 className="mt-3 max-w-3xl font-serif text-5xl leading-[1.05] tracking-tight sm:text-6xl">
-              Learn properly. <span className="bg-[linear-gradient(transparent_62%,#fde047_62%)]">Pay only for the shortcut.</span>
+              Learn properly. <span className="bg-[linear-gradient(transparent_62%,var(--marker)_62%)]">Pay only for the shortcut.</span>
             </h1>
             <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">
               Every feature is in both plans. Pro just runs on our AI keys, so there&apos;s nothing to set up and no limits to babysit.
@@ -73,7 +73,9 @@ export default function PricingPage({ searchParams }: PageProps<"/pricing">) {
                 <h2 className="font-serif text-4xl">{PLANS.free.name}</h2>
                 <span className="rounded-full border border-ink/30 px-3 py-1 font-mono text-[11px] text-muted uppercase">Free forever</span>
               </div>
-              <p className="mt-6 font-serif text-5xl">₹0</p>
+              <Suspense fallback={<p className="mt-6 font-serif text-5xl">0</p>}>
+                <FreePrice preview={searchParams} />
+              </Suspense>
               <p className="mt-1 text-sm text-muted">10 free prompts on our keys, then your own free Groq key.</p>
               <Features list={PLANS.free.features} />
               <Suspense fallback={<div className="mt-10 h-11" />}>
@@ -145,6 +147,12 @@ function Features({ list, pro }: { list: string[]; pro?: boolean }) {
       ))}
     </ul>
   );
+}
+
+// In the same currency as Pro's price beside it.
+async function FreePrice({ preview }: { preview: PageProps<"/pricing">["searchParams"] }) {
+  const region = await currentRegion(((await preview).region as string | undefined) ?? null);
+  return <p className="mt-6 font-serif text-5xl">{region === "india" ? "₹0" : "$0"}</p>;
 }
 
 async function ProPrice({ preview }: { preview: PageProps<"/pricing">["searchParams"] }) {

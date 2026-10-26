@@ -21,6 +21,8 @@ type Props = {
   onJump: (page: number, docId?: string | null) => void;
   onFocusTopic: (t: PlanTopic) => void;
   onTopicStatus: (t: PlanTopic, s: TopicStatus) => void;
+  onRecall: (t: PlanTopic) => void; // a quick recall check on a finished topic
+  onListen: (t: PlanTopic) => void; // a two-minute audio overview, read aloud
   onTeach: (t: PlanTopic) => void;
   onPlanCreated: () => void;
   onRepace: (minutesPerDay: number, deadline: string) => Promise<void>;
@@ -36,7 +38,9 @@ type Props = {
 // What the goal form needs from the workspace: PDFs on their way in (what's
 // happening now, the titles still to come, a promise for when they're all in)
 // and the plan being queued or built, which outlives the form.
-export type PlanJob = { state: "queued" | "building" } | { state: "failed"; error: string };
+// While building, the phases and topics written so far (streamed from /api/plan).
+export type PlanFound = { phase: string } | { topic: string };
+export type PlanJob = { state: "queued" } | { state: "building"; found?: PlanFound[] } | { state: "failed"; error: string };
 export type PlanSetup = {
   upload: string | null;
   incoming: string[];
@@ -128,6 +132,24 @@ export function PlanPanel(props: Props) {
           </button>
         </div>
         {pacing && <CustomPace plan={plan} topics={topics} onApply={props.onRepace} onClose={() => setPacing(false)} />}
+        {/* Behind: offer a new pace from today instead of just a red badge. */}
+        {!status.onTrack && status.completed < status.total && (
+          <div className="animate-enter mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warn/40 bg-warn/5 px-4 py-3">
+            <p className="min-w-0 text-sm">
+              <span className="font-medium">
+                {status.daysLeft < 0 ? "Your deadline has passed." : `You're ${status.overdue} ${status.overdue === 1 ? "topic" : "topics"} behind.`}
+              </span>{" "}
+              <span className="text-muted">Re-pace from today and the plan fits again. Nothing you&apos;ve done is lost.</span>
+            </p>
+            <button
+              type="button"
+              onClick={() => setPacing(true)}
+              className="shrink-0 rounded-md border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white transition hover:-translate-y-px"
+            >
+              Re-pace
+            </button>
+          </div>
+        )}
 
         <div className="mt-4 flex items-center gap-3">
           <div className="h-2 flex-1 overflow-hidden rounded-full border border-ink bg-panel">
@@ -229,6 +251,8 @@ function TopicRow({
   onJump,
   onFocusTopic,
   onTopicStatus,
+  onRecall,
+  onListen,
   onTeach,
   papers,
   reviews,
@@ -265,7 +289,7 @@ function TopicRow({
               </span>
             ) : (
               <span className="rounded border border-dashed border-ink/60 px-1.5 py-px font-mono text-ink">
-                {t.source === "pdf" ? "PDF removed" : "Beyond the PDFs"}
+                {t.source === "pdf" ? "PDF removed" : "Beyond your files"}
               </span>
             )}
             {paper && (
@@ -353,6 +377,7 @@ function TopicRow({
               <SmallButton primary disabled={busy} onClick={() => onTeach(t)}>
                 Teach me
               </SmallButton>
+              <SmallButton onClick={() => onListen(t)}>Listen (2 min)</SmallButton>
               {inPdf && (
                 <SmallButton onClick={() => onJump(t.page_start!, doc!.id)}>
                   Open {docs.length > 1 ? `${doc!.label} ` : ""}p. {t.page_start}
@@ -366,7 +391,10 @@ function TopicRow({
               )}
               {!active && !completed && <SmallButton onClick={() => onFocusTopic(t)}>Focus on this</SmallButton>}
               {completed ? (
-                <SmallButton onClick={() => onTopicStatus(t, "in_progress")}>Reopen</SmallButton>
+                <>
+                  <SmallButton onClick={() => onRecall(t)}>Check myself</SmallButton>
+                  <SmallButton onClick={() => onTopicStatus(t, "in_progress")}>Reopen</SmallButton>
+                </>
               ) : (
                 <SmallButton onClick={() => onTopicStatus(t, "completed")}>{t.mastery >= 0.75 ? "✓ Mark understood" : "Mark done"}</SmallButton>
               )}

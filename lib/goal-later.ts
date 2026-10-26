@@ -8,7 +8,7 @@ import type { PaperMeta } from "@/lib/pdf/add-paper";
 // pages not brought in. Shown in the session's "To add" tab until the student
 // adds or removes them. Kept in this browser, per session.
 
-export type GoalHint = { name: string; title?: string; doi?: string; arxiv?: string };
+export type GoalHint = { name: string; title?: string; doi?: string; arxiv?: string; authors?: string };
 export type GoalLink = { url: string; kind: "youtube" | "web" };
 export type Later = { papers: GoalHint[]; links: GoalLink[] };
 // What /api/paper/from-goal returns for each paper the goal names.

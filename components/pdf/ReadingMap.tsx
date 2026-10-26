@@ -84,7 +84,7 @@ export function ReadingMap({
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         {!documentId ? (
-          <p className="text-sm text-muted">Reading time is tracked for PDFs in your sessions.</p>
+          <p className="text-sm text-muted">Reading time is tracked for the files in your sessions.</p>
         ) : time === null ? (
           <p className="text-sm text-muted">Loading…</p>
         ) : (

@@ -14,11 +14,10 @@ import type { HighlightColor } from "@/lib/highlights";
 import { HighlightsPanel } from "./HighlightsPanel";
 import { MemoryPanel } from "./MemoryPanel";
 import { PlanPanel, type PlanSetup } from "./PlanPanel";
-import { ToAddPanel, type ToAddProps } from "./ToAddPanel";
 import { FilesPanel, type FilesProps } from "./FilesPanel";
 import type { SendRequest } from "./Workspace";
 
-export type Tab = "chat" | "plan" | "passes" | "practice" | "highlights" | "memory" | "later" | "files";
+export type Tab = "chat" | "plan" | "passes" | "practice" | "highlights" | "memory" | "files";
 
 export type ExamProps = { practice: ExamPractice; examDate: string | null; onExamDate: (date: string | null) => void };
 
@@ -56,13 +55,14 @@ type Props = {
   onCite: (page: number, docLabel?: string) => void;
   onFocusTopic: (topic: PlanTopic) => void;
   onTopicStatus: (topic: PlanTopic, status: TopicStatus) => void;
+  onRecall: (topic: PlanTopic) => void;
+  onListen: (topic: PlanTopic) => void;
   onDeleteHighlight: (h: Highlight) => void;
   onUpdateHighlight: (h: Highlight, patch: { color?: HighlightColor; note?: string | null }) => void;
   onPlanCreated: () => void;
   onRepace: (minutesPerDay: number, deadline: string) => Promise<void>;
   draftGoal: string; // a template's or pack's goal, to start the plan from
   setup: PlanSetup;
-  toAdd?: ToAddProps; // study sessions: what the goal names that isn't in yet
   files: FilesProps; // every PDF: open, close its tab, delete
   onClose?: () => void;
   keyInfo?: KeyInfo | null; // the user's own Groq key in use here (never the key itself)
@@ -81,6 +81,9 @@ export function TutorPanel(props: Props) {
     ? `${passDocs.filter((d) => (props.paper.reviews[d.id]?.passes_done ?? 0) >= (props.paper.reviews[d.id]?.target_pass ?? 1)).length}/${passDocs.length}`
     : undefined;
   const answered = props.exam.practice.attempts.length;
+  // Files: how many, and "+n" for what's still coming in or waiting to be added from the goal.
+  const waiting = props.files.uploads.length + (props.files.later ? props.files.later.later.papers.length + props.files.later.later.links.length : 0);
+  const filesBadge = props.files.docs.length || waiting ? `${props.files.docs.length}${waiting ? ` +${waiting}` : ""}` : undefined;
   // Exam sessions keep it simple: ask, practise, see progress.
   const tabs: { id: Tab; label: string; badge?: string }[] =
     props.kind === "exam"
@@ -88,7 +91,7 @@ export function TutorPanel(props: Props) {
           { id: "chat", label: "Tutor" },
           { id: "practice", label: "Practice" },
           { id: "memory", label: "Progress", badge: answered ? String(answered) : undefined },
-          { id: "files", label: "Files", badge: props.files.docs.length ? String(props.files.docs.length) : undefined },
+          { id: "files", label: "Files", badge: filesBadge },
         ]
       : [
           { id: "chat", label: "Tutor" },
@@ -96,12 +99,9 @@ export function TutorPanel(props: Props) {
             ? { id: "passes", label: "Passes", badge: passesBadge }
             : { id: "plan", label: "Plan", badge: plan ? `${done}/${topics.length}` : "Set goal" },
           ...(studyPapers.length ? [{ id: "passes" as const, label: "Papers", badge: passesBadge }] : []),
-          ...(props.toAdd
-            ? [{ id: "later" as const, label: "To add", badge: props.toAdd.later.papers.length + props.toAdd.later.links.length ? String(props.toAdd.later.papers.length + props.toAdd.later.links.length) : undefined }]
-            : []),
           { id: "highlights", label: "Highlights", badge: highlights.length ? String(highlights.length) : undefined },
           { id: "memory", label: "Progress" },
-          { id: "files", label: "Files", badge: props.files.docs.length ? String(props.files.docs.length) : undefined },
+          { id: "files", label: "Files", badge: filesBadge },
         ];
   const activePaper = props.docs.find((d) => d.id === props.paper.activeDocId && (props.kind === "paper" || props.paper.paperIds.has(d.id)));
 
@@ -230,6 +230,8 @@ export function TutorPanel(props: Props) {
             onJump={props.onJump}
             onFocusTopic={props.onFocusTopic}
             onTopicStatus={props.onTopicStatus}
+            onRecall={props.onRecall}
+            onListen={props.onListen}
             papers={props.paper.paperIds}
             reviews={props.paper.reviews}
             onOpenPaper={(docId) => {
@@ -252,10 +254,10 @@ export function TutorPanel(props: Props) {
             setup={props.setup}
           />
         )}
-        {tab === "later" && props.toAdd && <ToAddPanel {...props.toAdd} />}
         {tab === "files" && <FilesPanel {...props.files} />}
         {tab === "highlights" && (
           <HighlightsPanel
+            sessionId={props.sessionId}
             highlights={highlights}
             docs={props.docs}
             busy={Boolean(props.busy)}

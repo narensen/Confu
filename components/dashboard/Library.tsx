@@ -209,7 +209,7 @@ export function Library({ name, sessions: all }: { name: string | null; sessions
               <input
                 value={query}
                 onChange={(e) => change(() => setQuery(e.target.value))}
-                placeholder="Search titles and PDFs"
+                placeholder="Search titles and files"
                 className="w-full rounded-lg border border-ink/20 bg-panel py-1.5 pr-3 pl-8 text-sm outline-none transition focus:border-ink"
               />
             </label>
@@ -280,7 +280,7 @@ function Summary({ s, today }: { s: LibrarySession; today: string | null }) {
   }
   if (s.kind === "paper") return <>{s.paper && s.paper.total ? `${s.paper.done} of ${s.paper.total} papers read to their target pass` : "No papers yet"}</>;
   if (s.study) return <>{`${s.study.done} of ${s.study.total} topics · ${s.study.goal}`}</>;
-  return <>{s.docs.length ? `${s.docs.length} PDF${s.docs.length > 1 ? "s" : ""} · ${pages} pages · set a goal to get a plan` : "Add a PDF to begin"}</>;
+  return <>{s.docs.length ? `${s.docs.length} file${s.docs.length > 1 ? "s" : ""} · ${pages} pages · set a goal to get a plan` : "Add a file to begin"}</>;
 }
 
 function SessionCard({ s, today }: { s: LibrarySession; today: string | null }) {
@@ -316,10 +316,10 @@ function SessionCard({ s, today }: { s: LibrarySession; today: string | null }) 
         {!s.docs.length
           ? s.kind === "paper"
             ? "No papers yet"
-            : "No PDFs yet"
+            : "No files yet"
           : s.kind === "paper"
             ? `${s.docs.length} paper${s.docs.length === 1 ? "" : "s"}`
-            : `${s.docs.length} PDF${s.docs.length === 1 ? "" : "s"} · ${pages} pages`}
+            : `${s.docs.length} file${s.docs.length === 1 ? "" : "s"} · ${pages} pages`}
         {notReady > 0 && <span className="ml-2 text-warn">{notReady} not ready</span>}
       </p>
 

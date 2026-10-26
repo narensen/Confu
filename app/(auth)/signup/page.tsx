@@ -7,7 +7,7 @@ export default function SignupPage() {
   return (
     <AuthCard
       title="Create your account"
-      subtitle="Upload a PDF, set a goal, and learn it properly."
+      subtitle="Upload your notes, set a goal, and learn it properly."
       footer={
         <>
           Already have an account?{" "}

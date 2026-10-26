@@ -397,7 +397,7 @@ function RetentionCell({ value }: { value: number | null }) {
   return (
     <span
       className="inline-block min-w-11 rounded px-1.5 py-0.5 text-center font-mono text-[11px] tabular-nums"
-      style={{ background: `rgba(13, 13, 12, ${alpha})`, color: alpha > 0.45 ? "#fff" : "#0d0d0c" }}
+      style={{ background: `color-mix(in srgb, var(--ink) ${alpha * 100}%, transparent)`, color: alpha > 0.45 ? "var(--paper)" : "var(--ink)" }}
     >
       {value}%
     </span>

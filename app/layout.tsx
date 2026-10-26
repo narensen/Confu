@@ -10,6 +10,7 @@ import { FeedbackHost } from "@/components/Feedback";
 import { FlashToast } from "@/components/FlashToast";
 import { RoomDock } from "@/components/rooms/RoomDock";
 import { Telemetry } from "@/components/Telemetry";
+import { THEME_SCRIPT } from "@/lib/theme";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,7 +31,7 @@ export const metadata: Metadata = {
   // Absolute links for social preview images (packs, templates, Wrapped).
   metadataBase: new URL(SITE.url),
   title: "Confu — learn anything, deeply",
-  description: "Set a goal, bring your PDF and lectures, and learn with a tutor that remembers your progress.",
+  description: "Set a goal, bring your files and lectures, and learn with a tutor that remembers your progress.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -41,6 +42,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${newsreader.variable} h-full antialiased`}
     >
+      <head>
+        {/* The chosen theme, before first paint (lib/theme.ts). */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="flex min-h-full flex-col">
         {children}
         <DialogHost />

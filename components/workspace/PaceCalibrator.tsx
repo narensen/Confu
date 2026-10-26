@@ -66,7 +66,7 @@ export function PaceCalibrator({
           <p className="font-serif text-2xl leading-tight">
             About {total} hours <span className="font-sans text-sm text-muted">({estimate!.low}–{estimate!.high} h)</span>
           </p>
-          <p className="mt-1 text-xs leading-relaxed text-muted">{estimate!.why || "From your PDFs and the materials in your goal, with time to practise."}</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted">{estimate!.why || "From your files and the materials in your goal, with time to practise."}</p>
           {estimate!.parts.length > 0 && (
             <ul className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
               {estimate!.parts.map((p) => (

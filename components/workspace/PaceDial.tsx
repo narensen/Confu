@@ -16,8 +16,8 @@ const START = -SWEEP / 2; // degrees from the top, clockwise
 const SIZE = 284;
 const C = SIZE / 2;
 const R = 92;
-const INK = "#0d0d0c";
-const TRACK = "#e1e0d9";
+const INK = "var(--ink)";
+const TRACK = "var(--line)";
 const FOCUS = "#facc15";
 
 const PRESETS = [
@@ -129,7 +129,7 @@ function Dial({ value, onChange }: { value: number; onChange: (v: number) => voi
       <path d={arc(START, -START)} fill="none" stroke={TRACK} strokeWidth={12} strokeLinecap="round" />
       <path d={arc(START, angleOf(value))} fill="none" stroke={INK} strokeWidth={12} strokeLinecap="round" />
       {(focused || dragging) && <circle cx={knob.x} cy={knob.y} r={19} fill="none" stroke={FOCUS} strokeWidth={4} />}
-      <circle cx={knob.x} cy={knob.y} r={14} fill="#ffffff" stroke={INK} strokeWidth={2.5} />
+      <circle cx={knob.x} cy={knob.y} r={14} fill="var(--panel)" stroke={INK} strokeWidth={2.5} />
       <text x={C} y={C - 2} textAnchor="middle" className="fill-ink font-sans text-[34px] font-semibold tracking-tight">
         {perDay(value)}
       </text>

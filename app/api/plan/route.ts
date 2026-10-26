@@ -38,12 +38,26 @@ export async function POST(request: Request) {
   if ("error" in access) return access.error;
   after(() => access.meter.flush());
 
-  try {
-    const planId = await generatePlan(supabase, access.groq, { userId, ...parsed.data });
-    return Response.json({ planId });
-  } catch (err) {
-    if ((err as { status?: number })?.status) return groqErrorResponse(err, "Could not generate a plan. Try again.");
-    logError("plan generation failed", err);
-    return Response.json({ error: err instanceof Error ? err.message : "Could not generate a plan. Try again." }, { status: 502 });
-  }
+  // One JSON object per line: {"phase"} and {"topic"} as the plan is
+  // written, then {"planId"}, or {"error"} (with the same codes as a JSON
+  // error response, so the client treats key and quota errors the same).
+  const encoder = new TextEncoder();
+  const body = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const send = (line: object) => controller.enqueue(encoder.encode(`${JSON.stringify(line)}\n`));
+      try {
+        const planId = await generatePlan(supabase, access.groq, { userId, ...parsed.data, onProgress: send });
+        send({ planId });
+      } catch (err) {
+        if ((err as { status?: number })?.status) send(await groqErrorResponse(err, "Could not generate a plan. Try again.").json());
+        else {
+          logError("plan generation failed", err);
+          send({ error: err instanceof Error ? err.message : "Could not generate a plan. Try again." });
+        }
+      } finally {
+        controller.close();
+      }
+    },
+  });
+  return new Response(body, { headers: { "Content-Type": "application/x-ndjson; charset=utf-8", "Cache-Control": "no-store" } });
 }

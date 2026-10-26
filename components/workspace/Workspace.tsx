@@ -12,6 +12,7 @@ import type { Attempt } from "@/lib/exam";
 import { useExamPractice } from "@/components/exam/useExamPractice";
 import { addPaperFromMeta, type PaperMeta } from "@/lib/pdf/add-paper";
 import { FIND_PAPER_EVENT } from "@/lib/find-paper";
+import { speechLoading, speechPlay, speechStop, speechSupported } from "@/lib/speech";
 import { closeTab, isOpenIn, keepTabs, openTab, useOpenTabs } from "@/lib/open-tabs";
 import { peekHandoff, takeHandoff } from "@/lib/pdf/handoff";
 import { attachPdfToDocument, titleFromFile, uploadPdfToSession } from "@/lib/pdf/upload";
@@ -47,6 +48,10 @@ import {
 import type { HighlightColor } from "@/lib/highlights";
 import { DocTabs } from "./DocTabs";
 import { KeyGate } from "./KeyGate";
+import type { UploadItem } from "./FilesPanel";
+import { AudioBar } from "./AudioBar";
+import { RecallCheck, recallOffered } from "./RecallCheck";
+import { ShortcutsDialog } from "./Shortcuts";
 import type { PlanJob } from "./PlanPanel";
 import { TutorPanel, type Tab } from "./TutorPanel";
 import { ask, toast } from "@/components/dialogs";
@@ -111,6 +116,8 @@ export function Workspace({
   const [uploadStatus, setUploadStatus] = useState<string | null>(null);
   const [addPaperOpen, setAddPaperOpen] = useState(false);
   const [addMaterialOpen, setAddMaterialOpen] = useState(false);
+  // "Choose" on a goal's playlist opens the YouTube tab on it.
+  const [materialStart, setMaterialStart] = useState<{ tab: "youtube"; url: string } | null>(null);
   const [plan, setPlan] = useState(initialPlan);
   const [topics, setTopics] = useState(initialTopics);
   const [memory, setMemory] = useState(initialMemory);
@@ -489,37 +496,99 @@ export function Workspace({
   );
 
   // Shared by "+ Add PDF" uploads and papers added by arXiv ID / DOI.
-  const addDocs = useCallback(
-    async (adders: ((userId: string, position: number) => Promise<string>)[]): Promise<SessionDoc[]> => {
-      if (uploadStatus) return [];
-      const added: SessionDoc[] = [];
-      try {
-        const { data: auth } = await supabase.auth.getUser();
-        if (!auth.user) throw new Error("Your session expired. Sign in again.");
-        let position = Math.max(-1, ...docs.map((d) => d.position)) + 1;
-        // New PDFs go to Files; the tabs open now stay the only ones open.
-        keepTabs(session.id, docs.map((d) => d.id));
-        for (const add of adders) {
-          const doc = await loadDoc(await add(auth.user.id, position++));
-          if (!doc) continue;
-          added.push(doc);
-          // Each is listed as soon as it's indexed, not after the whole batch.
-          setDocs((list) => relabel([...list, doc]));
+  // Files on their way in, listed in Files with their progress. A failure
+  // stays there with Retry and doesn't stop the files after it.
+  const [uploads, setUploads] = useState<UploadItem[]>([]);
+  const retries = useRef(new Map<string, () => void>());
+  const patchUpload = useCallback((key: string, patch: Partial<UploadItem> | null) => {
+    setUploads((list) => (patch ? list.map((u) => (u.key === key ? { ...u, ...patch } : u)) : list.filter((u) => u.key !== key)));
+  }, []);
+  const tracked = useCallback(
+    (name: string, run: (userId: string, position: number, onStatus: (s: string) => void) => Promise<string>, retry: () => void, keepFailure = true) => {
+      const key = crypto.randomUUID();
+      retries.current.set(key, retry);
+      setUploads((list) => [...list, { key, name, status: "waiting" }]);
+      return async (userId: string, position: number): Promise<string | null> => {
+        patchUpload(key, { status: "working", note: undefined });
+        try {
+          const id = await run(userId, position, (note) => {
+            setUploadStatus(note);
+            patchUpload(key, { note });
+          });
+          patchUpload(key, null);
+          retries.current.delete(key);
+          return id;
+        } catch (err) {
+          if (keepFailure) patchUpload(key, { status: "failed", note: err instanceof Error ? err.message : "Couldn't add it." });
+          else {
+            patchUpload(key, null);
+            retries.current.delete(key);
+          }
+          return null;
         }
-      } catch (err) {
-        toast(err instanceof Error ? err.message : "Couldn't add that.", "error");
-      } finally {
-        setUploadStatus(null);
-      }
-      return added;
+      };
     },
-    [docs, loadDoc, session.id, supabase, uploadStatus],
+    [patchUpload],
+  );
+  const retryUpload = useCallback(
+    (key: string) => {
+      const again = retries.current.get(key);
+      retries.current.delete(key);
+      patchUpload(key, null);
+      again?.();
+    },
+    [patchUpload],
+  );
+  // Retry runs the same add again (through the latest version of it).
+  const addAgain = useRef<{
+    pdfs: (files: File[]) => unknown;
+    imported: (items: ImportedFile[]) => unknown;
+    papers: (papers: PaperMeta[]) => unknown;
+    links?: (links: GoalLink[], keep: boolean) => unknown;
+  } | null>(null);
+
+  // Additions wait their turn: a paper still downloading never makes the
+  // next one get dropped. Positions keep counting up across queued batches.
+  const addQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const nextPosition = useRef(0);
+  const addDocs = useCallback(
+    (adders: ((userId: string, position: number) => Promise<string | null>)[]): Promise<SessionDoc[]> => {
+      const run = addQueue.current.then(async () => {
+        const added: SessionDoc[] = [];
+        try {
+          const { data: auth } = await supabase.auth.getUser();
+          if (!auth.user) throw new Error("Your session expired. Sign in again.");
+          nextPosition.current = Math.max(nextPosition.current, Math.max(-1, ...docs.map((d) => d.position)) + 1);
+          // New PDFs go to Files; the tabs open now stay the only ones open.
+          keepTabs(session.id, docIds.current);
+          for (const add of adders) {
+            // A failed file (null) is listed in Files with Retry; the rest carry on.
+            const id = await add(auth.user.id, nextPosition.current++);
+            const doc = id ? await loadDoc(id) : null;
+            if (!doc) continue;
+            added.push(doc);
+            // Each is listed as soon as it's indexed, not after the whole batch.
+            setDocs((list) => relabel([...list, doc]));
+          }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : "Couldn't add that.";
+          toast(message, "error");
+          setUploads((list) => list.map((u) => (u.status === "failed" ? u : { ...u, status: "failed", note: message })));
+        } finally {
+          setUploadStatus(null);
+        }
+        return added;
+      });
+      addQueue.current = run.catch(() => {});
+      return run;
+    },
+    [docs, loadDoc, session.id, supabase],
   );
 
   // Where a newly added PDF went: Files, not a tab.
   const addedToFiles = useCallback((added: SessionDoc[]) => {
     if (!added.length) return added;
-    toast(`${added.length === 1 ? `“${added[0].title.slice(0, 60)}” is` : `${added.length} PDFs are`} in Files. Open ${added.length === 1 ? "it" : "one"} there to read.`);
+    toast(`${added.length === 1 ? `“${added[0].title.slice(0, 60)}” is` : `${added.length} files are`} in Files. Open ${added.length === 1 ? "it" : "one"} there to read.`);
     return added;
   }, []);
 
@@ -533,15 +602,21 @@ export function Workspace({
       if (!pdfs.length) return [];
       return addedToFiles(
         await addDocs(
-          pdfs.map((file) => async (userId, position) => {
-            const { id, ocrNote } = await uploadPdfToSession(supabase, { userId, sessionId: session.id, file, position, onStatus: setUploadStatus });
-            if (ocrNote) toast(ocrNote);
-            return id;
-          }),
+          pdfs.map((file) =>
+            tracked(
+              file.name,
+              async (userId, position, onStatus) => {
+                const { id, ocrNote } = await uploadPdfToSession(supabase, { userId, sessionId: session.id, file, position, onStatus });
+                if (ocrNote) toast(ocrNote);
+                return id;
+              },
+              () => void addAgain.current?.pdfs([file]),
+            ),
+          ),
         ),
       );
     },
-    [addDocs, addedToFiles, session.id, supabase],
+    [addDocs, addedToFiles, session.id, supabase, tracked],
   );
 
   // PDFs picked when the session was created upload here, so the goal can be
@@ -552,7 +627,7 @@ export function Workspace({
     if (files.length) void addPdfs(files).finally(() => setIncoming([]));
   }, [addPdfs, session.id]);
 
-  const uploading = uploadStatus ?? (incoming.length ? "Getting your PDFs ready…" : null);
+  const uploading = uploadStatus ?? (incoming.length ? "Getting your files ready…" : null);
 
   // A plan asked for mid-upload waits for the PDFs, so it can use them. The
   // wait lives here, not in the goal form, so switching tabs doesn't drop it.
@@ -580,40 +655,55 @@ export function Workspace({
   const addImported = useCallback(
     (items: ImportedFile[]) =>
       addDocs(
-        items.map((it) => async (userId, position) => {
-          const { id } = await uploadPdfToSession(supabase, {
-            userId,
-            sessionId: session.id,
-            file: it.file,
-            position,
-            onStatus: setUploadStatus,
-            title: it.title,
-            meta: it.meta,
-            sourceUrl: it.sourceUrl ?? null,
-          });
-          return id;
-        }),
+        items.map((it) =>
+          tracked(
+            it.title || it.file.name,
+            async (userId, position, onStatus) => {
+              const { id } = await uploadPdfToSession(supabase, {
+                userId,
+                sessionId: session.id,
+                file: it.file,
+                position,
+                onStatus,
+                title: it.title,
+                meta: it.meta,
+                sourceUrl: it.sourceUrl ?? null,
+              });
+              return id;
+            },
+            () => void addAgain.current?.imported([it]),
+          ),
+        ),
       ),
-    [addDocs, session.id, supabase],
+    [addDocs, session.id, supabase, tracked],
   );
 
   const addPapers = useCallback(
     async (papers: PaperMeta[]) => {
       const skipped: string[] = [];
       const added = await addDocs(
-        papers.map((paper) => async (userId, position) => {
-          const res = await addPaperFromMeta(supabase, { userId, sessionId: session.id, position, paper, onStatus: setUploadStatus });
-          if (!res.hasPdf) skipped.push(`• ${paper.title}${res.note ? ` (${res.note})` : ""}`);
-          return res.id;
-        }),
+        papers.map((paper) =>
+          tracked(
+            paper.title,
+            async (userId, position, onStatus) => {
+              const res = await addPaperFromMeta(supabase, { userId, sessionId: session.id, position, paper, onStatus });
+              if (!res.hasPdf) skipped.push(`• ${paper.title}${res.note ? ` (${res.note})` : ""}`);
+              return res.id;
+            },
+            () => void addAgain.current?.papers([paper]),
+          ),
+        ),
       );
       if (skipped.length) {
         toast(`Added without a PDF (abstract only):\n${skipped.join("\n")}\n\nYou can still do a first pass, and the tutor can look these up. Upload the PDF later for a deeper read.`);
       }
       return added;
     },
-    [addDocs, session.id, supabase],
+    [addDocs, session.id, supabase, tracked],
   );
+  useEffect(() => {
+    addAgain.current = { ...addAgain.current, pdfs: addPdfs, imported: addImported, papers: addPapers };
+  }, [addImported, addPapers, addPdfs]);
 
   // Give a document without a PDF its file, keeping its id (and so its notes,
   // highlights and plan links): papers added by ID, and a pack's sources.
@@ -640,9 +730,9 @@ export function Workspace({
   const removePdf = useCallback(
     async (doc: SessionDoc) => {
       const ok = await ask({
-        title: `Remove “${doc.title}”?`,
+        title: `Delete “${doc.title}”?`,
         body: "Its highlights are deleted too. Plan topics that use it stay, without page links.",
-        confirm: "Remove PDF",
+        confirm: "Delete it",
         danger: true,
       });
       if (!ok) return;
@@ -908,27 +998,43 @@ export function Workspace({
     return () => window.removeEventListener(FIND_PAPER_EVENT, onFind);
   }, []);
 
-  // Lectures and pages linked in the goal, read into PDFs one by one. Returns
-  // the ones brought in and the ones that failed.
+  // Lectures and pages (from the goal, or a playlist), read into PDFs one by
+  // one, each listed in Files as it comes in. `keep`: a failure stays there
+  // with Retry; otherwise it's handed back (a goal's links return to its list).
   const importLinks = useCallback(
-    async (links: GoalLink[]) => {
+    async (links: (GoalLink & { title?: string })[], keep = false) => {
       const done: string[] = [];
-      const failed: GoalLink[] = [];
-      for (const l of links) {
-        try {
-          const got = l.kind === "youtube" ? await lecturePdf({ url: l.url }, setUploadStatus) : await webPagePdf(l.url, setUploadStatus);
-          setUploadStatus(null);
-          if ((await addImported([got])).length) done.push(l.url);
-          else failed.push(l);
-        } catch {
-          failed.push(l);
-        }
-      }
-      setUploadStatus(null);
-      return { done, failed };
+      const added = await addDocs(
+        links.map((l) =>
+          tracked(
+            l.title || l.url.replace(/^https?:\/\/(www\.)?/, ""),
+            async (userId, position, onStatus) => {
+              const got = l.kind === "youtube" ? await lecturePdf({ url: l.url }, onStatus) : await webPagePdf(l.url, onStatus);
+              const { id } = await uploadPdfToSession(supabase, {
+                userId,
+                sessionId: session.id,
+                file: got.file,
+                position,
+                onStatus,
+                title: got.title,
+                meta: got.meta,
+                sourceUrl: got.sourceUrl ?? null,
+              });
+              done.push(l.url);
+              return id;
+            },
+            () => void addAgain.current?.links?.([l], keep),
+            keep,
+          ),
+        ),
+      );
+      return { added, done, failed: links.filter((l) => !done.includes(l.url)) };
     },
-    [addImported],
+    [addDocs, session.id, supabase, tracked],
   );
+  useEffect(() => {
+    if (addAgain.current) addAgain.current.links = importLinks;
+  }, [importLinks]);
 
   // The papers and links a study goal names, handled once per goal (see
   // /api/paper/from-goal). Papers found for sure and YouTube lectures are
@@ -953,7 +1059,7 @@ export function Workspace({
         localStorage.setItem(goalKey, "done");
       } catch {}
       const found = (await res.json()) as { papers: GoalPaper[]; links: GoalLink[] };
-      const hint = (p: GoalPaper): GoalHint => ({ name: p.name, title: p.title, doi: p.doi, arxiv: p.arxiv });
+      const hint = (p: GoalPaper): GoalHint => ({ name: p.name, title: p.title, doi: p.doi, arxiv: p.arxiv, authors: p.authors });
       const sure = found.papers.filter((p) => p.paper);
       const unsure = found.papers.filter((p) => !p.paper).map(hint);
       const lectures = found.links.filter((l) => l.kind === "youtube");
@@ -998,6 +1104,88 @@ export function Workspace({
     [session.id, supabase],
   );
 
+  // Keyboard shortcuts (see Shortcuts.tsx). Only when not typing and no
+  // dialog is open; one listener, reading the latest state through a ref.
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [recall, setRecall] = useState<{ topic: PlanTopic; offer: boolean } | null>(null);
+
+  // A topic's audio overview: written once (then kept in this browser) and
+  // read aloud by the browser's own voice.
+  const listen = useCallback(async (t: PlanTopic) => {
+    if (!speechSupported()) return toast("This browser can't read aloud. Try Chrome, Edge or Safari.", "error");
+    const key = `confu:overview:${t.id}`;
+    let script: string | null = null;
+    try {
+      script = localStorage.getItem(key);
+    } catch {}
+    speechLoading(t.title);
+    track("overview.listen", { cached: Boolean(script) });
+    if (!script) {
+      const res = await fetch("/api/topic/overview", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ topicId: t.id }) }).catch(() => null);
+      notifyAiUsed();
+      if (!res?.ok) {
+        speechStop();
+        return toast(res ? await readAiError(res) : "Couldn't reach Confu. Check your connection.", "error");
+      }
+      script = ((await res.json()) as { script: string }).script;
+      try {
+        localStorage.setItem(key, script);
+      } catch {}
+    }
+    speechPlay(t.title, script);
+  }, []);
+  // Leaving the session ends the overview.
+  useEffect(() => speechStop, []);
+  const onKey = useRef<(e: KeyboardEvent) => void>(() => {});
+  useEffect(() => {
+    onKey.current = (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
+      const el = e.target as HTMLElement | null;
+      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+      if (document.querySelector('[role="dialog"][aria-modal="true"]')) return;
+      const show = (t: Tab) => {
+        setTab(t);
+        setDrawerOpen(true);
+        setMobileView("tutor");
+      };
+      const i = openDocs.findIndex((d) => d.id === activeDoc?.id);
+      const go: Record<string, () => void> = {
+        "?": () => setShortcutsOpen(true),
+        t: () => show("chat"),
+        p: () => show(isExam ? "practice" : isPaper ? "passes" : "plan"),
+        f: () => show("files"),
+        h: () => !isExam && show("highlights"),
+        "/": () => {
+          show("chat");
+          window.setTimeout(() => document.getElementById("tutor-input")?.focus(), 50);
+        },
+        "[": () => openDocs.length > 1 && selectDoc(openDocs[(i - 1 + openDocs.length) % openDocs.length].id),
+        "]": () => openDocs.length > 1 && selectDoc(openDocs[(i + 1) % openDocs.length].id),
+        w: () => activeDoc && closeDocTab(activeDoc),
+        n: () => {
+          const next = currentTopic(topics);
+          if (next?.source === "pdf" && next.page_start && next.document_id) {
+            setActiveTopicId(next.id);
+            jumpTo(next.page_start, next.document_id);
+          } else if (next) {
+            setActiveTopicId(next.id);
+            show("plan");
+          }
+        },
+        ".": () => toggleFocus(),
+      };
+      const run = go[e.key];
+      if (!run) return;
+      e.preventDefault();
+      run();
+    };
+  });
+  useEffect(() => {
+    const listener = (e: KeyboardEvent) => onKey.current(e);
+    window.addEventListener("keydown", listener);
+    return () => window.removeEventListener("keydown", listener);
+  }, []);
+
   const tutor = locked ? (
     <KeyGate
       sessionId={session.id}
@@ -1025,7 +1213,13 @@ export function Workspace({
       onJump={jumpTo}
       onCite={jumpToCitation}
       onFocusTopic={(t) => setActiveTopicId(t.id)}
-      onTopicStatus={setTopicStatus}
+      onTopicStatus={(t, s) => {
+        void setTopicStatus(t, s);
+        // Just finished: offer a quick recall check (unless turned off).
+        if (s === "completed" && recallOffered()) setRecall({ topic: t, offer: true });
+      }}
+      onRecall={(t) => setRecall({ topic: t, offer: false })}
+      onListen={listen}
       onDeleteHighlight={deleteHighlight}
       onUpdateHighlight={updateHighlight}
       onPlanCreated={onPlanCreated}
@@ -1034,9 +1228,34 @@ export function Workspace({
         docs,
         activeId: activeDoc?.id ?? null,
         open: openIds,
-        busy: Boolean(uploadStatus),
         addLabel: isPaper ? "+ Add paper" : "+ Add material",
         onAdd: isPaper ? () => setAddPaperOpen(true) : () => setAddMaterialOpen(true),
+        onAddPapers: isPaper || isExam ? undefined : () => setAddPaperOpen(true),
+        uploads,
+        onRetry: retryUpload,
+        onDismiss: (key) => {
+          retries.current.delete(key);
+          patchUpload(key, null);
+        },
+        later:
+          isPaper || isExam
+            ? undefined
+            : {
+                later,
+                busy: false,
+                onFind: openGoalSearch,
+                onRemovePaper: (name) => removeLater(session.id, { papers: [name] }),
+                onImport: async (links) => {
+                  const { done, failed } = await importLinks(links);
+                  removeLater(session.id, { links: done });
+                  if (failed.length) toast(`Couldn't bring in:\n${failed.map((l) => l.url).join("\n")}\n\nThey stay in Files; try them from + Add material too.`, "error");
+                },
+                onPlaylist: (url) => {
+                  setMaterialStart({ tab: "youtube", url });
+                  setAddMaterialOpen(true);
+                },
+                onRemoveLink: (url) => removeLater(session.id, { links: [url] }),
+              },
         // Shows it, and stays on Files (no jump to a paper's passes).
         onOpen: (docId) => {
           selectDoc(docId);
@@ -1054,24 +1273,6 @@ export function Workspace({
       }}
       draftGoal={session.draftGoal ?? ""}
       setup={{ upload: uploading, incoming, settled: uploadsSettled, job: planJob, setJob: setPlanJob }}
-      toAdd={
-        isPaper || isExam
-          ? undefined
-          : {
-              later,
-              busy: Boolean(uploadStatus),
-              onFind: openGoalSearch,
-              onAddPapers: () => setAddPaperOpen(true),
-              onAddMaterial: () => setAddMaterialOpen(true),
-              onRemovePaper: (name) => removeLater(session.id, { papers: [name] }),
-              onImport: async (links) => {
-                const { done, failed } = await importLinks(links);
-                removeLater(session.id, { links: done });
-                if (failed.length) toast(`Couldn't bring in:\n${failed.map((l) => l.url).join("\n")}\n\nThey stay in To add; try them from + Add material too.`, "error");
-              },
-              onRemoveLink: (url) => removeLater(session.id, { links: [url] }),
-            }
-      }
       onClose={focusMode ? () => setDrawerOpen(false) : undefined}
       keyInfo={needsKey ? keyInfo : null}
       kind={session.kind}
@@ -1128,7 +1329,7 @@ export function Workspace({
       <section className={`relative min-w-0 flex-1 flex-col md:flex ${focusMode || mobileView === "pdf" ? "flex" : "hidden"}`}>
         <PackSources sessionId={session.id} docs={docs} busy={Boolean(uploadStatus)} onAttach={attachPdf} onSelect={openDocTab} />
         <DocTabs
-          docs={docs}
+          docs={openDocs}
           activeId={activeDoc?.id ?? null}
           uploadStatus={uploadStatus}
           onSelect={openDocTab}
@@ -1138,6 +1339,7 @@ export function Workspace({
           addLabel={isPaper ? "+ Add paper" : "+ Add material"}
           paperIds={isPaper || isExam ? undefined : paperIds}
           onNotPaper={isPaper || isExam ? undefined : unmarkPaper}
+          onShortcuts={() => setShortcutsOpen(true)}
           onPaper={
             isPaper || isExam
               ? undefined
@@ -1205,7 +1407,7 @@ export function Workspace({
           ) : docs.length ? (
             <div className="animate-enter flex h-full flex-col items-center justify-center gap-2 bg-viewer px-6 text-center">
               <p className="font-serif text-2xl">Nothing open</p>
-              <p className="max-w-sm text-sm text-muted">Your PDFs are in Files. Open one there to read it here.</p>
+              <p className="max-w-sm text-sm text-muted">Everything is in Files. Open something there to read it here.</p>
               <button
                 type="button"
                 onClick={() => {
@@ -1220,11 +1422,11 @@ export function Workspace({
             </div>
           ) : (
             <div className="animate-enter flex h-full flex-col items-center justify-center gap-2 bg-viewer px-6 text-center">
-              <p className="font-serif text-2xl">{isPaper ? "No papers yet" : "No PDFs in this session"}</p>
+              <p className="font-serif text-2xl">{isPaper ? "No papers yet" : "Nothing in this session yet"}</p>
               <p className="max-w-sm text-sm text-muted">
                 {isPaper
                   ? "Add papers by arXiv ID, DOI, link or title. No PDF needed."
-                  : "Use “+ Add material” above: PDFs, web pages, YouTube lectures, Google Drive or Zotero. The tutor still works from your goal meanwhile."}
+                  : "Use “+ Add material” above: PDFs, slides, Word docs, web pages, YouTube lectures, Google Drive or Zotero. The tutor still works from your goal meanwhile."}
               </p>
               {isPaper && (
                 <div className="mt-3 flex flex-wrap justify-center gap-2">
@@ -1268,6 +1470,9 @@ export function Workspace({
           }}
         />
       )}
+      {shortcutsOpen && <ShortcutsDialog onClose={() => setShortcutsOpen(false)} />}
+      <AudioBar />
+      {recall && <RecallCheck key={recall.topic.id} topic={recall.topic} sessionId={session.id} offer={recall.offer} onClose={() => setRecall(null)} />}
       {mapOpen && (
         <LiteratureMap
           scope={{ kind: "session", sessionId: session.id, papers: paperDocs }}
@@ -1291,10 +1496,15 @@ export function Workspace({
       {converting && <ConvertFiles files={converting} onDone={(pdfs) => void addPdfs(pdfs)} onClose={() => setConverting(null)} />}
       {addMaterialOpen && (
         <AddMaterialDialog
-          initialTab={isPaper ? "zotero" : "upload"}
-          onClose={() => setAddMaterialOpen(false)}
+          initialTab={materialStart?.tab ?? (isPaper ? "zotero" : "upload")}
+          initialUrl={materialStart?.url}
+          onClose={() => {
+            setAddMaterialOpen(false);
+            setMaterialStart(null);
+          }}
           onFiles={(files) => void addPdfs(files)}
           onImported={(items) => void addImported(items).then(addedToFiles)}
+          onLectures={(list) => void importLinks(list.map((l) => ({ ...l, kind: "youtube" as const })), true).then((r) => addedToFiles(r.added))}
           onPapers={(papers) => void addPaperMetas(papers)}
           onFindPaper={
             isPaper
@@ -1313,7 +1523,7 @@ export function Workspace({
           onClick={() => setMobileView((v) => (v === "pdf" ? "tutor" : "pdf"))}
           className="fixed right-4 bottom-4 z-30 rounded-full border border-ink bg-ink px-5 py-2.5 text-sm font-medium text-white shadow-hard transition active:scale-95 md:hidden"
         >
-          {mobileView === "pdf" ? "Tutor" : "PDF"}
+          {mobileView === "pdf" ? "Tutor" : "Reader"}
         </button>
       )}
     </div>

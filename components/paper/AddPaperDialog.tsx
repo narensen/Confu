@@ -94,6 +94,18 @@ export function AddPaperDialog({
     find(q, hint);
   }
 
+  // Finding the goal's missing papers: picking a result adds it right away,
+  // so moving on to the next paper never loses a choice.
+  const goalMode = hints !== undefined;
+  const [added, setAdded] = useState<Set<string>>(new Set());
+  function addOne(paper: PaperMeta) {
+    onAdd([paper]);
+    setAdded((s) => new Set(s).add(squash(paper.title)));
+    const done = (hints ?? []).filter((h) => h.name === active || (h.title && squash(h.title) === squash(paper.title)));
+    for (const h of done) onHintDone?.(h.name);
+    if (done.some((h) => h.name === active)) setActive(null);
+  }
+
   function add() {
     onAdd(chosen);
     // Done with the goal paper being looked up, and any whose title was added.
@@ -165,7 +177,10 @@ export function AddPaperDialog({
                 {hints.map((h) => (
                   <li key={h.name} className={`rounded-lg border px-3 py-2 ${active === h.name ? "border-ink bg-yellow-50" : "border-line"}`}>
                     <div className="flex items-start justify-between gap-3">
-                      <span className="text-sm font-medium">{h.name}</span>
+                      <span className="text-sm font-medium">
+                        {h.name}
+                        {h.authors && <span className="font-normal text-muted"> · {h.authors}</span>}
+                      </span>
                       <button type="button" onClick={() => onHintDone?.(h.name)} className="shrink-0 text-xs text-muted hover:text-danger" title="Remove it from your list">
                         Skip
                       </button>
@@ -216,9 +231,40 @@ export function AddPaperDialog({
 
           {results && results.length > 0 && (
             <ul className="mt-5 space-y-2">
-              {mode === "search" && <p className={`${eyebrowClass} mb-1`}>Search results: pick the ones you want</p>}
+              {mode === "search" && <p className={`${eyebrowClass} mb-1`}>{goalMode ? "Search results: Add puts it in your session right away" : "Search results: pick the ones you want"}</p>}
               {results.map((r, i) =>
-                r.paper ? (
+                r.paper && goalMode ? (
+                  <li key={i} className="animate-enter" style={{ animationDelay: `${i * 40}ms` }}>
+                    <div className={`flex gap-3 rounded-lg border p-3 ${picked.has(i) ? "border-ink" : "border-line"}`}>
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-serif text-[1.02rem] leading-snug">{r.paper.title}</span>
+                        <span className="mt-0.5 block truncate text-xs text-muted">
+                          {[r.paper.authors.slice(0, 4).join(", ") + (r.paper.authors.length > 4 ? " et al." : ""), r.paper.venue, r.paper.year]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                        <span className="mt-1.5 flex flex-wrap gap-1.5 font-mono text-[10px]">
+                          {picked.has(i) && <Tag dark>Same title as your goal</Tag>}
+                          {r.paper.arxiv_id && <Tag>arXiv {r.paper.arxiv_id}</Tag>}
+                          {!r.paper.arxiv_id && r.paper.doi && <Tag>DOI {r.paper.doi}</Tag>}
+                          {r.paper.pdf_url ? <Tag>PDF available</Tag> : <Tag dashed>Abstract only</Tag>}
+                          {r.paper.cited_by ? <Tag>{r.paper.cited_by.toLocaleString()} citations</Tag> : null}
+                        </span>
+                      </span>
+                      {added.has(squash(r.paper.title)) ? (
+                        <span className="shrink-0 self-start rounded-md border border-ok/50 px-2.5 py-1 text-xs font-medium text-ok">Added ✓</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => addOne(r.paper!)}
+                          className="shrink-0 self-start rounded-md border border-ink bg-ink px-2.5 py-1 text-xs font-medium text-white transition hover:-translate-y-px"
+                        >
+                          Add
+                        </button>
+                      )}
+                    </div>
+                  </li>
+                ) : r.paper ? (
                   <li key={i} className="animate-enter" style={{ animationDelay: `${i * 40}ms` }}>
                     <label
                       className={`flex cursor-pointer gap-3 rounded-lg border p-3 transition duration-200 ${picked.has(i) ? "border-ink shadow-hard-sm" : "border-line hover:border-ink/40"}`}
@@ -288,9 +334,15 @@ export function AddPaperDialog({
               </button>
             )}
           </div>
-          <button disabled={!chosen.length} onClick={add} className={`${buttonClass} py-1.5`}>
-            {chosen.length ? `Add ${chosen.length} paper${chosen.length > 1 ? "s" : ""}` : "Add papers"}
-          </button>
+          {goalMode ? (
+            <button onClick={onClose} className={`${buttonClass} py-1.5`}>
+              {added.size ? `Done · ${added.size} added` : "Done"}
+            </button>
+          ) : (
+            <button disabled={!chosen.length} onClick={add} className={`${buttonClass} py-1.5`}>
+              {chosen.length ? `Add ${chosen.length} paper${chosen.length > 1 ? "s" : ""}` : "Add papers"}
+            </button>
+          )}
         </div>
       </div>
     </div>

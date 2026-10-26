@@ -48,6 +48,16 @@ export class TranscriptError extends Error {
   }
 }
 
+export type PlaylistLecture = { id: string; title: string; seconds: number };
+
+// A YouTube playlist's lectures, to pick which to import.
+export async function playlistLectures(url: string): Promise<{ title: string; author: string; videos: PlaylistLecture[] }> {
+  const res = await fetch("/api/import/youtube", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ url, mode: "playlist" }) });
+  const j = (await res.json().catch(() => ({}))) as { title?: string; author?: string; videos?: PlaylistLecture[]; error?: string };
+  if (!res.ok || !j.videos) throw new Error(j.error ?? "Couldn't open that playlist.");
+  return { title: j.title ?? "Playlist", author: j.author ?? "", videos: j.videos };
+}
+
 export async function lecturePdf(o: { url: string; transcript?: string; title?: string }, onStatus: (s: string) => void = () => {}): Promise<Fetched> {
   onStatus(o.transcript ? "Reading the transcript…" : "Fetching the lecture's transcript…");
   const res = await fetch("/api/import/youtube", {

@@ -96,7 +96,7 @@ export function StudyStreak() {
                     key={iso(date)}
                     title={future ? "" : `${date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}: ${mins ? `${fmtMins(mins)} reading` : "no reading"}${day?.actions ? `, ${day.actions} actions` : ""}`}
                     className={`block size-3 rounded-[3px] ${isToday ? "ring-2 ring-yellow-400 ring-offset-1" : ""}`}
-                    style={{ background: future ? "transparent" : `rgba(13,13,12,${ALPHA[level(day)]})` }}
+                    style={{ background: future ? "transparent" : `color-mix(in srgb, var(--ink) ${ALPHA[level(day)] * 100}%, transparent)` }}
                   />
                 );
               })}
@@ -106,7 +106,7 @@ export function StudyStreak() {
         <div className="mt-2 flex items-center justify-end gap-1 text-[10px] text-muted">
           Less
           {ALPHA.map((a) => (
-            <span key={a} className="size-2.5 rounded-[2px]" style={{ background: `rgba(13,13,12,${a})` }} />
+            <span key={a} className="size-2.5 rounded-[2px]" style={{ background: `color-mix(in srgb, var(--ink) ${a * 100}%, transparent)` }} />
           ))}
           More
         </div>

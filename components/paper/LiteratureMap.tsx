@@ -19,11 +19,11 @@ import type { SessionDoc } from "@/lib/types";
 // rest (no color per session, so any number of sessions works), and a thin
 // outer ring marks what two or more sessions share.
 
-const INK = "#0d0d0c";
+const INK = "var(--ink)";
 const CONTEXT = "#8f8c84"; // foundation ring
 const NEWER = "#b4b1a8"; // newer-work square
-const EDGE = "#dcdad3";
-const SURFACE = "#ffffff";
+const EDGE = "var(--line)";
+const SURFACE = "var(--panel)";
 const FOCUS = "#facc15";
 
 type Kind = GraphNode["kind"];
@@ -332,7 +332,7 @@ export function LiteratureMap({
                 <svg width={size.w} height={size.h} className="block" role="img" aria-label={`Citation map: ${counts.session} of your papers, ${counts.foundation} foundations and ${counts.frontier} newer papers.`}>
                   {drawn.ticks.map((t) => (
                     <g key={t.label}>
-                      <line x1={t.x} x2={t.x} y1={28} y2={size.h - 26} stroke="#ebeae5" strokeWidth={1} />
+                      <line x1={t.x} x2={t.x} y1={28} y2={size.h - 26} stroke="var(--line)" strokeWidth={1} />
                       <text x={t.x} y={size.h - 10} textAnchor="middle" className="fill-muted font-mono text-[10px]">
                         {t.label}
                       </text>

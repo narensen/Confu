@@ -17,18 +17,19 @@ type Props = {
   paperIds?: Set<string>;
   onPaper?: (docId: string) => void;
   onNotPaper?: (docId: string) => void; // undo "Read as a paper"
+  onShortcuts?: () => void;
 };
 
 // The PDFs open as tabs above the viewer. Closing one only hides it: every
 // PDF is in the Files tab, where they're opened again or deleted.
-export function DocTabs({ docs, activeId, uploadStatus, onSelect, onAdd, onClose, onAddClick, addLabel = "+ Add PDF", paperIds, onPaper, onNotPaper }: Props) {
+export function DocTabs({ docs, activeId, uploadStatus, onSelect, onAdd, onClose, onAddClick, addLabel = "+ Add PDF", paperIds, onPaper, onNotPaper, onShortcuts }: Props) {
   const input = useRef<HTMLInputElement>(null);
   const active = docs.find((d) => d.id === activeId);
   const activeIsPaper = Boolean(active && paperIds?.has(active.id));
 
   return (
     <div className="flex h-11 shrink-0 items-stretch border-b border-ink bg-paper">
-      <div className="flex min-w-0 flex-1 items-stretch overflow-x-auto [scrollbar-width:none]" role="tablist" aria-label="PDFs in this session">
+      <div className="flex min-w-0 flex-1 items-stretch overflow-x-auto [scrollbar-width:none]" role="tablist" aria-label="Open files">
         {docs.map((d) => {
           const active = d.id === activeId;
           return (
@@ -85,7 +86,7 @@ export function DocTabs({ docs, activeId, uploadStatus, onSelect, onAdd, onClose
         <button
           type="button"
           onClick={() => onPaper(active.id)}
-          title={activeIsPaper ? "Open this paper's three passes" : "Read this PDF with the three-pass method: notes, checklists and a coach"}
+          title={activeIsPaper ? "Open this paper's three passes" : "Read it with the three-pass method: notes, checklists and a coach"}
           className={`hidden shrink-0 items-center gap-1.5 border-l border-ink px-3 text-xs font-medium transition duration-200 sm:flex ${
             activeIsPaper ? "bg-yellow-300 hover:bg-yellow-400" : "hover:bg-yellow-100"
           }`}
@@ -100,7 +101,7 @@ export function DocTabs({ docs, activeId, uploadStatus, onSelect, onAdd, onClose
         <button
           type="button"
           onClick={() => onNotPaper(active.id)}
-          title="Not a paper: read it as a regular PDF (its pass notes are kept)"
+          title="Not a paper: read it as a regular document (its pass notes are kept)"
           className="hidden shrink-0 items-center border-l border-ink px-2.5 text-xs text-muted transition duration-200 hover:bg-paper hover:text-ink sm:flex"
         >
           Not a paper
@@ -120,6 +121,17 @@ export function DocTabs({ docs, activeId, uploadStatus, onSelect, onAdd, onClose
           addLabel
         )}
       </button>
+      {onShortcuts && (
+        <button
+          type="button"
+          onClick={onShortcuts}
+          aria-label="Keyboard shortcuts"
+          title="Keyboard shortcuts (?)"
+          className="hidden shrink-0 items-center border-l border-ink px-3 font-mono text-xs text-muted transition hover:bg-paper hover:text-ink sm:flex"
+        >
+          ?
+        </button>
+      )}
     </div>
   );
 }

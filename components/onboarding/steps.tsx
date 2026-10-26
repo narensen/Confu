@@ -45,7 +45,7 @@ function Btn({ children, dark = false }: { children: ReactNode; dark?: boolean }
 function Pointer({ className = "" }: { className?: string }) {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" className={`absolute drop-shadow ${className}`} aria-hidden>
-      <path d="M4 2l16 9-7 2-3 7z" fill="#0d0d0c" stroke="#fff" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M4 2l16 9-7 2-3 7z" fill="var(--ink)" stroke="var(--panel)" strokeWidth="1.5" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -61,7 +61,7 @@ const WelcomeArt = (
       {(
         [
           ["Your goal", <path key="g" d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 4a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0 4a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z" />],
-          ["Your PDFs", <path key="p" d="M6 2h9l5 5v15H6zM14 2v6h6M9 13h8M9 17h8" />],
+          ["Your files", <path key="p" d="M6 2h9l5 5v15H6zM14 2v6h6M9 13h8M9 17h8" />],
           ["Your progress", <path key="m" d="M4 20V10M10 20V4M16 20v-7M22 20H2" />],
         ] as const
       ).map(([label, icon]) => (
@@ -127,23 +127,23 @@ const GoalArt = (
   <div className="flex h-full flex-col justify-center gap-2.5">
     <div className="rounded-lg border border-dashed border-ink/40 bg-paper p-2.5">
       <p className="text-[10px] font-medium">Tip: draft your goal with any AI</p>
-      <span className="mt-1.5 inline-flex rounded border border-ink px-1.5 py-0.5 text-[9px]">Copy a starter prompt</span>
+      <span className="mt-1.5 flex gap-1">
+        <span className="inline-flex rounded border border-ink bg-ink px-1.5 py-0.5 text-[9px] text-white">Open in ChatGPT ↗</span>
+        <span className="inline-flex rounded border border-ink bg-ink px-1.5 py-0.5 text-[9px] text-white">Open in Claude ↗</span>
+      </span>
     </div>
-    <Frame className="space-y-1.5 p-2.5">
+    <Frame className="space-y-1 p-2.5">
       <p className="text-[9px] font-medium">Your goal</p>
       <p className="text-[10px] leading-snug">
-        <b>## Outcome</b> Explain PCA and apply it to our compound library…
+        <b>### Outcome</b> Explain PCA and apply it to our compound library…
       </p>
-      <Line w="80%" />
-      <Line w="55%" />
+      <p className="text-[10px] leading-snug">
+        <b>### Materials</b> PCA tutorial, Shlens · DOI 10.48550/arXiv.1404.1100
+      </p>
+      <Line w="70%" />
     </Frame>
-    <div className="grid grid-cols-3 gap-1.5 text-[9px]">
-      <Frame className="px-2 py-1.5">Nov 30</Frame>
-      <Frame className="px-2 py-1.5">1.5 hrs/day</Frame>
-      <div className="flex rounded-lg border border-ink p-0.5">
-        <span className="flex-1 rounded bg-ink py-1 text-center text-white">Begin.</span>
-        <span className="flex-1 py-1 text-center text-muted">Adv.</span>
-      </div>
+    <div className="rounded-lg border border-dashed border-ink/40 px-2.5 py-1.5 text-[9px]">
+      <b className="font-medium">Set my own pace (optional)</b> <span className="text-muted">· or let Confu size it</span>
     </div>
     <Btn dark>Build my plan</Btn>
   </div>
@@ -155,7 +155,7 @@ const PlanArt = (
     <p className="font-serif text-base leading-tight">Foundations</p>
     {[
       { n: "✓", t: "Linear algebra refresher", tag: <Chip>D1 pp. 3–8</Chip>, done: true },
-      { n: "2", t: "Python data handling", tag: <Chip dashed>Beyond the PDFs</Chip>, focus: true },
+      { n: "2", t: "Python data handling", tag: <Chip dashed>Beyond your files</Chip>, focus: true },
       { n: "3", t: "Molecular fingerprints", tag: <Chip>D3 pp. 21–26</Chip> },
     ].map((row) => (
       <Frame key={row.t} className={`flex items-center gap-2 px-2.5 py-2 ${row.focus ? "" : "shadow-none border-line"}`}>
@@ -242,8 +242,8 @@ const FigureArt = (
   <div className="relative flex h-full items-center justify-center">
     <div className="relative w-full rounded border border-ink bg-white p-4">
       <svg viewBox="0 0 200 110" className="w-full" aria-hidden>
-        <line x1="20" y1="95" x2="190" y2="95" stroke="#0d0d0c" strokeWidth="1" />
-        <line x1="20" y1="95" x2="20" y2="8" stroke="#0d0d0c" strokeWidth="1" />
+        <line x1="20" y1="95" x2="190" y2="95" stroke="var(--ink)" strokeWidth="1" />
+        <line x1="20" y1="95" x2="20" y2="8" stroke="var(--ink)" strokeWidth="1" />
         {[
           [40, 70],
           [55, 62],
@@ -258,9 +258,9 @@ const FigureArt = (
           [110, 60],
           [70, 80],
         ].map(([x, y], i) => (
-          <circle key={i} cx={x} cy={y} r="3" fill={i % 3 ? "#0d0d0c" : "#facc15"} />
+          <circle key={i} cx={x} cy={y} r="3" fill={i % 3 ? "var(--ink)" : "#facc15"} />
         ))}
-        <line x1="30" y1="85" x2="180" y2="15" stroke="#0d0d0c" strokeDasharray="3 3" />
+        <line x1="30" y1="85" x2="180" y2="15" stroke="var(--ink)" strokeDasharray="3 3" />
         <text x="150" y="105" fontSize="7" fontFamily="monospace">PC1</text>
       </svg>
       <div className="absolute inset-3 border-[1.5px] border-ink bg-ink/5 shadow-[0_0_0_9999px_rgba(13,13,12,0.12)]" />
@@ -413,7 +413,7 @@ export const GUIDE_STEPS: GuideStep[] = [
       "Confu is a tutor built around one thing: the goal you're working toward. You bring your material, it plans the path, teaches you one idea at a time, and remembers what you've understood.",
     points: [
       { label: "Goal first", body: "Everything (the plan, the answers, the questions it asks you) serves your goal and deadline." },
-      { label: "Grounded", body: "Answers come from your PDFs with page citations, and go beyond them when your goal needs it." },
+      { label: "Grounded", body: "Answers come from your files with page citations, and go beyond them when your goal needs it." },
       { label: "It remembers", body: "It tracks what you know and where you struggle, so it builds on that instead of repeating itself." },
     ],
     tip: "This guide takes about two minutes. Use ← → on your keyboard to move between steps.",
@@ -426,9 +426,9 @@ export const GUIDE_STEPS: GuideStep[] = [
     intro:
       "A session holds your material, chat and memory. Pick a type: a study session (goal and plan), exam prep (practice questions and weak topics), or a paper session (research papers). Your library lists them all.",
     points: [
-      { label: "Start one", body: <>Press <b>+ New session</b>, pick a type and give it a title. Add PDFs (textbook chapters, lecture notes, past papers) now or later.</> },
+      { label: "Start one", body: <>Press <b>+ New session</b>, pick a type and give it a title. Add files (PDFs, slides or Word docs: chapters, lecture notes, past papers) now or later; they upload while you write your goal.</> },
       { label: "Rename it", body: "Click the session title at the top of the workspace to edit it. Enter saves, Esc cancels." },
-      { label: "Your library", body: "Each card shows that session's progress. Filter by type, search titles and PDFs, and hover a card to delete it." },
+      { label: "Your library", body: "Each card shows that session's progress. Filter by type, search titles and files, and archive or delete a session from its card. The Literature map button shows every paper you've read, connected." },
     ],
     art: SessionsArt,
   },
@@ -442,7 +442,7 @@ export const GUIDE_STEPS: GuideStep[] = [
       { label: "Add it", body: <>Paste it in <b>Settings → API key</b>, or in the panel that appears in a session. We check it with Groq first. A session can also have its own key that overrides your account key.</> },
       { label: "Security", body: "It's encrypted before it's stored and never shown again; you'll only see its last four characters. Replace or remove it any time in Settings." },
     ],
-    tip: <>You can read your PDFs without a key; you only need it for the AI features. Rather not manage a key? Request Pro in <b>Settings → Plan</b>.</>,
+    tip: <>You can read your files without a key; you only need it for the AI features. Rather not manage a key? Request Pro in <b>Settings → Plan</b>.</>,
     art: KeyArt,
     onlyForKeyUsers: true,
   },
@@ -456,8 +456,9 @@ export const GUIDE_STEPS: GuideStep[] = [
         label: "Be specific",
         body: "Say what you want to be able to do or explain, why, and what you already know. “Understand PCA” is weak; “explain PCA to my lab and apply it to our assay data” is strong.",
       },
-      { label: "Use any AI", body: <><b>Copy a starter prompt</b> and paste it into ChatGPT, Claude or Gemini to draft a detailed goal, then paste the result back. Markdown is fine.</> },
-      { label: "The details", body: "Add other materials (lectures, courses), a deadline, hours per day and your background level." },
+      { label: "Use any AI", body: <>Press <b>Open in ChatGPT</b> or <b>Open in Claude</b> (or copy the prompt for any other AI) to draft your goal. It asks for each paper&apos;s title, authors and DOI and each lecture&apos;s YouTube link; paste the result back.</> },
+      { label: "Papers and lectures", body: "Papers and YouTube lectures your goal names are added for you. Anything Confu can't pin down waits in the Files tab, under “From your goal”." },
+      { label: "Pace is optional", body: "Leave it and the plan is sized to your goal; or set hours a day or a deadline (the other follows). You can change it later with Custom pace." },
     ],
     tip: "Plans are AI-generated and can contain mistakes. You can edit your goal and rebuild the plan any time.",
     art: GoalArt,
@@ -465,24 +466,24 @@ export const GUIDE_STEPS: GuideStep[] = [
   {
     id: "plan",
     eyebrow: "Your plan",
-    title: "A path built from your goal, across your PDFs and beyond",
-    intro: "Confu maps your PDFs and builds a plan in phases, from foundations to application, paced to your deadline.",
+    title: "A path built from your goal, across your files and beyond",
+    intro: "Confu maps your files and builds a plan in phases, from foundations to application, at a pace you can tune.",
     points: [
-      { label: "Topic tags", body: <><Chip>D1 pp. 3–8</Chip> means read those pages of that PDF. <Chip dashed>Beyond the PDFs</Chip> means your PDFs don&apos;t cover it, so the tutor teaches it and suggests resources.</> },
-      { label: "Open a topic", body: "See what you should be able to do, the key concepts and “Go deeper” resources (links open a search)." },
-      { label: "Stay on track", body: "Each topic has a due date and a mastery bar. Mark it done when you've got it; the header shows if you're on track or behind." },
+      { label: "Topic tags", body: <><Chip>D1 pp. 3–8</Chip> means read those pages of that file. <Chip dashed>Beyond your files</Chip> means your files don&apos;t cover it, so the tutor teaches it and suggests resources.</> },
+      { label: "Open a topic", body: "See what you should be able to do and the key concepts. “Listen (2 min)” gives a spoken preview before you read. In “Go deeper”, papers open Confu's paper search." },
+      { label: "Stay on track", body: "Mark a topic done, then lock it in with three quick recall questions. Behind? Press Re-pace, or Custom pace, and spin the dial: the rest of the plan reschedules from today." },
     ],
     art: PlanArt,
   },
   {
     id: "reading",
     eyebrow: "Reading",
-    title: "Your PDFs live on the right",
-    intro: "The workspace splits in two: the tutor on the left, your PDFs on the right. Drag the divider to resize.",
+    title: "Your files live on the right",
+    intro: "The workspace splits in two: the tutor on the left, what you're reading on the right. Drag the divider to resize.",
     points: [
-      { label: "Several PDFs", body: <>Each PDF is a tab (D1, D2, …). Use <b>+ Add PDF</b> to bring in more; hover a tab and press ✕ to remove one.</> },
-      { label: "Navigate", body: "Type a page number, zoom with − and +, or click 100% to fit the width. It remembers where you left off." },
-      { label: "Full screen", body: "Press ⛶ to read distraction-free. The tutor opens as a drawer from the “Tutor” button in the toolbar." },
+      { label: "Files and tabs", body: <>Everything you add lands in the <b>Files</b> tab on the left; open one and it becomes a tab (D1, D2, …). ✕ on a tab only closes it; delete files from Files. PDFs, slides and Word docs all work.</> },
+      { label: "Navigate", body: "Type a page number, zoom with − and +, or click 100% to fit the width. It remembers where you left off. Press ? for keyboard shortcuts." },
+      { label: "Full screen", body: "Press ⛶ (or the . key) to read distraction-free. The tutor opens as a drawer from the “Tutor” button in the toolbar. Prefer dark? Appearance is in your account menu." },
     ],
     art: ReadingArt,
   },
@@ -494,7 +495,7 @@ export const GUIDE_STEPS: GuideStep[] = [
     points: [
       { label: "Ask a doubt", body: "Type what confuses you about that exact passage." },
       { label: "Summarize · Context · Simplify", body: "Get the core claim, see how it fits with what comes before and after, or have it explained in plain words with an example." },
-      { label: "Highlight", body: "Save it in yellow. Saved passages are listed in the Highlights tab, where you can jump back or ask about them later." },
+      { label: "Highlight", body: "Save it in a colour. Saved passages are listed in the Highlights tab, where you can jump back, ask about them later, or export the whole session (Markdown, or Anki cards)." },
     ],
     art: HighlightArt,
   },
@@ -553,9 +554,9 @@ export const GUIDE_STEPS: GuideStep[] = [
     id: "exam",
     eyebrow: "Exam prep",
     title: "Revise for an exam with your own notes",
-    intro: "Choose “Exam prep” when you start a session, add your course PDFs (notes, slides, past papers) and set the exam date. It keeps things simple: a countdown, practice, and your weak spots.",
+    intro: "Choose “Exam prep” when you start a session, add your course files (notes, slides, past papers) and set the exam date. It keeps things simple: a countdown, practice, and your weak spots.",
     points: [
-      { label: "Practise", body: "Five exam-style questions at a time, written from your own material, from one PDF or all of them." },
+      { label: "Practise", body: "Five exam-style questions at a time, written from your own material, from one file or all of them." },
       { label: "Get marked", body: "Write your answer as you would in the exam. It's marked strictly, with what you missed and where in your notes the answer is." },
       { label: "Weak topics", body: "Your results find the topics you keep getting wrong. Press “Practise these” to drill them before the day." },
     ],
@@ -569,8 +570,8 @@ export const GUIDE_STEPS: GuideStep[] = [
     intro: "That's everything. The fastest way to learn the app is to use it.",
     points: [
       { label: "1", body: <>Press <b>+ New session</b>, choose Study, Exam prep or Papers, and name it.</> },
-      { label: "2", body: "Set your goal in the Plan tab and build your plan." },
-      { label: "3", body: <>Press <b>Teach me this topic</b> and start. Highlight anything you don&apos;t get.</> },
+      { label: "2", body: "Write your goal in the Plan tab (Open in ChatGPT helps) and build your plan." },
+      { label: "3", body: <>Open the first topic&apos;s pages, or press <b>Teach me</b>. Highlight anything you don&apos;t get.</> },
     ],
     tip: <>Reopen this guide any time from <b>Settings → Help &amp; legal</b>.</>,
     art: ReadyArt,
