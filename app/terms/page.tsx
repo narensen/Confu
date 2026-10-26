@@ -12,12 +12,14 @@ export default function TermsPage() {
     <LegalPage
       eyebrow="Terms"
       title="Terms & Disclaimer"
+      updated="October 26, 2026"
       summary={
         <Bullets
           items={[
             <>Confu is a study aid. Its answers, plans and suggested resources are AI-generated and can be wrong.</>,
             <>Double-check anything important against your course material, instructors or other trusted sources.</>,
             <>Only upload material you have the right to use, and use Confu to learn, not to cheat.</>,
+            <>Pro renews monthly until you cancel; cancel any time, and ask for a refund within 7 days of a payment.</>,
             <>
               We only use your Groq key to run your requests. See the{" "}
               <Link href="/privacy" className="underline underline-offset-4">
@@ -84,6 +86,62 @@ export default function TermsPage() {
           </Link>
           .
         </p>
+      </Section>
+
+      <Section title="Pro subscriptions and billing" id="billing">
+        <Bullets
+          items={[
+            <>
+              Pro is sold through Lemon Squeezy, our reseller and merchant of record, which processes the payment, adds any
+              sales tax, VAT or GST, and sends your receipts. Its terms apply to the purchase.
+            </>,
+            <>
+              Pro renews automatically every month at the price shown at checkout until you cancel. Cancel any time from
+              Settings → Plan → Manage billing; Pro stays on until the end of the month you&apos;ve paid for.
+            </>,
+            <>
+              <b>Refunds:</b> if Pro isn&apos;t for you, email us within 7 days of a payment and we&apos;ll refund it in full.
+            </>,
+            <>
+              Pro includes a generous daily allowance of AI use on our keys, shown in your account menu; it exists so the
+              service stays fast and fair for everyone.
+            </>,
+            <>
+              Prices can vary by country. If we change the price, we&apos;ll tell you at least 30 days before it applies to your
+              next renewal.
+            </>,
+            <>
+              If a payment fails, Pro stays on while it&apos;s retried; if it can&apos;t be collected, your account returns to
+              Free. Nothing is deleted either way.
+            </>,
+          ]}
+        />
+      </Section>
+
+      <Section title="Invites">
+        <p>
+          Inviting friends earns weeks of Pro for both of you, within the limits shown in Settings. Invites are for real
+          people who want to study: rewards from fake or duplicate accounts may be removed.
+        </p>
+      </Section>
+
+      <Section title="Sharing: study packs, Wrapped and rooms">
+        <Bullets
+          items={[
+            <>
+              You&apos;re responsible for what you publish. A study pack shares links, paper identifiers, your plan and, if you
+              choose, your highlights and notes; never files. Only share highlights and notes you&apos;re happy to make public,
+              and don&apos;t include other people&apos;s personal information.
+            </>,
+            <>
+              When someone copies your pack, the copy is theirs. Unpublishing your pack doesn&apos;t remove copies already made.
+            </>,
+            <>
+              In study rooms, use a name you&apos;re comfortable showing and keep what you write respectful.
+            </>,
+            <>We may remove packs, shared pages or rooms that break these terms.</>,
+          ]}
+        />
       </Section>
 
       <Section title="Acceptable use">

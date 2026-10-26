@@ -21,6 +21,7 @@ type Props = {
   onTopicStatus: (t: PlanTopic, s: TopicStatus) => void;
   onTeach: (t: PlanTopic) => void;
   onPlanCreated: () => void;
+  draftGoal?: string;
   // Topics on a research paper link to its three passes.
   papers: Set<string>;
   reviews: Record<string, PaperReview>;
@@ -53,6 +54,7 @@ export function PlanPanel(props: Props) {
           sessionId={sessionId}
           docTitles={docs.map((d) => d.title)}
           existing={plan}
+          draftGoal={props.draftGoal}
           onCreated={() => {
             setEditing(false);
             onPlanCreated();

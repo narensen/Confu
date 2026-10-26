@@ -9,7 +9,19 @@ import { SITE } from "@/lib/site";
 import { createClient } from "@/lib/supabase/client";
 import { Row, Section } from "./Section";
 
-type Prefs = { timezone: string | null; email_digest: boolean; email_reminders: boolean; push_reminders: boolean; calendar_token: string | null };
+type Prefs = {
+  timezone: string | null;
+  email_digest: boolean;
+  email_reminders: boolean;
+  push_reminders: boolean;
+  calendar_token: string | null;
+  // Daily study blocks in the calendar feed (migration 0025)
+  study_time?: string | null;
+  study_minutes?: number | null;
+  study_days?: number[] | null;
+};
+const DAYS = ["S", "M", "T", "W", "T", "F", "S"];
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export function RemindersSection() {
   const [supabase] = useState(createClient);
@@ -23,7 +35,8 @@ export function RemindersSection() {
     void (async () => {
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) return;
-      const { data, error } = await supabase.from("profiles").select("timezone, email_digest, email_reminders, push_reminders, calendar_token").eq("id", auth.user.id).maybeSingle();
+      // "*": the study-block columns only exist once migration 0025 has run.
+      const { data, error } = await supabase.from("profiles").select("*").eq("id", auth.user.id).maybeSingle();
       if (!live) return;
       if (error || !data) return setMissing(true);
       const p = data as Prefs;
@@ -119,6 +132,72 @@ export function RemindersSection() {
           </button>
         )}
       </Row>
+      {prefs && "study_days" in prefs && (
+        <Row
+          wide
+          label="Study time in your calendar"
+          hint="Block out a daily time to study. Your calendar feed (below) shows it with the topic that's next, so it lands in Google, Apple or Outlook calendar. Subscribed calendars refresh every few hours."
+        >
+          <div className="mt-2 space-y-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <Toggle
+                on={Boolean(prefs.study_time)}
+                label="Study time in your calendar"
+                onChange={(v) => save(v ? { study_time: "19:00", study_minutes: prefs.study_minutes ?? 45, study_days: prefs.study_days?.length ? prefs.study_days : [1, 2, 3, 4, 5] } : { study_time: null })}
+              />
+              {prefs.study_time && (
+                <>
+                  <label className="flex items-center gap-2 text-sm">
+                    <span className="text-muted">at</span>
+                    <input
+                      type="time"
+                      value={prefs.study_time.slice(0, 5)}
+                      onChange={(e) => e.target.value && save({ study_time: e.target.value })}
+                      className="rounded-md border border-ink/30 bg-panel px-2 py-1 font-mono text-sm"
+                    />
+                  </label>
+                  <label className="flex items-center gap-2 text-sm">
+                    <span className="text-muted">for</span>
+                    <select
+                      value={prefs.study_minutes ?? 45}
+                      onChange={(e) => save({ study_minutes: Number(e.target.value) })}
+                      className="rounded-md border border-ink/30 bg-panel px-2 py-1 text-sm"
+                    >
+                      {[25, 45, 60, 90, 120].map((m) => (
+                        <option key={m} value={m}>
+                          {m >= 60 ? `${m / 60} hour${m > 60 ? "s" : ""}` : `${m} minutes`}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </>
+              )}
+            </div>
+            {prefs.study_time && (
+              <div className="flex gap-1.5" role="group" aria-label="Study days">
+                {DAYS.map((d, i) => {
+                  const on = (prefs.study_days ?? []).includes(i);
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      aria-pressed={on}
+                      aria-label={DAY_NAMES[i]}
+                      onClick={() => {
+                        const next = on ? (prefs.study_days ?? []).filter((x) => x !== i) : [...(prefs.study_days ?? []), i].sort();
+                        if (next.length) save({ study_days: next });
+                      }}
+                      className={`size-8 rounded-full border text-xs font-medium transition ${on ? "border-ink bg-ink text-white" : "border-ink/30 text-muted hover:border-ink"}`}
+                    >
+                      {d}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </Row>
+      )}
       <Row
         wide
         label="Study plan in your calendar"

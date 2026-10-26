@@ -32,7 +32,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin">["se
   const days = (RANGES as readonly number[]).includes(requested) ? requested : 30;
 
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("admin_insights", { p_days: days });
+  const [{ data, error }, billing] = await Promise.all([supabase.rpc("admin_insights", { p_days: days }), supabase.rpc("billing_summary")]);
   if (error || !data) {
     return (
       <div className="animate-enter rounded-xl border border-danger/50 bg-panel px-6 py-8">
@@ -44,7 +44,30 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin">["se
       </div>
     );
   }
-  return <AdminDashboard data={data as Insights} days={days} ranges={[...RANGES]} />;
+  const b = billing.data as { active: number; india: number; cancelling: number; invited_pro: number; referrals: number } | null;
+  return (
+    <>
+      {b && (
+        <section aria-label="Pro" className="animate-enter mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {(
+            [
+              [b.active, "paying Pro subscribers", `${b.india} in India`],
+              [b.cancelling, "cancelled, still active", "until their paid month ends"],
+              [b.invited_pro, "on Pro from invites", "right now"],
+              [b.referrals, "accounts joined by invite", "all time"],
+            ] as const
+          ).map(([value, label, note]) => (
+            <div key={label} className="rounded-xl border border-ink bg-panel p-4">
+              <p className="font-sans text-3xl font-semibold">{value}</p>
+              <p className="mt-0.5 text-sm">{label}</p>
+              <p className="text-xs text-muted">{note}</p>
+            </div>
+          ))}
+        </section>
+      )}
+      <AdminDashboard data={data as Insights} days={days} ranges={[...RANGES]} />
+    </>
+  );
 }
 
 function DashboardSkeleton() {

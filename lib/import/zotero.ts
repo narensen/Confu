@@ -15,7 +15,7 @@ export type ZoteroItem = {
   pdf: { href: string; size: number | null } | null; // a PDF stored in Zotero
 };
 export type ZoteroCollection = { key: string; name: string; depth: number };
-export type ZoteroAccount = { apiKey: string; userId: number; username: string; files: boolean };
+export type ZoteroAccount = { apiKey: string; userId: number; username: string; files: boolean; write: boolean };
 
 type Creator = { creatorType?: string; firstName?: string; lastName?: string; name?: string };
 type ItemData = {
@@ -49,9 +49,9 @@ export async function connectZotero(apiKey: string): Promise<ZoteroAccount> {
   if (!/^[A-Za-z0-9]{24}$/.test(key)) throw new Error("A Zotero API key is 24 letters and numbers. Create one at zotero.org/settings/keys.");
   const res = await fetch(`${API}/keys/${key}`, { headers: { "Zotero-API-Version": "3" } });
   if (!res.ok) throw new Error("Zotero didn't recognise that key.");
-  const j = (await res.json()) as { userID: number; username: string; access?: { user?: { library?: boolean; files?: boolean } } };
+  const j = (await res.json()) as { userID: number; username: string; access?: { user?: { library?: boolean; files?: boolean; write?: boolean } } };
   if (!j.access?.user?.library) throw new Error("That key can't read your library. Edit it on zotero.org and tick 'Allow library access'.");
-  return { apiKey: key, userId: j.userID, username: j.username, files: Boolean(j.access.user.files) };
+  return { apiKey: key, userId: j.userID, username: j.username, files: Boolean(j.access.user.files), write: Boolean(j.access.user.write) };
 }
 
 export async function zoteroCollections(acc: ZoteroAccount): Promise<ZoteroCollection[]> {
@@ -208,4 +208,67 @@ export function parseRis(text: string): PaperMeta[] {
   }
   flush();
   return out;
+}
+
+/* ------------------------------------------------------------ writing */
+
+// Your pass notes, sent back to Zotero as a note on the paper's item (found
+// by title, or created). Needs a key with "Allow write access". Each send
+// adds a new note, tagged "Confu".
+
+export type NotesForZotero = { paper: PaperMeta; html: string };
+
+const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "");
+
+async function write(acc: ZoteroAccount, items: unknown[]): Promise<string> {
+  const token = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
+  const res = await fetch(`${API}/users/${acc.userId}/items`, {
+    method: "POST",
+    headers: { ...headers(acc.apiKey), "Content-Type": "application/json", "Zotero-Write-Token": token },
+    body: JSON.stringify(items),
+  });
+  if (res.status === 403) throw new Error("This Zotero key can't write. Edit it on zotero.org and tick 'Allow write access'.");
+  if (!res.ok) throw new Error(`Zotero answered with an error (${res.status}).`);
+  const j = (await res.json()) as { successful?: Record<string, { key: string }>; failed?: Record<string, { message: string }> };
+  const done = j.successful?.["0"]?.key;
+  if (!done) throw new Error(Object.values(j.failed ?? {})[0]?.message ?? "Zotero didn't save it.");
+  return done;
+}
+
+async function findItem(acc: ZoteroAccount, paper: PaperMeta): Promise<string | null> {
+  const list = await get<{ key: string; data: ItemData }[]>(
+    acc.apiKey,
+    `/users/${acc.userId}/items/top?limit=10&q=${encodeURIComponent(paper.title.slice(0, 120))}&qmode=titleCreatorYear&itemType=-note%20||%20attachment`,
+  ).catch(() => []);
+  return list.find((it) => it.data.title && norm(it.data.title) === norm(paper.title))?.key ?? null;
+}
+
+export async function sendNotesToZotero(acc: ZoteroAccount, list: NotesForZotero[], onStatus: (s: string) => void) {
+  if (!acc.write) throw new Error("This Zotero key can't write. Edit it on zotero.org and tick 'Allow write access'.");
+  const sent: string[] = [];
+  const failed: string[] = [];
+  for (const [i, { paper, html }] of list.entries()) {
+    onStatus(`Sending ${i + 1} of ${list.length}: ${paper.title}`);
+    try {
+      let parent = await findItem(acc, paper);
+      parent ??= await write(acc, [
+        {
+          itemType: paper.arxiv_id && !paper.doi ? "preprint" : "journalArticle",
+          title: paper.title,
+          creators: paper.authors.slice(0, 30).map((name) => ({ creatorType: "author", name })),
+          date: paper.year ? String(paper.year) : "",
+          DOI: paper.doi ?? "",
+          url: paper.url ?? "",
+          ...(paper.arxiv_id ? { extra: `arXiv: ${paper.arxiv_id}` } : {}),
+          tags: [{ tag: "Confu" }],
+        },
+      ]);
+      await write(acc, [{ itemType: "note", parentItem: parent, note: html, tags: [{ tag: "Confu" }] }]);
+      sent.push(paper.title);
+    } catch (err) {
+      failed.push(`${paper.title}: ${err instanceof Error ? err.message : "failed"}`);
+      if (err instanceof Error && /can't write/.test(err.message)) break;
+    }
+  }
+  return { sent, failed };
 }

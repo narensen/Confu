@@ -2,6 +2,7 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { friendlyAuthError } from "@/lib/auth-errors";
 import { safeNext } from "@/lib/safe-next";
+import { claimInvite } from "@/lib/referrals";
 import { createClient } from "@/lib/supabase/server";
 
 // Landing route for links in Supabase auth emails (confirm sign-up, reset
@@ -28,6 +29,9 @@ export async function GET(request: NextRequest) {
   // though they're signed in already: just carry on.
   if (failure && (await supabase.auth.getClaims()).data?.claims) failure = null;
   const error = failure ? friendlyAuthError(failure, "link").error : null;
+
+  // Arrived through an invite link: claim the free week (new accounts only).
+  if (!error) await claimInvite(supabase);
 
   const url = request.nextUrl.clone();
   url.search = "";

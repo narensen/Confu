@@ -8,6 +8,8 @@ import { passDef, passNotes, PASSES, type PaperReview, type PassNumber } from "@
 import type { SessionDoc, TutorAction } from "@/lib/types";
 import type { SendRequest } from "@/components/workspace/Workspace";
 
+export type PaperTool = "compare" | "related" | "bibtex" | "zotero";
+
 type Props = {
   sessionId: string;
   // Inside a study session: only its papers, under the study goal (no research goal or triage).
@@ -17,6 +19,8 @@ type Props = {
   onMarkPaper?: (docId: string) => void;
   onAddPapers?: () => void;
   studyGoal?: string;
+  onOpenMap?: () => void; // the literature map of these papers
+  onTool?: (tool: PaperTool) => void; // BibTeX, related work, compare, Zotero
   activeDocId: string | null;
   reviews: Record<string, PaperReview>;
   researchGoal: string;
@@ -119,7 +123,7 @@ export function PassesPanel(props: Props) {
   );
 }
 
-function ResearchGoal({ sessionId, researchGoal, docs, busy, fetching, onResearchGoal, onUpdate, inStudy, studyGoal, onAddPapers }: Props) {
+function ResearchGoal({ sessionId, researchGoal, docs, busy, fetching, onResearchGoal, onUpdate, inStudy, studyGoal, onAddPapers, onOpenMap, onTool }: Props) {
   // In a study session the study goal stands in until they write a research goal.
   const [goal, setGoal] = useState(researchGoal || (inStudy ? (studyGoal ?? "") : ""));
   const [pending, setPending] = useState(false);
@@ -203,6 +207,36 @@ function ResearchGoal({ sessionId, researchGoal, docs, busy, fetching, onResearc
         <button type="button" onClick={onAddPapers} disabled={Boolean(fetching)} className={`${ghostButtonClass} mt-2 w-full justify-center py-1.5 text-xs`}>
           + Add papers by arXiv ID, DOI, link or title
         </button>
+      )}
+      {docs.length > 0 && (onOpenMap || onTool) && (
+        <div className="mt-4 grid grid-cols-2 gap-2">
+          {onOpenMap && (
+            <button
+              type="button"
+              onClick={onOpenMap}
+              className="col-span-2 flex items-center justify-between gap-3 rounded-lg border border-ink bg-ink px-4 py-2.5 text-left text-white transition hover:-translate-y-px hover:shadow-[3px_3px_0_0_#facc15]"
+            >
+              <span>
+                <span className="block text-sm font-medium">Literature map</span>
+                <span className="block text-xs text-white/60">How these papers connect: shared foundations and newer work</span>
+              </span>
+              <span aria-hidden>→</span>
+            </button>
+          )}
+          {onTool &&
+            (
+              [
+                ["compare", "Compare papers"],
+                ["related", "Draft related work"],
+                ["bibtex", "Export BibTeX"],
+                ["zotero", "Send notes to Zotero"],
+              ] as const
+            ).map(([tool, label]) => (
+              <button key={tool} type="button" onClick={() => onTool(tool)} className={`${ghostButtonClass} justify-center py-1.5 text-xs`}>
+                {label}
+              </button>
+            ))}
+        </div>
       )}
     </section>
   );

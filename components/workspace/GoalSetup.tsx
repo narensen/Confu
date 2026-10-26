@@ -36,17 +36,19 @@ export function GoalSetup({
   sessionId,
   docTitles,
   existing,
+  draftGoal,
   onCreated,
   onCancel,
 }: {
   sessionId: string;
   docTitles: string[];
   existing?: StudyPlan | null;
+  draftGoal?: string; // from a template or pack
   onCreated: () => void;
   onCancel?: () => void;
 }) {
   const today = toISODate(new Date());
-  const [goal, setGoal] = useState(existing?.goal ?? "");
+  const [goal, setGoal] = useState(existing?.goal ?? draftGoal ?? "");
   const [materials, setMaterials] = useState(existing?.materials ?? "");
   const [deadline, setDeadline] = useState(existing && existing.deadline >= today ? existing.deadline : addDays(today, 14));
   // Students think in hours a day; the API and database store minutes.
@@ -59,7 +61,7 @@ export function GoalSetup({
   const [copied, setCopied] = useState(false);
   // Starting points built from the PDFs' tables of contents.
   const [starterDocs, setStarterDocs] = useState<StarterDoc[]>([]);
-  const [kind, setKind] = useState<StarterKind | null>(existing ? "own" : null);
+  const [kind, setKind] = useState<StarterKind | null>(existing || draftGoal ? "own" : null);
   const [picked, setPicked] = useState<string[]>([]);
   const chapters = useMemo(() => starterDocs.flatMap(chaptersOf), [starterDocs]);
 

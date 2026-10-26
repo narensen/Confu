@@ -101,6 +101,8 @@ export function LoginForm() {
 
 export function SignupForm() {
   const [state, action, pending] = useActionState(signup, undefined);
+  const params = useSearchParams();
+  const next = params.get("next") ?? "/dashboard";
   const captcha = useCaptcha();
   const resetCaptcha = captcha.reset;
   useEffect(() => resetCaptcha(), [state, resetCaptcha]);
@@ -111,10 +113,16 @@ export function SignupForm() {
   const mismatch = confirm.length > 0 && confirm !== password;
   return (
     <>
-      <GoogleButton label="Sign up with Google" />
+      {params.get("ref") && (
+        <p className="mb-4 rounded-lg border border-ink bg-yellow-100 px-3 py-2.5 text-sm leading-relaxed">
+          <span className="font-medium">You were invited.</span> Your first week of Pro is on your friend: it starts when you confirm your email.
+        </p>
+      )}
+      <GoogleButton label="Sign up with Google" next={next} />
       <OrDivider />
       {/* Keyed by the returned answers so they're refilled after an error. */}
       <form key={JSON.stringify(v)} action={action} className="space-y-4">
+        <input type="hidden" name="next" value={next} />
         <Field label="Name" name="fullName" autoComplete="name" required defaultValue={v.fullName} />
         <Field label="Email" name="email" type="email" autoComplete="email" required defaultValue={v.email} />
         <Field

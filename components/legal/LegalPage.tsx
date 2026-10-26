@@ -53,9 +53,9 @@ export function LegalPage({
   );
 }
 
-export function Section({ title, children }: { title: string; children: ReactNode }) {
+export function Section({ title, id, children }: { title: string; id?: string; children: ReactNode }) {
   return (
-    <section>
+    <section id={id} className="scroll-mt-6">
       <h2 className="font-serif text-2xl">{title}</h2>
       <div className="mt-3 space-y-3 text-ink/85">{children}</div>
     </section>

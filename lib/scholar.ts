@@ -179,7 +179,7 @@ function fromOpenAlex(w: OAWork): PaperMeta {
   };
 }
 
-const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+export const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
 // Every word of a (shortened or partial) title appears in the full one.
 export function titleWithin(part: string, full: string) {
@@ -269,7 +269,8 @@ async function s2Fetch(path: string, init: RequestInit = {}): Promise<Response |
   return null;
 }
 
-async function s2<T>(path: string): Promise<T | null> {
+// Semantic Scholar GET through the shared request queue (null when unavailable).
+export async function s2<T>(path: string): Promise<T | null> {
   const res = await s2Fetch(path);
   return res?.ok ? ((await res.json()) as T) : null; // still limited -> callers fall back
 }

@@ -24,6 +24,8 @@ export const FEATURE_LABELS: Record<string, string> = {
   probe: "Usage checks",
   ocr: "Scanned-page reading",
   recommend: "Paper recommendations",
+  related: "Related-work drafts",
+  compare: "Paper comparisons",
 };
 
 export function ago(iso: string | null): string {

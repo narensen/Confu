@@ -3,9 +3,12 @@ import { Geist, Geist_Mono, Newsreader } from "next/font/google";
 import "katex/dist/katex.min.css";
 import { Suspense } from "react";
 import "./globals.css";
+import { SITE } from "@/lib/site";
 import { AppShell } from "@/components/AppShell";
 import { DialogHost } from "@/components/dialogs";
 import { FeedbackHost } from "@/components/Feedback";
+import { FlashToast } from "@/components/FlashToast";
+import { RoomDock } from "@/components/rooms/RoomDock";
 import { Telemetry } from "@/components/Telemetry";
 
 const geistSans = Geist({
@@ -24,6 +27,8 @@ const newsreader = Newsreader({
 });
 
 export const metadata: Metadata = {
+  // Absolute links for social preview images (packs, templates, Wrapped).
+  metadataBase: new URL(SITE.url),
   title: "Confu — learn anything, deeply",
   description: "Set a goal, bring your PDF and lectures, and learn with a tutor that remembers your progress.",
 };
@@ -41,6 +46,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <DialogHost />
         <FeedbackHost />
         <AppShell />
+        <FlashToast />
+        <Suspense fallback={null}>
+          <RoomDock />
+        </Suspense>
         <Suspense fallback={null}>
           <Telemetry />
         </Suspense>

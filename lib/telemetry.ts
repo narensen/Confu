@@ -14,9 +14,16 @@ const queue: Event[] = [];
 let timer: ReturnType<typeof setTimeout> | null = null;
 let anon: string | null = null;
 
-// /session/2b0c…-…/x → /session/:id, so pages group together.
+// /session/2b0c…-…/x → /session/:id, so pages group together. Private links
+// (shared Wrapped pages, private rooms, unlisted packs, invites) are masked too.
 export function routeOf(pathname: string) {
-  return pathname.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, ":id").slice(0, 300);
+  return pathname
+    .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, ":id")
+    .replace(/^\/w\/[^/]+/, "/w/:token")
+    .replace(/^\/rooms\/r-[^/]+/, "/rooms/:room")
+    .replace(/^\/p\/[^/]+/, "/p/:pack")
+    .replace(/^\/r\/[^/]+/, "/r/:code")
+    .slice(0, 300);
 }
 
 function anonId() {

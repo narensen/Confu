@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import type { ProMember } from "@/components/settings/ProMembers";
-import { SETTINGS_GRID, SettingsView } from "@/components/settings/SettingsView";
+import { SETTINGS_GRID, SettingsView, type BillingInfo } from "@/components/settings/SettingsView";
 import { eyebrowClass } from "@/components/ui";
 import type { UsageKey } from "@/components/usage/UsageSection";
 import { PRO_DAILY_TOKENS, PRO_KEY_REF, userKeyRef } from "@/lib/ai-access";
+import { billingConfigured, currentRegion, STUDENT_CODE } from "@/lib/billing";
+import { PRICES, type Region } from "@/lib/pricing";
 import { getCurrentRole, requireUser } from "@/lib/dal";
 import { getKeyInfo } from "@/lib/groq-keys";
 import { isOwner, planOf } from "@/lib/plans";
@@ -34,17 +36,27 @@ export default function SettingsPage() {
 async function SettingsContent() {
   const user = await requireUser();
   const supabase = await createClient();
-  const [role, account, overrides, auth, profile] = await Promise.all([
+  const [role, account, overrides, auth, profile, subscription, region] = await Promise.all([
     getCurrentRole(),
     getKeyInfo(supabase, user.id, null),
     supabase.from("groq_keys").select("id, session_id, last4, study_sessions(title)").eq("user_id", user.id).not("session_id", "is", null),
     supabase.auth.getUser(),
-    // "*": pro_requested_at only exists once migration 0012 has run.
+    // "*": pro_requested_at, paid_until and pro_until exist only once their migrations have run.
     supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+    supabase
+      .from("subscriptions")
+      .select("status, renews_at, ends_at, card_brand, card_last_four")
+      .eq("user_id", user.id)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    currentRegion(),
   ]);
   const plan = planOf(role);
   const owner = isOwner(role);
   const me = auth.data.user;
+  const p = profile.data as Profile | null;
+  const billing = billingInfo(p, owner, region, (subscription.data as BillingInfo["subscription"]) ?? null);
 
   const sessionKeys = ((overrides.data ?? []) as unknown as { id: string; session_id: string; last4: string; study_sessions: { title: string } | null }[]).map(
     (o) => ({ id: o.id, sessionId: o.session_id, last4: o.last4, title: o.study_sessions?.title ?? "Untitled session" }),
@@ -80,7 +92,8 @@ async function SettingsContent() {
       createdAt={me?.created_at ?? null}
       lastSignInAt={me?.last_sign_in_at ?? null}
       providers={(me?.app_metadata?.providers as string[] | undefined) ?? [me?.app_metadata?.provider ?? "email"]}
-      requestedAt={(profile.data as { pro_requested_at?: string | null } | null)?.pro_requested_at ?? null}
+      requestedAt={p?.pro_requested_at ?? null}
+      billing={billing}
       account={account}
       sessionKeys={sessionKeys}
       usageKeys={usageKeys}
@@ -90,6 +103,21 @@ async function SettingsContent() {
       }
     />
   );
+}
+
+type Profile = { role?: string | null; pro_requested_at?: string | null; paid_until?: string | null; pro_until?: string | null };
+
+// Where this account's Pro comes from, for the Plan section.
+function billingInfo(p: Profile | null, owner: boolean, region: Region, subscription: BillingInfo["subscription"]): BillingInfo {
+  const live = (iso: string | null | undefined) => Boolean(iso && Date.parse(iso) > Date.now());
+  return {
+    configured: billingConfigured,
+    price: PRICES[region],
+    student: Boolean(STUDENT_CODE),
+    source: owner ? "admin" : p?.role === "pro" ? "granted" : live(p?.paid_until) ? "paid" : live(p?.pro_until) ? "invite" : null,
+    proUntil: live(p?.pro_until) ? (p?.pro_until ?? null) : null,
+    subscription,
+  };
 }
 
 function SettingsSkeleton() {

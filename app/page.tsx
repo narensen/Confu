@@ -8,7 +8,12 @@ import { LandingMotion, Words } from "@/components/landing/LandingMotion";
 import { ExamMock, PaperMock, PlanMock, WorkspaceMock } from "@/components/landing/Mocks";
 import { buttonClass, eyebrowClass, ghostButtonClass } from "@/components/ui";
 import { getUser } from "@/lib/dal";
+import { Reels } from "@/components/landing/Reels";
+import { SiteFooter } from "@/components/site/SiteNav";
+import { currentRegion } from "@/lib/billing";
 import { PLANS } from "@/lib/plans";
+import { PRICES } from "@/lib/pricing";
+import { TEMPLATES } from "@/lib/templates";
 
 export const metadata: Metadata = {
   title: "Confu — understand it deeply, not just skim it",
@@ -35,7 +40,7 @@ const MODES = [
     tag: "Papers",
     title: "Read research the right way",
     body: "Add papers by arXiv ID, DOI or title. No PDF hunting. Read them with Keshav's three-pass method, with a coach that pushes you to think.",
-    points: ["Triage: which papers deserve a deep read", "Five Cs, explain-back, re-implementation", "Finds related and citing papers"],
+    points: ["Triage: which papers deserve a deep read", "Five Cs, explain-back, re-implementation", "A literature map of what cites what"],
     mock: <PaperMock />,
   },
 ];
@@ -71,6 +76,21 @@ const FEATURES: { title: string; body: string; icon: ReactNode }[] = [
     body: "Off-topic? It answers briefly and steers back. Stuck? It changes how it explains rather than repeating.",
     icon: <path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 4a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0 4a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z" />,
   },
+  {
+    title: "Bring anything",
+    body: "PDFs and slides, web pages and whole courses, YouTube lectures, Google Drive and Zotero all become study material.",
+    icon: <path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v3h16v-3" />,
+  },
+  {
+    title: "Review before you forget",
+    body: "Finished topics and the passages you asked about come back as quick questions, just before they'd fade.",
+    icon: <path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2" />,
+  },
+  {
+    title: "Study alongside others",
+    body: "Join a study room: a shared focus timer and a few people quietly working with you. No chat, no noise.",
+    icon: <path d="M16 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1M9 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM22 19v-1a4 4 0 0 0-3-3.9M16 4.1a3 3 0 0 1 0 5.8" />,
+  },
 ];
 
 const STEPS = [
@@ -82,7 +102,7 @@ const STEPS = [
 const FAQ: { q: string; a: ReactNode }[] = [
   {
     q: "Is Confu free?",
-    a: "Yes. Every account starts with 10 free prompts on our keys, no setup. After that, Free runs on your own Groq API key, and Groq has a free tier, so you still don't pay anyone. Pro, in early access, keeps running on our keys.",
+    a: "Yes. Every account starts with 10 free prompts on our keys, no setup. After that, Free runs on your own Groq API key, and Groq has a free tier, so you still don't pay anyone. Pro keeps running on our keys for ₹299 a month in India, $6 elsewhere.",
   },
   {
     q: "Why do I need a Groq API key?",
@@ -90,7 +110,7 @@ const FAQ: { q: string; a: ReactNode }[] = [
   },
   {
     q: "What's Pro?",
-    a: "The same Confu, running on our own Groq keys: no API key, no setup, with a daily fair-use allowance you can see in your account menu. It's in early access. Create an account, then request it in Settings → Plan.",
+    a: "The same Confu, running on our own Groq keys: no API key, no setup, with a generous daily allowance you can see in your account menu. It's ₹299 a month in India and $6 elsewhere, cancel anytime. Invite friends and you each get a free week.",
   },
   {
     q: "How much can I do on Groq's free tier?",
@@ -140,15 +160,12 @@ export default function Home() {
             <a href="#modes" className="transition hover:text-ink">
               Modes
             </a>
-            <a href="#features" className="transition hover:text-ink">
-              Features
-            </a>
-            <a href="#honest" className="transition hover:text-ink">
-              Our approach
-            </a>
-            <a href="#plans" className="transition hover:text-ink">
-              Plans
-            </a>
+            <Link href="/templates" className="transition hover:text-ink">
+              Templates
+            </Link>
+            <Link href="/pricing" className="transition hover:text-ink">
+              Pricing
+            </Link>
             <a href="#faq" className="transition hover:text-ink">
               FAQ
             </a>
@@ -218,6 +235,21 @@ export default function Home() {
             <DemoVideo />
           </div>
           <p data-reveal className="mt-4 font-mono text-xs text-muted">The real Confu workspace. The tutor&apos;s reply is a sample answer.</p>
+        </div>
+      </section>
+
+      {/* Reels */}
+      <section className="border-b border-ink bg-paper">
+        <div className="mx-auto max-w-6xl px-6 py-24">
+          <div className="max-w-2xl">
+            <p data-reveal className={eyebrowClass}>
+              In under 30 seconds
+            </p>
+            <h2 data-split className="mt-2 font-serif text-4xl leading-tight tracking-tight sm:text-5xl">How studying should feel.</h2>
+          </div>
+          <div data-reveal-group className="mt-14">
+            <Reels />
+          </div>
         </div>
       </section>
 
@@ -302,6 +334,47 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Templates */}
+      <section id="templates" className="scroll-mt-16 border-b border-ink">
+        <div className="mx-auto max-w-6xl px-6 py-24">
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <div className="max-w-2xl">
+              <p data-reveal className={eyebrowClass}>
+                Not sure where to start?
+              </p>
+              <h2 data-split className="mt-2 font-serif text-4xl leading-tight tracking-tight sm:text-5xl">Start from a goal.</h2>
+              <p data-reveal className="mt-4 text-lg leading-relaxed text-muted">
+                Templates come with free lectures, readings and papers, already picked. Or copy a study pack another learner shared.
+              </p>
+            </div>
+            <div data-reveal className="flex gap-2">
+              <Link href="/templates" className={`${ghostButtonClass} px-5 py-2.5`}>
+                All templates
+              </Link>
+              <Link href="/packs" className={`${ghostButtonClass} px-5 py-2.5`}>
+                Study packs
+              </Link>
+            </div>
+          </div>
+          <ul data-reveal-group className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {TEMPLATES.slice(0, 6).map((t) => (
+              <li key={t.slug} data-reveal-item>
+                <Link
+                  href={`/templates/${t.slug}`}
+                  className="group flex h-full flex-col rounded-2xl border border-ink bg-panel p-6 transition-[translate,box-shadow] duration-300 ease-fluid hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--ink)]"
+                >
+                  <span className="font-serif text-2xl leading-snug">{t.title}</span>
+                  <span className="mt-2 text-sm leading-relaxed text-muted">{t.tagline}</span>
+                  <span className="mt-auto pt-5 font-mono text-[11px] text-muted">
+                    {t.sources.length} free sources · {t.weeks} {t.weeks === 1 ? "week" : "weeks"} · start →
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
       {/* Our approach: sincere about what this is */}
       <section id="honest" className="scroll-mt-16 border-b border-ink">
         <div className="mx-auto grid max-w-6xl gap-14 px-6 py-24 lg:grid-cols-2">
@@ -355,11 +428,13 @@ export default function Home() {
                     {PLANS[p].name}
                     {p === "pro" && <span className="text-yellow-400">.</span>}
                   </h3>
-                  <span
-                    className={`rounded-full px-3 py-1 font-mono text-[11px] uppercase ${p === "pro" ? "bg-yellow-300 text-ink" : "border border-ink/30 text-muted"}`}
-                  >
-                    {p === "pro" ? "Early access" : "Free forever"}
-                  </span>
+                  {p === "pro" ? (
+                    <Suspense fallback={<span className="h-7 w-24" />}>
+                      <ProPriceBadge />
+                    </Suspense>
+                  ) : (
+                    <span className="rounded-full border border-ink/30 px-3 py-1 font-mono text-[11px] text-muted uppercase">Free forever</span>
+                  )}
                 </div>
                 <p className={`mt-3 text-lg ${p === "pro" ? "text-white/70" : "text-muted"}`}>{PLANS[p].tagline}</p>
                 <ul className="mt-8 flex-1 space-y-3 text-sm">
@@ -375,12 +450,12 @@ export default function Home() {
                 {p === "pro" ? (
                   <div className="mt-10">
                     <Link
-                      href="/settings#plan"
+                      href="/pricing"
                       className="inline-flex items-center gap-2 rounded-lg border border-white bg-white px-5 py-2.5 text-sm font-medium text-ink transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[3px_3px_0_0_#facc15] active:translate-y-0"
                     >
-                      Request Pro →
+                      Get Pro →
                     </Link>
-                    <p className="mt-3 text-xs text-white/50">Sign in, then request it in Settings → Plan.</p>
+                    <p className="mt-3 text-xs text-white/50">Cancel anytime. Or invite friends: you each get a free week.</p>
                   </div>
                 ) : (
                   <div className="mt-10">
@@ -438,22 +513,7 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="border-t border-ink bg-panel">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-6 py-6 text-sm text-muted">
-          <div className="flex items-center gap-4">
-            <Logo />
-            <span className="hidden sm:inline">A study aid. AI can make mistakes, so check important facts.</span>
-          </div>
-          <div className="flex gap-5">
-            <Link href="/privacy" className="hover:text-ink">
-              Privacy
-            </Link>
-            <Link href="/terms" className="hover:text-ink">
-              Terms &amp; disclaimer
-            </Link>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </LandingMotion>
   );
 }
@@ -512,5 +572,14 @@ async function FinalAction() {
     >
       {user ? "Go to your library" : "Create your free account"} →
     </Link>
+  );
+}
+
+async function ProPriceBadge() {
+  const price = PRICES[await currentRegion()];
+  return (
+    <span className="rounded-full bg-yellow-300 px-3 py-1 font-mono text-[11px] text-ink uppercase">
+      {price.amount}/{price.per === "month" ? "mo" : price.per}
+    </span>
   );
 }

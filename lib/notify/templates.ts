@@ -115,6 +115,7 @@ export function digestEmail(o: {
   due: number;
   sessions: { id: string; title: string }[];
   days: { day: string; minutes: number }[];
+  alerts?: { title: string; url: string | null; authors: string[]; year: number | null }[]; // new papers citing theirs
   unsubscribe: string;
 }) {
   const quiet = o.minutes === 0 && o.reviews === 0 && o.topicsDone === 0 && o.activeDays === 0;
@@ -164,10 +165,28 @@ ${button(`${SITE.url}/review`, "Review now")}
           .join("")}</table>`
       : "";
 
+  const alerts = o.alerts?.length
+    ? `<p style="margin:26px 0 4px;font-family:${MONO};font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:${MUTED}">New papers citing what you read</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${o.alerts
+        .map(
+          (a) =>
+            `<tr><td style="border-top:1px solid ${LINE};padding:11px 0">${a.url ? `<a href="${esc(a.url)}" style="color:${INK};text-decoration:none;font-weight:600">${esc(a.title)}</a>` : `<span style="font-weight:600">${esc(a.title)}</span>`}<div style="font-size:12px;color:${MUTED};padding-top:2px">${esc([a.authors.join(", "), a.year].filter(Boolean).join(" · "))}</div></td></tr>`,
+        )
+        .join("")}</table>`
+    : "";
+
+  // In a month's first week: last month's Wrapped is ready.
+  const today = new Date();
+  const lastMonth = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - 1, 1));
+  const wrapped =
+    today.getUTCDate() <= 7
+      ? `<p style="margin:24px 0 0;font-size:14px"><a href="${SITE.url}/wrapped?m=${lastMonth.toISOString().slice(0, 7)}" style="color:${INK};font-weight:600">Your ${lastMonth.toLocaleDateString("en-US", { month: "long", timeZone: "UTC" })} in Confu is ready &rarr;</a></p>`
+      : "";
+
   const html = layout({
     label: "Weekly summary",
     preheader: quiet ? "Ten minutes today is enough to get going again." : `${duration(o.minutes)} studied, ${o.activeDays} of 7 days active.`,
-    body: `${eyebrow(range)}${summary}${due}${sessions}`,
+    body: `${eyebrow(range)}${summary}${due}${sessions}${alerts}${wrapped}`,
     why: "Your weekly summary from Confu, sent once a week.",
     unsubscribe: o.unsubscribe,
   });
@@ -176,6 +195,7 @@ ${button(`${SITE.url}/review`, "Review now")}
     quiet ? `A quiet week${name ? `, ${name}` : ""}. Ten minutes today is enough to pick the thread back up.` : `Your week${name ? `, ${name}` : ""}: ${duration(o.minutes)} studied, ${o.activeDays} of 7 days active, ${o.topicsDone} topics done, ${o.reviews} reviews.`,
     o.due ? `${o.due} reviews are due by tomorrow: ${SITE.url}/review` : "",
     top ? `Continue ${top.title}: ${SITE.url}/session/${top.id}` : "",
+    o.alerts?.length ? `New papers citing what you read:\n${o.alerts.map((a) => `- ${a.title}${a.url ? ` ${a.url}` : ""}`).join("\n")}` : "",
     `Unsubscribe: ${o.unsubscribe}`,
   ]
     .filter(Boolean)

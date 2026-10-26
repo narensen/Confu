@@ -18,6 +18,10 @@ import { ConvertFiles } from "@/components/import/ConvertFiles";
 import { needsConversion } from "@/lib/import/drive";
 import { openRecommendPapers, RecommendPapers } from "@/components/paper/RecommendDialog";
 import { PaperCard } from "@/components/paper/PaperCard";
+import { PackSources, PendingSourceCard, pendingSource } from "@/components/packs/PackSources";
+import { LiteratureMap } from "@/components/paper/LiteratureMap";
+import { exportBibtex, PaperTools } from "@/components/paper/PaperTools";
+import type { PaperTool } from "@/components/paper/PassesPanel";
 import { GoalPapers } from "@/components/paper/GoalPapers";
 import { currentTopic } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/client";
@@ -47,7 +51,7 @@ const PdfViewer = dynamic(() => import("@/components/pdf/PdfViewer"), {
 });
 
 type Props = {
-  session: { id: string; title: string; kind: SessionKind; researchGoal: string; examDate: string | null };
+  session: { id: string; title: string; kind: SessionKind; researchGoal: string; examDate: string | null; draftGoal?: string };
   initialDocs: SessionDoc[];
   initialDocId: string | null;
   initialPlan: StudyPlan | null;
@@ -548,18 +552,21 @@ export function Workspace({
     [addDocs, session.id, supabase],
   );
 
-  // Give a metadata-only paper its PDF, keeping its id (and so its notes).
+  // Give a document without a PDF its file, keeping its id (and so its notes,
+  // highlights and plan links): papers added by ID, and a pack's sources.
   const attachPdf = useCallback(
-    async (docId: string, file: File) => {
-      if (uploadStatus) return;
+    async (docId: string, file: File): Promise<boolean> => {
+      if (uploadStatus) return false;
       try {
         const { data: auth } = await supabase.auth.getUser();
         if (!auth.user) throw new Error("Your session expired. Sign in again.");
         await attachPdfToDocument(supabase, { userId: auth.user.id, documentId: docId, file, onStatus: setUploadStatus });
         const fresh = await loadDoc(docId);
         if (fresh) setDocs((list) => relabel(list.map((d) => (d.id === docId ? fresh : d))));
+        return true;
       } catch (err) {
         toast(err instanceof Error ? err.message : "Couldn't attach the PDF.", "error");
+        return false;
       } finally {
         setUploadStatus(null);
       }
@@ -716,6 +723,11 @@ export function Workspace({
     [isExam, isPaper, paperIds, plan, selectDoc],
   );
 
+  // The literature map and the paper tools (BibTeX, Zotero, related work, compare).
+  const [mapOpen, setMapOpen] = useState(false);
+  const [paperTool, setPaperTool] = useState<Exclude<PaperTool, "bibtex"> | null>(null);
+  const paperDocs = useMemo(() => docs.filter((d) => paperIds.has(d.id)), [docs, paperIds]);
+
   // Uploaded through "Add paper" in a study session: mark them as papers.
   const addPaperPdfs = useCallback(
     async (files: File[]) => {
@@ -825,6 +837,7 @@ export function Workspace({
       onDeleteHighlight={deleteHighlight}
       onUpdateHighlight={updateHighlight}
       onPlanCreated={reloadPlan}
+      draftGoal={session.draftGoal ?? ""}
       onClose={focusMode ? () => setDrawerOpen(false) : undefined}
       keyInfo={needsKey ? keyInfo : null}
       kind={session.kind}
@@ -840,6 +853,8 @@ export function Workspace({
         onMarkPaper: markPaper,
         onAddPapers: () => setAddPaperOpen(true),
         studyGoal: plan ? plan.goal_title || plan.goal : "",
+        onOpenMap: () => setMapOpen(true),
+        onTool: (t) => (t === "bibtex" ? exportBibtex(paperDocs, session.title) : setPaperTool(t)),
       }}
       exam={{ practice, examDate, onExamDate: saveExamDate }}
     />
@@ -895,6 +910,7 @@ export function Workspace({
       )}
 
       <section className={`relative min-w-0 flex-1 flex-col md:flex ${focusMode || mobileView === "pdf" ? "flex" : "hidden"}`}>
+        <PackSources sessionId={session.id} docs={docs} busy={Boolean(uploadStatus)} onAttach={attachPdf} onSelect={openDocTab} />
         <DocTabs
           docs={docs}
           activeId={activeDoc?.id ?? null}
@@ -906,8 +922,10 @@ export function Workspace({
           addLabel={isPaper ? "+ Add paper" : "+ Add material"}
         />
         <div className="relative min-h-0 flex-1">
-          {activeDoc && !activeDoc.hasPdf ? (
-            <PaperCard key={activeDoc.id} doc={activeDoc} busy={Boolean(uploadStatus)} onAttach={(file) => attachPdf(activeDoc.id, file)} />
+          {activeDoc && !activeDoc.hasPdf && pendingSource(activeDoc) && pendingSource(activeDoc)!.kind !== "paper" ? (
+            <PendingSourceCard key={activeDoc.id} doc={activeDoc} busy={Boolean(uploadStatus)} onAttach={attachPdf} />
+          ) : activeDoc && !activeDoc.hasPdf ? (
+            <PaperCard key={activeDoc.id} doc={activeDoc} busy={Boolean(uploadStatus)} onAttach={(file) => void attachPdf(activeDoc.id, file)} />
           ) : activeDoc ? (
             <PdfViewer
               key={activeDoc.id}
@@ -994,6 +1012,27 @@ export function Workspace({
             setAddPaperOpen(false);
             setAddMaterialOpen(true);
           }}
+        />
+      )}
+      {mapOpen && (
+        <LiteratureMap
+          sessionId={session.id}
+          papers={paperDocs}
+          onOpenDoc={openDocTab}
+          onAdd={async (paper) => {
+            await addPaperMetas([paper]);
+          }}
+          onClose={() => setMapOpen(false)}
+        />
+      )}
+      {paperTool && (
+        <PaperTools
+          tool={paperTool}
+          sessionId={session.id}
+          papers={paperDocs}
+          reviews={reviews}
+          goal={researchGoal || (plan ? plan.goal_title || plan.goal : "")}
+          onClose={() => setPaperTool(null)}
         />
       )}
       {converting && <ConvertFiles files={converting} onDone={(pdfs) => void addPdfs(pdfs)} onClose={() => setConverting(null)} />}

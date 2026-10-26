@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { friendlyAuthError } from "@/lib/auth-errors";
 import { HEARD_FROM, OCCUPATIONS, PURPOSES } from "@/lib/signup-survey";
+import { claimInvite } from "@/lib/referrals";
 import { createClient } from "@/lib/supabase/server";
 
 // `values` hands the sign-up answers back on an error, so the form keeps them.
@@ -65,6 +66,8 @@ export async function signup(_: AuthState, formData: FormData): Promise<AuthStat
   const parsed = Signup.safeParse(raw);
   if (!parsed.success) return { error: parsed.error.issues[0].message, values };
 
+  // Where to go once signed up (e.g. back to a pack someone shared).
+  const next = safeNext(formData.get("next"));
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
@@ -77,14 +80,17 @@ export async function signup(_: AuthState, formData: FormData): Promise<AuthStat
         purpose: parsed.data.purpose,
         purpose_detail: parsed.data.purposeDetail || null,
       },
-      emailRedirectTo: `${await origin()}/auth/confirm?next=/dashboard`,
+      emailRedirectTo: `${await origin()}/auth/confirm?next=${encodeURIComponent(next)}`,
       captchaToken: captcha(formData),
     },
   });
   if (error) return { ...friendlyAuthError(error, "signup"), values, email: parsed.data.email };
 
   // With email confirmation disabled, Supabase returns a session immediately.
-  if (data.session) redirect("/dashboard");
+  if (data.session) {
+    await claimInvite(supabase);
+    redirect(next);
+  }
   // Signing up again with an existing email "succeeds" (Supabase hides which
   // emails exist) but sends nothing: the user comes back with no identities.
   if (data.user && data.user.identities?.length === 0) {

@@ -41,9 +41,15 @@ export async function trialPromptsLeft(supabase: SupabaseClient, userId: string)
 
 export const userKeyRef = (keyId: string): KeyRef => `key:${keyId}`;
 
+// Pro comes from a role set by hand, a live subscription (paid_until, kept by
+// the billing webhook) or weeks earned through invites (pro_until).
 export async function getRole(supabase: SupabaseClient, userId: string): Promise<Role> {
-  const { data } = await supabase.from("profiles").select("role").eq("id", userId).maybeSingle();
-  return data?.role === "admin" || data?.role === "pro" ? data.role : null;
+  // "*": paid_until and pro_until only exist once migration 0023 has run.
+  const { data } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+  const p = data as { role?: string | null; paid_until?: string | null; pro_until?: string | null } | null;
+  if (p?.role === "admin" || p?.role === "pro") return p.role;
+  const live = (iso: string | null | undefined) => Boolean(iso && Date.parse(iso) > Date.now());
+  return live(p?.paid_until) || live(p?.pro_until) ? "pro" : null;
 }
 
 // Tokens a user has used on the Pro pool in the last 24 hours.

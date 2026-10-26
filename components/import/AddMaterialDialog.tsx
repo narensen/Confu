@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
 import { JSON_HEADERS } from "@/lib/ai-errors";
-import type { Block } from "@/lib/import/blocks";
 import { buildPdfFile } from "@/lib/import/build-pdf";
+import { BlockedError, courseLinks, coursePdf, lecturePdf, MAX_COURSE_PAGES, TranscriptError, webError, webPagePdf, type Article, type CourseLinks } from "@/lib/import/fetch-client";
 import { driveConfigured, driveReady, importFromDrive, prepareDrive } from "@/lib/import/drive";
 import {
   connectZotero,
@@ -215,46 +215,19 @@ function UploadTab({ onFiles }: { onFiles: (files: File[]) => void }) {
 
 /* ---------------------------------------------------------------- web */
 
-type Article = { kind: "article"; url: string; title: string; byline: string; blocks: Block[]; words: number };
-type Links = { kind: "links"; url: string; title: string; links: { url: string; title: string; inCourse: boolean }[] };
-const MAX_COURSE_PAGES = 40;
-
-// The site turned Confu away (a bot check or a login): offer pasting instead.
-class BlockedError extends Error {}
-
-async function webError(res: Response) {
-  const body = (await res.json().catch(() => ({}))) as { error?: string; blocked?: boolean };
-  const message = body.error ?? `Request failed (${res.status}).`;
-  return body.blocked ? new BlockedError(message) : new Error(message);
-}
-
-async function fetchArticle(url: string): Promise<Article | { pdf: File }> {
-  const res = await fetch("/api/import/web", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ url, mode: "page" }) });
-  if (!res.ok) throw await webError(res);
-  if (res.headers.get("content-type")?.includes("application/pdf")) {
-    const name = decodeURIComponent(res.headers.get("x-confu-filename") ?? "document.pdf");
-    return { pdf: new File([await res.blob()], name.endsWith(".pdf") ? name : `${name}.pdf`, { type: "application/pdf" }) };
-  }
-  return (await res.json()) as Article;
-}
-
 function WebTab({ busy, setBusy, setError, done }: Shared) {
   const [url, setUrl] = useState("");
   const [mode, setMode] = useState<"page" | "course">("page");
-  const [course, setCourse] = useState<Links | null>(null);
+  const [course, setCourse] = useState<CourseLinks | null>(null);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [title, setTitle] = useState("");
   const [paste, setPaste] = useState(false);
 
   async function importPage() {
     setError(null);
-    setBusy("Reading the page…");
     try {
-      const got = await fetchArticle(url);
-      if ("pdf" in got) return done([{ file: got.pdf, title: got.pdf.name.replace(/\.pdf$/i, ""), sourceUrl: url, meta: { source: "web" } }], "web_pdf");
-      setBusy(`Typesetting “${got.title}”…`);
-      const file = await buildPdfFile({ kind: "Web page", title: got.title, byline: got.byline, sourceUrl: got.url, chapters: [{ title: got.title, blocks: got.blocks }] });
-      done([{ file, title: got.title, sourceUrl: got.url, meta: { source: "web", words: got.words } }], "web_page");
+      const got = await webPagePdf(url, setBusy);
+      done([got], got.meta.words ? "web_page" : "web_pdf");
     } catch (err) {
       if (err instanceof BlockedError) setPaste(true);
       setError(err instanceof Error ? err.message : "Couldn't import that page.");
@@ -267,9 +240,7 @@ function WebTab({ busy, setBusy, setError, done }: Shared) {
     setError(null);
     setBusy("Finding the course's pages…");
     try {
-      const res = await fetch("/api/import/web", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ url, mode: "links" }) });
-      if (!res.ok) throw await webError(res);
-      const found = (await res.json()) as Links;
+      const found = await courseLinks(url);
       setCourse(found);
       setTitle(found.title.split(/\s+[|—–-]\s+/)[0]);
       setPicked(new Set(found.links.filter((l) => l.inCourse).slice(0, MAX_COURSE_PAGES).map((l) => l.url)));
@@ -285,26 +256,10 @@ function WebTab({ busy, setBusy, setError, done }: Shared) {
     if (!course) return;
     const pages = course.links.filter((l) => picked.has(l.url));
     setError(null);
-    const chapters: { title: string; url: string; blocks: Block[] }[] = [];
-    const failed: string[] = [];
     try {
-      for (const [i, p] of pages.entries()) {
-        setBusy(`Reading ${i + 1} of ${pages.length}: ${p.title}`);
-        try {
-          const got = await fetchArticle(p.url);
-          if ("pdf" in got) failed.push(`${p.title} (a PDF; add it separately)`);
-          else chapters.push({ title: p.title || got.title, url: got.url, blocks: got.blocks });
-        } catch (err) {
-          failed.push(`${p.title}: ${err instanceof Error ? err.message : "failed"}`);
-        }
-      }
-      if (!chapters.length) throw new Error(`None of those pages could be read.\n${failed.join("\n")}`);
-      setBusy(`Typesetting ${chapters.length} pages…`);
-      const name = title.trim() || course.title;
-      const host = new URL(course.url).hostname.replace(/^www\./, "");
-      const file = await buildPdfFile({ kind: "Web course", title: name, byline: `${host} · ${chapters.length} pages`, sourceUrl: course.url, chapters });
-      if (failed.length) setError(`Skipped ${failed.length}:\n${failed.join("\n")}`);
-      done([{ file, title: name, sourceUrl: course.url, meta: { source: "web_course", pages: chapters.length } }], "web_course");
+      const got = await coursePdf({ url: course.url, title: title.trim() || course.title, pages }, setBusy);
+      if (got.failed.length) setError(`Skipped ${got.failed.length}:\n${got.failed.join("\n")}`);
+      done([got], "web_course");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't import that course.");
     } finally {
@@ -523,23 +478,11 @@ function YouTubeTab({ busy, setBusy, setError, done }: Shared) {
 
   async function importLecture(withTranscript: boolean) {
     setError(null);
-    setBusy(withTranscript ? "Reading the transcript…" : "Fetching the lecture's transcript…");
     try {
-      const res = await fetch("/api/import/youtube", {
-        method: "POST",
-        headers: JSON_HEADERS,
-        body: JSON.stringify({ url, ...(withTranscript ? { transcript, title: title || undefined } : {}) }),
-      });
-      if (!res.ok) {
-        const j = (await res.json().catch(() => ({}))) as { error?: string; code?: string };
-        if (j.code === "BLOCKED" || j.code === "NO_CAPTIONS") setPaste(true);
-        throw new Error(j.error ?? "Couldn't import that lecture.");
-      }
-      const got = (await res.json()) as { title: string; byline: string; sourceUrl?: string; blocks: Block[]; automatic: boolean };
-      setBusy(`Typesetting “${got.title}”…`);
-      const file = await buildPdfFile({ kind: "YouTube lecture", title: got.title, byline: got.byline, sourceUrl: got.sourceUrl, chapters: [{ title: got.title, blocks: got.blocks }] });
-      done([{ file, title: got.title, sourceUrl: got.sourceUrl ?? null, meta: { source: "youtube", automatic_captions: got.automatic } }], withTranscript ? "youtube_pasted" : "youtube");
+      const got = await lecturePdf({ url, ...(withTranscript ? { transcript, title } : {}) }, setBusy);
+      done([got], withTranscript ? "youtube_pasted" : "youtube");
     } catch (err) {
+      if (err instanceof TranscriptError && (err.code === "BLOCKED" || err.code === "NO_CAPTIONS")) setPaste(true);
       setError(err instanceof Error ? err.message : "Couldn't import that lecture.");
     } finally {
       setBusy(null);

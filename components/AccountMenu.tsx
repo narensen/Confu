@@ -166,6 +166,52 @@ export function AccountMenu({ name, email, plan, owner, keyLast4 }: Props) {
               </svg>
               Settings
             </Link>
+            {!pro && (
+              <Link
+                role="menuitem"
+                href="/pricing"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition hover:bg-yellow-100"
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                  <path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9Z" />
+                </svg>
+                Upgrade to Pro
+              </Link>
+            )}
+            <Link
+              role="menuitem"
+              href="/settings#invite"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition hover:bg-paper"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                <path d="M20 12v9H4v-9M2 7h20v5H2zM12 21V7M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7Zm0 0h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7Z" />
+              </svg>
+              Invite friends, get Pro
+            </Link>
+            <Link
+              role="menuitem"
+              href="/rooms"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition hover:bg-paper"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                <path d="M16 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1M9 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM22 19v-1a4 4 0 0 0-3-3.9M16 4.1a3 3 0 0 1 0 5.8" />
+              </svg>
+              Study rooms
+            </Link>
+            <Link
+              role="menuitem"
+              href="/wrapped"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition hover:bg-paper"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                <path d="M3 3v18h18M7 16v-3M11 16V8M15 16v-5M19 16V5" />
+              </svg>
+              Your month
+            </Link>
             {installable && (
               <button
                 role="menuitem"

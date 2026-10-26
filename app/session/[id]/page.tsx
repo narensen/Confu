@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { AppHeader } from "@/components/AppHeader";
+import { SharePack } from "@/components/packs/SharePack";
 import { SessionTitle } from "@/components/workspace/SessionTitle";
 import { Workspace } from "@/components/workspace/Workspace";
 import { trialPromptsLeft } from "@/lib/ai-access";
@@ -63,7 +64,8 @@ async function SessionWorkspace({ params }: { params: Promise<{ id: string }> })
     getCurrentRole(),
     getKeyInfo(supabase, user.id, id),
     trialPromptsLeft(supabase, user.id),
-    supabase.from("study_sessions").select("id, title, kind, research_goal, exam_date").eq("id", id).maybeSingle(),
+    // "*": draft_goal only exists once migration 0024 has run.
+    supabase.from("study_sessions").select("*").eq("id", id).maybeSingle(),
     supabase
       .from("documents")
       .select("id, title, storage_path, page_count, last_page, position, status, updated_at, source_url, meta")
@@ -95,7 +97,6 @@ async function SessionWorkspace({ params }: { params: Promise<{ id: string }> })
   }[];
   const docIds = docRows.map((d) => d.id);
 
-  const isPaper = session.data.kind === "paper";
   const isExam = session.data.kind === "exam";
   const [topics, signed, highlights, reviews, attempts] = await Promise.all([
     plan.data
@@ -142,9 +143,17 @@ async function SessionWorkspace({ params }: { params: Promise<{ id: string }> })
     <>
       <AppHeader>
         <SessionTitle sessionId={session.data.id} initialTitle={session.data.title} />
+        <SharePack sessionId={session.data.id} title={session.data.title} />
       </AppHeader>
       <Workspace
-        session={{ id: session.data.id, title: session.data.title, kind: session.data.kind, researchGoal: session.data.research_goal ?? "", examDate: session.data.exam_date ?? null }}
+        session={{
+          id: session.data.id,
+          title: session.data.title,
+          kind: session.data.kind,
+          researchGoal: session.data.research_goal ?? "",
+          examDate: session.data.exam_date ?? null,
+          draftGoal: (session.data as { draft_goal?: string }).draft_goal ?? "",
+        }}
         initialDocs={sessionDocs}
         initialDocId={sessionDocs.find((d) => d.id === recent?.id)?.id ?? sessionDocs[0]?.id ?? null}
         initialPlan={plan.data as StudyPlan | null}

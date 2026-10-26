@@ -12,11 +12,22 @@ import { PLANS, type Plan } from "@/lib/plans";
 import { SITE } from "@/lib/site";
 import { DeleteAccount, EmailField, NameField, PasswordForm, RequestProButton, ResetLinkButton, SignOutEverywhereButton } from "./AccountForms";
 import { ProMembers, type ProMember } from "./ProMembers";
+import { BillingNotice } from "./BillingNotice";
+import { InviteSection } from "./InviteSection";
 import { RemindersSection } from "./RemindersSection";
 import { Row, Section } from "./Section";
 import { SettingsNav, type NavItem } from "./SettingsNav";
 
 export const SETTINGS_GRID = "lg:grid lg:grid-cols-[12.5rem_minmax(0,1fr)] lg:gap-14";
+
+export type BillingInfo = {
+  configured: boolean; // Lemon Squeezy is set up
+  price: { amount: string; per: string; note: string };
+  student: boolean; // a student discount applies to college emails
+  source: "admin" | "granted" | "paid" | "invite" | null; // where Pro comes from
+  proUntil: string | null; // invite weeks
+  subscription: { status: string; renews_at: string | null; ends_at: string | null; card_brand: string | null; card_last_four: string | null } | null;
+};
 
 export type SettingsData = {
   user: { email: string | null; name: string | null };
@@ -32,6 +43,7 @@ export type SettingsData = {
   usageKeys: UsageKey[];
   members: ProMember[] | null; // owner only
   membersError?: string;
+  billing: BillingInfo;
 };
 
 // The Settings page, laid out like a publication's account settings: a
@@ -42,6 +54,7 @@ export function SettingsView(d: SettingsData) {
     { id: "profile", label: "Profile" },
     { id: "security", label: "Sign-in & security" },
     { id: "plan", label: "Plan" },
+    { id: "invite", label: "Invite friends" },
     ...(pro ? [] : [{ id: "api-key", label: "API key" }]),
     { id: "usage", label: "Usage" },
     { id: "reminders", label: "Reminders & calendar" },
@@ -127,8 +140,11 @@ export function SettingsView(d: SettingsData) {
             title="Plan"
             description={pro ? "You're on Pro: Confu's AI runs on our keys, no setup needed." : "Free runs on your own Groq key. Pro runs on ours."}
           >
-            <PlanCards plan={d.plan} owner={d.owner} requestedAt={d.requestedAt} used={d.usageKeys[0]?.allowance?.used ?? 0} />
+            <BillingNotice />
+            <PlanCards plan={d.plan} owner={d.owner} requestedAt={d.requestedAt} used={d.usageKeys[0]?.allowance?.used ?? 0} billing={d.billing} />
           </Section>
+
+          <InviteSection />
 
           {!pro && (
             <Section id="api-key" title="API key" description="Your Groq key, encrypted at rest. Only its last four characters are ever shown.">
@@ -203,7 +219,7 @@ export function SettingsView(d: SettingsData) {
   );
 }
 
-function PlanCards({ plan, owner, requestedAt, used }: { plan: Plan; owner: boolean; requestedAt: string | null; used: number }) {
+function PlanCards({ plan, owner, requestedAt, used, billing }: { plan: Plan; owner: boolean; requestedAt: string | null; used: number; billing: BillingInfo }) {
   return (
     <div className="grid gap-4 p-5 sm:grid-cols-2 sm:p-6">
       {(["free", "pro"] as const).map((p) => {
@@ -220,6 +236,10 @@ function PlanCards({ plan, owner, requestedAt, used }: { plan: Plan; owner: bool
               </p>
               {current ? (
                 <span className="rounded-full bg-ink px-2.5 py-0.5 text-[11px] font-medium text-white">{owner ? "Current · Admin" : "Current plan"}</span>
+              ) : p === "pro" && billing.configured ? (
+                <span className="rounded-full border border-ink/30 bg-yellow-200 px-2.5 py-0.5 font-mono text-[11px] font-medium">
+                  {billing.price.amount}/{billing.price.per === "month" ? "mo" : billing.price.per}
+                </span>
               ) : p === "pro" ? (
                 <span className="rounded-full border border-ink/30 bg-yellow-200 px-2.5 py-0.5 text-[11px] font-medium">Early access</span>
               ) : null}
@@ -235,8 +255,9 @@ function PlanCards({ plan, owner, requestedAt, used }: { plan: Plan; owner: bool
                 </li>
               ))}
             </ul>
-            <div className="mt-5">
-              {p === "pro" && plan === "free" && <RequestProButton requestedAt={requestedAt} />}
+            <div className="mt-5 space-y-3">
+              {p === "pro" && plan === "free" && (billing.configured ? <GetPro billing={billing} /> : <RequestProButton requestedAt={requestedAt} />)}
+              {p === "pro" && plan === "pro" && <ProStatus billing={billing} />}
               {p === "pro" && plan === "pro" && (
                 <p className="text-xs leading-relaxed text-muted">
                   {owner
@@ -253,4 +274,75 @@ function PlanCards({ plan, owner, requestedAt, used }: { plan: Plan; owner: bool
       })}
     </div>
   );
+}
+
+function GetPro({ billing }: { billing: BillingInfo }) {
+  return (
+    <div className="space-y-2">
+      <a href="/api/billing/checkout" className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-white transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[3px_3px_0_0_#facc15]">
+        Get Pro · {billing.price.amount}/{billing.price.per}
+      </a>
+      <p className="text-xs leading-relaxed text-muted">
+        {billing.price.note} Cancel anytime.
+        {billing.student && " College email? Your student discount is applied at checkout."}{" "}
+        <a href="#invite" className="underline underline-offset-2 hover:text-ink">
+          Or invite friends for free weeks.
+        </a>
+      </p>
+    </div>
+  );
+}
+
+const CARD: Record<string, string> = { visa: "Visa", mastercard: "Mastercard", amex: "Amex", discover: "Discover", rupay: "RuPay" };
+
+// How this account has Pro, and what to do about it.
+function ProStatus({ billing }: { billing: BillingInfo }) {
+  const s = billing.subscription;
+  const manage = (
+    <a href="/api/billing/portal" className={`${ghostButtonClass} w-full py-1.5 text-xs`}>
+      Manage billing
+    </a>
+  );
+  if (billing.source === "paid" && s) {
+    const card = s.card_last_four ? ` · ${CARD[s.card_brand ?? ""] ?? "Card"} ••${s.card_last_four}` : "";
+    return (
+      <div className="space-y-2">
+        <p className="text-xs leading-relaxed">
+          {s.status === "cancelled" && s.ends_at ? (
+            <>
+              <span className="font-medium">Cancelled.</span> Pro stays on until <LocalTime iso={s.ends_at} />; resume any time before then.
+            </>
+          ) : s.status === "past_due" ? (
+            <span className="text-warn">
+              <span className="font-medium">The last payment didn&apos;t go through.</span> It&apos;s being retried; update your card to keep Pro.
+            </span>
+          ) : s.renews_at ? (
+            <>
+              Renews <LocalTime iso={s.renews_at} />
+              {card}
+            </>
+          ) : (
+            "Subscribed."
+          )}
+        </p>
+        {manage}
+      </div>
+    );
+  }
+  if (billing.source === "invite" && billing.proUntil) {
+    return (
+      <div className="space-y-2">
+        <p className="text-xs leading-relaxed">
+          <span className="font-medium">Pro from invites</span> until <LocalTime iso={billing.proUntil} />. Invite more friends for more weeks.
+        </p>
+        {billing.configured && (
+          <a href="/api/billing/checkout" className={`${ghostButtonClass} w-full py-1.5 text-xs`}>
+            Keep Pro after that · {billing.price.amount}/{billing.price.per}
+          </a>
+        )}
+      </div>
+    );
+  }
+  if (billing.source === "granted") return <p className="text-xs leading-relaxed text-muted">Pro was given to this account by Confu.</p>;
+  return null;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
-import { PassesPanel } from "@/components/paper/PassesPanel";
+import { PassesPanel, type PaperTool } from "@/components/paper/PassesPanel";
 import { UsageMeter } from "@/components/usage/UsageMeter";
 import { ExamProgress } from "@/components/exam/ExamProgress";
 import { PracticePanel } from "@/components/exam/PracticePanel";
@@ -33,6 +33,8 @@ export type PaperProps = {
   onMarkPaper: (docId: string) => void;
   onAddPapers: () => void;
   studyGoal: string; // the study plan's goal, the default for triage and suggestions
+  onOpenMap: () => void;
+  onTool: (tool: PaperTool) => void;
 };
 
 type Props = {
@@ -55,6 +57,7 @@ type Props = {
   onDeleteHighlight: (h: Highlight) => void;
   onUpdateHighlight: (h: Highlight, patch: { color?: HighlightColor; note?: string | null }) => void;
   onPlanCreated: () => void;
+  draftGoal: string; // a template's or pack's goal, to start the plan from
   onClose?: () => void;
   keyInfo?: KeyInfo | null; // the user's own Groq key in use here (never the key itself)
   kind: SessionKind;
@@ -192,6 +195,8 @@ export function TutorPanel(props: Props) {
             onMarkPaper={props.paper.onMarkPaper}
             onAddPapers={props.paper.onAddPapers}
             studyGoal={props.paper.studyGoal}
+            onOpenMap={props.paper.onOpenMap}
+            onTool={props.paper.onTool}
             activeDocId={props.paper.activeDocId}
             reviews={props.paper.reviews}
             researchGoal={props.paper.researchGoal}
@@ -231,6 +236,7 @@ export function TutorPanel(props: Props) {
               props.onSend({ action: "teach", topicId: t.id });
             }}
             onPlanCreated={props.onPlanCreated}
+            draftGoal={props.draftGoal}
           />
         )}
         {tab === "highlights" && (

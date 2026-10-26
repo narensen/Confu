@@ -21,7 +21,7 @@ const subscribe = (l: () => void) => {
   return () => listeners.delete(l);
 };
 
-function chime() {
+export function chime() {
   try {
     const ctx = new AudioContext();
     [660, 880].forEach((f, i) => {

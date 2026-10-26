@@ -1,6 +1,7 @@
 // Plans, shared by the server and the UI.
 //   Free  brings their own Groq key (role NULL)
-//   Pro   runs on Confu's keys with a daily fair-use allowance (role 'pro')
+//   Pro   runs on Confu's keys with a daily fair-use allowance: a subscription,
+//         invite weeks or a grant (role 'pro'; see getRole in lib/ai-access.ts)
 //   Owner is Pro without the allowance (role 'admin')
 
 export type Role = "admin" | "pro" | null;
@@ -26,7 +27,8 @@ export const PLANS: Record<Plan, { name: string; tagline: string; features: stri
     features: [
       "Everything in Free",
       "No Groq key needed: runs on Confu's keys",
-      "A daily fair-use allowance, shown in your account menu",
+      "A generous daily allowance, shown in your account menu",
+      "Cancel anytime; your sessions stay yours on Free",
     ],
   },
 };
