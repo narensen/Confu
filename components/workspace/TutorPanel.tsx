@@ -7,7 +7,7 @@ import { ExamProgress } from "@/components/exam/ExamProgress";
 import { PracticePanel } from "@/components/exam/PracticePanel";
 import type { ExamPractice } from "@/components/exam/useExamPractice";
 import type { KeyInfo } from "@/lib/groq-keys";
-import { PAPER_MAX_PAGES, type PaperReview } from "@/lib/paper";
+import type { PaperReview } from "@/lib/paper";
 import type { ChatMessage, Highlight, LearnerMemory, PlanTopic, SessionDoc, SessionKind, StudyPlan, TopicStatus } from "@/lib/types";
 import { ChatPanel } from "./ChatPanel";
 import type { HighlightColor } from "@/lib/highlights";
@@ -120,8 +120,10 @@ export function TutorPanel(props: Props) {
   }, [tab, plan, topics.length, highlights.length]);
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <nav className="relative flex h-12 shrink-0 items-stretch overflow-x-auto border-b border-ink px-3 [scrollbar-width:none]" role="tablist">
+    <div className="@container flex h-full min-h-0 flex-col">
+      <nav className="relative flex h-12 shrink-0 items-stretch gap-2 border-b border-ink px-3">
+        {/* Only the tabs scroll when there are many; the usage meter stays put at the right. */}
+        <div className="flex min-w-0 flex-1 items-stretch overflow-x-auto [mask-image:linear-gradient(to_right,#000_calc(100%-28px),transparent)] [scrollbar-width:none]" role="tablist">
         <div ref={navRef} className="relative flex items-stretch gap-1">
           {tabs.map((t) => (
             <button
@@ -154,7 +156,7 @@ export function TutorPanel(props: Props) {
             />
           )}
         </div>
-        <div className="flex-1" />
+        </div>
         <UsageMeter sessionId={props.sessionId} keyId={props.keyInfo?.id} keyLast4={props.keyInfo?.last4} />
         {props.onClose && (
           <button
@@ -202,7 +204,6 @@ export function TutorPanel(props: Props) {
             sessionId={props.sessionId}
             inStudy={props.kind === "study"}
             docs={passDocs}
-            otherDocs={props.kind === "study" ? props.docs.filter((d) => !props.paper.paperIds.has(d.id) && d.hasPdf && d.pageCount <= PAPER_MAX_PAGES) : []}
             onMarkPaper={props.paper.onMarkPaper}
             onAddPapers={props.paper.onAddPapers}
             studyGoal={props.paper.studyGoal}

@@ -1,6 +1,6 @@
 "use client";
 
-import { findPaper, isPaperResource } from "@/lib/find-paper";
+import { docForResource, findPaper, isPaperResource } from "@/lib/find-paper";
 import { eyebrowClass } from "@/components/ui";
 import { formatMinutes } from "@/lib/schedule";
 import type { PlanTopic, Resource, SessionDoc } from "@/lib/types";
@@ -21,6 +21,7 @@ export function StartHere({
   docs,
   busy,
   onOpen,
+  onOpenDoc,
   onTeach,
 }: {
   topic: PlanTopic;
@@ -28,6 +29,7 @@ export function StartHere({
   docs: SessionDoc[];
   busy: boolean;
   onOpen: (t: PlanTopic) => void;
+  onOpenDoc: (docId: string) => void; // a paper the topic recommends that's already in Files
   onTeach: (t: PlanTopic) => void;
 }) {
   const fresh = !topics.some((t) => t.status === "completed");
@@ -35,6 +37,7 @@ export function StartHere({
   const inPdf = topic.source === "pdf" && topic.page_start !== null && Boolean(doc);
   const pages = inPdf ? (topic.page_start === topic.page_end ? `p. ${topic.page_start}` : `pp. ${topic.page_start}–${topic.page_end}`) : null;
   const resource = !inPdf ? topic.resources?.[0] : undefined;
+  const have = resource && isPaperResource(resource) ? docForResource(resource, docs) : null;
 
   return (
     <div className="animate-enter rounded-xl border border-ink bg-panel p-4 shadow-[4px_4px_0_0_#facc15]">
@@ -73,6 +76,17 @@ export function StartHere({
             className="rounded-lg border border-ink bg-ink px-3.5 py-2 text-sm font-medium text-white transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[2px_2px_0_0_#facc15] active:translate-y-0"
           >
             Open {pages} →
+          </button>
+        ) : have && resource ? (
+          <button
+            type="button"
+            onClick={() => {
+              track("start_here.open_paper");
+              onOpenDoc(have.id);
+            }}
+            className="rounded-lg border border-ink bg-ink px-3.5 py-2 text-sm font-medium text-white transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[2px_2px_0_0_#facc15] active:translate-y-0"
+          >
+            Open the paper: {resource.title} →
           </button>
         ) : resource && isPaperResource(resource) ? (
           <button

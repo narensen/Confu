@@ -58,12 +58,16 @@ export function UsageMeter({ sessionId, keyId, keyLast4 }: { sessionId: string; 
   const blocked = main?.status === "blocked";
 
   let label: string | null = null;
+  let suffix = ""; // dropped when the tutor panel is narrow
   if (main?.plan === "trial") {
     const n = Math.max(0, (main.dailyLimit ?? 0) - main.used24h);
     label = blocked ? "free prompts used" : `${n} free prompt${n === 1 ? "" : "s"} left`;
   }
   else if (blocked) label = main?.plan === "pro" ? "allowance used" : "limit reached";
-  else if (main && main.status !== "none") label = left !== null ? `${stale ? "~" : ""}${Math.round(left * 100)}% left` : `${formatTokens(main.used24h)} today`;
+  else if (main && main.status !== "none") {
+    label = left !== null ? `${stale ? "~" : ""}${Math.round(left * 100)}%` : formatTokens(main.used24h);
+    suffix = left !== null ? " left" : " today";
+  }
   else if (keyLast4) label = "no usage yet";
 
   const tone = blocked ? "text-danger" : stale ? "text-muted/70" : left !== null && left < 0.1 ? "text-danger" : left !== null && left < 0.3 ? "text-warn" : "text-muted";
@@ -82,7 +86,7 @@ export function UsageMeter({ sessionId, keyId, keyLast4 }: { sessionId: string; 
     <Link
       href="/settings#usage"
       title={title}
-      className="my-2.5 mr-1 flex items-center gap-2 rounded-md border border-line px-2 font-mono text-[11px] text-muted transition hover:border-ink hover:text-ink"
+      className="my-2.5 mr-1 flex shrink-0 items-center gap-2 rounded-md border border-line px-2 font-mono text-[11px] whitespace-nowrap text-muted transition hover:border-ink hover:text-ink"
     >
       {main?.plan === "trial" ? (
         <span className="rounded border border-ink/40 px-1 text-[9px] font-bold text-ink uppercase">Trial</span>
@@ -99,6 +103,8 @@ export function UsageMeter({ sessionId, keyId, keyLast4 }: { sessionId: string; 
             </span>
           )}
           {label}
+          {/* "today" / "left" only when the tutor panel has room (it's an @container). */}
+          {suffix && <span className="hidden @lg:inline">{suffix}</span>}
           {stale && <span className="rounded border border-dashed border-ink/30 px-1 text-[9px] uppercase">stale</span>}
         </span>
       )}

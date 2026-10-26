@@ -105,6 +105,7 @@ export function ChatPanel({ messages, busy, plan, docs, activeTopic, topics, onS
                     const d = docs.find((x) => x.id === t.document_id);
                     if (t.source === "pdf" && t.page_start !== null && d) onJump(t.page_start, d.id);
                   }}
+                  onOpenDoc={(id) => onJump(docs.find((d) => d.id === id)?.lastPage || 1, id)}
                   onTeach={() => onSend({ action: "teach" })}
                 />
               )}

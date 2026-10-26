@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { fire } from "@/lib/supabase/fire";
 
 // Time spent per page, for "Where it got hard" (page_time, migration 0019).
 // Counts 5-second ticks on the page being read, only while the tab is visible
@@ -39,7 +40,7 @@ export function useReadingTime(documentId: string | undefined, page: number) {
       if (!pending.current.size) return;
       const pages = [...pending.current].map(([n, v]) => ({ page: n, seconds: v.seconds, visits: v.visits })).filter((p) => p.seconds || p.visits);
       pending.current.clear();
-      if (pages.length) void supabase.rpc("add_page_time", { p_document: documentId, p_pages: pages, p_tz: Intl.DateTimeFormat().resolvedOptions().timeZone });
+      if (pages.length) fire(supabase.rpc("add_page_time", { p_document: documentId, p_pages: pages, p_tz: Intl.DateTimeFormat().resolvedOptions().timeZone }), "reading time");
     };
     const every = window.setInterval(flush, 30_000);
     const onHide = () => {

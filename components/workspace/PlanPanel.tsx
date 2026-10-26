@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { eyebrowClass } from "@/components/ui";
 import { currentTopic, formatMinutes, scheduleStatus, toISODate } from "@/lib/schedule";
-import { PAPER_MAX_PAGES, type PaperReview } from "@/lib/paper";
+import type { PaperReview } from "@/lib/paper";
 import type { PlanTopic, Resource, SessionDoc, StudyPlan, TopicStatus } from "@/lib/types";
 import { GoalSetup } from "./GoalSetup";
 import { CustomPace } from "./PaceDial";
 import { Markdown } from "./Markdown";
-import { findPaper, isPaperResource } from "@/lib/find-paper";
+import { docForResource, findPaper, isPaperResource } from "@/lib/find-paper";
 import { resourceHref, StartHere } from "./StartHere";
 
 type Props = {
@@ -203,6 +203,7 @@ export function PlanPanel(props: Props) {
               const d = docs.find((x) => x.id === t.document_id);
               if (t.source === "pdf" && t.page_start !== null && d) props.onJump(t.page_start, d.id);
             }}
+            onOpenDoc={(id) => (props.papers.has(id) ? props.onOpenPaper(id) : props.onJump(docs.find((d) => d.id === id)?.lastPage || 1, id))}
             onTeach={props.onTeach}
           />
         </section>
@@ -257,7 +258,6 @@ function TopicRow({
   papers,
   reviews,
   onOpenPaper,
-  onMarkPaper,
 }: Props & { topic: PlanTopic; active: boolean; today: string }) {
   const [open, setOpen] = useState(active);
   const overdue = t.status !== "completed" && t.due_date < today;
@@ -340,9 +340,25 @@ function TopicRow({
               <div>
                 <p className={eyebrowClass}>Go deeper</p>
                 <ul className="mt-2 divide-y divide-line rounded-lg border border-line">
-                  {t.resources.map((r) => (
+                  {t.resources.map((r) => {
+                    // Already in the session (added from the goal or the plan): open it.
+                    const have = isPaperResource(r) ? docForResource(r, docs) : null;
+                    return (
                     <li key={r.title}>
-                      {isPaperResource(r) ? (
+                      {have ? (
+                        <button
+                          type="button"
+                          onClick={() => (papers.has(have.id) ? onOpenPaper(have.id) : onJump(have.lastPage || 1, have.id))}
+                          className="flex w-full items-center gap-3 px-3 py-2 text-left transition hover:bg-paper"
+                        >
+                          <span className="w-16 shrink-0 font-mono text-[10px] uppercase tracking-wider text-muted">{RESOURCE_LABEL.paper}</span>
+                          <span className="min-w-0 flex-1 text-sm leading-snug">
+                            {r.title}
+                            <span className="ml-1.5 rounded border border-ok/50 px-1 font-mono text-[9px] text-ok uppercase">In your files</span>
+                          </span>
+                          <span className="shrink-0 text-xs font-medium">Open</span>
+                        </button>
+                      ) : isPaperResource(r) ? (
                         // Papers open Confu's paper search (Google is a fallback inside it).
                         <button
                           type="button"
@@ -368,7 +384,8 @@ function TopicRow({
                         </a>
                       )}
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
               </div>
             )}
@@ -383,12 +400,7 @@ function TopicRow({
                   Open {docs.length > 1 ? `${doc!.label} ` : ""}p. {t.page_start}
                 </SmallButton>
               )}
-              {paper ? (
-                <SmallButton onClick={() => onOpenPaper(doc!.id)}>Read with the passes</SmallButton>
-              ) : (
-                inPdf &&
-                doc!.pageCount <= PAPER_MAX_PAGES && <SmallButton onClick={() => onMarkPaper(doc!.id)}>It&apos;s a paper: read with passes</SmallButton>
-              )}
+              {paper && <SmallButton onClick={() => onOpenPaper(doc!.id)}>Read with the passes</SmallButton>}
               {!active && !completed && <SmallButton onClick={() => onFocusTopic(t)}>Focus on this</SmallButton>}
               {completed ? (
                 <>

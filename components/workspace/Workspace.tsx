@@ -11,9 +11,10 @@ import { emptyReview, isPaperDoc, type PaperReview } from "@/lib/paper";
 import type { Attempt } from "@/lib/exam";
 import { useExamPractice } from "@/components/exam/useExamPractice";
 import { addPaperFromMeta, type PaperMeta } from "@/lib/pdf/add-paper";
-import { FIND_PAPER_EVENT } from "@/lib/find-paper";
+import { docForResource, FIND_PAPER_EVENT, isPaperResource } from "@/lib/find-paper";
 import { speechLoading, speechPlay, speechStop, speechSupported } from "@/lib/speech";
 import { closeTab, isOpenIn, keepTabs, openTab, useOpenTabs } from "@/lib/open-tabs";
+import { fire } from "@/lib/supabase/fire";
 import { peekHandoff, takeHandoff } from "@/lib/pdf/handoff";
 import { attachPdfToDocument, titleFromFile, uploadPdfToSession } from "@/lib/pdf/upload";
 import { AddPaperDialog } from "@/components/paper/AddPaperDialog";
@@ -246,7 +247,7 @@ export function Workspace({
   useEffect(() => {
     if (!activeId) return;
     const id = window.setTimeout(() => {
-      void supabase.from("documents").update({ last_page: page }).eq("id", activeId);
+      fire(supabase.from("documents").update({ last_page: page }).eq("id", activeId), "your page");
     }, 1500);
     return () => window.clearTimeout(id);
   }, [activeId, page, supabase]);
@@ -857,12 +858,12 @@ export function Workspace({
             docId,
             window.setTimeout(() => {
               const { document_id, target_pass, passes_done, triage_reason, pass1, pass2, pass3 } = next;
-              void supabase
-                .from("paper_reviews")
-                .upsert(
-                  { document_id, session_id: session.id, target_pass, passes_done, triage_reason, pass1, pass2, pass3 },
-                  { onConflict: "document_id" },
-                );
+              fire(
+                supabase
+                  .from("paper_reviews")
+                  .upsert({ document_id, session_id: session.id, target_pass, passes_done, triage_reason, pass1, pass2, pass3 }, { onConflict: "document_id" }),
+                "the paper's notes",
+              );
             }, 600),
           );
         }
@@ -885,7 +886,7 @@ export function Workspace({
       if (!doc) return;
       const meta = { ...(doc.meta ?? {}), paper_check: value };
       setDocs((list) => list.map((d) => (d.id === docId ? { ...d, meta } : d)));
-      void supabase.from("documents").update({ meta }).eq("id", docId);
+      fire(supabase.from("documents").update({ meta }).eq("id", docId), "whether it's a paper");
     },
     [docs, supabase],
   );
@@ -980,6 +981,10 @@ export function Workspace({
 
   // What the goal names that isn't in the session yet: the "To add" tab.
   const later = useLater(session.id);
+  const laterNow = useRef(later);
+  useEffect(() => {
+    laterNow.current = later;
+  }, [later]);
   // The paper search listing those papers (and, from "Add", looking one up).
   const [goalSearch, setGoalSearch] = useState<{ focus?: string } | null>(null);
   const openGoalSearch = useCallback((focus?: string) => {
@@ -1051,7 +1056,8 @@ export function Workspace({
       if (localStorage.getItem(goalKey) === "done") return;
     } catch {}
     let live = true;
-    void (async () => {
+    // The plan's own papers wait for this to finish (see below), so nothing is added twice.
+    goalJob.current = (async () => {
       const res = await fetch("/api/paper/from-goal", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ sessionId: session.id }) }).catch(() => null);
       notifyAiUsed();
       if (!res?.ok || !live) return;
@@ -1088,10 +1094,54 @@ export function Workspace({
     };
   }, [goalKey, locked, session.id]);
 
+  // The papers the plan itself recommends ("Go deeper"), added the same way:
+  // found for sure, added; not sure, waiting in Files to be searched for. Once
+  // per plan, after the goal's papers are in, skipping any already in Files.
+  const goalJob = useRef<Promise<unknown>>(Promise.resolve());
+  const docsNow = useRef(docs);
+  useEffect(() => {
+    docsNow.current = docs;
+  }, [docs]);
+  const planPapersFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (isPaper || isExam || !plan || locked || !topics.length || topics[0].plan_id !== plan.id) return;
+    if (planPapersFor.current === plan.id) return;
+    const key = `confu:plan-papers:${plan.id}`;
+    try {
+      if (localStorage.getItem(key)) return;
+    } catch {}
+    planPapersFor.current = plan.id;
+    const titles = [...new Map(topics.flatMap((t) => t.resources ?? []).filter(isPaperResource).map((r) => [r.title.toLowerCase(), r])).values()];
+    void (async () => {
+      await goalJob.current;
+      const wanted = titles.filter((r) => !docForResource(r, docsNow.current) && !laterNow.current.papers.some((p) => p.name === r.title)).slice(0, 12);
+      if (wanted.length) {
+        const res = await fetch("/api/paper/resolve-titles", {
+          method: "POST",
+          headers: JSON_HEADERS,
+          body: JSON.stringify({ sessionId: session.id, titles: wanted.map((r) => r.title), field: plan.goal_title ?? "" }),
+        }).catch(() => null);
+        if (!res?.ok) return; // try again next time
+        const { papers } = (await res.json()) as { papers: GoalPaper[] };
+        addLater(session.id, { papers: papers.filter((p) => !p.paper).map((p) => ({ name: p.name, title: p.title })) });
+        const act = goalActions.current;
+        await act.uploadsSettled();
+        const sure = papers.flatMap((p) => (p.paper && !docsNow.current.some((d) => d.title.toLowerCase() === p.paper!.title.toLowerCase()) ? [p.paper] : []));
+        if (sure.length) {
+          const added = await act.addPaperMetas(sure);
+          if (added.length) toast(`Added ${added.length} ${added.length === 1 ? "paper" : "papers"} your plan recommends. They're in Files.`);
+        }
+      }
+      try {
+        localStorage.setItem(key, "done");
+      } catch {}
+    })();
+  }, [isExam, isPaper, locked, plan, session.id, topics]);
+
   const saveExamDate = useCallback(
     (date: string | null) => {
       setExamDate(date);
-      void supabase.from("study_sessions").update({ exam_date: date }).eq("id", session.id);
+      fire(supabase.from("study_sessions").update({ exam_date: date }).eq("id", session.id), "the exam date");
     },
     [session.id, supabase],
   );
@@ -1099,7 +1149,7 @@ export function Workspace({
   const saveResearchGoal = useCallback(
     (goal: string) => {
       setResearchGoal(goal);
-      void supabase.from("study_sessions").update({ research_goal: goal }).eq("id", session.id);
+      fire(supabase.from("study_sessions").update({ research_goal: goal }).eq("id", session.id), "the research question");
     },
     [session.id, supabase],
   );

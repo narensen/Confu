@@ -15,7 +15,6 @@ type Props = {
   // Inside a study session: only its papers, under the study goal (no research goal or triage).
   inStudy?: boolean;
   docs: SessionDoc[];
-  otherDocs?: SessionDoc[]; // study material short enough to be a paper
   onMarkPaper?: (docId: string) => void;
   onAddPapers?: () => void;
   studyGoal?: string;
@@ -96,29 +95,6 @@ export function PassesPanel(props: Props) {
         docs.length > 0 && <p className="px-6 py-5 text-sm text-muted">Pick a paper above to open it beside its passes.</p>
       )}
 
-      {inStudy && props.otherDocs && props.otherDocs.length > 0 && (
-        <section className="border-t border-line px-6 py-5">
-          <p className={eyebrowClass}>Is another file a paper?</p>
-          <ul className="mt-3 space-y-1.5">
-            {props.otherDocs.map((d) => (
-              <li key={d.id} className="flex items-center gap-3 rounded-lg border border-line px-3 py-2">
-                <span className="shrink-0 rounded border border-ink/30 px-1 font-mono text-[10px] text-muted">{d.label}</span>
-                <span className="min-w-0 flex-1 truncate text-sm">{d.title}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    props.onMarkPaper?.(d.id);
-                    onSelectDoc(d.id);
-                  }}
-                  className="shrink-0 rounded-md border border-ink px-2.5 py-1 text-xs font-medium transition hover:bg-ink hover:text-white"
-                >
-                  Read as a paper
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
     </div>
   );
 }
