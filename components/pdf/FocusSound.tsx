@@ -13,7 +13,7 @@ export type Noise = "white" | "pink" | "brown";
 type Sound = { playing: Noise | null; volume: number; loading: boolean };
 
 const NOISES: { id: Noise; name: string; hint: string }[] = [
-  { id: "white", name: "White noise", hint: "Even hiss, like a fan. Masks voices best." },
+  { id: "white", name: "White noise", hint: "A soft, steady hum, like a fan in the next room." },
   { id: "pink", name: "Pink noise", hint: "Softer and balanced, like steady rain." },
   { id: "brown", name: "Brown noise", hint: "Deep rumble, like a distant waterfall." },
 ];

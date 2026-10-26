@@ -21,11 +21,18 @@ export type GraphNode = {
   oa?: string; // OpenAlex id, for its abstract
   citedByYours?: number; // foundations: how many of your papers cite it
   citesYours?: number; // frontier: how many of your papers it cites
+  // The personal map: the sessions a node belongs to (your papers) or links
+  // to through citations (the rest), and where each copy of your paper is.
+  sessions?: string[];
+  docs?: { session: string; doc: string }[];
+  // Connects sessions: in two of them, or linked to two of your papers that
+  // share no session (a foundation two separate projects both stand on).
+  bridge?: boolean;
 };
 export type GraphEdge = { from: string; to: string }; // from cites to
 export type Graph = { nodes: GraphNode[]; edges: GraphEdge[]; built: string; missing: string[] };
 
-export type SessionPaper = { docId: string; title: string; doi: string | null; arxiv: string | null; openalex?: string | null; year?: number | null };
+export type SessionPaper = { docId: string; title: string; doi: string | null; arxiv: string | null; openalex?: string | null; year?: number | null; sessionId?: string };
 
 type OAWork = {
   id: string;
@@ -173,12 +180,27 @@ async function s2References(p: SessionPaper): Promise<{ year: number | null; cit
   return { year: d.year, citations: d.citationCount ?? 0, refs };
 }
 
-const MAX_FOUNDATIONS = 26;
-const MAX_FRONTIER = 16;
+// How big a map gets: one session's, or the personal map of every session.
+type Limits = { papers: number; foundations: number; frontier: number; refs: number };
+const SESSION_LIMITS: Limits = { papers: 15, foundations: 26, frontier: 16, refs: 600 };
+export const LIBRARY_LIMITS: Limits = { papers: 60, foundations: 40, frontier: 24, refs: 1200 };
 
-export async function buildGraph(papers: SessionPaper[]): Promise<{ graph: Graph; resolved: Record<string, string> }> {
-  const list = papers.slice(0, 15);
+export async function buildGraph(papers: SessionPaper[], limits: Limits = SESSION_LIMITS): Promise<{ graph: Graph; resolved: Record<string, string> }> {
+  // The same paper in two sessions is one node that belongs to both.
+  const groups = new Map<string, SessionPaper[]>();
+  for (const p of papers) {
+    const key = norm(p.title);
+    groups.set(key, [...(groups.get(key) ?? []), p]);
+  }
+  const copies = [...groups.values()].slice(0, limits.papers);
+  const list = copies.map((g) => g[0]);
   const works = await pool(list, 4, (p) => resolveWork(p));
+  // Papers OpenAlex can't place, or places without their references (common
+  // for arXiv preprints): Semantic Scholar, two at a time (it throttles).
+  const fallback = await pool([...list.keys()], 2, (i) => (works[i]?.referenced_works?.length ? Promise.resolve(null) : s2References(list[i])));
+  const tagged = list.some((p) => p.sessionId);
+  const placesOf = (i: number) =>
+    tagged ? { sessions: [...new Set(copies[i].map((c) => c.sessionId!))], docs: copies[i].map((c) => ({ session: c.sessionId!, doc: c.docId })) } : {};
   const nodes = new Map<string, GraphNode>();
   const edges = new Set<string>();
   const missing: string[] = [];
@@ -191,28 +213,41 @@ export async function buildGraph(papers: SessionPaper[]): Promise<{ graph: Graph
     const w = works[i];
     if (w) {
       // Your own copy's year beats OpenAlex's (which can be a later re-issue).
-      const n = { ...nodeFromOA(w, "session"), docId: p.docId, title: p.title, ...(p.year ? { year: p.year } : {}) };
+      const n = { ...nodeFromOA(w, "session"), docId: p.docId, title: p.title, ...(p.year ? { year: p.year } : {}), ...placesOf(i) };
       n.key = norm(p.title);
       nodes.set(n.key, n);
-      resolved[p.docId] = shortId(w.id);
-      oaRefs.set(n.key, (w.referenced_works ?? []).map(shortId));
+      for (const c of copies[i]) resolved[c.docId] = shortId(w.id);
+      const s = fallback[i];
+      if (s?.refs.length) {
+        refsOf.set(n.key, s.refs.map((r) => r.key));
+        for (const r of s.refs) if (!nodes.has(r.key)) nodes.set(r.key, r);
+      } else oaRefs.set(n.key, (w.referenced_works ?? []).map(shortId));
     } else {
-      const s = await s2References(p);
+      const s = fallback[i];
       if (!s) {
         missing.push(p.title);
         continue;
       }
       const key = norm(p.title);
-      nodes.set(key, { key, title: p.title, year: p.year ?? s.year, authors: [], citations: s.citations, doi: p.doi, arxiv: p.arxiv, url: p.arxiv ? `https://arxiv.org/abs/${p.arxiv}` : p.doi ? `https://doi.org/${p.doi}` : null, kind: "session", docId: p.docId });
+      nodes.set(key, { key, title: p.title, year: p.year ?? s.year, authors: [], citations: s.citations, doi: p.doi, arxiv: p.arxiv, url: p.arxiv ? `https://arxiv.org/abs/${p.arxiv}` : p.doi ? `https://doi.org/${p.doi}` : null, kind: "session", docId: p.docId, ...placesOf(i) });
       refsOf.set(key, s.refs.map((r) => r.key));
       for (const r of s.refs) if (!nodes.has(r.key)) nodes.set(r.key, r);
     }
   }
   const session = [...nodes.values()].filter((n) => n.kind === "session");
+  const sessionsOf = (keys: string[]) => [...new Set(keys.flatMap((k) => nodes.get(k)?.sessions ?? []))];
+  const spans = (keys: string[]) => {
+    const sets = [...new Set(keys)].map((k) => nodes.get(k)?.sessions ?? []);
+    return sets.some((a, i) => sets.some((b, j) => j > i && a.length > 0 && b.length > 0 && !a.some((x) => b.includes(x))));
+  };
+  if (tagged) for (const n of session) n.bridge = (n.sessions?.length ?? 0) >= 2;
 
-  // What they cite: details for every OpenAlex reference, keyed by title.
-  const allRefIds = [...new Set([...oaRefs.values()].flat())];
-  const refWorks = await worksByIds(allRefIds.slice(0, 600));
+  // What they cite: details for the OpenAlex references, keyed by title. The
+  // ones several papers share come first, so a big library keeps them.
+  const refCount = new Map<string, number>();
+  for (const ids of oaRefs.values()) for (const id of new Set(ids)) refCount.set(id, (refCount.get(id) ?? 0) + 1);
+  const allRefIds = [...refCount.entries()].sort((a, b) => b[1] - a[1]).map(([id]) => id);
+  const refWorks = await worksByIds(allRefIds.slice(0, limits.refs));
   const keyOfOA = new Map<string, string>();
   for (const w of refWorks) {
     if (!w.display_name || checkedYear(w) === false) continue;
@@ -235,9 +270,17 @@ export async function buildGraph(papers: SessionPaper[]): Promise<{ graph: Graph
     .map(([key, count]) => ({ key, count, citations: nodes.get(key)?.citations ?? 0 }))
     .sort((a, b) => b.count - a.count || b.citations - a.citations)
     .filter((f, i) => f.count >= 2 || i < Math.max(8, session.length * 3))
-    .slice(0, MAX_FOUNDATIONS);
+    .slice(0, limits.foundations);
   const keep = new Set([...sessionKeys, ...foundations.map((f) => f.key)]);
-  for (const f of foundations) nodes.get(f.key)!.citedByYours = f.count;
+  for (const f of foundations) {
+    const n = nodes.get(f.key)!;
+    n.citedByYours = f.count;
+    if (tagged) {
+      const citing = [...refsOf].filter(([, refs]) => refs.includes(f.key)).map(([from]) => from);
+      n.sessions = sessionsOf(citing);
+      n.bridge = spans(citing);
+    }
+  }
   for (const [from, refs] of refsOf) for (const to of new Set(refs)) if (keep.has(to) && from !== to) edges.add(`${from}\u0000${to}`);
 
   // Links among foundations (what they cite of each other).
@@ -255,7 +298,7 @@ export async function buildGraph(papers: SessionPaper[]): Promise<{ graph: Graph
   const frontier: GraphNode[] = [];
   if (sessionOA.length) {
     const since = `${new Date().getFullYear() - 4}-01-01`;
-    const filter = `cites:${sessionOA.slice(0, 40).join("|")},from_publication_date:${since}`;
+    const filter = `cites:${sessionOA.slice(0, limits.papers).join("|")},from_publication_date:${since}`;
     const [top, recent] = await Promise.all([
       oa<{ results: OAWork[] }>("works", { filter, sort: "cited_by_count:desc", per_page: "50" }),
       oa<{ results: OAWork[] }>("works", { filter, sort: "publication_date:desc", per_page: "25" }),
@@ -272,11 +315,19 @@ export async function buildGraph(papers: SessionPaper[]): Promise<{ graph: Graph
       .filter((c) => c.cites.length && !nodes.has(norm(c.w.display_name!)))
       .sort((a, b) => b.cites.length - a.cites.length || (b.w.cited_by_count ?? 0) - (a.w.cited_by_count ?? 0));
     const minOverlap = sessionOA.length >= 3 ? 2 : 1;
-    const picked = [...candidates.filter((c) => c.cites.length >= minOverlap), ...candidates.filter((c) => c.cites.length < minOverlap)].slice(0, MAX_FRONTIER);
+    const picked = [...candidates.filter((c) => c.cites.length >= minOverlap), ...candidates.filter((c) => c.cites.length < minOverlap)].slice(0, limits.frontier);
     for (const c of picked) {
-      const n = { ...nodeFromOA(c.w, "frontier"), citesYours: c.cites.length };
+      const n = { ...nodeFromOA(c.w, "frontier"), citesYours: c.cites.length, ...(tagged ? { sessions: sessionsOf(c.cites), bridge: spans(c.cites) } : {}) };
       frontier.push(n);
       for (const to of c.cites) edges.add(`${n.key}\u0000${to}`);
+    }
+  }
+
+  // Your papers citing each other across sessions connect those sessions.
+  if (tagged) {
+    for (const e of edges) {
+      const [a, b] = e.split("\u0000").map((k) => nodes.get(k));
+      if (a?.kind === "session" && b?.kind === "session" && !(a.sessions ?? []).some((x) => b.sessions?.includes(x))) a.bridge = b.bridge = true;
     }
   }
 

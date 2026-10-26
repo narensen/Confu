@@ -9,7 +9,8 @@ import { buttonClass, eyebrowClass, ghostButtonClass, inputClass, labelClass } f
 import { isPowerPoint, PPT_CONVERTER_URL } from "@/lib/pdf/office";
 import { needsConversion } from "@/lib/import/drive";
 import { ConvertFiles } from "@/components/import/ConvertFiles";
-import { uploadPdfToSession, validatePdf } from "@/lib/pdf/upload";
+import { handOffPdfs } from "@/lib/pdf/handoff";
+import { validatePdf } from "@/lib/pdf/upload";
 import { createClient } from "@/lib/supabase/client";
 import type { SessionKind } from "@/lib/types";
 
@@ -45,8 +46,6 @@ export const KINDS: { kind: SessionKind; name: string; body: string; example: st
     icon: <path d="M6 2h9l5 5v15H6zM14 2v6h6M9 13h7M9 17h5" />,
   },
 ];
-
-type FileState = { name: string; status: "waiting" | "working" | "done" | "failed"; note?: string };
 
 export function NewSessionLauncher({ className, label = "+ New session" }: { className?: string; label?: string }) {
   const [open, setOpen] = useState(false);
@@ -85,7 +84,6 @@ function NewSessionDialog({ initialKind, onClose }: { initialKind: SessionKind |
   const [examDate, setExamDate] = useState("");
   const [question, setQuestion] = useState("");
   const [files, setFiles] = useState<File[]>([]);
-  const [progress, setProgress] = useState<FileState[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pptPicked, setPptPicked] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -177,30 +175,8 @@ function NewSessionDialog({ initialKind, onClose }: { initialKind: SessionKind |
         .single();
       if (insertError || !session) throw insertError ?? new Error("Couldn't create the session.");
 
-      if (files.length) {
-        const states: FileState[] = files.map((f) => ({ name: f.name, status: "waiting" }));
-        setProgress([...states]);
-        for (const [i, file] of files.entries()) {
-          states[i] = { ...states[i], status: "working" };
-          setProgress([...states]);
-          try {
-            await uploadPdfToSession(supabase, {
-              userId: auth.user.id,
-              sessionId: session.id,
-              file,
-              position: i,
-              onStatus: (note) => {
-                states[i] = { ...states[i], note };
-                setProgress([...states]);
-              },
-            });
-            states[i] = { ...states[i], status: "done", note: undefined };
-          } catch (err) {
-            states[i] = { ...states[i], status: "failed", note: err instanceof Error ? err.message : "Upload failed" };
-          }
-          setProgress([...states]);
-        }
-      }
+      // The session uploads them itself, so the goal can be written meanwhile.
+      handOffPdfs(session.id, files);
       // The dashboard stays mounted (hidden) while the session is open, so
       // close the dialog now, or it's still there, "Creating…", on the way back.
       // Refresh first so the library lists the new session when you return.
@@ -301,57 +277,39 @@ function NewSessionDialog({ initialKind, onClose }: { initialKind: SessionKind |
               ) : (
                 <div>
                   <span className={labelClass}>
-                    PDFs <span className="font-normal text-muted">(optional: add web pages, courses, YouTube lectures, Google Drive or Zotero inside the session)</span>
+                    PDFs <span className="font-normal text-muted">(optional: add web pages, YouTube lectures, Google Drive or Zotero inside the session)</span>
                   </span>
                   <input ref={fileInput} type="file" accept="application/pdf,.pptx,.ppt,.odp,.docx,.doc,.odt,.rtf" multiple className="hidden" onChange={(e) => {
                       addFiles(e.target.files);
                       e.target.value = "";
                     }}
                   />
-                  {progress ? (
-                    <ul className="space-y-1.5 rounded-lg border border-line p-3 text-sm">
-                      {progress.map((p) => (
-                        <li key={p.name} className="flex items-center gap-2">
-                          <span
-                            className={`size-2 shrink-0 rounded-full ${
-                              p.status === "done" ? "bg-ok" : p.status === "failed" ? "bg-danger" : p.status === "working" ? "animate-pulse bg-ink" : "bg-line"
-                            }`}
-                          />
-                          <span className="min-w-0 flex-1 truncate">{p.name}</span>
-                          <span className={`shrink-0 truncate text-xs ${p.status === "failed" ? "text-danger" : "text-muted"}`}>
-                            {p.note ?? (p.status === "done" ? "Ready" : p.status === "waiting" ? "Waiting" : "")}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <div
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        addFiles(e.dataTransfer.files);
-                      }}
-                      className="rounded-lg border border-dashed border-ink/40 bg-paper p-4 text-center"
-                    >
-                      {files.length > 0 && (
-                        <ul className="mb-3 space-y-1 text-left text-sm">
-                          {files.map((f) => (
-                            <li key={f.name + f.size} className="flex items-center gap-2">
-                              <span className="font-mono text-[10px] text-muted">PDF</span>
-                              <span className="min-w-0 flex-1 truncate">{f.name}</span>
-                              <button type="button" onClick={() => setFiles((cur) => cur.filter((c) => c !== f))} className="text-xs text-muted hover:text-danger">
-                                Remove
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                      <button type="button" onClick={() => fileInput.current?.click()} className={`${ghostButtonClass} py-1.5 text-xs`}>
-                        {files.length ? "Add more PDFs" : "Choose PDFs"}
-                      </button>
-                      <p className="mt-2 text-xs text-muted">or drop them here · up to 50 MB each</p>
-                    </div>
-                  )}
+                  <div
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      addFiles(e.dataTransfer.files);
+                    }}
+                    className="rounded-lg border border-dashed border-ink/40 bg-paper p-4 text-center"
+                  >
+                    {files.length > 0 && (
+                      <ul className="mb-3 space-y-1 text-left text-sm">
+                        {files.map((f) => (
+                          <li key={f.name + f.size} className="flex items-center gap-2">
+                            <span className="font-mono text-[10px] text-muted">PDF</span>
+                            <span className="min-w-0 flex-1 truncate">{f.name}</span>
+                            <button type="button" onClick={() => setFiles((cur) => cur.filter((c) => c !== f))} className="text-xs text-muted hover:text-danger">
+                              Remove
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <button type="button" onClick={() => fileInput.current?.click()} className={`${ghostButtonClass} py-1.5 text-xs`}>
+                      {files.length ? "Add more PDFs" : "Choose PDFs"}
+                    </button>
+                    <p className="mt-2 text-xs text-muted">or drop them here · up to 50 MB each. They upload in the session while you write your goal.</p>
+                  </div>
                 </div>
               )}
 
@@ -375,7 +333,7 @@ function NewSessionDialog({ initialKind, onClose }: { initialKind: SessionKind |
               Back
             </button>
             <button form="new-session-form" disabled={busy || !title.trim()} className={`${buttonClass} py-2`}>
-              {busy ? (progress ? "Adding your PDFs…" : "Creating…") : "Create session"}
+              {busy ? "Creating…" : "Create session"}
             </button>
           </div>
         )}

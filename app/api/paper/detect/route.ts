@@ -64,7 +64,7 @@ export async function POST(request: Request) {
   ]);
   const known = new Set((reviews ?? []).map((r) => r.document_id as string));
   const goal = `${plan?.goal_title ?? ""} ${plan?.goal ?? ""}`;
-  const docs = ((docRows ?? []) as Doc[]).filter((d) => !known.has(d.id) && d.page_count > 0 && d.page_count <= PAPER_MAX_PAGES && d.meta?.paper_check !== "yes");
+  const docs = ((docRows ?? []) as Doc[]).filter((d) => !known.has(d.id) && d.page_count > 0 && d.page_count <= PAPER_MAX_PAGES && d.meta?.paper_check !== "yes" && d.meta?.paper_check !== "off");
   if (!docs.length) return Response.json({ papers: [] });
 
   const { data: pages } = await supabase

@@ -10,8 +10,6 @@ import { buildPdfFile } from "@/lib/import/build-pdf";
 
 export type Fetched = { file: File; title: string; sourceUrl: string | null; meta: Record<string, unknown> };
 export type Article = { kind: "article"; url: string; title: string; byline: string; blocks: Block[]; words: number };
-export type CourseLinks = { kind: "links"; url: string; title: string; links: { url: string; title: string; inCourse: boolean }[] };
-export const MAX_COURSE_PAGES = 40;
 
 // The site turned Confu away (a bot check or a login): offer pasting instead.
 export class BlockedError extends Error {}
@@ -32,12 +30,6 @@ export async function fetchArticle(url: string): Promise<Article | { pdf: File }
   return (await res.json()) as Article;
 }
 
-export async function courseLinks(url: string): Promise<CourseLinks> {
-  const res = await fetch("/api/import/web", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ url, mode: "links" }) });
-  if (!res.ok) throw await webError(res);
-  return (await res.json()) as CourseLinks;
-}
-
 export async function webPagePdf(url: string, onStatus: (s: string) => void = () => {}): Promise<Fetched> {
   onStatus("Reading the page…");
   const got = await fetchArticle(url);
@@ -45,41 +37,6 @@ export async function webPagePdf(url: string, onStatus: (s: string) => void = ()
   onStatus(`Typesetting “${got.title}”…`);
   const file = await buildPdfFile({ kind: "Web page", title: got.title, byline: got.byline, sourceUrl: got.url, chapters: [{ title: got.title, blocks: got.blocks }] });
   return { file, title: got.title, sourceUrl: got.url, meta: { source: "web", words: got.words } };
-}
-
-// A course or docs site: the given pages (or the course's own list), one chapter each.
-export async function coursePdf(
-  o: { url: string; title?: string; pages?: { url: string; title: string }[] },
-  onStatus: (s: string) => void = () => {},
-): Promise<Fetched & { failed: string[] }> {
-  let pages = o.pages;
-  let name = o.title;
-  if (!pages?.length) {
-    onStatus("Finding the course's pages…");
-    const found = await courseLinks(o.url);
-    pages = found.links.filter((l) => l.inCourse).slice(0, MAX_COURSE_PAGES);
-    name ||= found.title.split(/\s+[|—–-]\s+/)[0];
-  }
-  const chapters: { title: string; url: string; blocks: Block[] }[] = [];
-  const failed: string[] = [];
-  for (const [i, p] of pages.entries()) {
-    onStatus(`Reading ${i + 1} of ${pages.length}: ${p.title}`);
-    try {
-      const got = await fetchArticle(p.url);
-      if ("pdf" in got) failed.push(`${p.title} (a PDF; add it separately)`);
-      else chapters.push({ title: p.title || got.title, url: got.url, blocks: got.blocks });
-    } catch (err) {
-      failed.push(`${p.title}: ${err instanceof Error ? err.message : "failed"}`);
-    }
-  }
-  if (!chapters.length) throw new Error(`None of the course's pages could be read.\n${failed.join("\n")}`);
-  onStatus(`Typesetting ${chapters.length} pages…`);
-  const title = name || "Course";
-  const host = new URL(o.url).hostname.replace(/^www\./, "");
-  const file = await buildPdfFile({ kind: "Web course", title, byline: `${host} · ${chapters.length} pages`, sourceUrl: o.url, chapters });
-  // The chapter list is kept, so a shared study pack can fetch the same pages.
-  const links = chapters.map((c) => ({ url: c.url, title: c.title }));
-  return { file, title, sourceUrl: o.url, meta: { source: "web_course", pages: chapters.length, links }, failed };
 }
 
 export class TranscriptError extends Error {

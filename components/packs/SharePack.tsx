@@ -20,7 +20,7 @@ export function SharePack({ sessionId, title }: { sessionId: string; title: stri
         type="button"
         onClick={() => setOpen(true)}
         title="Share this session as a study pack"
-        className="flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted transition hover:bg-paper hover:text-ink"
+        className="ml-auto flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted transition hover:bg-paper hover:text-ink"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
           <path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M16 6l-4-4-4 4M12 2v13" />

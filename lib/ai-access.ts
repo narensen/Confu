@@ -70,6 +70,13 @@ export async function proUsedLast24h(supabase: SupabaseClient, userId: string): 
 //   Free        -> the user's own key: the session's if set, else their account key
 // The returned meter records usage (and, for own keys, Groq's limits);
 // call meter.flush() once the route's AI work is done.
+// Pro, or the student's own key: AI that doesn't spend a free-trial prompt.
+// For extras (like the pace estimate) that shouldn't use up the trial.
+export async function hasOwnAccess(supabase: SupabaseClient, userId: string, sessionId: string | null) {
+  if (planOf(await getRole(supabase, userId)) === "pro") return poolSize() > 0;
+  return Boolean(await loadKey(supabase, userId, sessionId));
+}
+
 export async function resolveGroq(
   supabase: SupabaseClient,
   userId: string,

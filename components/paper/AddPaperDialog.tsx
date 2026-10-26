@@ -3,26 +3,45 @@
 import { useEffect, useRef, useState } from "react";
 import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
 import { JSON_HEADERS } from "@/lib/ai-errors";
+import type { GoalHint } from "@/lib/goal-later";
 import type { PaperMeta } from "@/lib/pdf/add-paper";
 
 type Result = { input: string; paper: PaperMeta | null };
+
+const squash = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, "");
+// What to search a goal paper by: its title (a wrong DOI would find the wrong
+// paper for sure), else its arXiv id or DOI, else its name.
+const searchText = (h: GoalHint) => h.title || h.arxiv || h.doi || h.name;
 
 export function AddPaperDialog({
   onClose,
   onAdd,
   onUpload,
   onMoreSources,
+  hints,
+  onHintDone,
+  focus,
+  initialQuery,
 }: {
   onClose: () => void;
   onAdd: (papers: PaperMeta[]) => void;
   onUpload: (files: File[]) => void;
   onMoreSources?: () => void;
+  // Papers from the goal that couldn't be added on their own: shown under the
+  // search box, with what the goal says about them, to look up in one click.
+  hints?: GoalHint[];
+  onHintDone?: (name: string) => void;
+  focus?: string; // a goal paper to look up straight away
+  initialQuery?: string; // a paper to look up straight away (from the plan)
 }) {
-  const [query, setQuery] = useState("");
+  const focused = hints?.find((h) => h.name === focus);
+  const auto = focused ? searchText(focused) : initialQuery?.trim() || "";
+  const [active, setActive] = useState<string | null>(focused?.name ?? null); // the goal paper being looked up
+  const [query, setQuery] = useState(auto);
   const [results, setResults] = useState<Result[] | null>(null);
   const [mode, setMode] = useState<"single" | "batch" | "search">("single");
   const [picked, setPicked] = useState<Set<number>>(new Set());
-  const [pending, setPending] = useState(false);
+  const [pending, setPending] = useState(Boolean(auto));
   const [error, setError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -32,20 +51,27 @@ export function AddPaperDialog({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  async function find() {
-    if (query.trim().length < 2) return;
+  function find(q = query, hint?: GoalHint) {
+    if (q.trim().length < 2) return;
     setPending(true);
     setError(null);
     setResults(null);
+    void search(q, hint);
+  }
+
+  async function search(q: string, hint?: GoalHint) {
     try {
-      const res = await fetch("/api/paper/resolve", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ query }) });
+      const res = await fetch("/api/paper/resolve", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ query: q }) });
       const json = (await res.json()) as { mode?: "single" | "batch" | "search"; results?: Result[]; error?: string };
       if (!res.ok) throw new Error(json.error ?? "Lookup failed.");
       const list = json.results ?? [];
       setMode(json.mode ?? "single");
       setResults(list);
-      // Exact identifiers are pre-selected; search results are picked by hand.
-      setPicked(new Set(json.mode === "search" ? [] : list.flatMap((r, i) => (r.paper ? [i] : []))));
+      // Exact identifiers are pre-selected; search results are picked by hand,
+      // unless one has the exact title searched for (or the goal gave).
+      const want = squash(hint?.title ?? q);
+      const exact = list.findIndex((r) => r.paper && squash(r.paper.title) === want);
+      setPicked(new Set(json.mode === "search" ? (exact >= 0 ? [exact] : []) : list.flatMap((r, i) => (r.paper ? [i] : []))));
       if (!list.some((r) => r.paper)) setError("Nothing found. Check the ID, or try the title.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Lookup failed.");
@@ -54,7 +80,33 @@ export function AddPaperDialog({
     }
   }
 
+  // Opened on a paper (a goal paper's "Add", a plan's paper): search for it right away.
+  useEffect(() => {
+    if (auto) void search(auto, focused);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const chosen = (results ?? []).filter((r, i) => r.paper && picked.has(i)).map((r) => r.paper!);
+
+  function lookUp(hint: GoalHint, q: string) {
+    setActive(hint.name);
+    setQuery(q);
+    find(q, hint);
+  }
+
+  function add() {
+    onAdd(chosen);
+    // Done with the goal paper being looked up, and any whose title was added.
+    const done = (hints ?? []).filter((h) => h.name === active || (h.title && chosen.some((p) => squash(p.title) === squash(h.title!))));
+    for (const h of done) onHintDone?.(h.name);
+    if ((hints?.length ?? 0) > done.length) {
+      // More to find: stay open for the next one.
+      setResults(null);
+      setQuery("");
+      setActive(null);
+      setPicked(new Set());
+    } else onClose();
+  }
 
   return (
     <div className="animate-fade fixed inset-0 z-60 flex items-center justify-center bg-ink/40 p-3 backdrop-blur-[2px] sm:p-6" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
@@ -64,6 +116,12 @@ export function AddPaperDialog({
             <p className={eyebrowClass}>Add papers</p>
             <h2 id="add-paper-title" className="mt-1 font-serif text-2xl">No PDF needed</h2>
             <p className="mt-1 text-sm text-muted">Paste an arXiv ID or link, a DOI, a PDF link, or a title. Several? One per line.</p>
+            {hints && hints.length > 0 && (
+              <p className="mt-3 rounded-lg border border-ink bg-yellow-50 px-3 py-2 text-xs leading-relaxed">
+                <span className="font-medium">Some papers from your goal couldn&apos;t be added on their own.</span> It happens with very new papers, papers named only
+                by a nickname, or a DOI that points somewhere else. Search for them here: click a title or ID below to look it up.
+              </p>
+            )}
           </div>
           <button onClick={onClose} aria-label="Close" className="flex size-8 items-center justify-center rounded-md text-muted hover:bg-paper">
             ✕
@@ -74,7 +132,7 @@ export function AddPaperDialog({
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              void find();
+              find();
             }}
             className="space-y-3"
           >
@@ -86,7 +144,7 @@ export function AddPaperDialog({
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
-                  void find();
+                  find();
                 }
               }}
               placeholder={"2402.03300\nhttps://arxiv.org/abs/1707.06347\n10.1038/nature14236\nLet's Verify Step by Step"}
@@ -100,7 +158,61 @@ export function AddPaperDialog({
             </div>
           </form>
 
+          {hints && hints.length > 0 && (
+            <div className="mt-4">
+              <p className={eyebrowClass}>From your goal: still to find</p>
+              <ul className="mt-2 space-y-1.5">
+                {hints.map((h) => (
+                  <li key={h.name} className={`rounded-lg border px-3 py-2 ${active === h.name ? "border-ink bg-yellow-50" : "border-line"}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="text-sm font-medium">{h.name}</span>
+                      <button type="button" onClick={() => onHintDone?.(h.name)} className="shrink-0 text-xs text-muted hover:text-danger" title="Remove it from your list">
+                        Skip
+                      </button>
+                    </div>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {[
+                        ["Title", h.title || (h.arxiv || h.doi ? "" : h.name)],
+                        ["arXiv", h.arxiv],
+                        ["DOI", h.doi],
+                      ]
+                        .filter((x): x is [string, string] => Boolean(x[1]))
+                        .map(([label, value]) => (
+                          <button
+                            key={label}
+                            type="button"
+                            disabled={pending}
+                            onClick={() => lookUp(h, value)}
+                            title={`Search for ${value}`}
+                            className="max-w-full truncate rounded-md border border-ink/30 bg-panel px-2 py-0.5 text-left text-xs transition hover:border-ink hover:bg-paper"
+                          >
+                            <span className="mr-1 font-mono text-[10px] text-muted uppercase">{label}</span>
+                            {value}
+                          </button>
+                        ))}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {error && <p className="animate-pop mt-4 rounded-lg border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</p>}
+          {/* Google only as a fallback, when the student chooses it. */}
+          {!pending && (results || error) && query.trim().length > 2 && (
+            <p className="mt-3 text-xs leading-relaxed text-muted">
+              Not in OpenAlex or Semantic Scholar?{" "}
+              <a
+                href={`https://scholar.google.com/scholar?q=${encodeURIComponent(query.trim().split("\n")[0])}`}
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-ink underline underline-offset-2"
+              >
+                Search Google Scholar ↗
+              </a>{" "}
+              and paste its arXiv ID, DOI or PDF link here.
+            </p>
+          )}
 
           {results && results.length > 0 && (
             <ul className="mt-5 space-y-2">
@@ -176,14 +288,7 @@ export function AddPaperDialog({
               </button>
             )}
           </div>
-          <button
-            disabled={!chosen.length}
-            onClick={() => {
-              onAdd(chosen);
-              onClose();
-            }}
-            className={`${buttonClass} py-1.5`}
-          >
+          <button disabled={!chosen.length} onClick={add} className={`${buttonClass} py-1.5`}>
             {chosen.length ? `Add ${chosen.length} paper${chosen.length > 1 ? "s" : ""}` : "Add papers"}
           </button>
         </div>

@@ -6,7 +6,9 @@ import { currentTopic, formatMinutes, scheduleStatus, toISODate } from "@/lib/sc
 import { PAPER_MAX_PAGES, type PaperReview } from "@/lib/paper";
 import type { PlanTopic, Resource, SessionDoc, StudyPlan, TopicStatus } from "@/lib/types";
 import { GoalSetup } from "./GoalSetup";
+import { CustomPace } from "./PaceDial";
 import { Markdown } from "./Markdown";
+import { findPaper, isPaperResource } from "@/lib/find-paper";
 import { resourceHref, StartHere } from "./StartHere";
 
 type Props = {
@@ -21,12 +23,26 @@ type Props = {
   onTopicStatus: (t: PlanTopic, s: TopicStatus) => void;
   onTeach: (t: PlanTopic) => void;
   onPlanCreated: () => void;
+  onRepace: (minutesPerDay: number, deadline: string) => Promise<void>;
   draftGoal?: string;
+  setup: PlanSetup;
   // Topics on a research paper link to its three passes.
   papers: Set<string>;
   reviews: Record<string, PaperReview>;
   onOpenPaper: (docId: string) => void;
   onMarkPaper: (docId: string) => void;
+};
+
+// What the goal form needs from the workspace: PDFs on their way in (what's
+// happening now, the titles still to come, a promise for when they're all in)
+// and the plan being queued or built, which outlives the form.
+export type PlanJob = { state: "queued" | "building" } | { state: "failed"; error: string };
+export type PlanSetup = {
+  upload: string | null;
+  incoming: string[];
+  settled: () => Promise<void>;
+  job: PlanJob | null;
+  setJob: (job: PlanJob | null) => void;
 };
 
 function formatDate(iso: string) {
@@ -40,21 +56,24 @@ const RESOURCE_LABEL: Record<Resource["type"], string> = {
   reading: "Reading",
   course: "Course",
   practice: "Practice",
+  paper: "Paper",
 };
 
 export function PlanPanel(props: Props) {
   const { sessionId, docs, plan, topics, activeTopic, onPlanCreated } = props;
   const [editing, setEditing] = useState(false);
   const [showGoal, setShowGoal] = useState(false);
+  const [pacing, setPacing] = useState(false);
 
   if (!plan || editing) {
     return (
       <div className="h-full overflow-y-auto px-6 py-6">
         <GoalSetup
           sessionId={sessionId}
-          docTitles={docs.map((d) => d.title)}
+          docTitles={[...new Set([...docs.map((d) => d.title), ...props.setup.incoming])]}
           existing={plan}
           draftGoal={props.draftGoal}
+          setup={props.setup}
           onCreated={() => {
             setEditing(false);
             onPlanCreated();
@@ -97,7 +116,18 @@ export function PlanPanel(props: Props) {
           <Meta>{status.daysLeft >= 0 ? `${status.daysLeft} days left` : "Past deadline"}</Meta>
           <Meta>{formatMinutes(plan.minutes_per_day)}/day</Meta>
           <Meta className="capitalize">{plan.level}</Meta>
+          <button
+            type="button"
+            onClick={() => setPacing(true)}
+            className="ml-auto flex items-center gap-1.5 rounded-full border border-ink px-2.5 py-0.5 font-medium transition hover:bg-ink hover:text-white"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
+              <path d="M5.6 18.4a9 9 0 1 1 12.8 0M12 12l4-4" />
+            </svg>
+            Custom pace
+          </button>
         </div>
+        {pacing && <CustomPace plan={plan} topics={topics} onApply={props.onRepace} onClose={() => setPacing(false)} />}
 
         <div className="mt-4 flex items-center gap-3">
           <div className="h-2 flex-1 overflow-hidden rounded-full border border-ink bg-panel">
@@ -288,18 +318,31 @@ function TopicRow({
                 <ul className="mt-2 divide-y divide-line rounded-lg border border-line">
                   {t.resources.map((r) => (
                     <li key={r.title}>
-                      <a
-                        href={resourceHref(r)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center gap-3 px-3 py-2 transition hover:bg-paper"
-                      >
-                        <span className="w-16 shrink-0 font-mono text-[10px] uppercase tracking-wider text-muted">{RESOURCE_LABEL[r.type]}</span>
-                        <span className="min-w-0 flex-1 text-sm leading-snug">{r.title}</span>
-                        <span className="text-muted" aria-hidden>
-                          ↗
-                        </span>
-                      </a>
+                      {isPaperResource(r) ? (
+                        // Papers open Confu's paper search (Google is a fallback inside it).
+                        <button
+                          type="button"
+                          onClick={() => findPaper(r.search || r.title)}
+                          className="flex w-full items-center gap-3 px-3 py-2 text-left transition hover:bg-paper"
+                        >
+                          <span className="w-16 shrink-0 font-mono text-[10px] uppercase tracking-wider text-muted">{RESOURCE_LABEL.paper}</span>
+                          <span className="min-w-0 flex-1 text-sm leading-snug">{r.title}</span>
+                          <span className="shrink-0 text-xs font-medium">Find &amp; add</span>
+                        </button>
+                      ) : (
+                        <a
+                          href={resourceHref(r)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center gap-3 px-3 py-2 transition hover:bg-paper"
+                        >
+                          <span className="w-16 shrink-0 font-mono text-[10px] uppercase tracking-wider text-muted">{RESOURCE_LABEL[r.type]}</span>
+                          <span className="min-w-0 flex-1 text-sm leading-snug">{r.title}</span>
+                          <span className="text-muted" aria-hidden>
+                            ↗
+                          </span>
+                        </a>
+                      )}
                     </li>
                   ))}
                 </ul>

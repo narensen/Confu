@@ -41,6 +41,8 @@ export type PaperDocMeta = {
   doi?: string | null;
   arxiv_id?: string | null;
   abstract?: string | null;
+  // "yes" once found to be a paper; "off" when the student said it isn't one.
+  paper_check?: string;
 };
 
 export function docLabel(index: number) {
@@ -64,7 +66,7 @@ export type StudyPlan = {
 
 export type TopicStatus = "not_started" | "in_progress" | "completed";
 
-export type ResourceType = "lecture" | "video" | "reading" | "course" | "practice";
+export type ResourceType = "lecture" | "video" | "reading" | "course" | "practice" | "paper";
 
 // Suggested outside material. We store a search query rather than a URL so a
 // suggestion can never be a dead or invented link.

@@ -24,7 +24,9 @@ export function emptyReview(documentId: string): PaperReview {
 // to this many pages can be marked as one by hand.
 export const PAPER_MAX_PAGES = 80;
 
-export function isPaperDoc(doc: { id: string; meta?: { doi?: string | null; arxiv_id?: string | null } | null }, reviews: Record<string, unknown>) {
+export function isPaperDoc(doc: { id: string; meta?: { doi?: unknown; arxiv_id?: unknown; paper_check?: unknown } | null }, reviews: Record<string, unknown>) {
+  // The student's "Not a paper" wins (its pass notes are kept, in case they change their mind).
+  if (doc.meta?.paper_check === "off") return false;
   return doc.id in reviews || Boolean(doc.meta?.doi || doc.meta?.arxiv_id);
 }
 

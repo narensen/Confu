@@ -16,10 +16,12 @@ const Body = z
     materials: z.string().trim().max(2000).default(""),
     level: z.enum(["beginner", "intermediate", "advanced"]),
     startDate: isoDate,
-    deadline: isoDate,
-    minutesPerDay: z.number().int().min(5).max(600),
+    // Both, or neither (the plan is sized to the goal; the pace is set after).
+    deadline: isoDate.optional(),
+    minutesPerDay: z.number().int().min(5).max(600).optional(),
   })
-  .refine((b) => b.deadline >= b.startDate, { message: "Deadline must be after the start date" });
+  .refine((b) => !b.deadline || b.deadline >= b.startDate, { message: "Deadline must be after the start date" })
+  .refine((b) => Boolean(b.deadline) === Boolean(b.minutesPerDay), { message: "Give both a deadline and hours a day, or neither" });
 
 export async function POST(request: Request) {
   const supabase = await createClient();

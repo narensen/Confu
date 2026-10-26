@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
 import { JSON_HEADERS } from "@/lib/ai-errors";
 import { buildPdfFile } from "@/lib/import/build-pdf";
-import { BlockedError, courseLinks, coursePdf, lecturePdf, MAX_COURSE_PAGES, TranscriptError, webError, webPagePdf, type Article, type CourseLinks } from "@/lib/import/fetch-client";
+import { BlockedError, lecturePdf, TranscriptError, webError, webPagePdf, type Article } from "@/lib/import/fetch-client";
 import { driveConfigured, driveReady, importFromDrive, prepareDrive } from "@/lib/import/drive";
 import {
   connectZotero,
@@ -20,7 +20,7 @@ import {
 import { metaFor, type PaperMeta } from "@/lib/pdf/add-paper";
 import { track } from "@/lib/telemetry";
 
-// "Add material": PDFs, web pages and whole courses, YouTube lectures, Google
+// "Add material": PDFs, web pages, YouTube lectures, Google
 // Drive and Zotero. Everything except papers becomes a PDF (imports are
 // typeset in the browser), so it gets search, highlights, contents, plans,
 // the tutor and spaced review like any upload.
@@ -82,7 +82,7 @@ export function AddMaterialDialog({
             <h2 id="add-material-title" className="mt-1 font-serif text-2xl">
               Study from anything
             </h2>
-            <p className="mt-1 text-sm text-muted">PDFs, web pages and whole courses, lecture videos, Google Drive and Zotero.</p>
+            <p className="mt-1 text-sm text-muted">PDFs, web pages, lecture videos, Google Drive and Zotero.</p>
           </div>
           <button onClick={onClose} disabled={Boolean(busy)} aria-label="Close" className="flex size-8 items-center justify-center rounded-md text-muted hover:bg-paper disabled:opacity-30">
             ✕
@@ -217,10 +217,6 @@ function UploadTab({ onFiles }: { onFiles: (files: File[]) => void }) {
 
 function WebTab({ busy, setBusy, setError, done }: Shared) {
   const [url, setUrl] = useState("");
-  const [mode, setMode] = useState<"page" | "course">("page");
-  const [course, setCourse] = useState<CourseLinks | null>(null);
-  const [picked, setPicked] = useState<Set<string>>(new Set());
-  const [title, setTitle] = useState("");
   const [paste, setPaste] = useState(false);
 
   async function importPage() {
@@ -236,86 +232,30 @@ function WebTab({ busy, setBusy, setError, done }: Shared) {
     }
   }
 
-  async function findPages() {
-    setError(null);
-    setBusy("Finding the course's pages…");
-    try {
-      const found = await courseLinks(url);
-      setCourse(found);
-      setTitle(found.title.split(/\s+[|—–-]\s+/)[0]);
-      setPicked(new Set(found.links.filter((l) => l.inCourse).slice(0, MAX_COURSE_PAGES).map((l) => l.url)));
-    } catch (err) {
-      if (err instanceof BlockedError) setPaste(true);
-      setError(err instanceof Error ? err.message : "Couldn't read that page.");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function importCourse() {
-    if (!course) return;
-    const pages = course.links.filter((l) => picked.has(l.url));
-    setError(null);
-    try {
-      const got = await coursePdf({ url: course.url, title: title.trim() || course.title, pages }, setBusy);
-      if (got.failed.length) setError(`Skipped ${got.failed.length}:\n${got.failed.join("\n")}`);
-      done([got], "web_course");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't import that course.");
-    } finally {
-      setBusy(null);
-    }
-  }
-
   return (
     <div className="space-y-4">
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          if (url.trim().length > 3) void (mode === "page" ? importPage() : findPages());
+          if (url.trim().length > 3) void importPage();
         }}
         className="space-y-3"
       >
         <input
           autoFocus
           value={url}
-          onChange={(e) => {
-            setUrl(e.target.value);
-            setCourse(null);
-          }}
-          placeholder="https://spinningup.openai.com/en/latest/"
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="https://distill.pub/2016/augmented-rnns/"
           aria-label="Web page address"
           className={`${inputClass} font-mono text-[13px]`}
         />
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex rounded-lg border border-ink p-0.5 text-xs">
-            {(
-              [
-                ["page", "This page"],
-                ["course", "Whole course or docs"],
-              ] as const
-            ).map(([m, label]) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => {
-                  setMode(m);
-                  setCourse(null);
-                }}
-                className={`rounded-md px-2.5 py-1 font-medium transition ${mode === m ? "bg-ink text-white" : "text-muted hover:text-ink"}`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+        <div className="flex justify-end">
           <button className={`${buttonClass} py-1.5`} disabled={Boolean(busy) || url.trim().length < 4}>
-            {mode === "page" ? "Import page" : "Find pages"}
+            Import page
           </button>
         </div>
         <p className="text-xs leading-relaxed text-muted">
-          {mode === "page"
-            ? "The article's text, headings, lists, code and maths become a clean PDF. A link to a PDF imports the PDF itself."
-            : "Paste the course's first page. Confu lists its pages from the site's menu; pick which to import as one document with a chapter per page."}{" "}
+          The article&apos;s text, headings, lists, code and maths become a clean PDF. A link to a PDF imports the PDF itself.{" "}
           {!paste && (
             <button type="button" onClick={() => setPaste(true)} className="underline underline-offset-2 hover:text-ink">
               Site won&apos;t load? Paste the page instead.
@@ -325,58 +265,6 @@ function WebTab({ busy, setBusy, setError, done }: Shared) {
       </form>
 
       {paste && <PastePage url={url} busy={busy} setBusy={setBusy} setError={setError} done={done} />}
-
-      {course && (
-        <div className="animate-enter space-y-3 rounded-xl border border-line p-3">
-          <label className="block">
-            <span className="mb-1 block text-xs font-medium">Document title</span>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} className={`${inputClass} py-1.5`} />
-          </label>
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-muted">
-              {picked.size} of {course.links.length} pages{picked.size > MAX_COURSE_PAGES ? ` · up to ${MAX_COURSE_PAGES} at a time` : ""}
-            </span>
-            <span className="flex gap-3">
-              <button type="button" className="underline-offset-2 hover:underline" onClick={() => setPicked(new Set(course.links.slice(0, MAX_COURSE_PAGES).map((l) => l.url)))}>
-                Select all
-              </button>
-              <button type="button" className="underline-offset-2 hover:underline" onClick={() => setPicked(new Set())}>
-                None
-              </button>
-            </span>
-          </div>
-          <ul className="max-h-64 space-y-0.5 overflow-y-auto">
-            {course.links.map((l) => (
-              <li key={l.url}>
-                <label className="flex cursor-pointer items-start gap-2.5 rounded-md px-2 py-1.5 text-sm hover:bg-paper">
-                  <input
-                    type="checkbox"
-                    checked={picked.has(l.url)}
-                    onChange={() =>
-                      setPicked((s) => {
-                        const next = new Set(s);
-                        if (next.has(l.url)) next.delete(l.url);
-                        else if (next.size < MAX_COURSE_PAGES) next.add(l.url);
-                        return next;
-                      })
-                    }
-                    className="mt-0.5 size-4 shrink-0 accent-[var(--ink)]"
-                  />
-                  <span className="min-w-0">
-                    <span className="block leading-snug">{l.title}</span>
-                    <span className="block truncate font-mono text-[10px] text-muted">{l.url.replace(/^https?:\/\//, "")}</span>
-                  </span>
-                </label>
-              </li>
-            ))}
-          </ul>
-          <div className="flex justify-end">
-            <button type="button" onClick={importCourse} disabled={Boolean(busy) || !picked.size} className={`${buttonClass} py-1.5`}>
-              Import {picked.size} page{picked.size === 1 ? "" : "s"} as one document
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

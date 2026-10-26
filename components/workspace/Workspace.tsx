@@ -11,7 +11,10 @@ import { emptyReview, isPaperDoc, type PaperReview } from "@/lib/paper";
 import type { Attempt } from "@/lib/exam";
 import { useExamPractice } from "@/components/exam/useExamPractice";
 import { addPaperFromMeta, type PaperMeta } from "@/lib/pdf/add-paper";
-import { attachPdfToDocument, uploadPdfToSession } from "@/lib/pdf/upload";
+import { FIND_PAPER_EVENT } from "@/lib/find-paper";
+import { closeTab, isOpenIn, keepTabs, openTab, useOpenTabs } from "@/lib/open-tabs";
+import { peekHandoff, takeHandoff } from "@/lib/pdf/handoff";
+import { attachPdfToDocument, titleFromFile, uploadPdfToSession } from "@/lib/pdf/upload";
 import { AddPaperDialog } from "@/components/paper/AddPaperDialog";
 import { AddMaterialDialog, type ImportedFile } from "@/components/import/AddMaterialDialog";
 import { ConvertFiles } from "@/components/import/ConvertFiles";
@@ -22,8 +25,10 @@ import { PackSources, PendingSourceCard, pendingSource } from "@/components/pack
 import { LiteratureMap } from "@/components/paper/LiteratureMap";
 import { exportBibtex, PaperTools } from "@/components/paper/PaperTools";
 import type { PaperTool } from "@/components/paper/PassesPanel";
-import { GoalPapers } from "@/components/paper/GoalPapers";
-import { currentTopic } from "@/lib/schedule";
+import { addLater, removeLater, useLater, type GoalHint, type GoalLink, type GoalPaper } from "@/lib/goal-later";
+import { lecturePdf, webPagePdf } from "@/lib/import/fetch-client";
+import { assignDueDates, currentTopic, toISODate } from "@/lib/schedule";
+import { track } from "@/lib/telemetry";
 import { createClient } from "@/lib/supabase/client";
 import { displayUserTurn } from "@/lib/tutor/format";
 import {
@@ -42,6 +47,7 @@ import {
 import type { HighlightColor } from "@/lib/highlights";
 import { DocTabs } from "./DocTabs";
 import { KeyGate } from "./KeyGate";
+import type { PlanJob } from "./PlanPanel";
 import { TutorPanel, type Tab } from "./TutorPanel";
 import { ask, toast } from "@/components/dialogs";
 
@@ -159,7 +165,16 @@ export function Workspace({
     setMobileView("tutor");
   }, []);
 
-  const activeDoc = docs.find((d) => d.id === activeDocId) ?? docs[0] ?? null;
+  // The tabs above the viewer: every PDF the student hasn't closed.
+  // PDFs are added to Files without opening a tab; opening one does.
+  const tabs = useOpenTabs(session.id);
+  const openDocs = useMemo(() => docs.filter((d) => isOpenIn(tabs, d.id)), [docs, tabs]);
+  const openIds = useMemo(() => new Set(openDocs.map((d) => d.id)), [openDocs]);
+  const docIds = useRef<string[]>([]);
+  useEffect(() => {
+    docIds.current = docs.map((d) => d.id);
+  }, [docs]);
+  const activeDoc = openDocs.find((d) => d.id === activeDocId) ?? openDocs[0] ?? null;
   const page = activeDoc?.lastPage ?? 1;
   const multi = docs.length > 1;
   const labelOf = useCallback((id: string | null | undefined) => docs.find((d) => d.id === id)?.label, [docs]);
@@ -168,10 +183,15 @@ export function Workspace({
 
   // Switching PDFs remounts the viewer (it's keyed by PDF) at that PDF's last
   // page; clear any pending jump so it isn't replayed into the new PDF.
-  const selectDoc = useCallback((docId: string) => {
-    setGoTo(null);
-    setActiveDocId(docId);
-  }, []);
+  // Showing a PDF (from its tab, Files, the plan, a citation…) opens its tab again if it was closed.
+  const selectDoc = useCallback(
+    (docId: string) => {
+      openTab(session.id, docId, docIds.current);
+      setGoTo(null);
+      setActiveDocId(docId);
+    },
+    [session.id],
+  );
 
   // Jump to a page, switching PDFs if needed.
   const jumpTo = useCallback(
@@ -477,12 +497,15 @@ export function Workspace({
         const { data: auth } = await supabase.auth.getUser();
         if (!auth.user) throw new Error("Your session expired. Sign in again.");
         let position = Math.max(-1, ...docs.map((d) => d.position)) + 1;
+        // New PDFs go to Files; the tabs open now stay the only ones open.
+        keepTabs(session.id, docs.map((d) => d.id));
         for (const add of adders) {
           const doc = await loadDoc(await add(auth.user.id, position++));
-          if (doc) added.push(doc);
+          if (!doc) continue;
+          added.push(doc);
+          // Each is listed as soon as it's indexed, not after the whole batch.
+          setDocs((list) => relabel([...list, doc]));
         }
-        setDocs((list) => relabel([...list, ...added]));
-        if (added.length) selectDoc(added[added.length - 1].id);
       } catch (err) {
         toast(err instanceof Error ? err.message : "Couldn't add that.", "error");
       } finally {
@@ -490,8 +513,15 @@ export function Workspace({
       }
       return added;
     },
-    [docs, loadDoc, selectDoc, supabase, uploadStatus],
+    [docs, loadDoc, session.id, supabase, uploadStatus],
   );
+
+  // Where a newly added PDF went: Files, not a tab.
+  const addedToFiles = useCallback((added: SessionDoc[]) => {
+    if (!added.length) return added;
+    toast(`${added.length === 1 ? `“${added[0].title.slice(0, 60)}” is` : `${added.length} PDFs are`} in Files. Open ${added.length === 1 ? "it" : "one"} there to read.`);
+    return added;
+  }, []);
 
   // Slides and Word files are turned into PDFs through Google first (ConvertFiles).
   const [converting, setConverting] = useState<File[] | null>(null);
@@ -501,18 +531,51 @@ export function Workspace({
       if (office.length) setConverting(office);
       const pdfs = files.filter((f) => !needsConversion(f));
       if (!pdfs.length) return [];
-      return addDocs(
-        pdfs.map((file) => async (userId, position) => {
-          const { id, ocrNote } = await uploadPdfToSession(supabase, { userId, sessionId: session.id, file, position, onStatus: setUploadStatus });
-          if (ocrNote) toast(ocrNote);
-          return id;
-        }),
+      return addedToFiles(
+        await addDocs(
+          pdfs.map((file) => async (userId, position) => {
+            const { id, ocrNote } = await uploadPdfToSession(supabase, { userId, sessionId: session.id, file, position, onStatus: setUploadStatus });
+            if (ocrNote) toast(ocrNote);
+            return id;
+          }),
+        ),
       );
     },
-    [addDocs, session.id, supabase],
+    [addDocs, addedToFiles, session.id, supabase],
   );
 
-  // Imported material (web pages, courses, lectures, Drive, Zotero PDFs):
+  // PDFs picked when the session was created upload here, so the goal can be
+  // written (and the plan queued) while they're read and indexed.
+  const [incoming, setIncoming] = useState(() => peekHandoff(session.id).map(titleFromFile));
+  useEffect(() => {
+    const files = takeHandoff(session.id);
+    if (files.length) void addPdfs(files).finally(() => setIncoming([]));
+  }, [addPdfs, session.id]);
+
+  const uploading = uploadStatus ?? (incoming.length ? "Getting your PDFs ready…" : null);
+
+  // A plan asked for mid-upload waits for the PDFs, so it can use them. The
+  // wait lives here, not in the goal form, so switching tabs doesn't drop it.
+  const uploadWaiters = useRef<(() => void)[]>([]);
+  const stillUploading = useRef(Boolean(uploading));
+  useEffect(() => {
+    stillUploading.current = Boolean(uploading);
+    if (uploading) {
+      // Closing the tab mid-upload loses the rest of the PDFs.
+      const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+      window.addEventListener("beforeunload", warn);
+      return () => window.removeEventListener("beforeunload", warn);
+    }
+    for (const done of uploadWaiters.current.splice(0)) done();
+  }, [uploading]);
+  const uploadsSettled = useCallback(
+    () => new Promise<void>((resolve) => (stillUploading.current ? uploadWaiters.current.push(resolve) : resolve())),
+    [],
+  );
+  // A plan being queued or built: kept here, so leaving the Plan tab doesn't lose it.
+  const [planJob, setPlanJob] = useState<PlanJob | null>(null);
+
+  // Imported material (web pages, lectures, Drive, Zotero PDFs):
   // PDFs built or downloaded in the browser, with their title and source.
   const addImported = useCallback(
     (items: ImportedFile[]) =>
@@ -597,6 +660,20 @@ export function Workspace({
     [activeDoc?.id, docs],
   );
 
+  // Closing a tab keeps the PDF (it's in Files); the next open tab shows.
+  const closeDocTab = useCallback(
+    (doc: SessionDoc) => {
+      closeTab(session.id, doc.id, docIds.current);
+      if (activeDoc?.id === doc.id) {
+        const i = openDocs.findIndex((d) => d.id === doc.id);
+        const next = openDocs[i + 1] ?? openDocs[i - 1] ?? null;
+        setGoTo(null);
+        setActiveDocId(next?.id ?? null);
+      }
+    },
+    [activeDoc?.id, openDocs, session.id],
+  );
+
   const setTopicStatus = useCallback(
     async (topic: PlanTopic, status: TopicStatus) => {
       const patch = { status, completed_at: status === "completed" ? new Date().toISOString() : null };
@@ -618,6 +695,39 @@ export function Workspace({
       if (firstInPdf?.page_start) jumpTo(firstInPdf.page_start, firstInPdf.document_id);
     }
   }, [jumpTo, session.id, supabase]);
+
+  // Custom pace: a new daily time and deadline. The plan stays; the topics
+  // still to do are spread again from today to the new deadline.
+  const repace = useCallback(
+    async (minutesPerDay: number, deadline: string) => {
+      if (!plan) return;
+      const left = topics.filter((t) => t.status !== "completed");
+      const dates = assignDueDates(
+        left.map((t) => t.est_minutes),
+        toISODate(new Date()),
+        deadline,
+      );
+      const due = new Map(left.map((t, i) => [t.id, dates[i]]));
+      const results = await Promise.all([
+        supabase.from("study_plans").update({ deadline, minutes_per_day: minutesPerDay }).eq("id", plan.id),
+        ...left.map((t) => supabase.from("plan_topics").update({ due_date: due.get(t.id) }).eq("id", t.id)),
+      ]);
+      if (results.some((r) => r.error)) throw new Error("Couldn't save the new pace. Check your connection and try again.");
+      setPlan({ ...plan, deadline, minutes_per_day: minutesPerDay });
+      setTopics((list) => list.map((t) => (due.has(t.id) ? { ...t, due_date: due.get(t.id)! } : t)));
+      track("plan.repace", { minutesPerDay, topics: left.length });
+      toast("New pace set: your topics are rescheduled.");
+    },
+    [plan, supabase, topics],
+  );
+
+  // A plan finishes after its uploads, maybe long after it was asked for:
+  // reload with the latest documents, not the ones from back then.
+  const reloadPlanRef = useRef(reloadPlan);
+  useEffect(() => {
+    reloadPlanRef.current = reloadPlan;
+  }, [reloadPlan]);
+  const onPlanCreated = useCallback(() => reloadPlanRef.current(), []);
 
   const startDrag = (e: React.PointerEvent) => {
     const root = rootRef.current;
@@ -677,7 +787,33 @@ export function Workspace({
     () => new Set(isExam ? [] : docs.filter((d) => isPaper || isPaperDoc(d, storedReviews)).map((d) => d.id)),
     [docs, isExam, isPaper, storedReviews],
   );
-  const markPaper = useCallback((docId: string) => updateReview(docId, {}), [updateReview]);
+  // A study session's PDF read as a paper, or not. "Not a paper" keeps its
+  // pass notes (marking it again brings them back), and detection leaves it be.
+  const setPaperCheck = useCallback(
+    (docId: string, value: "yes" | "off") => {
+      const doc = docs.find((d) => d.id === docId);
+      if (!doc) return;
+      const meta = { ...(doc.meta ?? {}), paper_check: value };
+      setDocs((list) => list.map((d) => (d.id === docId ? { ...d, meta } : d)));
+      void supabase.from("documents").update({ meta }).eq("id", docId);
+    },
+    [docs, supabase],
+  );
+  const markPaper = useCallback(
+    (docId: string) => {
+      if (docs.find((d) => d.id === docId)?.meta?.paper_check === "off") setPaperCheck(docId, "yes");
+      updateReview(docId, {});
+    },
+    [docs, setPaperCheck, updateReview],
+  );
+  const unmarkPaper = useCallback(
+    (docId: string) => {
+      setPaperCheck(docId, "off");
+      if (tab === "passes" && paperIds.size <= 1) setTab(plan ? "plan" : "chat");
+      toast("Not read as a paper any more. Its pass notes are kept, if you change your mind.");
+    },
+    [paperIds, plan, setPaperCheck, tab],
+  );
 
   // Study sessions: spot the PDFs that are research papers (Semantic Scholar,
   // OpenAlex and the goal; see /api/paper/detect) whenever PDFs or the goal change.
@@ -744,51 +880,107 @@ export function Workspace({
   const addPaperMetas = useCallback(
     async (papers: PaperMeta[]) => {
       const added = await addPapers(papers);
-      if (isPaper || !added.length) return;
+      if (isPaper || !added.length) return added;
       for (const d of added) markPaper(d.id);
       setTab("passes");
+      return added;
     },
     [addPapers, isPaper, markPaper],
   );
 
-  // The papers a study goal names, offered once per goal (see /api/paper/from-goal).
-  const [goalPapers, setGoalPapers] = useState<{ papers: PaperMeta[]; unresolved: string[] } | null>(null);
-  const goalKey = !isPaper && !isExam && plan ? `confu:goal-papers:${session.id}:${hashText(`${plan.goal_title}\n${plan.goal}`)}` : null;
+  // What the goal names that isn't in the session yet: the "To add" tab.
+  const later = useLater(session.id);
+  // The paper search listing those papers (and, from "Add", looking one up).
+  const [goalSearch, setGoalSearch] = useState<{ focus?: string } | null>(null);
+  const openGoalSearch = useCallback((focus?: string) => {
+    setGoalSearch({ focus });
+    setAddPaperOpen(true);
+  }, []);
+  // A paper named in the plan ("Find & add"): the paper search, on its title.
+  const [paperQuery, setPaperQuery] = useState<string | null>(null);
+  useEffect(() => {
+    const onFind = (e: Event) => {
+      setGoalSearch(null);
+      setPaperQuery((e as CustomEvent<{ query: string }>).detail.query);
+      setAddPaperOpen(true);
+    };
+    window.addEventListener(FIND_PAPER_EVENT, onFind);
+    return () => window.removeEventListener(FIND_PAPER_EVENT, onFind);
+  }, []);
+
+  // Lectures and pages linked in the goal, read into PDFs one by one. Returns
+  // the ones brought in and the ones that failed.
+  const importLinks = useCallback(
+    async (links: GoalLink[]) => {
+      const done: string[] = [];
+      const failed: GoalLink[] = [];
+      for (const l of links) {
+        try {
+          const got = l.kind === "youtube" ? await lecturePdf({ url: l.url }, setUploadStatus) : await webPagePdf(l.url, setUploadStatus);
+          setUploadStatus(null);
+          if ((await addImported([got])).length) done.push(l.url);
+          else failed.push(l);
+        } catch {
+          failed.push(l);
+        }
+      }
+      setUploadStatus(null);
+      return { done, failed };
+    },
+    [addImported],
+  );
+
+  // The papers and links a study goal names, handled once per goal (see
+  // /api/paper/from-goal). Papers found for sure and YouTube lectures are
+  // added straight away; papers that couldn't be found open the paper search
+  // (and, like other links, wait in "To add" until they're dealt with).
+  const goalKey = !isPaper && !isExam && plan ? `confu:goal-papers2:${session.id}:${hashText(`${plan.goal_title}\n${plan.goal}\n${plan.materials}`)}` : null;
+  const goalActions = useRef({ addPaperMetas, importLinks, uploadsSettled, openGoalSearch });
+  useEffect(() => {
+    goalActions.current = { addPaperMetas, importLinks, uploadsSettled, openGoalSearch };
+  });
   useEffect(() => {
     if (!goalKey || locked) return;
-    let saved: string | null = null;
     try {
-      saved = localStorage.getItem(goalKey);
+      if (localStorage.getItem(goalKey) === "done") return;
     } catch {}
-    if (saved === "done") return;
-    if (saved) {
-      try {
-        setGoalPapers(JSON.parse(saved));
-        return;
-      } catch {}
-    }
     let live = true;
     void (async () => {
       const res = await fetch("/api/paper/from-goal", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ sessionId: session.id }) }).catch(() => null);
       notifyAiUsed();
-      if (!res?.ok) return;
-      const found = (await res.json()) as { papers: PaperMeta[]; unresolved: string[] };
-      const any = found.papers.length || found.unresolved.length;
+      if (!res?.ok || !live) return;
       try {
-        localStorage.setItem(goalKey, any ? JSON.stringify(found) : "done");
+        localStorage.setItem(goalKey, "done");
       } catch {}
-      if (live && any) setGoalPapers(found);
+      const found = (await res.json()) as { papers: GoalPaper[]; links: GoalLink[] };
+      const hint = (p: GoalPaper): GoalHint => ({ name: p.name, title: p.title, doi: p.doi, arxiv: p.arxiv });
+      const sure = found.papers.filter((p) => p.paper);
+      const unsure = found.papers.filter((p) => !p.paper).map(hint);
+      const lectures = found.links.filter((l) => l.kind === "youtube");
+      addLater(session.id, { papers: unsure, links: found.links.filter((l) => l.kind !== "youtube") });
+
+      const act = goalActions.current;
+      await act.uploadsSettled();
+      const squash = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, "");
+      const notes: string[] = [];
+      if (sure.length) {
+        const added = await act.addPaperMetas(sure.map((p) => p.paper!));
+        const missed = sure.filter((p) => !added.some((d) => squash(d.title) === squash(p.paper!.title)));
+        if (missed.length) addLater(session.id, { papers: missed.map(hint) });
+        if (added.length) notes.push(`${added.length} ${added.length === 1 ? "paper" : "papers"}`);
+      }
+      if (lectures.length) {
+        const { done, failed } = await act.importLinks(lectures);
+        if (failed.length) addLater(session.id, { links: failed });
+        if (done.length) notes.push(`${done.length} ${done.length === 1 ? "lecture" : "lectures"}`);
+      }
+      if (notes.length) toast(`Added ${notes.join(" and ")} from your goal.`);
+      if (unsure.length) act.openGoalSearch();
     })();
     return () => {
       live = false;
     };
   }, [goalKey, locked, session.id]);
-  const closeGoalPapers = useCallback(() => {
-    setGoalPapers(null);
-    try {
-      if (goalKey) localStorage.setItem(goalKey, "done");
-    } catch {}
-  }, [goalKey]);
 
   const saveExamDate = useCallback(
     (date: string | null) => {
@@ -836,8 +1028,50 @@ export function Workspace({
       onTopicStatus={setTopicStatus}
       onDeleteHighlight={deleteHighlight}
       onUpdateHighlight={updateHighlight}
-      onPlanCreated={reloadPlan}
+      onPlanCreated={onPlanCreated}
+      onRepace={repace}
+      files={{
+        docs,
+        activeId: activeDoc?.id ?? null,
+        open: openIds,
+        busy: Boolean(uploadStatus),
+        addLabel: isPaper ? "+ Add paper" : "+ Add material",
+        onAdd: isPaper ? () => setAddPaperOpen(true) : () => setAddMaterialOpen(true),
+        // Shows it, and stays on Files (no jump to a paper's passes).
+        onOpen: (docId) => {
+          selectDoc(docId);
+          setMobileView("pdf");
+        },
+        onCloseTab: closeDocTab,
+        onDelete: removePdf,
+        ...(isPaper || isExam
+          ? {}
+          : {
+              paperIds,
+              onPaper: (docId: string) => markPaper(docId),
+              onNotPaper: unmarkPaper,
+            }),
+      }}
       draftGoal={session.draftGoal ?? ""}
+      setup={{ upload: uploading, incoming, settled: uploadsSettled, job: planJob, setJob: setPlanJob }}
+      toAdd={
+        isPaper || isExam
+          ? undefined
+          : {
+              later,
+              busy: Boolean(uploadStatus),
+              onFind: openGoalSearch,
+              onAddPapers: () => setAddPaperOpen(true),
+              onAddMaterial: () => setAddMaterialOpen(true),
+              onRemovePaper: (name) => removeLater(session.id, { papers: [name] }),
+              onImport: async (links) => {
+                const { done, failed } = await importLinks(links);
+                removeLater(session.id, { links: done });
+                if (failed.length) toast(`Couldn't bring in:\n${failed.map((l) => l.url).join("\n")}\n\nThey stay in To add; try them from + Add material too.`, "error");
+              },
+              onRemoveLink: (url) => removeLater(session.id, { links: [url] }),
+            }
+      }
       onClose={focusMode ? () => setDrawerOpen(false) : undefined}
       keyInfo={needsKey ? keyInfo : null}
       kind={session.kind}
@@ -859,25 +1093,7 @@ export function Workspace({
       exam={{ practice, examDate, onExamDate: saveExamDate }}
     />
   );
-  const panel =
-    goalPapers && !locked ? (
-      <div className="flex h-full min-h-0 flex-col">
-        <GoalPapers
-          key={goalKey}
-          papers={goalPapers.papers}
-          unresolved={goalPapers.unresolved}
-          busy={Boolean(uploadStatus)}
-          onAdd={(papers) => {
-            closeGoalPapers();
-            void addPaperMetas(papers);
-          }}
-          onDismiss={closeGoalPapers}
-        />
-        <div className="min-h-0 flex-1">{tutor}</div>
-      </div>
-    ) : (
-      tutor
-    );
+  const panel = tutor;
 
   return (
     <div ref={rootRef} className={`flex min-h-0 flex-1 bg-paper ${focusMode ? "fixed inset-0 z-40" : "relative"}`}>
@@ -917,9 +1133,22 @@ export function Workspace({
           uploadStatus={uploadStatus}
           onSelect={openDocTab}
           onAdd={addPdfs}
-          onRemove={removePdf}
+          onClose={closeDocTab}
           onAddClick={isPaper ? () => setAddPaperOpen(true) : () => setAddMaterialOpen(true)}
           addLabel={isPaper ? "+ Add paper" : "+ Add material"}
+          paperIds={isPaper || isExam ? undefined : paperIds}
+          onNotPaper={isPaper || isExam ? undefined : unmarkPaper}
+          onPaper={
+            isPaper || isExam
+              ? undefined
+              : (docId) => {
+                  // Mark it (keeps any notes), then open its passes beside the PDF.
+                  if (!paperIds.has(docId)) markPaper(docId);
+                  setTab("passes");
+                  setDrawerOpen(true);
+                  setMobileView("tutor");
+                }
+          }
         />
         <div className="relative min-h-0 flex-1">
           {activeDoc && !activeDoc.hasPdf && pendingSource(activeDoc) && pendingSource(activeDoc)!.kind !== "paper" ? (
@@ -973,13 +1202,29 @@ export function Workspace({
                 ) : null
               }
             />
+          ) : docs.length ? (
+            <div className="animate-enter flex h-full flex-col items-center justify-center gap-2 bg-viewer px-6 text-center">
+              <p className="font-serif text-2xl">Nothing open</p>
+              <p className="max-w-sm text-sm text-muted">Your PDFs are in Files. Open one there to read it here.</p>
+              <button
+                type="button"
+                onClick={() => {
+                  setTab("files");
+                  setDrawerOpen(true);
+                  setMobileView("tutor");
+                }}
+                className="mt-3 rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-white transition hover:-translate-y-px hover:shadow-hard-sm"
+              >
+                Open Files
+              </button>
+            </div>
           ) : (
             <div className="animate-enter flex h-full flex-col items-center justify-center gap-2 bg-viewer px-6 text-center">
               <p className="font-serif text-2xl">{isPaper ? "No papers yet" : "No PDFs in this session"}</p>
               <p className="max-w-sm text-sm text-muted">
                 {isPaper
                   ? "Add papers by arXiv ID, DOI, link or title. No PDF needed."
-                  : "Use “+ Add material” above: PDFs, web pages and courses, YouTube lectures, Google Drive or Zotero. The tutor still works from your goal meanwhile."}
+                  : "Use “+ Add material” above: PDFs, web pages, YouTube lectures, Google Drive or Zotero. The tutor still works from your goal meanwhile."}
               </p>
               {isPaper && (
                 <div className="mt-3 flex flex-wrap justify-center gap-2">
@@ -1005,7 +1250,16 @@ export function Workspace({
       )}
       {addPaperOpen && (
         <AddPaperDialog
-          onClose={() => setAddPaperOpen(false)}
+          key={paperQuery ?? goalSearch?.focus ?? (goalSearch ? "goal" : "plain")}
+          onClose={() => {
+            setAddPaperOpen(false);
+            setGoalSearch(null);
+            setPaperQuery(null);
+          }}
+          initialQuery={paperQuery ?? undefined}
+          hints={goalSearch ? later.papers : undefined}
+          focus={goalSearch?.focus}
+          onHintDone={(name) => removeLater(session.id, { papers: [name] })}
           onAdd={(papers) => void addPaperMetas(papers)}
           onUpload={(files) => void addPaperPdfs(files)}
           onMoreSources={() => {
@@ -1016,9 +1270,8 @@ export function Workspace({
       )}
       {mapOpen && (
         <LiteratureMap
-          sessionId={session.id}
-          papers={paperDocs}
-          onOpenDoc={openDocTab}
+          scope={{ kind: "session", sessionId: session.id, papers: paperDocs }}
+          onOpenDoc={(docId) => openDocTab(docId)}
           onAdd={async (paper) => {
             await addPaperMetas([paper]);
           }}
@@ -1041,7 +1294,7 @@ export function Workspace({
           initialTab={isPaper ? "zotero" : "upload"}
           onClose={() => setAddMaterialOpen(false)}
           onFiles={(files) => void addPdfs(files)}
-          onImported={(items) => void addImported(items)}
+          onImported={(items) => void addImported(items).then(addedToFiles)}
           onPapers={(papers) => void addPaperMetas(papers)}
           onFindPaper={
             isPaper

@@ -26,11 +26,11 @@ import {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const URL_TTL = 60 * 60 * 6;
 
-export default function SessionPage({ params }: PageProps<"/session/[id]">) {
+export default function SessionPage({ params, searchParams }: PageProps<"/session/[id]">) {
   return (
     <div className="flex h-dvh flex-col overflow-hidden">
       <Suspense fallback={<WorkspaceSkeleton />}>
-        <SessionWorkspace params={params} />
+        <SessionWorkspace params={params} searchParams={searchParams} />
       </Suspense>
     </div>
   );
@@ -54,8 +54,10 @@ function WorkspaceSkeleton() {
   );
 }
 
-async function SessionWorkspace({ params }: { params: Promise<{ id: string }> }) {
+async function SessionWorkspace({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: PageProps<"/session/[id]">["searchParams"] }) {
   const { id } = await params;
+  // ?doc=…: open that PDF (links from the literature map).
+  const wanted = (await searchParams).doc;
   if (!UUID.test(id)) notFound();
   const user = await requireUser();
   const supabase = await createClient();
@@ -155,7 +157,7 @@ async function SessionWorkspace({ params }: { params: Promise<{ id: string }> })
           draftGoal: (session.data as { draft_goal?: string }).draft_goal ?? "",
         }}
         initialDocs={sessionDocs}
-        initialDocId={sessionDocs.find((d) => d.id === recent?.id)?.id ?? sessionDocs[0]?.id ?? null}
+        initialDocId={sessionDocs.find((d) => d.id === wanted)?.id ?? sessionDocs.find((d) => d.id === recent?.id)?.id ?? sessionDocs[0]?.id ?? null}
         initialPlan={plan.data as StudyPlan | null}
         initialTopics={(topics.data ?? []) as PlanTopic[]}
         initialMemory={m ? { ...EMPTY_MEMORY, ...m } : EMPTY_MEMORY}

@@ -21,8 +21,6 @@ export type PackSource = {
   year?: number | null;
   venue?: string | null;
   abstract?: string | null;
-  // Courses: the chapter pages to fetch
-  links?: { url: string; title: string }[];
 };
 
 export type PackTopic = {
@@ -100,9 +98,8 @@ export function sourceOf(doc: { title: string; page_count: number; source_url: s
   }
   switch (m.source) {
     case "web":
+    case "web_course": // whole-course imports are retired: shared as their first page
       return doc.source_url ? { ...base, kind: "web" } : { ...base, kind: "file" };
-    case "web_course":
-      return doc.source_url ? { ...base, kind: "web_course", links: Array.isArray(m.links) ? (m.links as PackSource["links"])!.slice(0, 40) : undefined } : { ...base, kind: "file" };
     case "youtube":
       return doc.source_url ? { ...base, kind: "youtube" } : { ...base, kind: "file" };
     case "sample":

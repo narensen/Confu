@@ -1,5 +1,6 @@
 "use client";
 
+import { findPaper, isPaperResource } from "@/lib/find-paper";
 import { eyebrowClass } from "@/components/ui";
 import { formatMinutes } from "@/lib/schedule";
 import type { PlanTopic, Resource, SessionDoc } from "@/lib/types";
@@ -72,6 +73,17 @@ export function StartHere({
             className="rounded-lg border border-ink bg-ink px-3.5 py-2 text-sm font-medium text-white transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[2px_2px_0_0_#facc15] active:translate-y-0"
           >
             Open {pages} →
+          </button>
+        ) : resource && isPaperResource(resource) ? (
+          <button
+            type="button"
+            onClick={() => {
+              track("start_here.find_paper");
+              findPaper(resource.search || resource.title);
+            }}
+            className="rounded-lg border border-ink bg-ink px-3.5 py-2 text-sm font-medium text-white transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[2px_2px_0_0_#facc15] active:translate-y-0"
+          >
+            Find the paper: {resource.title}
           </button>
         ) : resource ? (
           <a

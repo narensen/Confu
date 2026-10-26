@@ -203,6 +203,17 @@ export function AccountMenu({ name, email, plan, owner, keyLast4 }: Props) {
             </Link>
             <Link
               role="menuitem"
+              href="/map"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition hover:bg-paper"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                <path d="M6 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm12 4a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM8 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm-.6-15.1 8.8 3.2M16.6 10.6l-7.4 7M6.4 7l1.2 10" />
+              </svg>
+              Literature map
+            </Link>
+            <Link
+              role="menuitem"
               href="/wrapped"
               onClick={() => setOpen(false)}
               className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition hover:bg-paper"

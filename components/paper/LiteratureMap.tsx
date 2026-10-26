@@ -10,11 +10,14 @@ import type { PaperMeta } from "@/lib/pdf/add-paper";
 import { track } from "@/lib/telemetry";
 import type { SessionDoc } from "@/lib/types";
 
-// The literature map: a session's papers, the foundations they cite and the
-// newer work that cites them. Emphasis encoding: your papers are the one
-// accent (ink); context is gray, told apart by shape (hollow ring =
-// foundation, square = newer work), with a legend and a table view, so
-// identity never rests on color. Yellow marks only hover and selection.
+// The literature map: a session's papers (or, on the personal map, every
+// session's), the foundations they cite and the newer work that cites them.
+// Emphasis encoding: your papers are the one accent (ink); context is gray,
+// told apart by shape (hollow ring = foundation, square = newer work), with a
+// legend and a table view, so identity never rests on color. Yellow marks
+// only hover and selection. On the personal map, picking a session dims the
+// rest (no color per session, so any number of sessions works), and a thin
+// outer ring marks what two or more sessions share.
 
 const INK = "#0d0d0c";
 const CONTEXT = "#8f8c84"; // foundation ring
@@ -27,20 +30,27 @@ type Kind = GraphNode["kind"];
 type SimNode = GraphNode & SimulationNodeDatum & { r: number };
 type Layout = "web" | "timeline";
 const KIND_LABEL: Record<Kind, string> = { session: "Your papers", foundation: "Foundations", frontier: "Newer work" };
+// The personal map shows this many papers, newest first (LIBRARY_LIMITS in lib/openalex).
+const LIBRARY_PAPERS = 60;
 const STEPS = ["Finding your papers in OpenAlex…", "Collecting what they cite…", "Spotting shared foundations…", "Looking for newer work that builds on them…", "Drawing the map…"];
 
 const radius = (n: GraphNode) => Math.max(n.kind === "session" ? 9 : 5, Math.min(17, 4 + 2.6 * Math.log10(n.citations + 1)));
 const short = (t: string, n = 34) => (t.length > n ? `${t.slice(0, n - 1)}…` : t);
 const fmt = (n: number) => n.toLocaleString("en-US");
 
+// Connects your sessions (the personal map only; see GraphNode.bridge).
+const bridges = (n: GraphNode) => Boolean(n.bridge);
+
 function relation(n: GraphNode) {
-  if (n.kind === "session") return "In your session";
+  if (n.kind === "session") return (n.sessions?.length ?? 0) > 1 ? `In ${n.sessions!.length} of your sessions` : "In your session";
   if (n.kind === "foundation") return n.citedByYours && n.citedByYours > 1 ? `Cited by ${n.citedByYours} of your papers` : "Cited by one of your papers";
   return n.citesYours && n.citesYours > 1 ? `Cites ${n.citesYours} of your papers` : "Cites one of your papers";
 }
 
 function layoutGraph(graph: Graph, mode: Layout, w: number, h: number) {
-  const nodes: SimNode[] = graph.nodes.map((n) => ({ ...n, r: radius(n) }));
+  // Smaller marks on a narrow screen, so a big map doesn't collapse into a knot.
+  const k = Math.max(0.55, Math.min(1, w / 1000));
+  const nodes: SimNode[] = graph.nodes.map((n) => ({ ...n, r: Math.max(4, radius(n) * k) }));
   const links = graph.edges.map((e) => ({ source: e.from, target: e.to }));
   const years = nodes.map((n) => n.year).filter((y): y is number => Boolean(y)).sort((a, b) => a - b);
   // One very old classic shouldn't squash everything else: start near the
@@ -54,7 +64,7 @@ function layoutGraph(graph: Graph, mode: Layout, w: number, h: number) {
 
   const sim = forceSimulation(nodes)
     .force("link", forceLink<SimNode, { source: string; target: string }>(links).id((d) => d.key).distance(mode === "web" ? 64 : 40).strength(mode === "web" ? 0.35 : 0.04))
-    .force("collide", forceCollide<SimNode>((d) => d.r + (d.kind === "session" ? 14 : 7)))
+    .force("collide", forceCollide<SimNode>((d) => d.r + (d.kind === "session" ? 14 : 7) * k))
     .stop();
   if (mode === "web") {
     sim.force("charge", forceManyBody().strength(-170)).force("x", forceX(w / 2).strength(0.06)).force("y", forceY(h / 2).strength(0.09));
@@ -117,19 +127,25 @@ function placeLabels(nodes: SimNode[], w: number, h: number) {
   return labels;
 }
 
+export type MapSession = { id: string; title: string; kind: string; papers: number };
+type Scope = { kind: "session"; sessionId: string; papers: SessionDoc[] } | { kind: "library" };
+
 export function LiteratureMap({
-  sessionId,
-  papers,
+  scope,
   onOpenDoc,
   onAdd,
   onClose,
 }: {
-  sessionId: string;
-  papers: SessionDoc[];
-  onOpenDoc: (docId: string) => void;
-  onAdd: (paper: PaperMeta) => Promise<void>;
-  onClose: () => void;
+  scope: Scope;
+  onOpenDoc: (docId: string, sessionId?: string) => void;
+  // Library: the session to add it to.
+  onAdd: (paper: PaperMeta, sessionId?: string) => Promise<void>;
+  onClose?: () => void; // the personal map is a page, not a dialog
 }) {
+  const library = scope.kind === "library";
+  const [sessions, setSessions] = useState<MapSession[]>([]);
+  const [total, setTotal] = useState(0);
+  const [only, setOnly] = useState<string | null>(null); // library: the session picked
   const [graph, setGraph] = useState<Graph | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true); // the first build starts on open
@@ -144,13 +160,18 @@ export function LiteratureMap({
 
   // Fetch the map; state changes only once it answers.
   const fetchGraph = (refresh: boolean) =>
-    fetch("/api/paper/graph", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ sessionId, docIds: papers.map((p) => p.id).slice(0, 15), refresh }) })
+    (scope.kind === "library"
+      ? fetch("/api/paper/graph/library", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ refresh }) })
+      : fetch("/api/paper/graph", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ sessionId: scope.sessionId, docIds: scope.papers.map((p) => p.id).slice(0, 15), refresh }) })
+    )
       .then(async (res) => {
-        const j = (await res.json().catch(() => ({}))) as { graph?: Graph; error?: string; cached?: boolean };
-        if (!res.ok || !j.graph) throw new Error(j.error ?? "Couldn't map the literature.");
-        setGraph(j.graph);
+        const j = (await res.json().catch(() => ({}))) as { graph?: Graph | null; error?: string; cached?: boolean; sessions?: MapSession[]; total?: number };
+        if (!res.ok || j.graph === undefined) throw new Error(j.error ?? "Couldn't map the literature.");
+        setSessions(j.sessions ?? []);
+        setTotal(j.total ?? 0);
+        setGraph(j.graph ?? { nodes: [], edges: [], built: "", missing: [] });
         setError(null);
-        track("map.open", { papers: papers.length, nodes: j.graph.nodes.length, cached: Boolean(j.cached) });
+        track(library ? "map.library" : "map.open", { nodes: j.graph?.nodes.length ?? 0, cached: Boolean(j.cached) });
       })
       .catch((err: unknown) => setError(err instanceof Error ? err.message : "Couldn't map the literature."))
       .finally(() => setLoading(false));
@@ -186,7 +207,7 @@ export function LiteratureMap({
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       if (selected) setSelected(null);
-      else onClose();
+      else onClose?.();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -194,15 +215,20 @@ export function LiteratureMap({
 
   const drawn = useMemo(() => (graph && graph.nodes.length ? layoutGraph(graph, layout, size.w, size.h) : null), [graph, layout, size.w, size.h]);
   const focusKey = hover?.key ?? selected;
+  // What stays bright: a hovered or selected paper and its neighbours, else
+  // the picked session's part of the map.
   const neighbours = useMemo(() => {
-    if (!drawn || !focusKey) return null;
+    if (!drawn) return null;
+    if (!focusKey) return only ? new Set(drawn.nodes.filter((n) => n.sessions?.includes(only)).map((n) => n.key)) : null;
     const set = new Set([focusKey]);
     for (const e of drawn.edges) {
       if (e.from === focusKey) set.add(e.to);
       if (e.to === focusKey) set.add(e.from);
     }
     return set;
-  }, [drawn, focusKey]);
+  }, [drawn, focusKey, only]);
+  const sessionName = useMemo(() => new Map(sessions.map((x) => [x.id, x.title])), [sessions]);
+  const namesOf = (n: GraphNode) => (n.sessions ?? []).map((id) => sessionName.get(id)).filter((t): t is string => Boolean(t));
   const counts = useMemo(() => {
     const c = { session: 0, foundation: 0, frontier: 0 } as Record<Kind, number>;
     for (const n of graph?.nodes ?? []) c[n.kind]++;
@@ -211,15 +237,20 @@ export function LiteratureMap({
   const sel = graph?.nodes.find((n) => n.key === selected) ?? null;
   const hovered = drawn?.nodes.find((n) => n.key === hover?.key) ?? null;
 
-  return createPortal(
-    <div className="animate-fade fixed inset-0 z-[60] flex items-center justify-center bg-ink/40 p-2 backdrop-blur-[2px] sm:p-5" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal="true" aria-labelledby="map-title" className="animate-pop flex h-full max-h-[52rem] w-full max-w-7xl flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
+  const box = (
+      <div
+        role={library ? "region" : "dialog"}
+        aria-modal={library ? undefined : true}
+        aria-labelledby="map-title"
+        className={`flex w-full flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard ${library ? "h-[calc(100dvh-9rem)] min-h-[34rem]" : "animate-pop h-full max-h-[52rem] max-w-7xl"}`}
+      >
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-ink px-5 py-4">
           <div>
-            <p className={eyebrowClass}>Literature map</p>
+            <p className={eyebrowClass}>{library ? "Your literature" : "Literature map"}</p>
             <h2 id="map-title" className="mt-0.5 font-serif text-2xl">
-              How your papers connect
+              {library ? "Everything you've read, connected" : "How your papers connect"}
             </h2>
+            {library && total > LIBRARY_PAPERS && <p className="mt-0.5 text-xs text-muted">Your {LIBRARY_PAPERS} newest papers of {total}.</p>}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {!table && (
@@ -237,9 +268,11 @@ export function LiteratureMap({
             <button type="button" onClick={() => load(true)} disabled={loading} className={`${ghostButtonClass} px-2.5 py-1 text-xs`}>
               Refresh
             </button>
-            <button type="button" onClick={onClose} aria-label="Close" className="flex size-8 items-center justify-center rounded-md text-muted hover:bg-paper">
-              ✕
-            </button>
+            {onClose && (
+              <button type="button" onClick={onClose} aria-label="Close" className="flex size-8 items-center justify-center rounded-md text-muted hover:bg-paper">
+                ✕
+              </button>
+            )}
           </div>
         </div>
 
@@ -249,7 +282,24 @@ export function LiteratureMap({
             <Legend kind="session" label={`${KIND_LABEL.session} (${counts.session})`} />
             <Legend kind="foundation" label={`Foundations: what they cite (${counts.foundation})`} />
             <Legend kind="frontier" label={`Newer work citing them (${counts.frontier})`} />
+            {library && sessions.length > 1 && <Legend kind="bridge" label="Connects your sessions" />}
             <span className="ml-auto">Bigger = more cited. Lines: citations.</span>
+          </div>
+        )}
+        {library && graph && !loading && sessions.length > 1 && (
+          <div className="flex gap-1.5 overflow-x-auto border-b border-line px-5 py-2 text-xs" role="radiogroup" aria-label="Session">
+            {[{ id: null, title: "All sessions", papers: counts.session + graph.missing.length }, ...sessions].map((x) => (
+              <button
+                key={x.id ?? "all"}
+                type="button"
+                role="radio"
+                aria-checked={only === x.id}
+                onClick={() => setOnly(x.id)}
+                className={`shrink-0 rounded-full border px-2.5 py-1 whitespace-nowrap transition ${only === x.id ? "border-ink bg-ink text-white" : "border-ink/25 text-muted hover:border-ink hover:text-ink"}`}
+              >
+                {short(x.title, 28)} <span className="font-mono opacity-60">{x.papers}</span>
+              </button>
+            ))}
           </div>
         )}
 
@@ -268,8 +318,15 @@ export function LiteratureMap({
                   Try again
                 </button>
               </div>
+            ) : library && graph && !graph.nodes.length ? (
+              <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
+                <p className="font-serif text-xl">No papers yet</p>
+                <p className="max-w-sm text-sm text-muted">
+                  Add papers to a Papers session, or read a PDF as a paper in a study session. They all show up here, connected.
+                </p>
+              </div>
             ) : table || !drawn ? (
-              <TableView graph={graph!} added={added} onPick={setSelected} />
+              <TableView graph={graph!} added={added} onPick={setSelected} namesOf={library ? namesOf : undefined} />
             ) : (
               <>
                 <svg width={size.w} height={size.h} className="block" role="img" aria-label={`Citation map: ${counts.session} of your papers, ${counts.foundation} foundations and ${counts.frontier} newer papers.`}>
@@ -290,6 +347,8 @@ export function LiteratureMap({
                   <g>
                     {drawn.edges.map((e, i) => {
                       const on = focusKey && (e.from === focusKey || e.to === focusKey);
+                      // Dimmed: off the hovered paper, or outside the picked session.
+                      const faded = focusKey ? !on : Boolean(neighbours && !(neighbours.has(e.from) && neighbours.has(e.to)));
                       return (
                         <line
                           key={i}
@@ -299,7 +358,7 @@ export function LiteratureMap({
                           y2={e.b.y}
                           stroke={on ? INK : EDGE}
                           strokeWidth={on ? 1.5 : 1}
-                          opacity={focusKey && !on ? 0.35 : 1}
+                          opacity={faded ? 0.3 : 1}
                         />
                       );
                     })}
@@ -333,6 +392,7 @@ export function LiteratureMap({
                           {/* Hit area: bigger than the mark (24px minimum). */}
                           <circle r={Math.max(12, n.r + 6)} fill="transparent" />
                           {isFocus && <circle r={n.r + 6} fill="none" stroke={FOCUS} strokeWidth={3} />}
+                          {library && bridges(n) && !isFocus && <circle r={n.r + 3.5} fill="none" stroke={INK} strokeWidth={1} />}
                           {n.kind === "frontier" ? (
                             <rect x={-n.r * 0.9} y={-n.r * 0.9} width={n.r * 1.8} height={n.r * 1.8} rx={2} fill={added.has(n.key) ? INK : NEWER} stroke={SURFACE} strokeWidth={2} />
                           ) : n.kind === "foundation" ? (
@@ -382,6 +442,7 @@ export function LiteratureMap({
                     <p className="mt-1.5">
                       <span className="font-medium">{fmt(hovered.citations)}</span> <span className="text-muted">citations · {relation(hovered)}</span>
                     </p>
+                    {library && namesOf(hovered).length > 0 && <p className="mt-1 text-muted">{namesOf(hovered).length > 1 ? "Sessions" : "Session"}: {namesOf(hovered).join(", ")}</p>}
                   </div>
                 )}
               </>
@@ -397,32 +458,42 @@ export function LiteratureMap({
               node={sel}
               inSession={sel.kind === "session"}
               added={added.has(sel.key)}
+              sessions={library ? sessions : undefined}
               onClose={() => setSelected(null)}
-              onOpen={() => {
-                if (sel.docId) {
-                  onOpenDoc(sel.docId);
-                  onClose();
-                }
+              onOpen={(doc, session) => {
+                onOpenDoc(doc, session);
+                onClose?.();
               }}
-              onAdd={async () => {
-                await onAdd(await paperFor(sel));
+              onAdd={async (session) => {
+                await onAdd(await paperFor(sel), session);
                 setAdded((s) => new Set(s).add(sel.key));
-                track("map.add_paper", { kind: sel.kind });
+                track("map.add_paper", { kind: sel.kind, library });
               }}
             />
           )}
         </div>
       </div>
+  );
+
+  if (library) return box;
+  return createPortal(
+    <div className="animate-fade fixed inset-0 z-[60] flex items-center justify-center bg-ink/40 p-2 backdrop-blur-[2px] sm:p-5" onMouseDown={(e) => e.target === e.currentTarget && onClose?.()}>
+      {box}
     </div>,
     document.body,
   );
 }
 
-function Legend({ kind, label }: { kind: Kind; label: string }) {
+function Legend({ kind, label }: { kind: Kind | "bridge"; label: string }) {
   return (
     <span className="flex items-center gap-1.5">
       <svg width="14" height="14" viewBox="-7 -7 14 14" aria-hidden>
-        {kind === "frontier" ? (
+        {kind === "bridge" ? (
+          <>
+            <circle r={3.5} fill={SURFACE} stroke={CONTEXT} strokeWidth={1.5} />
+            <circle r={6.2} fill="none" stroke={INK} strokeWidth={1} />
+          </>
+        ) : kind === "frontier" ? (
           <rect x={-5} y={-5} width={10} height={10} rx={1.5} fill={NEWER} />
         ) : kind === "foundation" ? (
           <circle r={5} fill={SURFACE} stroke={CONTEXT} strokeWidth={2} />
@@ -436,7 +507,7 @@ function Legend({ kind, label }: { kind: Kind; label: string }) {
 }
 
 // The same information without the picture: every paper, by group.
-function TableView({ graph, added, onPick }: { graph: Graph; added: Set<string>; onPick: (key: string) => void }) {
+function TableView({ graph, added, onPick, namesOf }: { graph: Graph; added: Set<string>; onPick: (key: string) => void; namesOf?: (n: GraphNode) => string[] }) {
   return (
     <div className="h-full overflow-y-auto px-5 py-4">
       {(["session", "foundation", "frontier"] as const).map((k) => {
@@ -454,7 +525,8 @@ function TableView({ graph, added, onPick }: { graph: Graph; added: Set<string>;
                   <th className="py-1.5 pr-3 font-medium">Title</th>
                   <th className="py-1.5 pr-3 text-right font-medium">Year</th>
                   <th className="py-1.5 pr-3 text-right font-medium">Citations</th>
-                  <th className="py-1.5 font-medium">Link to yours</th>
+                  <th className="py-1.5 pr-3 font-medium">Link to yours</th>
+                  {namesOf && <th className="py-1.5 font-medium">Sessions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -468,7 +540,8 @@ function TableView({ graph, added, onPick }: { graph: Graph; added: Set<string>;
                     </td>
                     <td className="py-1.5 pr-3 text-right font-mono text-xs tabular-nums">{n.year ?? "–"}</td>
                     <td className="py-1.5 pr-3 text-right font-mono text-xs tabular-nums">{fmt(n.citations)}</td>
-                    <td className="py-1.5 text-xs text-muted">{relation(n)}</td>
+                    <td className="py-1.5 pr-3 text-xs text-muted">{relation(n)}</td>
+                    {namesOf && <td className="py-1.5 text-xs text-muted">{namesOf(n).join(", ") || "–"}</td>}
                   </tr>
                 ))}
               </tbody>
@@ -480,9 +553,27 @@ function TableView({ graph, added, onPick }: { graph: Graph; added: Set<string>;
   );
 }
 
-function Detail({ node, inSession, added, onClose, onOpen, onAdd }: { node: GraphNode; inSession: boolean; added: boolean; onClose: () => void; onOpen: () => void; onAdd: () => Promise<void> }) {
+function Detail({
+  node,
+  inSession,
+  added,
+  sessions,
+  onClose,
+  onOpen,
+  onAdd,
+}: {
+  node: GraphNode;
+  inSession: boolean;
+  added: boolean;
+  sessions?: MapSession[]; // the personal map: where to open or add it
+  onClose: () => void;
+  onOpen: (docId: string, sessionId?: string) => void;
+  onAdd: (sessionId?: string) => Promise<void>;
+}) {
   // Keyed by the paper, so this starts fresh for each one.
   const [abstract, setAbstract] = useState<string | null | undefined>(node.oa ? undefined : null);
+  // Add it to the session it connects to, unless the student picks another.
+  const [target, setTarget] = useState(node.sessions?.[0] ?? sessions?.[0]?.id ?? "");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -527,10 +618,36 @@ function Detail({ node, inSession, added, onClose, onOpen, onAdd }: { node: Grap
       </div>
       <div className="flex flex-wrap gap-2 border-t border-line px-4 py-3">
         {inSession ? (
-          <button type="button" onClick={onOpen} className="rounded-md border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white">
-            Open in this session
-          </button>
+          sessions ? (
+            (node.docs ?? []).map((d) => (
+              <button key={d.doc} type="button" onClick={() => onOpen(d.doc, d.session)} className="max-w-full truncate rounded-md border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white">
+                Open in {short(sessions.find((x) => x.id === d.session)?.title ?? "its session", 30)}
+              </button>
+            ))
+          ) : (
+            node.docId && (
+              <button type="button" onClick={() => onOpen(node.docId!)} className="rounded-md border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white">
+                Open in this session
+              </button>
+            )
+          )
         ) : (
+          <>
+          {sessions && sessions.length > 0 && (
+            <select
+              value={target}
+              onChange={(e) => setTarget(e.target.value)}
+              disabled={pending || added}
+              aria-label="Session to add it to"
+              className="w-full rounded-md border border-ink/30 bg-panel px-2 py-1.5 text-xs"
+            >
+              {sessions.map((x) => (
+                <option key={x.id} value={x.id}>
+                  {short(x.title, 40)}
+                </option>
+              ))}
+            </select>
+          )}
           <button
             type="button"
             disabled={pending || added}
@@ -538,7 +655,7 @@ function Detail({ node, inSession, added, onClose, onOpen, onAdd }: { node: Grap
               setPending(true);
               setError(null);
               try {
-                await onAdd();
+                await onAdd(sessions ? target : undefined);
               } catch (err) {
                 setError(err instanceof Error ? err.message : "Couldn't add it.");
               } finally {
@@ -547,8 +664,9 @@ function Detail({ node, inSession, added, onClose, onOpen, onAdd }: { node: Grap
             }}
             className="rounded-md border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
           >
-            {added ? "Added ✓" : pending ? "Adding…" : "Add to this session"}
+            {added ? "Added ✓" : pending ? "Adding…" : sessions ? "Add to session" : "Add to this session"}
           </button>
+          </>
         )}
         {node.url && (
           <a href={node.url} target="_blank" rel="noreferrer" className={`${ghostButtonClass} px-3 py-1 text-xs`}>

@@ -392,6 +392,45 @@ export async function searchPapers(query: string, limit = 6, fromYear?: number, 
   return merged.slice(0, n);
 }
 
+// arXiv papers whose title or abstract uses this exact name ("DAPO", "Dr. GRPO"):
+// recent papers are often known by a name that only their abstract spells out.
+// OpenAlex candidates for a paper known by a short name: a relevance search
+// for the name with its field, and works whose title or abstract uses the
+// exact name, most cited first. Generous limits, so it's the fast path.
+export async function openAlexByName(name: string, field: string): Promise<PaperMeta[]> {
+  const phrase = name.replace(/["()]/g, " ").replace(/\s+/g, " ").trim();
+  if (phrase.length < 3) return [];
+  const [relevant, titled, mentioning] = await Promise.all([
+    getJson<{ results: OAWork[] }>(oaUrl("works", { search: `${phrase} ${field}`.slice(0, 200), per_page: "8" })),
+    getJson<{ results: OAWork[] }>(oaUrl("works", { filter: `title.search:"${phrase}"`, sort: "cited_by_count:desc", per_page: "8" })),
+    getJson<{ results: OAWork[] }>(oaUrl("works", { filter: `title_and_abstract.search:"${phrase}"`, sort: "cited_by_count:desc", per_page: "8" })),
+  ]);
+  const out: PaperMeta[] = [];
+  for (const w of [...(relevant?.results ?? []), ...(titled?.results ?? []), ...(mentioning?.results ?? [])]) {
+    if (!w.display_name) continue;
+    const p = fromOpenAlex(w);
+    if (!out.some((o) => sameTitle(o.title, p.title))) out.push(p);
+  }
+  return out;
+}
+
+// arXiv asks for one request every three seconds: these calls queue up.
+let arxivTurn = Promise.resolve();
+export async function arxivByName(name: string, max = 6): Promise<PaperMeta[]> {
+  const phrase = name.replace(/["()]/g, " ").replace(/\s+/g, " ").trim();
+  if (phrase.length < 3) return [];
+  const turn = arxivTurn;
+  let release!: () => void;
+  arxivTurn = new Promise((r) => (release = r));
+  await turn;
+  try {
+    const q = `ti:"${phrase}" OR abs:"${phrase}"`;
+    return await arxivQuery(`search_query=${encodeURIComponent(q)}&max_results=${max}&sortBy=relevance`);
+  } finally {
+    setTimeout(release, 3100);
+  }
+}
+
 // Look up several arXiv papers in one request: Semantic Scholar's batch
 // endpoint, else arXiv itself (one id_list call). Returns what exists.
 export async function papersByArxivIds(ids: string[]): Promise<PaperMeta[]> {

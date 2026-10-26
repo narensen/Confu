@@ -6,10 +6,21 @@ export type Release = { date: string; title: string; summary: string; items: str
 export const CHANGELOG: Release[] = [
   {
     date: "2026-10-26",
+    title: "Your whole literature, connected",
+    summary: "One map of every paper you've read, and a plan that starts while your PDFs upload.",
+    items: [
+      "Your literature map: every paper across your sessions, the foundations they share and the newer work citing them. Pick a session to see its part, and spot the papers that connect your projects.",
+      "Write your goal while your PDFs upload: the plan waits for them, then builds itself.",
+      "Goals now start from a template with a Materials section, and Confu checks it as you paste: paper DOIs, YouTube links, and anything missing.",
+      "Your goal draft is saved as you type, so leaving the page doesn't lose it.",
+    ],
+  },
+  {
+    date: "2026-10-26",
     title: "Pro, study packs, literature maps and study rooms",
     summary: "The biggest update yet: share what worked, see how papers connect, and study alongside others.",
     items: [
-      "Pro is open to everyone: ₹299 a month in India, $6 elsewhere, with a student discount for college emails. Cancel anytime.",
+      "Pro: ₹299 a month in India, $6 elsewhere, cancel anytime. Checkout opens soon; until then, request Pro from Settings → Plan.",
       "Invite friends: they get a week of Pro when they join, and you get a week once they've studied.",
       "Study packs: share a session's sources, plan and highlights as a page others can copy. Class mode lets students choose to share their progress with you.",
       "Goal templates: eleven ready-made goals with free lectures, readings and papers, from neural networks to quantum computing.",
@@ -37,7 +48,7 @@ export const CHANGELOG: Release[] = [
     title: "Import anything, and a better reading room",
     summary: "Bring in the web, lectures and your libraries, and stay focused while you read.",
     items: [
-      "Import web pages and whole courses, YouTube lectures (from their transcripts), Google Drive and Zotero.",
+      "Import web pages, YouTube lectures (from their transcripts), Google Drive and Zotero.",
       "Sites that block automated reading can be pasted in instead.",
       "Reader: search, contents, light, sepia and night themes, a reading map, read aloud, a focus timer and white, pink and brown noise.",
       "Streaks and a study heatmap, review reminders, a weekly summary email, notifications and a calendar feed of your plan.",

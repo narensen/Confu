@@ -8,7 +8,7 @@ import { StudyStreak } from "./StudyStreak";
 import { TrySample } from "./TrySample";
 import Link from "next/link";
 import { useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { eyebrowClass } from "@/components/ui";
+import { eyebrowClass, ghostButtonClass } from "@/components/ui";
 import { countdownLabel, daysUntil } from "@/lib/exam";
 import { ago } from "@/lib/format-usage";
 import type { SessionKind } from "@/lib/types";
@@ -122,7 +122,12 @@ export function Library({ name, sessions: all }: { name: string | null; sessions
             {sessions.length || archived.length ? "Pick up where you left off, or start something new." : "Start your first session: it takes a minute."}
           </p>
         </div>
-        <div data-intro>
+        <div data-intro className="flex items-center gap-2">
+          {all.some((x) => x.kind !== "exam" && x.docs.length > 0) && (
+            <Link href="/map" className={`${ghostButtonClass} py-2.5`} title="Every paper across your sessions, and how they connect">
+              Literature map
+            </Link>
+          )}
           <NewSessionLauncher />
         </div>
       </header>

@@ -13,10 +13,12 @@ import { ChatPanel } from "./ChatPanel";
 import type { HighlightColor } from "@/lib/highlights";
 import { HighlightsPanel } from "./HighlightsPanel";
 import { MemoryPanel } from "./MemoryPanel";
-import { PlanPanel } from "./PlanPanel";
+import { PlanPanel, type PlanSetup } from "./PlanPanel";
+import { ToAddPanel, type ToAddProps } from "./ToAddPanel";
+import { FilesPanel, type FilesProps } from "./FilesPanel";
 import type { SendRequest } from "./Workspace";
 
-export type Tab = "chat" | "plan" | "passes" | "practice" | "highlights" | "memory";
+export type Tab = "chat" | "plan" | "passes" | "practice" | "highlights" | "memory" | "later" | "files";
 
 export type ExamProps = { practice: ExamPractice; examDate: string | null; onExamDate: (date: string | null) => void };
 
@@ -57,7 +59,11 @@ type Props = {
   onDeleteHighlight: (h: Highlight) => void;
   onUpdateHighlight: (h: Highlight, patch: { color?: HighlightColor; note?: string | null }) => void;
   onPlanCreated: () => void;
+  onRepace: (minutesPerDay: number, deadline: string) => Promise<void>;
   draftGoal: string; // a template's or pack's goal, to start the plan from
+  setup: PlanSetup;
+  toAdd?: ToAddProps; // study sessions: what the goal names that isn't in yet
+  files: FilesProps; // every PDF: open, close its tab, delete
   onClose?: () => void;
   keyInfo?: KeyInfo | null; // the user's own Groq key in use here (never the key itself)
   kind: SessionKind;
@@ -82,6 +88,7 @@ export function TutorPanel(props: Props) {
           { id: "chat", label: "Tutor" },
           { id: "practice", label: "Practice" },
           { id: "memory", label: "Progress", badge: answered ? String(answered) : undefined },
+          { id: "files", label: "Files", badge: props.files.docs.length ? String(props.files.docs.length) : undefined },
         ]
       : [
           { id: "chat", label: "Tutor" },
@@ -89,8 +96,12 @@ export function TutorPanel(props: Props) {
             ? { id: "passes", label: "Passes", badge: passesBadge }
             : { id: "plan", label: "Plan", badge: plan ? `${done}/${topics.length}` : "Set goal" },
           ...(studyPapers.length ? [{ id: "passes" as const, label: "Papers", badge: passesBadge }] : []),
+          ...(props.toAdd
+            ? [{ id: "later" as const, label: "To add", badge: props.toAdd.later.papers.length + props.toAdd.later.links.length ? String(props.toAdd.later.papers.length + props.toAdd.later.links.length) : undefined }]
+            : []),
           { id: "highlights", label: "Highlights", badge: highlights.length ? String(highlights.length) : undefined },
           { id: "memory", label: "Progress" },
+          { id: "files", label: "Files", badge: props.files.docs.length ? String(props.files.docs.length) : undefined },
         ];
   const activePaper = props.docs.find((d) => d.id === props.paper.activeDocId && (props.kind === "paper" || props.paper.paperIds.has(d.id)));
 
@@ -110,7 +121,7 @@ export function TutorPanel(props: Props) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <nav className="relative flex h-12 shrink-0 items-stretch border-b border-ink px-3" role="tablist">
+      <nav className="relative flex h-12 shrink-0 items-stretch overflow-x-auto border-b border-ink px-3 [scrollbar-width:none]" role="tablist">
         <div ref={navRef} className="relative flex items-stretch gap-1">
           {tabs.map((t) => (
             <button
@@ -119,7 +130,7 @@ export function TutorPanel(props: Props) {
               role="tab"
               aria-selected={tab === t.id}
               onClick={() => onTab(t.id)}
-              className={`flex items-center gap-1.5 px-2.5 text-sm transition-colors duration-200 ${
+              className={`flex shrink-0 items-center gap-1.5 px-2.5 text-sm whitespace-nowrap transition-colors duration-200 ${
                 tab === t.id ? "font-medium text-ink" : "text-muted hover:text-ink"
               }`}
             >
@@ -236,9 +247,13 @@ export function TutorPanel(props: Props) {
               props.onSend({ action: "teach", topicId: t.id });
             }}
             onPlanCreated={props.onPlanCreated}
+            onRepace={props.onRepace}
             draftGoal={props.draftGoal}
+            setup={props.setup}
           />
         )}
+        {tab === "later" && props.toAdd && <ToAddPanel {...props.toAdd} />}
+        {tab === "files" && <FilesPanel {...props.files} />}
         {tab === "highlights" && (
           <HighlightsPanel
             highlights={highlights}

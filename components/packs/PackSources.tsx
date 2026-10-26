@@ -5,7 +5,7 @@ import { ask, toast } from "@/components/dialogs";
 import { eyebrowClass, ghostButtonClass } from "@/components/ui";
 import { JSON_HEADERS } from "@/lib/ai-errors";
 import { buildPdfFile } from "@/lib/import/build-pdf";
-import { coursePdf, lecturePdf, webPagePdf } from "@/lib/import/fetch-client";
+import { lecturePdf, webPagePdf } from "@/lib/import/fetch-client";
 import { SAMPLE } from "@/lib/import/sample";
 import { SOURCE_LABEL, type PackSource } from "@/lib/packs";
 import { createClient } from "@/lib/supabase/client";
@@ -30,9 +30,8 @@ export async function fetchSourceFile(s: PackSource, onStatus: (s: string) => vo
       return new File([await res.blob()], `${(s.arxiv_id ?? s.title).replace(/[^\w.-]+/g, "_").slice(0, 60)}.pdf`, { type: "application/pdf" });
     }
     case "web":
+    case "web_course": // packs shared before whole-course imports were retired: the first page
       return (await webPagePdf(s.url!, onStatus)).file;
-    case "web_course":
-      return (await coursePdf({ url: s.url!, title: s.title, pages: s.links }, onStatus)).file;
     case "youtube":
       return (await lecturePdf({ url: s.url! }, onStatus)).file;
     case "sample":

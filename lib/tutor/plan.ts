@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { MODELS, parseJsonObject, type Groq } from "@/lib/groq";
-import { assignDueDates, daysBetween } from "@/lib/schedule";
+import { addDays, assignDueDates, daysBetween } from "@/lib/schedule";
 import { docLabel, type Level, type OutlineItem } from "@/lib/types";
 
 // Strip Markdown so model-written labels render cleanly in our own components.
@@ -23,7 +23,7 @@ const page = z.preprocess(
 );
 
 const Resource = z.object({
-  type: z.enum(["lecture", "video", "reading", "course", "practice"]).catch("reading"),
+  type: z.enum(["lecture", "video", "reading", "course", "practice", "paper"]).catch("reading"),
   title: text(200).pipe(z.string().min(1)),
   search: text(200).pipe(z.string().min(2)),
 });
@@ -85,6 +85,8 @@ async function documentMap(supabase: SupabaseClient, doc: Doc, budget: number) {
   return `${outlineText ? `Table of contents:\n${outlineText}\n` : ""}Page openings${step > 1 ? ` (every ${step} pages)` : ""}:\n${snippets}`;
 }
 
+const AUTO_MINUTES_PER_DAY = 60;
+
 export async function generatePlan(
   supabase: SupabaseClient,
   groq: Groq,
@@ -95,8 +97,10 @@ export async function generatePlan(
     materials: string;
     level: Level;
     startDate: string;
-    deadline: string;
-    minutesPerDay: number;
+    // Both, or neither: then the plan is sized to the goal, paced at an hour a
+    // day, and the student tunes the pace afterwards (Custom pace).
+    deadline?: string;
+    minutesPerDay?: number;
   },
 ) {
   const { userId, sessionId, goal, materials, level, startDate, deadline, minutesPerDay } = input;
@@ -112,8 +116,9 @@ export async function generatePlan(
   const docs = (docRows ?? []) as Doc[];
   const labelled = docs.map((d, i) => ({ ...d, label: docLabel(i) }));
 
-  const days = Math.max(1, daysBetween(startDate, deadline) + 1);
-  const budget = days * minutesPerDay;
+  const paced = Boolean(deadline && minutesPerDay);
+  const days = paced ? Math.max(1, daysBetween(startDate, deadline!) + 1) : 0;
+  const budget = paced ? days * minutesPerDay! : 0;
   const perDoc = docs.length ? Math.floor(MAP_BUDGET / docs.length) : 0;
   const maps = await Promise.all(labelled.map((d) => documentMap(supabase, d, perDoc)));
   const materialsBlock = labelled.length
@@ -122,13 +127,13 @@ export async function generatePlan(
 
   const prompt = `Design a study plan for ONE student.
 
-THE STUDENT'S GOAL (the source of truth — the plan exists to achieve this):
+THE STUDENT'S GOAL (the source of truth — the plan exists to achieve this; its Materials section, if any, lists the papers, lectures and books they are using):
 """
 ${goal.slice(0, 8000)}
 """
 ${materials ? `\nOTHER MATERIALS THE STUDENT IS USING (lectures, courses, books):\n"""\n${materials.slice(0, 2000)}\n"""\n` : ""}
 LEVEL: ${level}
-TIME: ${days} day(s) × ${+(minutesPerDay / 60).toFixed(2)} h/day ≈ ${budget} minutes total
+${paced ? `TIME: ${days} day(s) × ${+(minutesPerDay! / 60).toFixed(2)} h/day ≈ ${budget} minutes total` : "TIME: no deadline yet. Size the plan to what the goal truly needs (realistic, not padded); the student sets their pace afterwards."}
 
 PRIMARY MATERIALS — the student's PDFs, labelled D1, D2, …:
 ${materialsBlock}
@@ -141,8 +146,8 @@ How to plan:
 - Group topics into 2–5 phases that build on each other (e.g. foundations → core ideas → application). 3–15 topics in total, prerequisites first.
 - Objectives are checkable and aim at deep understanding: "Explain why…", "Derive…", "Predict what happens if…", "Apply … to …". 2–4 per topic.
 - key_concepts: the essential terms for the topic (≤ 8).
-- resources: OUTSIDE material only, never the student's PDFs. 0–2 per topic, and every "external" topic needs at least one. Prefer the student's own listed materials, then well-known real resources (university lecture series, standard textbooks, official documentation, practice sets). Give a search query that will find it, never a URL. If you are not sure a specific title exists, describe it generically instead of inventing one.
-- est_minutes: realistic for a ${level} learner. The total should fit ~${budget} minutes; if the goal can't fit, prioritise what matters most for it.
+- resources: OUTSIDE material only, never the student's PDFs. 0–2 per topic, and every "external" topic needs at least one. Prefer the student's own listed materials, then well-known real resources (university lecture series, standard textbooks, official documentation, practice sets). Give a search query that will find it, never a URL. A research paper is type "paper", titled with its full title (its search: the title). If you are not sure a specific title exists, describe it generically instead of inventing one.
+- est_minutes: realistic for a ${level} learner.${paced ? ` The total should fit ~${budget} minutes; if the goal can't fit, prioritise what matters most for it.` : ""}
 - Write every field as plain text: no Markdown, no bullet characters, and no "Phase 1:" or "Topic 2." prefixes.
 
 Return ONLY JSON in this shape:
@@ -164,7 +169,7 @@ Return ONLY JSON in this shape:
           "objectives": ["string"],
           "key_concepts": ["string"],
           "est_minutes": number,
-          "resources": [{ "type": "lecture" | "video" | "reading" | "course" | "practice", "title": "string", "search": "search query" }]
+          "resources": [{ "type": "lecture" | "video" | "reading" | "course" | "practice" | "paper", "title": "string", "search": "search query" }]
         }
       ]
     }
@@ -214,10 +219,13 @@ Return ONLY JSON in this shape:
       }
       return { ...t, source: "external" as const, document_id: null, page_start: null, page_end: null };
     });
+  // No pace given: an hour a day, until the work is done.
+  const pace = minutesPerDay ?? AUTO_MINUTES_PER_DAY;
+  const end = deadline ?? addDays(startDate, Math.max(1, Math.ceil(topics.reduce((a, t) => a + t.est_minutes, 0) / pace)) - 1);
   const dueDates = assignDueDates(
     topics.map((t) => t.est_minutes),
     startDate,
-    deadline,
+    end,
   );
 
   // Replace any existing plan for this session (topics cascade).
@@ -235,8 +243,8 @@ Return ONLY JSON in this shape:
       phases: parsed.phases.map((p) => ({ title: p.title, description: p.description })),
       level,
       start_date: startDate,
-      deadline,
-      minutes_per_day: minutesPerDay,
+      deadline: end,
+      minutes_per_day: pace,
       overview: parsed.overview,
     })
     .select("id")

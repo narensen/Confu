@@ -42,7 +42,7 @@ export function AppHeader({ children }: { children?: ReactNode }) {
       <Link href="/dashboard" className="transition hover:opacity-70">
         <Logo />
       </Link>
-      <div className="min-w-0 flex-1">{children}</div>
+      <div className="flex min-w-0 flex-1 items-center gap-2">{children}</div>
       <Suspense fallback={<div className="skeleton h-8 w-32 rounded-lg" />}>
         <UserMenu />
       </Suspense>

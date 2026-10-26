@@ -9,15 +9,22 @@ type Props = {
   uploadStatus: string | null;
   onSelect: (id: string) => void;
   onAdd: (files: File[]) => void;
-  onRemove: (doc: SessionDoc) => void;
+  onClose: (doc: SessionDoc) => void; // close the tab; the PDF stays in Files
   // Paper sessions open the "Add papers" dialog instead of a file picker.
   onAddClick?: () => void;
   addLabel?: string;
+  // Study sessions: which PDFs are research papers, and the switch to read one as a paper.
+  paperIds?: Set<string>;
+  onPaper?: (docId: string) => void;
+  onNotPaper?: (docId: string) => void; // undo "Read as a paper"
 };
 
-// The session's PDFs as tabs above the viewer.
-export function DocTabs({ docs, activeId, uploadStatus, onSelect, onAdd, onRemove, onAddClick, addLabel = "+ Add PDF" }: Props) {
+// The PDFs open as tabs above the viewer. Closing one only hides it: every
+// PDF is in the Files tab, where they're opened again or deleted.
+export function DocTabs({ docs, activeId, uploadStatus, onSelect, onAdd, onClose, onAddClick, addLabel = "+ Add PDF", paperIds, onPaper, onNotPaper }: Props) {
   const input = useRef<HTMLInputElement>(null);
+  const active = docs.find((d) => d.id === activeId);
+  const activeIsPaper = Boolean(active && paperIds?.has(active.id));
 
   return (
     <div className="flex h-11 shrink-0 items-stretch border-b border-ink bg-paper">
@@ -46,12 +53,13 @@ export function DocTabs({ docs, activeId, uploadStatus, onSelect, onAdd, onRemov
                   {d.label}
                 </span>
                 <span className={`truncate ${active ? "font-medium" : "text-muted"}`}>{d.title}</span>
+                {paperIds?.has(d.id) && <span className="shrink-0 rounded bg-yellow-300 px-1 font-mono text-[9px] font-medium tracking-wide text-ink uppercase">Paper</span>}
               </button>
               <button
-                onClick={() => onRemove(d)}
-                aria-label={`Remove ${d.title}`}
-                title="Remove from session"
-                className="mr-1.5 flex size-5 shrink-0 items-center justify-center rounded text-xs text-muted opacity-0 transition group-hover:opacity-100 hover:bg-danger/10 hover:text-danger focus:opacity-100"
+                onClick={() => onClose(d)}
+                aria-label={`Close ${d.title}`}
+                title="Close tab (it stays in Files)"
+                className="mr-1.5 flex size-5 shrink-0 items-center justify-center rounded text-xs text-muted opacity-0 transition group-hover:opacity-100 hover:bg-ink/10 hover:text-ink focus:opacity-100"
               >
                 ✕
               </button>
@@ -73,6 +81,31 @@ export function DocTabs({ docs, activeId, uploadStatus, onSelect, onAdd, onRemov
           if (files.length) onAdd(files);
         }}
       />
+      {onPaper && active && (
+        <button
+          type="button"
+          onClick={() => onPaper(active.id)}
+          title={activeIsPaper ? "Open this paper's three passes" : "Read this PDF with the three-pass method: notes, checklists and a coach"}
+          className={`hidden shrink-0 items-center gap-1.5 border-l border-ink px-3 text-xs font-medium transition duration-200 sm:flex ${
+            activeIsPaper ? "bg-yellow-300 hover:bg-yellow-400" : "hover:bg-yellow-100"
+          }`}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+            <path d="M6 2h9l5 5v15H6zM14 2v6h6M9 13h7M9 17h5" />
+          </svg>
+          {activeIsPaper ? "Open its passes" : "Read as a paper"}
+        </button>
+      )}
+      {onNotPaper && active && activeIsPaper && (
+        <button
+          type="button"
+          onClick={() => onNotPaper(active.id)}
+          title="Not a paper: read it as a regular PDF (its pass notes are kept)"
+          className="hidden shrink-0 items-center border-l border-ink px-2.5 text-xs text-muted transition duration-200 hover:bg-paper hover:text-ink sm:flex"
+        >
+          Not a paper
+        </button>
+      )}
       <button
         onClick={() => (onAddClick ? onAddClick() : input.current?.click())}
         disabled={Boolean(uploadStatus)}
