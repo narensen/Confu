@@ -603,13 +603,26 @@ export default function PdfViewer(props: Props) {
         )}
       <div ref={scrollRef} onScroll={onScroll} onMouseUp={onMouseUp} className="pdf-scroll relative min-h-0 flex-1 overflow-auto">
         {loadError ? (
-          <p className="p-8 text-center text-sm text-danger">{loadError}</p>
+          <div className="flex flex-col items-center gap-3 p-8 text-center text-sm">
+            <p className="text-danger">{loadError}</p>
+            {/* Reloading signs a fresh link (they expire after a few hours). */}
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="rounded-lg border border-ink bg-panel px-4 py-1.5 font-medium transition hover:-translate-y-px hover:shadow-hard-sm"
+            >
+              Reload
+            </button>
+          </div>
         ) : (
           <Document
             file={url}
             suspense={false}
             loading={<p className="p-8 text-center text-sm text-muted">Loading PDF…</p>}
-            onLoadError={(e) => setLoadError(`Could not open this PDF: ${e.message}`)}
+            onLoadError={(e) => {
+              console.error("PDF load failed", e);
+              setLoadError("Couldn't open this PDF. Check your network or reload.");
+            }}
             onLoadSuccess={async (pdf) => {
               pdfRef.current = pdf;
               void pdf
