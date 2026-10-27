@@ -43,10 +43,33 @@ export function AddPaperDialog({
   const [picked, setPicked] = useState<Set<number>>(new Set());
   const [pending, setPending] = useState(Boolean(auto));
   const [error, setError] = useState<string | null>(null);
+  const [searched, setSearched] = useState(auto); // what the results are for
   const fileInput = useRef<HTMLInputElement>(null);
+  const run = useRef(0); // a search closed before it answers is ignored
+
+  // Finding the goal's missing papers, results open in their own popup so the
+  // list of what's still to find stays put underneath.
+  const goalMode = hints !== undefined;
+  const resultsOpen = goalMode && (pending || results !== null || error !== null);
+  const resultsOpenRef = useRef(resultsOpen);
+  useEffect(() => {
+    resultsOpenRef.current = resultsOpen;
+  }, [resultsOpen]);
+
+  function closeResults() {
+    run.current++;
+    setPending(false);
+    setResults(null);
+    setError(null);
+    setActive(null);
+  }
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (resultsOpenRef.current) closeResults();
+      else onClose();
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
@@ -56,13 +79,16 @@ export function AddPaperDialog({
     setPending(true);
     setError(null);
     setResults(null);
+    setSearched(q.trim());
     void search(q, hint);
   }
 
   async function search(q: string, hint?: GoalHint) {
+    const mine = ++run.current;
     try {
       const res = await fetch("/api/paper/resolve", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ query: q }) });
       const json = (await res.json()) as { mode?: "single" | "batch" | "search"; results?: Result[]; error?: string };
+      if (mine !== run.current) return;
       if (!res.ok) throw new Error(json.error ?? "Lookup failed.");
       const list = json.results ?? [];
       setMode(json.mode ?? "single");
@@ -74,9 +100,9 @@ export function AddPaperDialog({
       setPicked(new Set(json.mode === "search" ? (exact >= 0 ? [exact] : []) : list.flatMap((r, i) => (r.paper ? [i] : []))));
       if (!list.some((r) => r.paper)) setError("Nothing found. Check the ID, or try the title.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Lookup failed.");
+      if (mine === run.current) setError(err instanceof Error ? err.message : "Lookup failed.");
     } finally {
-      setPending(false);
+      if (mine === run.current) setPending(false);
     }
   }
 
@@ -96,14 +122,17 @@ export function AddPaperDialog({
 
   // Finding the goal's missing papers: picking a result adds it right away,
   // so moving on to the next paper never loses a choice.
-  const goalMode = hints !== undefined;
   const [added, setAdded] = useState<Set<string>>(new Set());
   function addOne(paper: PaperMeta) {
     onAdd([paper]);
     setAdded((s) => new Set(s).add(squash(paper.title)));
     const done = (hints ?? []).filter((h) => h.name === active || (h.title && squash(h.title) === squash(paper.title)));
     for (const h of done) onHintDone?.(h.name);
-    if (done.some((h) => h.name === active)) setActive(null);
+    // Found the paper being looked up: back to the list for the next one.
+    if (done.some((h) => h.name === active)) {
+      closeResults();
+      setQuery("");
+    }
   }
 
   function add() {
@@ -119,6 +148,106 @@ export function AddPaperDialog({
       setPicked(new Set());
     } else onClose();
   }
+
+  const resultsView = (
+    <>
+          {error && <p className="animate-pop mt-4 rounded-lg border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</p>}
+          {results && results.length > 0 && (
+            <ul className="mt-5 space-y-2">
+              {mode === "search" && <p className={`${eyebrowClass} mb-1`}>{goalMode ? "Add puts it in your session right away" : "Search results: pick the ones you want"}</p>}
+              {results.map((r, i) =>
+                r.paper && goalMode ? (
+                  <li key={i} className="animate-enter" style={{ animationDelay: `${i * 40}ms` }}>
+                    <div className={`flex gap-3 rounded-lg border p-3 ${picked.has(i) ? "border-ink" : "border-line"}`}>
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-serif text-[1.02rem] leading-snug">{r.paper.title}</span>
+                        <span className="mt-0.5 block truncate text-xs text-muted">
+                          {[r.paper.authors.slice(0, 4).join(", ") + (r.paper.authors.length > 4 ? " et al." : ""), r.paper.venue, r.paper.year]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                        <span className="mt-1.5 flex flex-wrap gap-1.5 font-mono text-[10px]">
+                          {picked.has(i) && <Tag dark>Same title as your goal</Tag>}
+                          {r.paper.arxiv_id && <Tag>arXiv {r.paper.arxiv_id}</Tag>}
+                          {!r.paper.arxiv_id && r.paper.doi && <Tag>DOI {r.paper.doi}</Tag>}
+                          {r.paper.pdf_url ? <Tag>PDF available</Tag> : <Tag dashed>Abstract only</Tag>}
+                          {r.paper.cited_by ? <Tag>{r.paper.cited_by.toLocaleString()} citations</Tag> : null}
+                        </span>
+                      </span>
+                      {added.has(squash(r.paper.title)) ? (
+                        <span className="shrink-0 self-start rounded-md border border-ok/50 px-2.5 py-1 text-xs font-medium text-ok">Added ✓</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => addOne(r.paper!)}
+                          className="shrink-0 self-start rounded-md border border-ink bg-ink px-2.5 py-1 text-xs font-medium text-white transition hover:-translate-y-px"
+                        >
+                          Add
+                        </button>
+                      )}
+                    </div>
+                  </li>
+                ) : r.paper ? (
+                  <li key={i} className="animate-enter" style={{ animationDelay: `${i * 40}ms` }}>
+                    <label
+                      className={`flex cursor-pointer gap-3 rounded-lg border p-3 transition duration-200 ${picked.has(i) ? "border-ink shadow-hard-sm" : "border-line hover:border-ink/40"}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={picked.has(i)}
+                        onChange={() =>
+                          setPicked((s) => {
+                            const next = new Set(s);
+                            if (next.has(i)) next.delete(i);
+                            else next.add(i);
+                            return next;
+                          })
+                        }
+                        className="mt-1 size-4 shrink-0 accent-[var(--ink)]"
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-serif text-[1.02rem] leading-snug">{r.paper.title}</span>
+                        <span className="mt-0.5 block truncate text-xs text-muted">
+                          {[r.paper.authors.slice(0, 4).join(", ") + (r.paper.authors.length > 4 ? " et al." : ""), r.paper.venue, r.paper.year]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                        <span className="mt-1.5 flex flex-wrap gap-1.5 font-mono text-[10px]">
+                          {r.paper.arxiv_id && <Tag>arXiv {r.paper.arxiv_id}</Tag>}
+                          {!r.paper.arxiv_id && r.paper.doi && <Tag>DOI {r.paper.doi}</Tag>}
+                          {r.paper.pdf_url ? <Tag dark>PDF available</Tag> : <Tag dashed>Abstract only</Tag>}
+                          {r.paper.cited_by ? <Tag>{r.paper.cited_by.toLocaleString()} citations</Tag> : null}
+                        </span>
+                      </span>
+                    </label>
+                  </li>
+                ) : (
+                  <li key={i} className="rounded-lg border border-dashed border-danger/40 px-3 py-2 text-sm text-danger">
+                    Not found: <span className="font-mono">{r.input}</span>
+                  </li>
+                ),
+              )}
+            </ul>
+          )}
+          {/* Google only as a fallback, when the student chooses it. */}
+          {!pending && (results || error) && searched.length > 2 && (
+            <p className="mt-4 text-xs leading-relaxed text-muted">
+              Not in OpenAlex or Semantic Scholar?{" "}
+              <a
+                href={`https://scholar.google.com/scholar?q=${encodeURIComponent(searched.split("\n")[0])}`}
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-ink underline underline-offset-2"
+              >
+                Search Google Scholar ↗
+              </a>{" "}
+              and paste its arXiv ID, DOI or PDF link into the search box.
+            </p>
+          )}
+
+    </>
+  );
+  const activeHint = hints?.find((h) => h.name === active);
 
   return (
     <div className="animate-fade fixed inset-0 z-60 flex items-center justify-center bg-ink/40 p-3 backdrop-blur-[2px] sm:p-6" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
@@ -212,100 +341,7 @@ export function AddPaperDialog({
             </div>
           )}
 
-          {error && <p className="animate-pop mt-4 rounded-lg border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</p>}
-          {/* Google only as a fallback, when the student chooses it. */}
-          {!pending && (results || error) && query.trim().length > 2 && (
-            <p className="mt-3 text-xs leading-relaxed text-muted">
-              Not in OpenAlex or Semantic Scholar?{" "}
-              <a
-                href={`https://scholar.google.com/scholar?q=${encodeURIComponent(query.trim().split("\n")[0])}`}
-                target="_blank"
-                rel="noreferrer"
-                className="font-medium text-ink underline underline-offset-2"
-              >
-                Search Google Scholar ↗
-              </a>{" "}
-              and paste its arXiv ID, DOI or PDF link here.
-            </p>
-          )}
-
-          {results && results.length > 0 && (
-            <ul className="mt-5 space-y-2">
-              {mode === "search" && <p className={`${eyebrowClass} mb-1`}>{goalMode ? "Search results: Add puts it in your session right away" : "Search results: pick the ones you want"}</p>}
-              {results.map((r, i) =>
-                r.paper && goalMode ? (
-                  <li key={i} className="animate-enter" style={{ animationDelay: `${i * 40}ms` }}>
-                    <div className={`flex gap-3 rounded-lg border p-3 ${picked.has(i) ? "border-ink" : "border-line"}`}>
-                      <span className="min-w-0 flex-1">
-                        <span className="block font-serif text-[1.02rem] leading-snug">{r.paper.title}</span>
-                        <span className="mt-0.5 block truncate text-xs text-muted">
-                          {[r.paper.authors.slice(0, 4).join(", ") + (r.paper.authors.length > 4 ? " et al." : ""), r.paper.venue, r.paper.year]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </span>
-                        <span className="mt-1.5 flex flex-wrap gap-1.5 font-mono text-[10px]">
-                          {picked.has(i) && <Tag dark>Same title as your goal</Tag>}
-                          {r.paper.arxiv_id && <Tag>arXiv {r.paper.arxiv_id}</Tag>}
-                          {!r.paper.arxiv_id && r.paper.doi && <Tag>DOI {r.paper.doi}</Tag>}
-                          {r.paper.pdf_url ? <Tag>PDF available</Tag> : <Tag dashed>Abstract only</Tag>}
-                          {r.paper.cited_by ? <Tag>{r.paper.cited_by.toLocaleString()} citations</Tag> : null}
-                        </span>
-                      </span>
-                      {added.has(squash(r.paper.title)) ? (
-                        <span className="shrink-0 self-start rounded-md border border-ok/50 px-2.5 py-1 text-xs font-medium text-ok">Added ✓</span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => addOne(r.paper!)}
-                          className="shrink-0 self-start rounded-md border border-ink bg-ink px-2.5 py-1 text-xs font-medium text-white transition hover:-translate-y-px"
-                        >
-                          Add
-                        </button>
-                      )}
-                    </div>
-                  </li>
-                ) : r.paper ? (
-                  <li key={i} className="animate-enter" style={{ animationDelay: `${i * 40}ms` }}>
-                    <label
-                      className={`flex cursor-pointer gap-3 rounded-lg border p-3 transition duration-200 ${picked.has(i) ? "border-ink shadow-hard-sm" : "border-line hover:border-ink/40"}`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={picked.has(i)}
-                        onChange={() =>
-                          setPicked((s) => {
-                            const next = new Set(s);
-                            if (next.has(i)) next.delete(i);
-                            else next.add(i);
-                            return next;
-                          })
-                        }
-                        className="mt-1 size-4 shrink-0 accent-[var(--ink)]"
-                      />
-                      <span className="min-w-0 flex-1">
-                        <span className="block font-serif text-[1.02rem] leading-snug">{r.paper.title}</span>
-                        <span className="mt-0.5 block truncate text-xs text-muted">
-                          {[r.paper.authors.slice(0, 4).join(", ") + (r.paper.authors.length > 4 ? " et al." : ""), r.paper.venue, r.paper.year]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </span>
-                        <span className="mt-1.5 flex flex-wrap gap-1.5 font-mono text-[10px]">
-                          {r.paper.arxiv_id && <Tag>arXiv {r.paper.arxiv_id}</Tag>}
-                          {!r.paper.arxiv_id && r.paper.doi && <Tag>DOI {r.paper.doi}</Tag>}
-                          {r.paper.pdf_url ? <Tag dark>PDF available</Tag> : <Tag dashed>Abstract only</Tag>}
-                          {r.paper.cited_by ? <Tag>{r.paper.cited_by.toLocaleString()} citations</Tag> : null}
-                        </span>
-                      </span>
-                    </label>
-                  </li>
-                ) : (
-                  <li key={i} className="rounded-lg border border-dashed border-danger/40 px-3 py-2 text-sm text-danger">
-                    Not found: <span className="font-mono">{r.input}</span>
-                  </li>
-                ),
-              )}
-            </ul>
-          )}
+          {!goalMode && resultsView}
         </div>
 
         <div className="flex items-center justify-between gap-3 border-t border-ink px-6 py-4">
@@ -345,6 +381,33 @@ export function AddPaperDialog({
           )}
         </div>
       </div>
+
+      {resultsOpen && (
+        <div className="animate-fade absolute inset-0 flex items-center justify-center bg-ink/30 p-3 sm:p-6" onMouseDown={(e) => e.target === e.currentTarget && closeResults()}>
+          <div role="dialog" aria-modal="true" aria-labelledby="paper-results-title" className="animate-pop flex max-h-full w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
+            <div className="flex items-start justify-between gap-4 border-b border-ink px-5 pt-4 pb-3">
+              <div className="min-w-0">
+                <p className={eyebrowClass}>{pending ? "Searching OpenAlex and Semantic Scholar" : "Search results"}</p>
+                <h3 id="paper-results-title" className="mt-1 font-serif text-xl leading-snug">
+                  Search for {activeHint ? activeHint.name : <span className="font-mono text-base">{searched}</span>}
+                </h3>
+                {activeHint && searched !== activeHint.name && <p className="mt-0.5 truncate font-mono text-xs text-muted">{searched}</p>}
+              </div>
+              <button onClick={closeResults} aria-label="Back to the list" className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted hover:bg-paper">
+                ✕
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-5">
+              {pending ? <p className="mt-5 animate-pulse text-sm text-muted">Looking up…</p> : resultsView}
+            </div>
+            <div className="flex justify-end border-t border-ink px-5 py-3">
+              <button type="button" onClick={closeResults} className={`${ghostButtonClass} py-1.5 text-xs`}>
+                {hints?.length ? "← Back to what's missing" : "← Back"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
