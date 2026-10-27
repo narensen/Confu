@@ -5,6 +5,16 @@ export type Release = { date: string; title: string; summary: string; items: str
 
 export const CHANGELOG: Release[] = [
   {
+    date: "2026-10-28",
+    title: "Everything in view",
+    summary: "Your plan, what you're reading and the tutor, side by side.",
+    items: [
+      "The workspace now has three parts: your plan, papers, files and notes on the left, what you're reading in the middle, the tutor on the right. No more switching tabs to ask a question.",
+      "Resize either side by dragging its edge, or fold it away to read wider. It comes back when you need it, like when the tutor replies.",
+      "The reader's toolbar is grouped by job, with labels: find your way, read, capture a figure, focus. When the reader is narrow, the rest is under More.",
+    ],
+  },
+  {
     date: "2026-10-27",
     title: "Lock it in, listen ahead, take it with you",
     summary: "Recall checks, audio overviews, playlists, exports and dark mode.",

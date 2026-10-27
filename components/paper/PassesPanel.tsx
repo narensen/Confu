@@ -29,6 +29,10 @@ type Props = {
   onResearchGoal: (goal: string) => void;
   fetching: string | null;
   onSend: (req: SendRequest) => void;
+  // One paper's passes open on their own (picked from the list, "Open its
+  // passes", the plan); otherwise the tab is just the reading list.
+  passesOpen: boolean;
+  onPassesOpen: (open: boolean) => void;
 };
 
 const PASS_ACTIONS: Record<PassNumber, { action: TutorAction; label: string; primary?: boolean }[]> = {
@@ -44,9 +48,27 @@ const PASS_ACTIONS: Record<PassNumber, { action: TutorAction; label: string; pri
 };
 
 export function PassesPanel(props: Props) {
-  const { docs, activeDocId, reviews, busy, onSelectDoc, inStudy } = props;
+  const { docs, activeDocId, reviews, busy, onSelectDoc, inStudy, passesOpen, onPassesOpen } = props;
   // In a study session the viewer may be on a textbook: then no paper is open.
   const active = docs.find((d) => d.id === activeDocId) ?? (inStudy ? undefined : docs[0]);
+
+  // One paper at a time: its passes, with the way back to the list.
+  if (passesOpen && active && reviews[active.id]) {
+    return (
+      <div className="h-full overflow-y-auto">
+        <div className="flex items-center justify-between gap-3 border-b border-line px-6 py-2.5">
+          <button type="button" onClick={() => onPassesOpen(false)} className="text-xs font-medium text-muted transition hover:text-ink">
+            ← All papers
+          </button>
+          <span className="min-w-0 truncate text-xs text-muted">
+            <span className="mr-1.5 rounded border border-ink/30 px-1 font-mono text-[10px]">{active.label}</span>
+            {active.title}
+          </span>
+        </div>
+        <PaperWorkspace key={active.id} doc={active} review={reviews[active.id]} busy={busy} onUpdate={props.onUpdate} onSend={props.onSend} />
+      </div>
+    );
+  }
 
   return (
     <div className="h-full overflow-y-auto">
@@ -71,7 +93,14 @@ export function PassesPanel(props: Props) {
                   className={`rounded-lg border transition-all duration-200 ease-fluid ${selected ? "border-ink shadow-hard-sm" : "border-line hover:border-ink/40"}`}
                 >
                   <div className="flex items-center gap-3 px-3 py-2.5">
-                    <button onClick={() => onSelectDoc(d.id)} className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
+                    <button
+                      onClick={() => {
+                        onSelectDoc(d.id);
+                        onPassesOpen(true);
+                      }}
+                      title="Open it beside its passes"
+                      className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
+                    >
                       <span className={`shrink-0 rounded px-1 font-mono text-[10px] ${selected ? "bg-ink text-white" : "border border-ink/30 text-muted"}`}>{d.label}</span>
                       <span className="min-w-0">
                         <span className={`block truncate text-sm ${selected ? "font-medium" : ""}`}>{d.title}</span>
@@ -88,18 +117,14 @@ export function PassesPanel(props: Props) {
         )}
       </section>
 
-      {active && reviews[active.id] ? (
-        <PaperWorkspace key={active.id} doc={active} review={reviews[active.id]} busy={busy} onUpdate={props.onUpdate} onSend={props.onSend} />
-      ) : (
-        inStudy &&
-        docs.length > 0 && <p className="px-6 py-5 text-sm text-muted">Pick a paper above to open it beside its passes.</p>
-      )}
+      {docs.length > 0 && <p className="px-6 py-4 text-xs text-muted">Pick a paper to open it beside its passes.</p>}
 
     </div>
   );
 }
 
-function ResearchGoal({ sessionId, researchGoal, docs, busy, fetching, onResearchGoal, onUpdate, inStudy, studyGoal, onAddPapers, onOpenMap, onTool }: Props) {
+function ResearchGoal(props: Props) {
+  const { sessionId, researchGoal, docs, busy, fetching, onResearchGoal, onUpdate, inStudy, studyGoal, onAddPapers, onOpenMap, onTool } = props;
   // In a study session the study goal stands in until they write a research goal.
   const [goal, setGoal] = useState(researchGoal || (inStudy ? (studyGoal ?? "") : ""));
   const [pending, setPending] = useState(false);
@@ -126,6 +151,48 @@ function ResearchGoal({ sessionId, researchGoal, docs, busy, fetching, onResearc
       setPending(false);
       notifyAiUsed();
     }
+  }
+
+  // Once passes are suggested, the setup is done for good: what's left is the
+  // goal on one line and the tools.
+  const suggested = docs.some((d) => props.reviews[d.id]?.triage_reason);
+  if (suggested) {
+    return (
+      <section className="animate-enter border-b border-ink px-6 pt-5 pb-4">
+        <p className={eyebrowClass}>{inStudy ? "Papers in this study" : "Paper session"} · three-pass method</p>
+        {(researchGoal || studyGoal) && <p className="mt-1 truncate text-sm text-muted" title={researchGoal || studyGoal}>{researchGoal || studyGoal}</p>}
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {onAddPapers && (
+            <button type="button" onClick={onAddPapers} disabled={Boolean(fetching)} className={`${ghostButtonClass} py-1 text-xs`}>
+              + Add papers
+            </button>
+          )}
+          <button type="button" onClick={() => openRecommendPapers()} disabled={Boolean(fetching)} className={`${ghostButtonClass} py-1 text-xs`}>
+            Suggest papers
+          </button>
+          {onOpenMap && docs.length > 0 && (
+            <button type="button" onClick={onOpenMap} className="rounded-md border border-ink bg-ink px-2.5 py-1 text-xs font-medium text-white transition hover:-translate-y-px">
+              Literature map
+            </button>
+          )}
+          {onTool &&
+            docs.length > 0 &&
+            (
+              [
+                ["compare", "Compare"],
+                ["related", "Related work"],
+                ["bibtex", "BibTeX"],
+                ["zotero", "Zotero"],
+              ] as const
+            ).map(([tool, label]) => (
+              <button key={tool} type="button" onClick={() => onTool(tool)} className={`${ghostButtonClass} py-1 text-xs`}>
+                {label}
+              </button>
+            ))}
+        </div>
+        {fetching && <p className="mt-2 truncate text-xs text-muted">{fetching}</p>}
+      </section>
+    );
   }
 
   return (

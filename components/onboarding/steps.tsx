@@ -184,30 +184,44 @@ const PlanArt = (
 );
 
 const ReadingArt = (
-  <Frame className="flex h-full flex-col overflow-hidden shadow-hard">
-    <div className="flex border-b border-ink bg-paper text-[9px]">
-      <span className="flex items-center gap-1 border-r border-ink/15 bg-panel px-2 py-1.5 font-medium">
-        <Chip dark>D1</Chip> PCA notes
-      </span>
-      <span className="flex items-center gap-1 px-2 py-1.5 text-muted">
-        <Chip>D2</Chip> Lecture 7
-      </span>
-      <span className="ml-auto border-l border-ink px-2 py-1.5 font-medium">+ Add PDF</span>
+  <Frame className="flex h-full overflow-hidden text-[9px] shadow-hard">
+    <div className="flex w-[22%] shrink-0 flex-col gap-0.5 border-r border-ink bg-panel p-1.5">
+      <span className="px-1 pb-0.5 font-mono text-[7px] tracking-wider text-muted uppercase">This session</span>
+      <span className="rounded bg-ink px-1.5 py-0.5 font-medium text-white">Plan</span>
+      <span className="px-1.5 py-0.5 text-muted">Highlights</span>
+      <span className="px-1.5 py-0.5 text-muted">Progress</span>
+      <span className="px-1.5 py-0.5 text-muted">Files</span>
     </div>
-    <div className="flex items-center gap-2 border-b border-ink px-2 py-1.5 text-[9px]">
-      <span className="rounded border border-ink/30 px-1 font-mono">12</span>
-      <span className="font-mono text-muted">/ 40</span>
-      <span className="font-mono">− 100% +</span>
-      <span className="rounded border border-ink px-1.5">Capture region</span>
-      <span className="ml-auto">⛶</span>
+    <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex border-b border-ink bg-paper">
+        <span className="flex items-center gap-1 border-r border-ink/15 bg-panel px-2 py-1.5 font-medium">
+          <Chip dark>D1</Chip> PCA notes
+        </span>
+        <span className="flex items-center gap-1 px-2 py-1.5 text-muted">
+          <Chip>D2</Chip> Lecture 7
+        </span>
+      </div>
+      <div className="flex items-center gap-1.5 border-b border-ink px-2 py-1.5">
+        <span className="rounded border border-ink/30 px-1 font-mono">12</span>
+        <span className="text-muted">Contents · Search</span>
+        <span className="font-mono">− 100% +</span>
+        <span className="rounded border border-ink px-1.5">Capture</span>
+      </div>
+      <div className="flex flex-1 justify-center bg-viewer p-2.5">
+        <div className="w-11/12 space-y-1.5 border border-ink bg-white p-2.5">
+          <Line w="50%" dark />
+          <Line />
+          <Line w="92%" />
+          <Line w="85%" />
+          <Line w="70%" />
+        </div>
+      </div>
     </div>
-    <div className="flex flex-1 justify-center bg-viewer p-3">
-      <div className="w-4/5 space-y-1.5 border border-ink bg-white p-3">
-        <Line w="50%" dark />
-        <Line />
-        <Line w="92%" />
-        <Line w="85%" />
-        <Line />
+    <div className="flex w-[26%] shrink-0 flex-col border-l border-ink bg-panel">
+      <span className="border-b border-ink px-2 py-1.5 font-medium">Tutor</span>
+      <div className="flex-1 space-y-1.5 p-1.5">
+        <p className="ml-auto w-4/5 rounded border border-ink px-1 py-0.5">Why the square?</p>
+        <Line w="90%" />
         <Line w="70%" />
       </div>
     </div>
@@ -478,12 +492,12 @@ export const GUIDE_STEPS: GuideStep[] = [
   {
     id: "reading",
     eyebrow: "Reading",
-    title: "Your files live on the right",
-    intro: "The workspace splits in two: the tutor on the left, what you're reading on the right. Drag the divider to resize.",
+    title: "Everything in view at once",
+    intro: "The workspace has three parts: your plan, files and notes on the left, what you're reading in the middle, the tutor on the right. Drag the dividers to resize, or fold either side away with its arrows.",
     points: [
-      { label: "Files and tabs", body: <>Everything you add lands in the <b>Files</b> tab on the left; open one and it becomes a tab (D1, D2, …). ✕ on a tab only closes it; delete files from Files. PDFs, slides and Word docs all work.</> },
-      { label: "Navigate", body: "Type a page number, zoom with − and +, or click 100% to fit the width. It remembers where you left off. Press ? for keyboard shortcuts." },
-      { label: "Full screen", body: "Press ⛶ (or the . key) to read distraction-free. The tutor opens as a drawer from the “Tutor” button in the toolbar. Prefer dark? Appearance is in your account menu." },
+      { label: "Files and tabs", body: <>Everything you add lands in <b>Files</b> on the left; open one and it becomes a tab (D1, D2, …). ✕ on a tab only closes it; delete files from Files. PDFs, slides and Word docs all work.</> },
+      { label: "The toolbar", body: "Grouped by job: find your way (page, Contents, Search), read (zoom, theme, listen), capture a figure, and focus (sound, timer, full screen). When the reader is narrow, the rest is under More. It remembers where you left off; press ? for keyboard shortcuts." },
+      { label: "Full screen", body: "Press ⛶ (or the . key) to read distraction-free. Both sides hide; the tutor opens as a drawer from the “Tutor” button in the toolbar. Prefer dark? Appearance is in your account menu." },
     ],
     art: ReadingArt,
   },
@@ -505,7 +519,7 @@ export const GUIDE_STEPS: GuideStep[] = [
     title: "Drag over a figure, table or equation",
     intro: "Text selection can't read images. For those, use the general highlight.",
     points: [
-      { label: "Capture region", body: "Press it in the toolbar, then drag a box over the figure. Add a question if you like, then press Explain." },
+      { label: "Capture", body: "Press it in the toolbar, then drag a box over the figure. Add a question if you like, then press Explain." },
       { label: "Vision model", body: "A vision model reads it: labels, axes, values, equations. The tutor then explains how to read it and why it matters." },
       { label: "Remembered", body: "The figure's description is saved and used as context whenever you're on that page again." },
     ],
@@ -516,7 +530,7 @@ export const GUIDE_STEPS: GuideStep[] = [
     id: "tutor",
     eyebrow: "The tutor",
     title: "Learn one idea at a time",
-    intro: "The Tutor tab is where the learning happens. It always knows your goal, the current topic and what you already understand.",
+    intro: "The tutor, on the right, is where the learning happens. It always knows your goal, the current topic and what you already understand.",
     points: [
       { label: "Teach me / Check my understanding", body: "Teach covers the next idea in your current topic. Check asks one question that tests understanding, not memory, and grades your answer honestly." },
       { label: "Citations", body: <>Page references like <span className="rounded bg-paper px-1 font-mono text-xs underline">D1 p. 12</span> are clickable and jump straight to that page.</> },

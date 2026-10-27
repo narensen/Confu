@@ -90,7 +90,14 @@ export type SendRequest = {
   figure?: { page: number; documentId: string } | null;
 };
 
-const SPLIT_KEY = "confu:split";
+const ZONES_KEY = "confu:zones"; // the two side panels' widths
+// Three zones from this width up (sections · PDF · tutor); below it, one panel at a time.
+const WIDE = "(min-width: 768px)";
+const subscribeWide = (fn: () => void) => {
+  const m = window.matchMedia(WIDE);
+  m.addEventListener("change", fn);
+  return () => m.removeEventListener("change", fn);
+};
 const noSubscribe = () => () => {};
 const URL_TTL = 60 * 60 * 6;
 
@@ -130,6 +137,8 @@ export function Workspace({
   const [goTo, setGoTo] = useState<{ page: number; n: number } | null>(null);
   const isPaper = session.kind === "paper";
   const isExam = session.kind === "exam";
+  // The Papers tab: one paper's passes, or (false) just the reading list.
+  const [passesOpen, setPassesOpen] = useState(false);
   const [tab, setTab] = useState<Tab>(isExam ? "practice" : isPaper ? "passes" : initialPlan ? "chat" : "plan");
   const practice = useExamPractice(session.id, initialAttempts);
   const [examDate, setExamDate] = useState(session.examDate);
@@ -148,7 +157,27 @@ export function Workspace({
     return () => clearTimeout(id);
   }, [tutorTip]);
   const [mobileView, setMobileView] = useState<"tutor" | "pdf">("pdf");
-  const [split, setSplit] = useState(40);
+  // Three zones: the session's sections on the left, the PDF, the tutor on the
+  // right. Each side can be dragged wider or folded away. A folded side opens
+  // again by itself when it's needed: the left when another section is opened
+  // (the plan, a paper's passes), the right when a new message arrives.
+  const wide = useSyncExternalStore(
+    subscribeWide,
+    () => window.matchMedia(WIDE).matches,
+    () => true,
+  );
+  const wideRef = useRef(true);
+  useEffect(() => {
+    wideRef.current = wide;
+  }, [wide]);
+  const [zones, setZones] = useState({ left: 320, right: 380 });
+  const [leftFoldedOn, setLeftFoldedOn] = useState<Tab | null>(null); // the section shown when folded
+  const [rightFoldedAt, setRightFoldedAt] = useState<number | null>(null); // how many messages there were
+  // Bringing up a section also unfolds the left side.
+  const showSection = useCallback((t: Tab) => {
+    setTab(t);
+    setLeftFoldedOn(null);
+  }, []);
   const rootRef = useRef<HTMLDivElement>(null);
   const [keyInfo, setKeyInfo] = useState(initialKey);
   const [keyNotice, setKeyNotice] = useState<string | null>(null);
@@ -265,11 +294,11 @@ export function Workspace({
     if (doc && p >= 1 && docs.some((d) => d.id === doc)) jumpTo(p, doc);
   }, [docs, jumpTo]);
 
-  // Restore the panel split.
+  // Restore the side panels' widths.
   useEffect(() => {
     try {
-      const saved = Number(localStorage.getItem(SPLIT_KEY));
-      if (saved >= 25 && saved <= 70) setSplit(saved);
+      const saved = JSON.parse(localStorage.getItem(ZONES_KEY) ?? "null") as { left?: number; right?: number } | null;
+      if (saved?.left && saved?.right) setZones({ left: Math.min(480, Math.max(220, saved.left)), right: Math.min(600, Math.max(300, saved.right)) });
     } catch {}
   }, []);
 
@@ -342,7 +371,8 @@ export function Workspace({
         { id: userId, role: "user", action: req.action, content, ...meta, highlight_id: req.highlightId ?? null, created_at: now },
         { id: replyId, role: "assistant", action: req.action, content: "", ...meta, highlight_id: null, created_at: now },
       ]);
-      setTab("chat");
+      if (!wideRef.current) setTab("chat"); // on wide screens the tutor is always beside the PDF
+      setRightFoldedAt(null);
       setDrawerOpen(true);
       setMobileView("tutor");
       setBusy("Thinking…");
@@ -441,7 +471,8 @@ export function Workspace({
       const documentId = activeDoc.id;
       busyRef.current = true;
       setBusy("Reading the figure…");
-      setTab("chat");
+      if (!wideRef.current) setTab("chat");
+      setRightFoldedAt(null);
       setDrawerOpen(true);
       setMobileView("tutor");
       let highlight: Highlight | null = null;
@@ -851,20 +882,25 @@ export function Workspace({
   }, [reloadPlan]);
   const onPlanCreated = useCallback(() => reloadPlanRef.current(), []);
 
-  const startDrag = (e: React.PointerEvent) => {
+  const startDrag = (side: "left" | "right") => (e: React.PointerEvent) => {
     const root = rootRef.current;
     if (!root) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     const box = root.getBoundingClientRect();
-    const move = (ev: PointerEvent) => setSplit(Math.min(70, Math.max(25, ((ev.clientX - box.left) / box.width) * 100)));
+    const move = (ev: PointerEvent) =>
+      setZones((z) =>
+        side === "left"
+          ? { ...z, left: Math.min(480, Math.max(220, ev.clientX - box.left)) }
+          : { ...z, right: Math.min(600, Math.max(300, box.right - ev.clientX)) },
+      );
     const up = () => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", up);
-      setSplit((s) => {
+      setZones((z) => {
         try {
-          localStorage.setItem(SPLIT_KEY, String(Math.round(s)));
+          localStorage.setItem(ZONES_KEY, JSON.stringify(z));
         } catch {}
-        return s;
+        return z;
       });
     };
     window.addEventListener("pointermove", move);
@@ -952,11 +988,12 @@ export function Workspace({
       selectDoc(docId);
       if (isPaper || isExam) return;
       if (paperIds.has(docId)) {
-        setTab("passes");
+        setPassesOpen(true);
+        showSection("passes");
         setDrawerOpen(true);
       } else setTab((t) => (t === "passes" ? (plan ? "plan" : "chat") : t));
     },
-    [isExam, isPaper, paperIds, plan, selectDoc],
+    [isExam, isPaper, paperIds, plan, selectDoc, showSection],
   );
 
   // The literature map and the paper tools (BibTeX, Zotero, related work, compare).
@@ -970,9 +1007,9 @@ export function Workspace({
       const added = await addPdfs(files);
       if (isPaper || !added.length) return;
       for (const d of added) markPaper(d.id);
-      setTab("passes");
+      showSection("passes");
     },
-    [addPdfs, isPaper, markPaper],
+    [addPdfs, isPaper, markPaper, showSection],
   );
 
   // Papers found by arXiv ID, DOI, title, Zotero or a suggestion. In a study
@@ -982,10 +1019,10 @@ export function Workspace({
       const added = await addPapers(papers);
       if (isPaper || !added.length) return added;
       for (const d of added) markPaper(d.id);
-      setTab("passes");
+      showSection("passes");
       return added;
     },
-    [addPapers, isPaper, markPaper],
+    [addPapers, isPaper, markPaper, showSection],
   );
 
   // What the goal names that isn't in the session yet: the "To add" tab.
@@ -1220,9 +1257,14 @@ export function Workspace({
       if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
       if (document.querySelector('[role="dialog"][aria-modal="true"]')) return;
       const show = (t: Tab) => {
-        setTab(t);
         setDrawerOpen(true);
         setMobileView("tutor");
+        if (t === "chat" && wideRef.current) {
+          setRightFoldedAt(null);
+          window.setTimeout(() => document.getElementById("tutor-input")?.focus(), 50);
+          return;
+        }
+        showSection(t);
       };
       const i = openDocs.findIndex((d) => d.id === activeDoc?.id);
       const go: Record<string, () => void> = {
@@ -1262,7 +1304,8 @@ export function Workspace({
     return () => window.removeEventListener("keydown", listener);
   }, []);
 
-  const tutor = locked ? (
+  const tutorPanel = (layout: "full" | "sections" | "chat", onCollapse?: () => void) =>
+    locked && layout !== "sections" ? (
     <KeyGate
       sessionId={session.id}
       notice={keyNotice}
@@ -1274,6 +1317,8 @@ export function Workspace({
     />
   ) : (
     <TutorPanel
+      layout={layout}
+      onCollapse={onCollapse}
       tab={tab}
       onTab={setTab}
       sessionId={session.id}
@@ -1363,44 +1408,73 @@ export function Workspace({
         onAddPapers: () => setAddPaperOpen(true),
         studyGoal: plan ? plan.goal_title || plan.goal : "",
         onOpenMap: () => setMapOpen(true),
+        passesOpen,
+        onPassesOpen: setPassesOpen,
         onTool: (t) => (t === "bibtex" ? exportBibtex(paperDocs, session.title) : setPaperTool(t)),
       }}
       exam={{ practice, examDate, onExamDate: saveExamDate }}
     />
   );
-  const panel = tutor;
+
+  // The folded sides, and when they open again by themselves (see zones above).
+  const sideTab = tab === "chat" ? null : tab;
+  const leftOpen = leftFoldedOn === null || (sideTab !== null && sideTab !== leftFoldedOn);
+  const rightOpen = rightFoldedAt === null || messages.length !== rightFoldedAt;
+  const handle = (side: "left" | "right") => (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-label={side === "left" ? "Resize the sections" : "Resize the tutor"}
+      onPointerDown={startDrag(side)}
+      className="group flex w-1.5 shrink-0 cursor-col-resize justify-center bg-panel"
+    >
+      <span className="h-full w-px bg-ink transition-all duration-200 group-hover:w-0.75 group-active:w-0.75" />
+    </div>
+  );
+  // A folded side: a slim strip that opens it again.
+  const strip = (side: "left" | "right") => (
+    <button
+      type="button"
+      onClick={() => (side === "left" ? setLeftFoldedOn(null) : setRightFoldedAt(null))}
+      title={side === "left" ? "Show the sections" : "Show the tutor"}
+      className={`flex w-9 shrink-0 flex-col items-center gap-3 bg-panel py-3 text-muted transition hover:bg-paper hover:text-ink ${side === "left" ? "border-r" : "border-l"} border-ink`}
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+        {side === "left" ? <path d="M13 17l5-5-5-5M6 17l5-5-5-5" /> : <path d="M11 17l-5-5 5-5M18 17l-5-5 5-5" />}
+      </svg>
+      <span className="text-xs font-medium [writing-mode:vertical-rl]">{side === "left" ? "Sections" : "Tutor"}</span>
+    </button>
+  );
 
   return (
     <div ref={rootRef} className={`flex min-h-0 flex-1 bg-paper ${focusMode ? "fixed inset-0 z-40" : "relative"}`}>
-      {!focusMode && (
-        <>
-          <aside
-            className={`min-w-0 flex-col bg-panel md:flex md:min-w-90 ${mobileView === "tutor" ? "flex w-full" : "hidden"}`}
-            style={{ flexBasis: `${split}%` }}
-          >
-            {panel}
-          </aside>
-          <div
-            role="separator"
-            aria-orientation="vertical"
-            aria-label="Resize panels"
-            onPointerDown={startDrag}
-            className="group hidden w-2 shrink-0 cursor-col-resize justify-center bg-panel md:flex"
-          >
-            <span className="h-full w-px bg-ink transition-all duration-200 group-hover:w-0.75 group-active:w-0.75" />
-          </div>
-        </>
-      )}
+      {!focusMode &&
+        (wide ? (
+          // Left zone: the session's sections, all listed.
+          leftOpen ? (
+            <>
+              <aside className="flex min-w-0 shrink-0 flex-col bg-panel" style={{ width: zones.left }}>
+                {tutorPanel("sections", () => setLeftFoldedOn(sideTab ?? "plan"))}
+              </aside>
+              {handle("left")}
+            </>
+          ) : (
+            strip("left")
+          )
+        ) : (
+          // Phones: one panel at a time, everything in tabs.
+          mobileView === "tutor" && <aside className="flex w-full min-w-0 flex-col bg-panel">{tutorPanel("full")}</aside>
+        ))}
 
       {/* Full screen: the tutor sits beside the PDF (not over it), and the PDF
           refits to the space that's left. */}
       {focusMode && drawerOpen && (
         <aside className="animate-slide-in flex w-[min(480px,40%)] min-w-80 shrink-0 flex-col border-r border-ink bg-panel">
-          {panel}
+          {tutorPanel("full")}
         </aside>
       )}
 
-      <section className={`relative min-w-0 flex-1 flex-col md:flex ${focusMode || mobileView === "pdf" ? "flex" : "hidden"}`}>
+      <section className={`relative min-w-0 flex-1 flex-col ${focusMode || wide || mobileView === "pdf" ? "flex" : "hidden"}`}>
         <PackSources sessionId={session.id} docs={docs} busy={Boolean(uploadStatus)} onAttach={attachPdf} onSelect={openDocTab} />
         <DocTabs
           docs={openDocs}
@@ -1418,7 +1492,8 @@ export function Workspace({
               ? undefined
               : () => {
                   // Its passes, beside the PDF.
-                  setTab("passes");
+                  setPassesOpen(true);
+                  showSection("passes");
                   setDrawerOpen(true);
                   setMobileView("tutor");
                 }
@@ -1486,7 +1561,7 @@ export function Workspace({
               <button
                 type="button"
                 onClick={() => {
-                  setTab("files");
+                  showSection("files");
                   setDrawerOpen(true);
                   setMobileView("tutor");
                 }}
@@ -1517,6 +1592,20 @@ export function Workspace({
           )}
         </div>
       </section>
+
+      {/* Right zone: the tutor, always beside the PDF. */}
+      {!focusMode &&
+        wide &&
+        (rightOpen ? (
+          <>
+            {handle("right")}
+            <aside className="flex min-w-0 shrink-0 flex-col bg-panel" style={{ width: zones.right }}>
+              {tutorPanel("chat", () => setRightFoldedAt(messages.length))}
+            </aside>
+          </>
+        ) : (
+          strip("right")
+        ))}
 
       {!isExam && (
         <RecommendPapers

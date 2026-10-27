@@ -497,126 +497,172 @@ export default function PdfViewer(props: Props) {
   }
 
   const zoomIndex = ZOOMS.indexOf(zoom);
+  const zoomOut = () => setZoom(ZOOMS[Math.max(0, zoomIndex - 1)]);
+  const zoomIn = () => setZoom(ZOOMS[Math.min(ZOOMS.length - 1, zoomIndex + 1)]);
 
   return (
     <div className="flex h-full flex-col bg-viewer" data-reader={theme}>
       {/* Toolbar (adapts to the panel's own width, not the screen's) */}
+      {/* Grouped by job: Navigate · Read · Capture · Focus. Labels show when
+          the viewer is wide enough; the rarely used Read tools fold into More
+          when it isn't. */}
       <div className="@container flex h-12 shrink-0 items-center gap-1 border-b border-ink bg-panel px-2 text-sm">
         {toolbarStart}
-        <form
-          className="flex items-center gap-1 px-1"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const n = Math.min(Math.max(1, Number(pageInput) || 1), numPages || 1);
-            scrollToPage(n);
-          }}
-        >
-          <input
-            aria-label="Page number"
-            value={pageInput}
-            onChange={(e) => setPageInput(e.target.value.replace(/\D/g, ""))}
-            className="h-7 w-11 rounded-md border border-ink/30 bg-panel text-center font-mono text-xs outline-none transition focus:border-ink focus:shadow-hard-sm"
-          />
-          <span className="font-mono text-xs text-muted">/ {numPages || "…"}</span>
-        </form>
-        <div className="mx-1.5 h-5 w-px bg-ink/20" />
-        <ToolButton label="Zoom out" disabled={zoomIndex <= 0} onClick={() => setZoom(ZOOMS[Math.max(0, zoomIndex - 1)])}>
-          −
-        </ToolButton>
-        <button
-          type="button"
-          onClick={() => setZoom(1)}
-          className="h-7 min-w-12 rounded-md px-1.5 font-mono text-xs tabular-nums text-muted transition hover:bg-paper hover:text-ink"
-          title="Fit width"
-        >
-          {Math.round(zoom * 100)}%
-        </button>
-        <ToolButton label="Zoom in" disabled={zoomIndex >= ZOOMS.length - 1} onClick={() => setZoom(ZOOMS[Math.min(ZOOMS.length - 1, zoomIndex + 1)])}>
-          +
-        </ToolButton>
-        <div className="mx-1.5 h-5 w-px bg-ink/20" />
-        <ToolButton label="Search this PDF (Ctrl+F)" aria-pressed={panel === "search"} onClick={() => togglePanel("search")}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-            <circle cx="11" cy="11" r="7" />
-            <path d="m20 20-3.5-3.5" />
-          </svg>
-        </ToolButton>
-        <ToolButton label="Contents" aria-pressed={panel === "contents"} onClick={() => togglePanel("contents")}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-            <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
-          </svg>
-        </ToolButton>
-        <ToolButton label={`Reading theme: ${THEME_NAME[theme]} (click to change)`} onClick={cycleTheme}>
-          {theme === "night" ? (
+        <div role="group" aria-label="Navigate" className="flex items-center gap-0.5">
+          <form
+            className="flex items-center gap-1 px-1"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const n = Math.min(Math.max(1, Number(pageInput) || 1), numPages || 1);
+              scrollToPage(n);
+            }}
+          >
+            <input
+              aria-label="Page number"
+              value={pageInput}
+              onChange={(e) => setPageInput(e.target.value.replace(/\D/g, ""))}
+              className="h-7 w-11 rounded-md border border-ink/30 bg-panel text-center font-mono text-xs outline-none transition focus:border-ink focus:shadow-hard-sm"
+            />
+            <span className="font-mono text-xs whitespace-nowrap text-muted">/ {numPages || "…"}</span>
+          </form>
+          <ToolButton label="Contents" text="Contents" textAt="@2xl:inline" aria-pressed={panel === "contents"} onClick={() => togglePanel("contents")}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-              <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />
+              <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
             </svg>
-          ) : theme === "sepia" ? (
-            <span aria-hidden className="flex size-5 items-center justify-center rounded bg-[#efe3c8] font-serif text-[12px] font-semibold text-[#5b4636]">
-              Aa
-            </span>
-          ) : (
+          </ToolButton>
+          <ToolButton label="Search this PDF (Ctrl+F)" text="Search" textAt="@2xl:inline" aria-pressed={panel === "search"} onClick={() => togglePanel("search")}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-              <circle cx="12" cy="12" r="4" />
-              <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-3.5-3.5" />
             </svg>
-          )}
-        </ToolButton>
-        <ToolButton
-          label={readAloud.state === "idle" ? "Read aloud from this page" : "Stop reading aloud"}
-          aria-pressed={readAloud.state !== "idle"}
-          onClick={() => (readAloud.state === "idle" ? void readAloud.start(current) : readAloud.stop())}
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-            <path d="M11 5 6 9H2v6h4l5 4V5z" />
-            <path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14" />
-          </svg>
-        </ToolButton>
-        <ToolButton label="Where it got hard" aria-pressed={panel === "map"} onClick={() => togglePanel("map")}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-            <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
-          </svg>
-        </ToolButton>
-        <div className="mx-1.5 h-5 w-px bg-ink/20" />
-        <button
-          type="button"
-          onClick={() => {
-            setRegionMode((v) => !v);
-            closePopover();
-          }}
-          aria-pressed={regionMode}
-          title="Drag over a figure, table or equation to have it read by a vision model (Esc to cancel)"
-          className={`flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium transition duration-200 ease-fluid ${
-            regionMode ? "border-ink bg-ink text-white" : "border-ink hover:-translate-y-px hover:shadow-hard-sm"
-          }`}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-            <path d="M3 7V3h4M17 3h4v4M21 17v4h-4M7 21H3v-4" />
-            <rect x="8" y="8" width="8" height="8" rx="1" />
-          </svg>
-          <span className="hidden @2xl:inline">{regionMode ? "Drag to capture…" : "Capture region"}</span>
-        </button>
-        <div className="flex-1" />
-        <span className="hidden truncate px-2 text-xs text-muted @4xl:inline">Select text to ask about it</span>
-        <FocusSound />
-        <FocusTimer />
-        <ToolButton
-          label={focusMode ? "Exit full screen" : "Full screen"}
-          onClick={() => {
-            if (!focusMode) track("reader.fullscreen");
-            onToggleFocus();
-          }}
-        >
-          {focusMode ? (
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-              <path d="M8 3v5H3M21 8h-5V3M3 16h5v5M16 21v-5h5" />
+          </ToolButton>
+        </div>
+        <div className="mx-1 h-5 w-px shrink-0 bg-ink/20" />
+        <div role="group" aria-label="Read" className="flex items-center gap-0.5">
+          <span className="hidden items-center gap-0.5 @md:flex">
+            <ToolButton label="Zoom out" disabled={zoomIndex <= 0} onClick={zoomOut}>
+              −
+            </ToolButton>
+            <button
+              type="button"
+              onClick={() => setZoom(1)}
+              className="h-7 min-w-11 rounded-md px-1 font-mono text-xs tabular-nums text-muted transition hover:bg-paper hover:text-ink"
+              title="Fit width"
+            >
+              {Math.round(zoom * 100)}%
+            </button>
+            <ToolButton label="Zoom in" disabled={zoomIndex >= ZOOMS.length - 1} onClick={zoomIn}>
+              +
+            </ToolButton>
+          </span>
+          <span className="hidden items-center gap-0.5 @4xl:flex">
+            <ToolButton label={`Reading theme: ${THEME_NAME[theme]} (click to change)`} text="Theme" textAt="@6xl:inline" onClick={cycleTheme}>
+              <ThemeIcon theme={theme} />
+            </ToolButton>
+            <ToolButton
+              label={readAloud.state === "idle" ? "Read aloud from this page" : "Stop reading aloud"}
+              text={readAloud.state === "idle" ? "Listen" : "Stop"}
+              textAt="@6xl:inline"
+              aria-pressed={readAloud.state !== "idle"}
+              onClick={() => (readAloud.state === "idle" ? void readAloud.start(current) : readAloud.stop())}
+            >
+              <ListenIcon />
+            </ToolButton>
+            <ToolButton label="Where it got hard" text="Hard spots" textAt="@6xl:inline" aria-pressed={panel === "map"} onClick={() => togglePanel("map")}>
+              <HardSpotsIcon />
+            </ToolButton>
+          </span>
+          <MoreMenu>
+            {(close) => (
+              <>
+                <span className="mb-1.5 flex items-center gap-1 border-b border-line pb-1.5 @md:hidden">
+                  <span className="px-2 text-sm">Zoom</span>
+                  <span className="ml-auto flex items-center gap-0.5">
+                    <ToolButton label="Zoom out" disabled={zoomIndex <= 0} onClick={zoomOut}>
+                      −
+                    </ToolButton>
+                    <button type="button" onClick={() => setZoom(1)} title="Fit width" className="h-7 min-w-11 rounded-md px-1 font-mono text-xs tabular-nums text-muted hover:bg-paper">
+                      {Math.round(zoom * 100)}%
+                    </button>
+                    <ToolButton label="Zoom in" disabled={zoomIndex >= ZOOMS.length - 1} onClick={zoomIn}>
+                      +
+                    </ToolButton>
+                  </span>
+                </span>
+                <MoreItem onClick={cycleTheme} hint={THEME_NAME[theme]}>
+                  <ThemeIcon theme={theme} />
+                  Reading theme
+                </MoreItem>
+                <MoreItem
+                  pressed={readAloud.state !== "idle"}
+                  onClick={() => {
+                    if (readAloud.state === "idle") void readAloud.start(current);
+                    else readAloud.stop();
+                    close();
+                  }}
+                >
+                  <ListenIcon />
+                  {readAloud.state === "idle" ? "Read aloud from here" : "Stop reading aloud"}
+                </MoreItem>
+                <MoreItem
+                  pressed={panel === "map"}
+                  onClick={() => {
+                    togglePanel("map");
+                    close();
+                  }}
+                >
+                  <HardSpotsIcon />
+                  Where it got hard
+                </MoreItem>
+              </>
+            )}
+          </MoreMenu>
+        </div>
+        <div className="mx-1 h-5 w-px shrink-0 bg-ink/20" />
+        <div role="group" aria-label="Capture" className="flex items-center">
+          <button
+            type="button"
+            onClick={() => {
+              setRegionMode((v) => !v);
+              closePopover();
+            }}
+            aria-pressed={regionMode}
+            title="Drag over a figure, table or equation to have it read by a vision model (Esc to cancel)"
+            className={`flex h-7 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs font-medium transition duration-200 ease-fluid ${
+              regionMode ? "border-ink bg-ink text-white" : "border-ink hover:-translate-y-px hover:shadow-hard-sm"
+            }`}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+              <path d="M3 7V3h4M17 3h4v4M21 17v4h-4M7 21H3v-4" />
+              <rect x="8" y="8" width="8" height="8" rx="1" />
             </svg>
-          ) : (
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-              <path d="M3 8V3h5M16 3h5v5M21 16v5h-5M8 21H3v-5" />
-            </svg>
-          )}
-        </ToolButton>
+            <span className="hidden @xl:inline">{regionMode ? "Drag to capture…" : "Capture"}</span>
+          </button>
+        </div>
+        <div className="min-w-0 flex-1" />
+        <span className="hidden truncate px-2 text-xs text-muted @7xl:inline">Select text to ask about it</span>
+        <div className="mx-1 h-5 w-px shrink-0 bg-ink/20" />
+        <div role="group" aria-label="Focus" className="flex items-center gap-0.5">
+          <FocusSound />
+          <FocusTimer />
+          <ToolButton
+            label={focusMode ? "Exit full screen" : "Full screen"}
+            onClick={() => {
+              if (!focusMode) track("reader.fullscreen");
+              onToggleFocus();
+            }}
+          >
+            {focusMode ? (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                <path d="M8 3v5H3M21 8h-5V3M3 16h5v5M16 21v-5h5" />
+              </svg>
+            ) : (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                <path d="M3 8V3h5M16 3h5v5M21 16v5h-5M8 21H3v-5" />
+              </svg>
+            )}
+          </ToolButton>
+        </div>
       </div>
 
       {/* Pages, with the contents drawer and search bar over them */}
@@ -1142,16 +1188,120 @@ function ContentsPanel({
   );
 }
 
-function ToolButton({ label, children, ...rest }: { label: string; children: ReactNode } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
+// `text` is a short label shown from the container width in `textAt` up
+// (a full class, e.g. "@3xl:inline", so Tailwind sees it).
+function ToolButton({
+  label,
+  text,
+  textAt,
+  children,
+  ...rest
+}: { label: string; text?: string; textAt?: string; children: ReactNode } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
       type="button"
       aria-label={label}
       title={label}
-      className="flex size-7 shrink-0 items-center justify-center rounded-md text-base text-ink transition duration-200 hover:bg-paper active:scale-90 disabled:opacity-30 aria-pressed:bg-ink aria-pressed:text-white"
+      className="flex h-7 min-w-7 shrink-0 items-center justify-center gap-1.5 rounded-md px-1.5 text-base text-ink transition duration-200 hover:bg-paper active:scale-90 disabled:opacity-30 aria-pressed:bg-ink aria-pressed:text-white"
       {...rest}
     >
       {children}
+      {text && <span className={`hidden text-xs font-medium ${textAt ?? ""}`}>{text}</span>}
+    </button>
+  );
+}
+
+function ThemeIcon({ theme }: { theme: ReaderTheme }) {
+  if (theme === "night")
+    return (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+        <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />
+      </svg>
+    );
+  if (theme === "sepia")
+    return (
+      <span aria-hidden className="flex size-5 items-center justify-center rounded bg-[#efe3c8] font-serif text-[12px] font-semibold text-[#5b4636]">
+        Aa
+      </span>
+    );
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+    </svg>
+  );
+}
+
+function ListenIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M11 5 6 9H2v6h4l5 4V5z" />
+      <path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14" />
+    </svg>
+  );
+}
+
+function HardSpotsIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+      <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+    </svg>
+  );
+}
+
+// The Read tools that don't fit inline when the viewer is narrow.
+function MoreMenu({ children }: { children: (close: () => void) => ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (root.current && !root.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+  return (
+    <div ref={root} className="relative @4xl:hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        title="More reading tools"
+        className="flex h-7 shrink-0 items-center gap-1 rounded-md px-1.5 text-xs font-medium transition hover:bg-paper aria-expanded:bg-paper"
+      >
+        More
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden>
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
+      {open && (
+        <div role="menu" className="animate-pop absolute top-full left-0 z-30 mt-1.5 w-56 rounded-xl border border-ink bg-panel p-1.5 shadow-hard">
+          {children(() => setOpen(false))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MoreItem({ pressed, hint, onClick, children }: { pressed?: boolean; hint?: string; onClick: () => void; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onClick}
+      className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-sm transition ${pressed ? "bg-ink text-white" : "hover:bg-paper"}`}
+    >
+      {children}
+      {hint && <span className="ml-auto text-[11px] text-muted">{hint}</span>}
     </button>
   );
 }

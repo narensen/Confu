@@ -226,7 +226,7 @@ function QuickAction({ children, ...rest }: React.ButtonHTMLAttributes<HTMLButto
 function EmptyState({ hasPlan, onOpenPlan }: { hasPlan: boolean; onOpenPlan: () => void }) {
   const items = [
     ["Select text", "in the PDF to ask a doubt, summarize it, see its context, or get it explained simply."],
-    ["Capture region", "in the toolbar, then drag over a figure, table or equation. A vision model reads it and the tutor explains it."],
+    ["Capture", "in the toolbar, then drag over a figure, table or equation. A vision model reads it and the tutor explains it."],
     ["Teach me / Check my understanding", "work through your plan one idea at a time, including topics beyond the PDF. Your progress is remembered."],
   ];
   return (

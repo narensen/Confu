@@ -32,7 +32,7 @@ export function FilesPanel({ docs, activeId, open, addLabel, onAdd, onAddPapers,
   const openCount = docs.filter((d) => open.has(d.id)).length;
   return (
     <div className="h-full overflow-y-auto px-6 py-6">
-      <header className="flex items-start justify-between gap-4">
+      <header className="flex flex-col gap-3 @md:flex-row @md:items-start @md:justify-between @md:gap-4">
         <div>
           <p className={eyebrowClass}>Files</p>
           <h2 className="mt-1 font-serif text-2xl leading-tight">Everything in this session</h2>
@@ -42,7 +42,7 @@ export function FilesPanel({ docs, activeId, open, addLabel, onAdd, onAddPapers,
               : "Nothing yet."}
           </p>
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-1.5">
+        <div className="flex shrink-0 flex-wrap gap-1.5 @md:flex-col @md:items-end">
           <button type="button" onClick={onAdd} className="rounded-md border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white transition hover:-translate-y-px">
             {addLabel}
           </button>

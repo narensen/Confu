@@ -85,7 +85,7 @@ export function HighlightsPanel({ sessionId, highlights, docs, busy, onJump, onD
           ))}
         </ul>
         <p className="mt-3 text-sm leading-relaxed text-muted">
-          Add a <b className="font-medium text-ink">Note</b> to any passage, or use <b className="font-medium text-ink">Capture region</b> on a figure, table or equation.
+          Add a <b className="font-medium text-ink">Note</b> to any passage, or use <b className="font-medium text-ink">Capture</b> on a figure, table or equation.
         </p>
         <div className="mt-5 border-t border-line pt-3">
           <ExportLinks sessionId={sessionId} />

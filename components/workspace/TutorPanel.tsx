@@ -36,6 +36,8 @@ export type PaperProps = {
   studyGoal: string; // the study plan's goal, the default for triage and suggestions
   onOpenMap: () => void;
   onTool: (tool: PaperTool) => void;
+  passesOpen: boolean; // one paper's passes shown, rather than the reading list
+  onPassesOpen: (open: boolean) => void;
 };
 
 type Props = {
@@ -65,6 +67,10 @@ type Props = {
   setup: PlanSetup;
   files: FilesProps; // every PDF: open, close its tab, delete
   onClose?: () => void;
+  // Where it's shown: everything with tabs (phones, full screen), the study
+  // sections on the left (no chat), or the tutor chat on the right.
+  layout?: "full" | "sections" | "chat";
+  onCollapse?: () => void; // the side layouts can fold away
   keyInfo?: KeyInfo | null; // the user's own Groq key in use here (never the key itself)
   kind: SessionKind;
   paper: PaperProps;
@@ -103,6 +109,11 @@ export function TutorPanel(props: Props) {
           { id: "memory", label: "Progress" },
           { id: "files", label: "Files", badge: filesBadge },
         ];
+  const layout = props.layout ?? "full";
+  const navTabs = layout === "sections" ? tabs.filter((t) => t.id !== "chat") : tabs;
+  // What's on screen: the chat side always shows the chat; the sections side
+  // shows the chosen section (its first one while the chat is "the tab").
+  const shown: Tab = layout === "chat" ? "chat" : navTabs.some((t) => t.id === tab) ? tab : navTabs[0].id;
   const activePaper = props.docs.find((d) => d.id === props.paper.activeDocId && (props.kind === "paper" || props.paper.paperIds.has(d.id)));
 
   // Sliding underline under the active tab.
@@ -119,8 +130,71 @@ export function TutorPanel(props: Props) {
     return () => ro.disconnect();
   }, [tab, plan, topics.length, highlights.length]);
 
+  const closeButton = props.onClose && (
+    <button
+      onClick={props.onClose}
+      aria-label="Hide tutor"
+      className="my-2 flex w-8 items-center justify-center rounded-md text-muted transition hover:bg-paper hover:text-ink"
+    >
+      ✕
+    </button>
+  );
+  const collapseButton = (side: "left" | "right") =>
+    props.onCollapse && (
+      <button
+        type="button"
+        onClick={props.onCollapse}
+        aria-label={side === "left" ? "Fold the sections away" : "Fold the tutor away"}
+        title={side === "left" ? "Fold away" : "Fold the tutor away"}
+        className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted transition hover:bg-paper hover:text-ink"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
+          {side === "left" ? <path d="M11 17l-5-5 5-5M18 17l-5-5 5-5" /> : <path d="M13 17l5-5-5-5M6 17l5-5-5-5" />}
+        </svg>
+      </button>
+    );
+
   return (
     <div className="@container flex h-full min-h-0 flex-col">
+      {layout === "chat" ? (
+        <div className="flex h-12 shrink-0 items-center gap-2 border-b border-ink pr-2 pl-4">
+          <p className="font-medium">Tutor</p>
+          <div className="flex-1" />
+          <UsageMeter sessionId={props.sessionId} keyId={props.keyInfo?.id} keyLast4={props.keyInfo?.last4} />
+          {closeButton}
+          {collapseButton("right")}
+        </div>
+      ) : layout === "sections" ? (
+        // Every section listed, none hidden behind scrolling.
+        <nav className="shrink-0 border-b border-ink px-2 py-2" role="tablist" aria-orientation="vertical" aria-label="Sections">
+          <div className="flex items-center justify-between px-2 pb-1">
+            <p className="font-mono text-[10px] tracking-wider text-muted uppercase">This session</p>
+            {collapseButton("left")}
+          </div>
+          {navTabs.map((t) => (
+            <button
+              key={t.id}
+              role="tab"
+              aria-selected={shown === t.id}
+              onClick={() => onTab(t.id)}
+              className={`flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors duration-150 ${
+                shown === t.id ? "bg-ink font-medium text-white" : "text-muted hover:bg-paper hover:text-ink"
+              }`}
+            >
+              {t.label}
+              {t.badge && (
+                <span
+                  className={`rounded px-1.5 py-px font-mono text-[10px] ${
+                    shown === t.id ? "bg-white/15" : t.id === "plan" && !plan ? "bg-ink text-white" : "border border-line"
+                  }`}
+                >
+                  {t.badge}
+                </span>
+              )}
+            </button>
+          ))}
+        </nav>
+      ) : (
       <nav className="relative flex h-12 shrink-0 items-stretch gap-2 border-b border-ink px-3">
         {/* Only the tabs scroll when there are many; the usage meter stays put at the right. */}
         <div className="flex min-w-0 flex-1 items-stretch overflow-x-auto [mask-image:linear-gradient(to_right,#000_calc(100%-28px),transparent)] [scrollbar-width:none]" role="tablist">
@@ -168,8 +242,9 @@ export function TutorPanel(props: Props) {
           </button>
         )}
       </nav>
-      <div key={tab} className="animate-fade min-h-0 flex-1">
-        {tab === "chat" && (
+      )}
+      <div key={shown} className="animate-fade min-h-0 flex-1">
+        {shown === "chat" && (
           <ChatPanel
             messages={props.messages}
             busy={props.busy}
@@ -189,7 +264,7 @@ export function TutorPanel(props: Props) {
             })()}
           />
         )}
-        {tab === "practice" && (
+        {shown === "practice" && (
           <PracticePanel
             practice={props.exam.practice}
             docs={props.docs}
@@ -199,7 +274,7 @@ export function TutorPanel(props: Props) {
             onAsk={(message) => props.onSend({ action: "chat", message })}
           />
         )}
-        {tab === "passes" && (
+        {shown === "passes" && (
           <PassesPanel
             sessionId={props.sessionId}
             inStudy={props.kind === "study"}
@@ -218,9 +293,11 @@ export function TutorPanel(props: Props) {
             onResearchGoal={props.paper.onResearchGoal}
             fetching={props.paper.fetching}
             onSend={props.onSend}
+            passesOpen={props.paper.passesOpen}
+            onPassesOpen={props.paper.onPassesOpen}
           />
         )}
-        {tab === "plan" && (
+        {shown === "plan" && (
           <PlanPanel
             sessionId={props.sessionId}
             docs={props.docs}
@@ -237,6 +314,7 @@ export function TutorPanel(props: Props) {
             reviews={props.paper.reviews}
             onOpenPaper={(docId) => {
               props.paper.onSelectDoc(docId);
+              props.paper.onPassesOpen(true);
               onTab("passes");
             }}
             onMarkPaper={(docId) => {
@@ -255,8 +333,8 @@ export function TutorPanel(props: Props) {
             setup={props.setup}
           />
         )}
-        {tab === "files" && <FilesPanel {...props.files} />}
-        {tab === "highlights" && (
+        {shown === "files" && <FilesPanel {...props.files} />}
+        {shown === "highlights" && (
           <HighlightsPanel
             sessionId={props.sessionId}
             highlights={highlights}
@@ -268,7 +346,7 @@ export function TutorPanel(props: Props) {
             onSend={props.onSend}
           />
         )}
-        {tab === "memory" &&
+        {shown === "memory" &&
           (props.kind === "exam" ? (
             <ExamProgress
               practice={props.exam.practice}
