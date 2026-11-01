@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { PrintButton } from "@/components/workspace/PrintButton";
 import { requireUser } from "@/lib/dal";
 import { sheetOf } from "@/lib/sheet";
@@ -9,7 +10,16 @@ import type { PlanTopic } from "@/lib/types";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // One page for a topic, from the plan and the pages already read. Nothing is generated.
-export default async function SheetPage({ params, searchParams }: PageProps<"/session/[id]/sheet">) {
+// The session read uses cookies, so it stays inside Suspense and the shell can prerender.
+export default function SheetPage({ params, searchParams }: PageProps<"/session/[id]/sheet">) {
+  return (
+    <Suspense fallback={<div className="skeleton m-8 h-80 rounded-xl" />}>
+      <Sheet params={params} searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function Sheet({ params, searchParams }: { params: PageProps<"/session/[id]/sheet">["params"]; searchParams: PageProps<"/session/[id]/sheet">["searchParams"] }) {
   const { id } = await params;
   const topicId = (await searchParams).topic;
   const wanted = typeof topicId === "string" ? topicId : null;

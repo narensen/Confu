@@ -8,7 +8,7 @@ import { SiteFooter, SiteNav } from "@/components/site/SiteNav";
 import { eyebrowClass } from "@/components/ui";
 import { getUser } from "@/lib/dal";
 import { SOURCE_LABEL, type Pack, type PackTopic } from "@/lib/packs";
-import { courseCodeFor, getPackForViewer, getPackPublic } from "@/lib/packs-server";
+import { courseCodeFor, getPackForViewer, getPackPublic, sectionScopeFor } from "@/lib/packs-server";
 import { createClient } from "@/lib/supabase/server";
 
 const KIND: Record<Pack["kind"], string> = { study: "Study pack", paper: "Paper pack", exam: "Exam pack" };
@@ -44,7 +44,7 @@ export default function PackPage({ params }: PageProps<"/p/[slug]">) {
 
 async function PackBody({ params }: { params: PageProps<"/p/[slug]">["params"] }) {
   const { slug } = await params;
-  const [pack, user, course] = await Promise.all([getPackForViewer(slug), getUser(), courseCodeFor(slug)]);
+  const [pack, user, course, scope] = await Promise.all([getPackForViewer(slug), getUser(), courseCodeFor(slug), sectionScopeFor(slug)]);
   if (!pack) notFound();
   if (!pack.mine) {
     after(async () => {
@@ -90,6 +90,16 @@ async function PackBody({ params }: { params: PageProps<"/p/[slug]">["params"] }
               </p>
             )}
             {pack.description && <p className="mt-5 max-w-2xl text-lg leading-relaxed whitespace-pre-line text-muted">{pack.description}</p>}
+            {scope.length > 0 && (
+              <div className="mt-6 max-w-2xl">
+                <p className={eyebrowClass}>Section paper</p>
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-relaxed text-muted">
+                  {scope.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <p className="mt-6 flex flex-wrap gap-x-3 gap-y-1 font-mono text-xs text-muted">
               <span>{pack.author_name ? `Shared by ${pack.author_name}` : "Shared anonymously"}</span>
               <span aria-hidden>·</span>

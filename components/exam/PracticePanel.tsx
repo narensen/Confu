@@ -1,14 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { Markdown } from "@/components/workspace/Markdown";
+import { GroqKeyForm } from "@/components/keys/GroqKeyForm";
 import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
 import { JSON_HEADERS } from "@/lib/ai-errors";
 import { countdownLabel, daysUntil, type ExamQuestion, type QuestionKind } from "@/lib/exam";
+import { endOfToday } from "@/lib/review";
 import { SITTING_COUNT, SITTING_SECONDS } from "@/lib/sitting";
 import { SITE } from "@/lib/site";
+import { createClient } from "@/lib/supabase/client";
 import { useToday } from "@/lib/use-today";
 import type { SessionDoc } from "@/lib/types";
+import { SectionPaper } from "./SectionPaper";
 import type { ExamPractice } from "./useExamPractice";
 
 type Props = {
@@ -18,6 +23,7 @@ type Props = {
   onExamDate: (date: string | null) => void;
   onJump: (page: number, docId?: string | null) => void;
   onAsk: (message: string) => void;
+  onTrial: boolean;
 };
 
 const MIXES: { value: "mixed" | QuestionKind; label: string }[] = [
@@ -26,19 +32,41 @@ const MIXES: { value: "mixed" | QuestionKind; label: string }[] = [
   { value: "short", label: "Short answer" },
 ];
 
-export function PracticePanel({ practice, docs, examDate, onExamDate, onJump, onAsk }: Props) {
+export function PracticePanel({ practice, docs, examDate, onExamDate, onJump, onAsk, onTrial }: Props) {
   const { quiz, loading, error, stats } = practice;
   const [scope, setScope] = useState<string>("all");
   const [mix, setMix] = useState<"mixed" | QuestionKind>("mixed");
+  const [keyAdded, setKeyAdded] = useState(false);
+  const [due, setDue] = useState<number | null>(null);
   const weak = stats.filter((t) => t.level === "weak" || t.level === "improving").slice(0, 5);
   const today = useToday();
+  const days = today ? daysUntil(examDate, today) : null;
+
+  useEffect(() => {
+    if (today === null || days === null || days >= 0) return;
+    void createClient()
+      .from("review_items")
+      .select("id", { count: "exact", head: true })
+      .eq("suspended", false)
+      .lte("due_at", endOfToday())
+      .then(({ count }) => setDue(count ?? 0));
+  }, [days, today]);
+
+  const over = today !== null && days !== null && days < 0 && (due ?? 0) > 0;
+  const showKey = onTrial && !keyAdded && days !== null && days >= 21 && days <= 28;
 
   return (
     <div className="h-full overflow-y-auto">
       <section className="flex items-center justify-between gap-4 border-b border-ink px-6 py-4">
         <div>
           <p className={eyebrowClass}>Exam</p>
-          <p className="mt-0.5 font-serif text-xl">{today ? countdownLabel(daysUntil(examDate, today)) : "\u00a0"}</p>
+          {over ? (
+            <Link href="/review" className="mt-0.5 block font-serif text-xl underline decoration-ink/30 underline-offset-4">
+              The paper is over. {due} {due === 1 ? "miss is" : "misses are"} due
+            </Link>
+          ) : (
+            <p className="mt-0.5 font-serif text-xl">{today ? countdownLabel(days) : "\u00a0"}</p>
+          )}
         </div>
         <label className="text-right">
           <span className="block font-mono text-[10px] text-muted uppercase">Exam date</span>
@@ -67,6 +95,15 @@ export function PracticePanel({ practice, docs, examDate, onExamDate, onJump, on
         <Summary practice={practice} onWeak={(topics) => practice.start({ topics, mix })} />
       ) : (
         <section className="animate-enter space-y-5 px-6 py-6">
+          <SectionPaper sessionId={practice.sessionId} docs={docs} onJump={onJump} />
+          {showKey && (
+            <div className="rounded-lg border border-ink bg-yellow-50 p-4">
+              <p className="text-sm leading-relaxed">The section paper does not use a prompt. Your own questions do. Add the free Groq key now.</p>
+              <div className="mt-3">
+                <GroqKeyForm sessionId={practice.sessionId} onSaved={() => setKeyAdded(true)} />
+              </div>
+            </div>
+          )}
           <div>
             <h2 className="font-serif text-2xl leading-tight">Practise with exam-style questions</h2>
             <p className="mt-1.5 text-sm leading-relaxed text-muted">

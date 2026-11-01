@@ -9,8 +9,18 @@ import type { Excerpt, FigureNote, Material } from "@/lib/tutor/prompts";
 const TOTAL_BUDGET = 11_000;
 
 export async function loadTutorState(supabase: SupabaseClient, sessionId: string) {
-  const [session, docs, plan, memory] = await Promise.all([
-    supabase.from("study_sessions").select("id, title, kind, research_goal, exam_date").eq("id", sessionId).maybeSingle(),
+  // An explicit cite_mode column 400s the whole select before 0035 is applied.
+  // Retry without it so chat still works, with cite mode treated as off.
+  let session = await supabase
+    .from("study_sessions")
+    .select("id, title, kind, research_goal, exam_date, cite_mode")
+    .eq("id", sessionId)
+    .maybeSingle();
+  if (session.error && /cite_mode/i.test(session.error.message)) {
+    session = await supabase.from("study_sessions").select("id, title, kind, research_goal, exam_date").eq("id", sessionId).maybeSingle();
+  }
+
+  const [docs, plan, memory] = await Promise.all([
     supabase.from("documents").select("id, title, page_count").eq("session_id", sessionId).order("position").order("created_at"),
     supabase.from("study_plans").select("*").eq("session_id", sessionId).maybeSingle(),
     supabase.from("learner_memory").select("*").eq("session_id", sessionId).maybeSingle(),
@@ -29,7 +39,14 @@ export async function loadTutorState(supabase: SupabaseClient, sessionId: string
     pageCount: d.page_count,
   }));
 
-  const sessionRow = session.data as { id: string; title: string; kind: SessionKind; research_goal: string; exam_date: string | null } | null;
+  const sessionRow = session.data as {
+    id: string;
+    title: string;
+    kind: SessionKind;
+    research_goal: string;
+    exam_date: string | null;
+    cite_mode?: boolean;
+  } | null;
   const reviews = new Map<string, PaperReview>();
   // Paper sessions: every document is a paper. Study sessions: the ones with notes.
   if (sessionRow && sessionRow.kind !== "exam") {
@@ -41,6 +58,7 @@ export async function loadTutorState(supabase: SupabaseClient, sessionId: string
   const m = memory.data as LearnerMemory | null;
   return {
     session: sessionRow,
+    citeMode: sessionRow?.cite_mode === true,
     reviews,
     materials,
     plan: plan.data as StudyPlan | null,

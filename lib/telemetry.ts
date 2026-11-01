@@ -19,11 +19,17 @@ let anon: string | null = null;
 export function routeOf(pathname: string) {
   return pathname
     .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, ":id")
+    .replace(/^\/w\/section\/[^/]+/, "/w/section/:token")
     .replace(/^\/w\/[^/]+/, "/w/:token")
     .replace(/^\/rooms\/r-[^/]+/, "/rooms/:room")
     .replace(/^\/spaces\/s-[^/]+/, "/spaces/:space")
     .replace(/^\/p\/[^/]+/, "/p/:pack")
     .replace(/^\/r\/[^/]+/, "/r/:code")
+    .replace(/^\/sit\/[^/]+/, "/sit/:token")
+    .replace(/^\/m\/[^/]+/, "/m/:token")
+    .replace(/^\/crib\/[^/]+/, "/crib/:token")
+    .replace(/^\/b\/[^/]+/, "/b/:code")
+    .replace(/^\/c\/[^/]+/, "/c/:code")
     .slice(0, 300);
 }
 

@@ -343,6 +343,80 @@ export const TEMPLATES: Template[] = [
     ],
     tags: ["Physics", "Exam"],
   },
+  {
+    slug: "gauss-law",
+    title: "Gauss's law",
+    tagline: "Flux, symmetry, and the field of a sphere and a line.",
+    description:
+      "A first-year exam on Gauss's law, from OpenStax University Physics Volume 2 (Samuel J. Ling, Jeff Sanny and William Moebs, CC BY 4.0). Copy it and Confu fetches the chapter into an exam session.",
+    kind: "exam",
+    level: "beginner",
+    weeks: 2,
+    minutesPerDay: 40,
+    goal: "Be ready for an exam on Gauss's law: explain flux, use symmetry to find the field of a sphere, a line and a plane, and say what the field is inside a conductor in equilibrium.",
+    outline: [
+      { phase: "Flux", topics: ["What flux counts", "Open and closed surfaces"] },
+      { phase: "The law", topics: ["Gauss's law", "When symmetry is enough"] },
+      { phase: "Uses", topics: ["Sphere", "Line and plane", "Conductors in equilibrium"] },
+    ],
+    sources: [
+      web("https://openstax.org/books/university-physics-volume-2/pages/6-introduction", "Gauss's law (OpenStax University Physics Volume 2)"),
+      web("https://openstax.org/books/university-physics-volume-2/pages/6-1-electric-flux", "Electric flux (OpenStax)"),
+      web("https://openstax.org/books/university-physics-volume-2/pages/6-2-explaining-gausss-law", "Explaining Gauss's law (OpenStax)"),
+      web("https://openstax.org/books/university-physics-volume-2/pages/6-3-applying-gausss-law", "Applying Gauss's law (OpenStax)"),
+      web("https://openstax.org/books/university-physics-volume-2/pages/6-4-conductors-in-electrostatic-equilibrium", "Conductors in electrostatic equilibrium (OpenStax)"),
+    ],
+    tags: ["Physics", "Exam"],
+  },
+  {
+    slug: "electric-potential",
+    title: "Electric potential",
+    tagline: "Potential energy, potential, and the potential of a point charge.",
+    description:
+      "A first-year exam on electric potential, from OpenStax University Physics Volume 2 (Samuel J. Ling, Jeff Sanny and William Moebs, CC BY 4.0). Copy it and Confu fetches the chapter into an exam session.",
+    kind: "exam",
+    level: "beginner",
+    weeks: 2,
+    minutesPerDay: 40,
+    goal: "Be ready for an exam on electric potential: relate potential energy to work, distinguish potential from potential difference, and compute the potential of a point charge and a simple group of charges.",
+    outline: [
+      { phase: "Energy", topics: ["Potential energy", "Work by the field"] },
+      { phase: "Potential", topics: ["Potential and potential difference", "From the field to potential"] },
+      { phase: "Charges", topics: ["Potential of a point charge", "Several point charges"] },
+    ],
+    sources: [
+      web("https://openstax.org/books/university-physics-volume-2/pages/7-introduction", "Electric potential (OpenStax University Physics Volume 2)"),
+      web("https://openstax.org/books/university-physics-volume-2/pages/7-1-electric-potential-energy", "Electric potential energy (OpenStax)"),
+      web("https://openstax.org/books/university-physics-volume-2/pages/7-2-electric-potential-and-potential-difference", "Electric potential and potential difference (OpenStax)"),
+      web("https://openstax.org/books/university-physics-volume-2/pages/7-3-calculations-of-electric-potential", "Calculations of electric potential (OpenStax)"),
+    ],
+    tags: ["Physics", "Exam"],
+  },
+  {
+    slug: "capacitance",
+    title: "Capacitance",
+    tagline: "Capacitors, series and parallel, energy, and a dielectric.",
+    description:
+      "A first-year exam on capacitance, from OpenStax University Physics Volume 2 (Samuel J. Ling, Jeff Sanny and William Moebs, CC BY 4.0). Copy it and Confu fetches the chapter into an exam session.",
+    kind: "exam",
+    level: "beginner",
+    weeks: 2,
+    minutesPerDay: 40,
+    goal: "Be ready for an exam on capacitance: find the capacitance of a simple capacitor, combine capacitors in series and parallel, compute the energy stored, and say what a dielectric does at the level of the chapter.",
+    outline: [
+      { phase: "One capacitor", topics: ["What capacitance is", "A parallel-plate capacitor"] },
+      { phase: "Combinations", topics: ["Series", "Parallel"] },
+      { phase: "Energy", topics: ["Energy stored", "A dielectric"] },
+    ],
+    sources: [
+      web("https://openstax.org/books/university-physics-volume-2/pages/8-introduction", "Capacitance (OpenStax University Physics Volume 2)"),
+      web("https://openstax.org/books/university-physics-volume-2/pages/8-1-capacitors-and-capacitance", "Capacitors and capacitance (OpenStax)"),
+      web("https://openstax.org/books/university-physics-volume-2/pages/8-2-capacitors-in-series-and-in-parallel", "Capacitors in series and in parallel (OpenStax)"),
+      web("https://openstax.org/books/university-physics-volume-2/pages/8-3-energy-stored-in-a-capacitor", "Energy stored in a capacitor (OpenStax)"),
+      web("https://openstax.org/books/university-physics-volume-2/pages/8-4-capacitor-with-a-dielectric", "Capacitor with a dielectric (OpenStax)"),
+    ],
+    tags: ["Physics", "Exam"],
+  },
 ];
 
 export const templateBySlug = (slug: string) => TEMPLATES.find((t) => t.slug === slug) ?? null;

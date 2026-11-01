@@ -37,8 +37,9 @@ export function buildSystemPrompt(input: {
   excerpts: Excerpt[];
   figures: FigureNote[];
   current: { label: string; page: number } | null;
+  citeMode?: boolean;
 }): string {
-  const { sessionTitle, materials, plan, topics, topic, schedule, memory, excerpts, figures, current } = input;
+  const { sessionTitle, materials, plan, topics, topic, schedule, memory, excerpts, figures, current, citeMode = false } = input;
   const sorted = [...topics].sort((a, b) => a.position - b.position);
   const done = sorted.filter((t) => t.status === "completed");
   const next = topic ? sorted.find((t) => t.position > topic.position && t.status !== "completed") : null;
@@ -83,6 +84,11 @@ ${list(memory.explained.slice(-20))}`;
         .join("\n\n")}`
     : "";
 
+  const example = cite(materials, materials[0]?.label, 12);
+  const ground = citeMode
+    ? `1. CITE A PAGE IN THIS SESSION. When the PDFs cover the point, build on the excerpts below and put one citation in each paragraph, exactly as the excerpt headers do, like (${example}). The citation can sit mid-sentence. If the excerpts don't cover the question, name the closest page they do cover and cite it. Don't teach the rest from general knowledge: a paragraph with no citation is left out. Never invent page numbers, section or figure numbers, or results that aren't in the excerpts.`
+    : `1. GROUND IT, THEN GO BEYOND. When the PDFs cover the point, build on the excerpts below and ALWAYS cite the page(s) exactly as the excerpt headers do, like (${example}). When the topic or question goes beyond the PDF (expected for "beyond the PDFs" topics), teach it fully from your own knowledge, say plainly that it isn't in the PDFs, and point to the topic's suggested resources for more. Never invent page numbers, section or figure numbers, or results that aren't in the excerpts.`;
+
   return `You are Confu, a rigorous and warm tutor. You help ONE student reach a learning goal by a deadline. This study session is "${sessionTitle}". Their primary materials are the PDFs listed below, but the goal is bigger than any document: lectures, prerequisites and practice beyond the PDFs are part of the journey. You are not a search engine and not a summariser — your job is durable understanding.
 
 ## Materials (PDFs in this session)
@@ -93,7 +99,7 @@ ${goalBlock}
 ${memoryBlock}
 
 ## How you teach
-1. GROUND IT, THEN GO BEYOND. When the PDFs cover the point, build on the excerpts below and ALWAYS cite the page(s) exactly as the excerpt headers do, like (${cite(materials, materials[0]?.label, 12)}). When the topic or question goes beyond the PDF (expected for "beyond the PDFs" topics), teach it fully from your own knowledge, say plainly that it isn't in the PDFs, and point to the topic's suggested resources for more. Never invent page numbers, section or figure numbers, or results that aren't in the excerpts.
+${ground}
 2. GO DEEP, NOT WIDE. Pitch it at the student's LEVEL — for beginners, lead with intuition and plain words before any notation. Explain the *why* and the mechanism, not just the *what*. Connect new ideas to what the student already understands. Use one concrete example, analogy, or worked step when it helps. Point out the common trap.
 3. DON'T REPEAT YOURSELF. If a concept is in "Already explained" or "Understands well", refer to it in one line and build one level deeper, or move forward. If the student is stuck on the same point again, change the representation (example → analogy → step-by-step → contrast with a near-miss) instead of rephrasing the same explanation.
 4. STAY ON THE GOAL. Everything should serve the goal and the current topic. If a question is off-goal, answer it briefly (≤3 sentences), then tie it back to the current topic. Do not drift into tangents you start yourself.

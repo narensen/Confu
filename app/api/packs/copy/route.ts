@@ -1,8 +1,7 @@
 import { z } from "zod";
 import { logError } from "@/lib/log";
-import type { Pack, PackContent, PackSource } from "@/lib/packs";
-import { addDays, toISODate } from "@/lib/schedule";
-import { papersByArxivIds } from "@/lib/scholar";
+import type { Pack, PackContent } from "@/lib/packs";
+import { insertSessionFromPackContent } from "@/lib/packs-server";
 import { createClient } from "@/lib/supabase/server";
 import { templateBySlug, templateContent } from "@/lib/templates";
 
@@ -46,128 +45,9 @@ export async function POST(request: Request) {
     content = pack.content;
   }
 
-  const sources = (content.sources ?? []).slice(0, 60);
-  // Papers: fresh details (authors, abstract) from arXiv in one request.
-  const fresh = new Map(
-    (await papersByArxivIds(sources.filter((s) => s.kind === "paper" && s.arxiv_id).map((s) => s.arxiv_id!)).catch(() => [])).map((p) => [p.arxiv_id, p]),
-  );
-
-  const { data: session, error: sessionError } = await supabase
-    .from("study_sessions")
-    .insert({ title: title.slice(0, 200), kind, draft_goal: content.plan ? "" : (content.goal ?? "").slice(0, 4000) })
-    .select("id")
-    .single();
-  if (sessionError || !session) {
-    logError("pack copy: session", sessionError);
-    return Response.json({ error: sessionError?.code === "42703" ? "Copying needs migration 0024 to be run." : "Couldn't create the session." }, { status: 500 });
-  }
-  const sessionId = session.id as string;
-
+  let sessionId: string | null = null;
   try {
-    const ids = sources.map(() => crypto.randomUUID());
-    if (sources.length) {
-      const docs = sources.map((s, i) => {
-        const p = s.arxiv_id ? fresh.get(s.arxiv_id) : undefined;
-        const paper =
-          s.kind === "paper"
-            ? {
-                authors: p?.authors ?? s.authors ?? [],
-                year: p?.year ?? s.year ?? null,
-                venue: p?.venue ?? s.venue ?? null,
-                doi: p?.doi ?? s.doi ?? null,
-                arxiv_id: s.arxiv_id ?? null,
-                abstract: p?.abstract ?? s.abstract ?? null,
-                pdf_url: s.pdf_url ?? p?.pdf_url ?? null,
-              }
-            : {};
-        return {
-          id: ids[i],
-          session_id: sessionId,
-          position: i,
-          title: s.title.slice(0, 300),
-          storage_path: null,
-          page_count: s.kind === "paper" ? 1 : 0,
-          outline: [],
-          status: "ready",
-          source_url: s.url,
-          // pack_source: what to fetch (see PackSources in the workspace).
-          meta: { ...paper, pack_source: { ...s, abstract: undefined } as PackSource },
-        };
-      });
-      const ins = await supabase.from("documents").insert(docs);
-      if (ins.error) throw ins.error;
-      // A paper's abstract is searchable (and quotable by the tutor) before its PDF arrives.
-      const pages = docs
-        .filter((d) => d.meta.abstract)
-        .map((d) => ({ document_id: d.id, page_number: 1, content: `${d.title}\n${(d.meta.authors ?? []).slice(0, 8).join(", ")}\n\nAbstract\n${d.meta.abstract}` }));
-      if (pages.length) {
-        const pg = await supabase.from("document_pages").insert(pages);
-        if (pg.error) throw pg.error;
-      }
-    }
-
-    // Papers get their three passes (the author's target, if they set one).
-    const targets = new Map((content.passes ?? []).map((p) => [p.doc, p.target]));
-    const reviews = sources.flatMap((s, i) => (s.kind === "paper" ? [{ document_id: ids[i], session_id: sessionId, target_pass: targets.get(i) ?? 1 }] : []));
-    if (reviews.length) {
-      const rv = await supabase.from("paper_reviews").insert(reviews);
-      if (rv.error) throw rv.error;
-    }
-
-    if (content.plan) {
-      const today = toISODate(new Date());
-      const plan = content.plan;
-      const { data: p, error } = await supabase
-        .from("study_plans")
-        .insert({
-          session_id: sessionId,
-          goal: plan.goal,
-          goal_title: plan.goal_title,
-          goal_summary: plan.goal_summary,
-          materials: plan.materials,
-          phases: plan.phases,
-          level: plan.level,
-          start_date: today,
-          deadline: addDays(today, Math.max(1, plan.days)),
-          minutes_per_day: plan.minutes_per_day,
-          overview: plan.overview,
-        })
-        .select("id")
-        .single();
-      if (error || !p) throw error ?? new Error("plan");
-      const topics = (content.topics ?? []).slice(0, 200).map((t, i) => {
-        const doc = t.doc !== null && t.doc < ids.length ? ids[t.doc] : null;
-        return {
-          plan_id: p.id,
-          position: i,
-          phase: t.phase,
-          source: doc ? t.source : "external",
-          document_id: doc,
-          title: t.title,
-          objectives: t.objectives,
-          key_concepts: t.key_concepts,
-          resources: t.resources,
-          page_start: doc ? t.page_start : null,
-          page_end: doc ? t.page_end : null,
-          est_minutes: t.est_minutes,
-          due_date: addDays(today, Math.min(Math.max(0, t.day), Math.max(1, plan.days))),
-        };
-      });
-      if (topics.length) {
-        const tp = await supabase.from("plan_topics").insert(topics);
-        if (tp.error) throw tp.error;
-      }
-    }
-
-    const highlights = (content.highlights ?? [])
-      .filter((h) => h.doc < ids.length)
-      .slice(0, 300)
-      .map((h) => ({ document_id: ids[h.doc], kind: "text", page_number: h.page, selected_text: h.text, note: h.note, color: h.color, rects: h.rects ?? [] }));
-    if (highlights.length) {
-      const hl = await supabase.from("highlights").insert(highlights);
-      if (hl.error) throw hl.error;
-    }
-
+    sessionId = await insertSessionFromPackContent(supabase, { title, kind, content });
     if (slug) {
       const name = ((claims.user_metadata ?? {}) as { full_name?: string }).full_name?.trim().split(/\s+/)[0] ?? null;
       const rec = await supabase.rpc("record_pack_copy", { p_slug: slug, p_session: sessionId, p_share: share, p_name: name });
@@ -180,7 +60,9 @@ export async function POST(request: Request) {
     return Response.json({ sessionId });
   } catch (err) {
     // Don't leave half a copy behind.
-    await supabase.from("study_sessions").delete().eq("id", sessionId);
+    if (sessionId) await supabase.from("study_sessions").delete().eq("id", sessionId);
+    const message = err instanceof Error ? err.message : "";
+    if (/migration 0024/.test(message)) return Response.json({ error: message }, { status: 500 });
     logError("pack copy failed", err);
     return Response.json({ error: "Couldn't copy it into your library. Try again." }, { status: 500 });
   }

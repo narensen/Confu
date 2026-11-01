@@ -163,16 +163,20 @@ function NewSessionDialog({ initialKind, onClose }: { initialKind: SessionKind |
     try {
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) throw new Error("Your session expired. Sign in again.");
-      const { data: session, error: insertError } = await supabase
-        .from("study_sessions")
-        .insert({
-          title: name.slice(0, 200),
-          kind,
-          ...(kind === "exam" && examDate ? { exam_date: examDate } : {}),
-          ...(kind === "paper" && question.trim() ? { research_goal: question.trim().slice(0, 4000) } : {}),
-        })
-        .select("id")
-        .single();
+      const row = {
+        title: name.slice(0, 200),
+        kind,
+        ...(kind === "exam" && examDate ? { exam_date: examDate } : {}),
+        ...(kind === "paper" && question.trim() ? { research_goal: question.trim().slice(0, 4000) } : {}),
+        ...(kind === "paper" ? { cite_mode: true } : {}),
+      };
+      let inserted = await supabase.from("study_sessions").insert(row).select("id").single();
+      if (inserted.error && kind === "paper" && inserted.error.code === "42703" && /cite_mode/i.test(inserted.error.message)) {
+        const { cite_mode: _cite, ...base } = row;
+        void _cite;
+        inserted = await supabase.from("study_sessions").insert(base).select("id").single();
+      }
+      const { data: session, error: insertError } = inserted;
       if (insertError || !session) throw insertError ?? new Error("Couldn't create the session.");
 
       // The session uploads them itself, so the goal can be written meanwhile.

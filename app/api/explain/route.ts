@@ -28,7 +28,7 @@ export async function POST(request: Request) {
 
   const said = answer.replace(/\s+/g, " ").trim();
   if (!said) {
-    await remember(supabase, { sessionId, documentId, page, topic, score: 0, gap: "Nothing was said." });
+    await remember(supabase, userId, { sessionId, documentId, page, topic, score: 0, gap: "Nothing was said." });
     return Response.json({ score: 0, gap: "Nothing was said." });
   }
 
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       answer: said.slice(0, 2000),
     });
     const gap = (graded.feedback || "Nothing to add.").slice(0, 500);
-    await remember(supabase, { sessionId, documentId, page, topic, score: graded.score, gap });
+    await remember(supabase, userId, { sessionId, documentId, page, topic, score: graded.score, gap });
     return Response.json({ score: graded.score, gap });
   } catch (err) {
     return groqErrorResponse(err, "Couldn't score that explanation. Try again.");
@@ -58,6 +58,7 @@ export async function POST(request: Request) {
 
 async function remember(
   supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
   row: { sessionId: string; documentId: string; page: number; topic?: string; score: number; gap: string },
 ) {
   const { error } = await supabase.from("explain_backs").insert({
@@ -70,4 +71,22 @@ async function remember(
   });
   // The score still goes back to the student. The words never get here.
   if (error && error.code !== "42P01" && error.code !== "PGRST205") logError("explain-back save", error);
+
+  const gap = row.gap.slice(0, 500);
+  const { error: gapError } = await supabase.from("review_items").upsert(
+    {
+      user_id: userId,
+      session_id: row.sessionId,
+      document_id: row.documentId,
+      page_number: row.page,
+      source: "gap",
+      source_key: `gap:${row.documentId}:${row.page}`,
+      prompt: gap,
+      question: "",
+      answer: "",
+    },
+    { onConflict: "user_id,source,source_key" },
+  );
+  // 23514: the source check hasn't been widened yet (0036). The score still returns.
+  if (gapError && gapError.code !== "42P01" && gapError.code !== "PGRST205" && gapError.code !== "23514") logError("explain-back gap not saved", gapError);
 }

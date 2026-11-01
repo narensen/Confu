@@ -43,13 +43,30 @@ export async function GET(request: Request) {
   // Review reminders
   const { data: due, error } = await admin.rpc("reminder_batch");
   if (error) return Response.json({ error: error.message }, { status: 500 });
-  for (const r of ((due ?? []) as { user_id: string; email: string; name: string | null; due: number; email_ok: boolean; push_ok: boolean }[]).slice(0, 400)) {
+  const dueRows = ((due ?? []) as { user_id: string; email: string; name: string | null; due: number; email_ok: boolean; push_ok: boolean }[]).slice(0, 400);
+  // The batch has no exam date. Look it up after the batch, in UTC, and only
+  // then add one sentence. A missing column must not stop the reminders.
+  const paperOver = new Set<string>();
+  if (dueRows.length) {
+    const now = new Date();
+    const utcDay = (offset: number) => new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + offset)).toISOString().slice(0, 10);
+    const { data: exams, error: examError } = await admin
+      .from("study_sessions")
+      .select("user_id")
+      .in("user_id", dueRows.map((r) => r.user_id))
+      .eq("kind", "exam")
+      .gte("exam_date", utcDay(-3))
+      .lt("exam_date", utcDay(0));
+    if (examError) logError("paper-over lookup failed", examError);
+    else for (const row of (exams ?? []) as { user_id: string }[]) paperOver.add(row.user_id);
+  }
+  for (const r of dueRows) {
     let sent = false;
     if (r.email_ok && emailConfigured && r.email && budget > 0) {
       budget--;
       try {
         const unsubscribe = unsubscribeUrl(r.user_id, "reminder");
-        await sendEmail({ to: r.email, unsubscribe, ...reminderEmail({ name: r.name, due: r.due, unsubscribe }) });
+        await sendEmail({ to: r.email, unsubscribe, ...reminderEmail({ name: r.name, due: r.due, unsubscribe, paperOver: paperOver.has(r.user_id) }) });
         result.reminders.emails++;
         sent = true;
         await pause(550); // Resend's rate limit

@@ -6,6 +6,24 @@ export type Release = { date: string; title: string; summary: string; items: str
 export const CHANGELOG: Release[] = [
   {
     date: "2026-11-01",
+    title: "The section, the week of the paper",
+    summary: "One paper for the section, a miss map with no names, and a tutor that has to cite a page.",
+    items: [
+      "Course-link requests are requests, not people. The share panel says so for the last two weeks.",
+      "Gauss's law, electric potential, and capacitance, from OpenStax University Physics Volume 2 (CC BY 4.0). Copying one starts an exam session.",
+      "The rep writes up to eight lines and makes one multiple-choice paper. Classmates sit it without the key, and without spending a prompt. Handing in stays private. Sharing a card is still a choice.",
+      "A library hour is one calendar event: a place, a time, and a topic. No list of who came.",
+      "A miss map says what the section missed, once eight people who share progress have handed in. No names and no scores.",
+      "Print a one-page crib: objectives, concepts, and page numbers. Not the paper.",
+      "A door card is a reading list. Copying it starts a session. Confu doesn't fetch NCERT textbooks.",
+      "In a paper session, the tutor has to cite a page or it stays quiet.",
+      "In the two weeks before an exam, the tutor starts folded. Three to four weeks out, a trial account is pointed at the free Groq key.",
+      "A gap from explaining a page comes back in review. After the paper, the reminder says the misses return today, in three days, and in seven.",
+      "After the paper, a section page shows counts only. Copied N times means copies, not people.",
+    ],
+  },
+  {
+    date: "2026-11-01",
     title: "The week before the exam",
     summary: "A course link, a timed paper, one page to print, and a check that you can explain the page.",
     items: [

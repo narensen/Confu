@@ -118,12 +118,16 @@ export async function POST(request: Request) {
   if (existing) {
     const { error } = await supabase.from("packs").update(row).eq("id", existing.id);
     if (error) return failed(error);
+    await noteLineage(supabase, o.sessionId);
     return Response.json({ slug: existing.slug, updated: true });
   }
   for (let attempt = 0; attempt < 3; attempt++) {
     const slug = packSlug(o.title);
     const { error } = await supabase.from("packs").insert({ ...row, slug });
-    if (!error) return Response.json({ slug, updated: false });
+    if (!error) {
+      await noteLineage(supabase, o.sessionId);
+      return Response.json({ slug, updated: false });
+    }
     if (error.code !== "23505") return failed(error); // only retry a taken link
   }
   return Response.json({ error: "Couldn't make a link for the pack. Try again." }, { status: 500 });
@@ -139,6 +143,11 @@ export async function DELETE(request: Request) {
   const { error } = await supabase.from("packs").delete().eq("session_id", sessionId);
   if (error) return failed(error);
   return Response.json({ ok: true });
+}
+
+async function noteLineage(supabase: Awaited<ReturnType<typeof createClient>>, sessionId: string) {
+  const { error } = await supabase.rpc("note_pack_lineage", { p_session: sessionId });
+  if (error && !/note_pack_lineage|schema cache|Could not find the function/i.test(error.message)) logError("pack lineage", error);
 }
 
 function failed(error: { code?: string; message: string }) {

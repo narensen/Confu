@@ -14,6 +14,7 @@ import { ago } from "@/lib/format-usage";
 import type { SessionKind } from "@/lib/types";
 import { useToday } from "@/lib/use-today";
 import { SessionActions } from "./SessionActions";
+import { DoorCardLauncher } from "./DoorCardDialog";
 import { KINDS, NewSessionLauncher, openNewSession } from "./NewSessionDialog";
 
 gsap.registerPlugin(useGSAP, Flip);
@@ -128,6 +129,7 @@ export function Library({ name, sessions: all }: { name: string | null; sessions
               Literature map
             </Link>
           )}
+          <DoorCardLauncher />
           <NewSessionLauncher />
         </div>
       </header>

@@ -24,7 +24,7 @@ export type ToolTab = Exclude<Tab, "chat">;
 // and whether it's waiting on the student (a dot).
 export type Section = { id: ToolTab; label: string; hint: string; badge?: string; dot?: boolean; shortcut?: string };
 
-export type ExamProps = { practice: ExamPractice; examDate: string | null; onExamDate: (date: string | null) => void };
+export type ExamProps = { practice: ExamPractice; examDate: string | null; onExamDate: (date: string | null) => void; onTrial: boolean };
 
 export type PaperProps = {
   reviews: Record<string, PaperReview>;
@@ -73,6 +73,8 @@ export type PanelProps = {
   kind: SessionKind;
   paper: PaperProps;
   exam: ExamProps;
+  citeMode: boolean;
+  onCiteMode: (on: boolean) => void;
   // Moving to another view from inside one ("Open the plan", "Practise these").
   onView: (view: Tab) => void;
 };
@@ -138,6 +140,8 @@ export function TutorPanel({ view, ...props }: PanelProps & { view: Tab }) {
           onOpenPlan={() => onView(props.kind === "paper" ? "passes" : props.kind === "exam" ? "practice" : "plan")}
           onOpenPaper={() => onView("passes")}
           kind={props.kind}
+          citeMode={props.citeMode}
+          onCiteMode={props.onCiteMode}
           paperFocus={(() => {
             const r = activePaper ? props.paper.reviews[activePaper.id] : undefined;
             return activePaper && r ? { label: activePaper.label, title: activePaper.title, done: r.passes_done, target: r.target_pass } : null;
@@ -150,6 +154,7 @@ export function TutorPanel({ view, ...props }: PanelProps & { view: Tab }) {
           docs={props.docs}
           examDate={props.exam.examDate}
           onExamDate={props.exam.onExamDate}
+          onTrial={props.exam.onTrial}
           onJump={props.onJump}
           onAsk={(message) => props.onSend({ action: "chat", message })}
         />

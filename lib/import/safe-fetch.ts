@@ -68,6 +68,10 @@ export async function safeFetch(
     if (url.username || url.password) throw new ImportError("Links with a username or password can't be imported.");
     if (url.port && url.port !== "80" && url.port !== "443") throw new ImportError("That link uses an unusual port, so it can't be imported.");
     const host = url.hostname.replace(/^\[|\]$/g, "");
+    const hostName = host.toLowerCase().replace(/\.$/, "");
+    if (hostName === "ncert.nic.in" || hostName.endsWith(".ncert.nic.in")) {
+      throw new ImportError("Confu doesn't fetch NCERT textbooks. If you already have the file, upload it.");
+    }
     if (host === "localhost" || host.endsWith(".local") || host.endsWith(".internal")) throw new ImportError("That address isn't reachable from Confu.");
     const addrs = net.isIP(host) ? [{ address: host }] : await lookup(host, { all: true }).catch(() => []);
     if (!addrs.length) throw new ImportError("Couldn't find that website. Check the link.");

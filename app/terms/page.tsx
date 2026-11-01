@@ -153,7 +153,18 @@ export default function TermsPage() {
               A sitting card and a page pin follow the same rule: don&apos;t publish other people&apos;s personal information.
               A sitting shares a score, not the questions. A pin shares a passage and one answer, not a chat.
             </>,
-            <>We may remove packs, roadmaps, threads, spaces, shared pages, sitting cards, pins or rooms that break these terms.</>,
+            <>
+              A section hand-in stays private. A sitting card exists only if that person chooses to share one. A miss map
+              shows topic names and counts, not names of people. A crib shows objectives and pages, not a file. A library
+              hour doesn&apos;t record who came. A door card is titles and links, not files, and Confu doesn&apos;t fetch NCERT
+              textbooks. A section page after the paper is counts, labelled as copies, not a ranking.
+            </>,
+            <>
+              Course-link requests count opens of a link, not people, and they don&apos;t store an IP address. Cite mode drops
+              a reply that doesn&apos;t cite a page in that session. An explain-back gap stays on the account that made it
+              and comes back in review.
+            </>,
+            <>We may remove packs, roadmaps, threads, spaces, shared pages, sitting cards, pins, miss maps, cribs, door cards, library hours, section pages or rooms that break these terms.</>,
           ]}
         />
       </Section>

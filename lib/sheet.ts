@@ -29,3 +29,18 @@ export function sheetOf(topic: SheetTopic, pages: { page_number: number; content
   }
   return { objectives, concepts, excerpts };
 }
+
+// The section crib: objectives and concept names only. No excerpts.
+export function cribSheet(input: { objectives: string[]; concepts: string[] }): { objectives: string[]; concepts: string[] } {
+  const objectives = input.objectives.map((o) => o.trim()).filter(Boolean).slice(0, 6);
+  const seen = new Set<string>();
+  const concepts: string[] = [];
+  for (const raw of input.concepts) {
+    const c = raw.trim();
+    const key = c.toLowerCase();
+    if (!c || seen.has(key) || concepts.length >= 12) continue;
+    seen.add(key);
+    concepts.push(c);
+  }
+  return { objectives, concepts };
+}

@@ -20,11 +20,13 @@ type Props = {
   onCite: (page: number, docLabel?: string) => void;
   onOpenPlan: () => void;
   kind: SessionKind;
+  citeMode: boolean;
+  onCiteMode: (on: boolean) => void;
   paperFocus: { label: string; title: string; done: number; target: number } | null;
   onOpenPaper?: () => void;
 };
 
-export function ChatPanel({ messages, busy, plan, docs, activeTopic, topics, onSend, onJump, onCite, onOpenPlan, onOpenPaper, kind, paperFocus }: Props) {
+export function ChatPanel({ messages, busy, plan, docs, activeTopic, topics, onSend, onJump, onCite, onOpenPlan, onOpenPaper, kind, citeMode, onCiteMode, paperFocus }: Props) {
   const topicDoc = docs.find((d) => d.id === activeTopic?.document_id);
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -162,6 +164,10 @@ export function ChatPanel({ messages, busy, plan, docs, activeTopic, topics, onS
             </QuickAction>
           </div>
         )}
+        <label className="mb-2 flex cursor-pointer items-start gap-2 px-1 text-xs leading-snug text-muted">
+          <input type="checkbox" checked={citeMode} onChange={(e) => onCiteMode(e.target.checked)} className="mt-0.5" />
+          <span>Answers have to cite a page in this session.</span>
+        </label>
         <form
           onSubmit={(e) => {
             e.preventDefault();

@@ -8,6 +8,7 @@ import { JSON_HEADERS } from "@/lib/ai-errors";
 import { SITE } from "@/lib/site";
 import { createClient } from "@/lib/supabase/client";
 import { track } from "@/lib/telemetry";
+import { SectionLoop } from "./SectionLoop";
 
 type Existing = { slug: string; title: string; description: string; visibility: "public" | "unlisted"; class_mode: boolean; author_name: string | null; views: number; copies: number };
 
@@ -117,7 +118,9 @@ function ShareDialog({ sessionId, sessionTitle, onClose }: { sessionId: string; 
       });
       const j = (await res.json().catch(() => ({}))) as { slug?: string; error?: string; updated?: boolean };
       if (!res.ok || !j.slug) throw new Error(j.error ?? "Couldn't publish it.");
-      track(j.updated ? "pack.update" : "pack.publish", { listed, classMode, roadmap });
+      const origin = await createClient().rpc("my_pack_copy", { p_session: sessionId });
+      const fromCopy = !origin.error && typeof origin.data === "string" && origin.data.length > 0;
+      track(j.updated ? "pack.update" : "pack.publish", { listed, classMode, roadmap, ...(fromCopy ? { fromCopy: true } : {}) });
       setExisting((e) => ({
         slug: j.slug!,
         title,
@@ -204,6 +207,7 @@ function ShareDialog({ sessionId, sessionTitle, onClose }: { sessionId: string; 
                       </code>
                     )}
                   </div>
+                  <SectionLoop sessionId={sessionId} slug={existing.slug} />
                 </div>
               )}
               <label className="block">

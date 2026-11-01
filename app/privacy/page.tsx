@@ -29,7 +29,7 @@ export default function PrivacyPage() {
               sessions. We never sell Google data, use it for ads, or train AI on it.
             </>,
             <>Payments are handled by Lemon Squeezy. We never see your card number.</>,
-            <>Nothing you make is public unless you choose to share it (a study pack, a Wrapped page, or a sitting card), and you can take it down any time.</>,
+            <>Nothing you make is public unless you choose to share it (a study pack, a Wrapped page, a sitting card, a miss map, a crib, a door card, a library hour, or a section page), and you can take it down any time.</>,
             <>We don&apos;t sell your data, show ads, or use tracking or analytics cookies, and we don&apos;t train AI models on your material.</>,
           ]}
         />
@@ -226,11 +226,43 @@ export default function PrivacyPage() {
             </>,
             <>
               <b>Explain-back.</b> Saying a page back stores the score and the one-line gap. The audio isn&apos;t recorded,
-              and the words you said aren&apos;t kept.
+              and the words you said aren&apos;t kept. The gap stays on your account and comes back in review. It isn&apos;t
+              on a miss map, a crib, or a section page.
             </>,
             <>
               <b>A sitting card.</b> Sharing a timed paper stores the score, the minutes, the weak topics, an optional band
               when the exam is close, and your first name if you choose. Not the questions or your answers.
+            </>,
+            <>
+              <b>Course-link requests.</b> Opening a course link counts as a request for that code, that day. It isn&apos;t a
+              person. We don&apos;t store an IP address or a user-agent.
+            </>,
+            <>
+              <b>A section paper.</b> The questions and the key stay in the owner&apos;s account. A hand-in stores the score,
+              the minutes, and the missed topic names. That row isn&apos;t public. A classmate sees the score in the response.
+              A sitting card, with an optional first name, exists only if they click share. Choices aren&apos;t kept.
+            </>,
+            <>
+              <b>A miss map.</b> Topic names and how many people missed them, for a pack whose copiers chose to share
+              progress. No names and no questions. Anyone with the link can see it.
+            </>,
+            <>
+              <b>A crib.</b> Objectives and page references from the published plan. No files and no excerpts.
+            </>,
+            <>
+              <b>A library hour.</b> The time, a place name the owner typed, and a topic. Not who attended.
+            </>,
+            <>
+              <b>A door card.</b> The titles and URLs the owner entered, and a plan only if they generated one. No files.
+              Confu doesn&apos;t fetch NCERT textbooks. A file you already have can still be uploaded into your own session.
+            </>,
+            <>
+              <b>A section page after the paper.</b> Counts and topic names. The copy line is how many times the pack was
+              copied, not how many people. No ranking and no names.
+            </>,
+            <>
+              <b>Cite mode.</b> A switch on the session. A reply that doesn&apos;t cite a page in the session is left out. We
+              don&apos;t keep a second copy of the uncited text.
             </>,
           ]}
         />

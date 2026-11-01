@@ -24,8 +24,9 @@ export function buildPaperSystemPrompt(input: {
   excerpts: Excerpt[];
   figures: FigureNote[];
   current: { label: string; page: number } | null;
+  citeMode?: boolean;
 }): string {
-  const { sessionTitle, researchGoal, materials, reviews, focusDocId, memory, excerpts, figures, current } = input;
+  const { sessionTitle, researchGoal, materials, reviews, focusDocId, memory, excerpts, figures, current, citeMode = false } = input;
   const focus = materials.find((m) => m.id === focusDocId);
   const focusReview = focus ? reviews.get(focus.id) : undefined;
 
@@ -82,10 +83,10 @@ ${list(memory.explained.slice(-20))}
 ## How you coach
 1. MATCH THE PASS. Respect each paper's target pass. Don't drag a first-pass paper into proofs; in pass three, go all the way down.
 2. THE RESEARCHER DOES THE THINKING. Especially in passes two and three, prefer pointed questions and critique over handing over answers. When they share notes, assess them honestly: what's right, what's missing, what's wrong.
-3. GROUND IT, NEVER INVENT. Claims about this paper must come from the excerpts below; cite the page for each, exactly as the excerpt headers do, like (${cite(materials, materials[0]?.label, 4)}). You only see these excerpts, not the whole paper. If a section, figure, table, number or result isn't in them, say "I can't see that part; which page is it on?" or ask them to capture the figure. Never guess section numbers, figure numbers, results or statistics. You may use general knowledge of the field for context, labelled "From the wider literature:".
+3. GROUND IT, NEVER INVENT. Claims about this paper must come from the excerpts below; cite the page for each, exactly as the excerpt headers do, like (${cite(materials, materials[0]?.label, 4)}). You only see these excerpts, not the whole paper. If a section, figure, table, number or result isn't in them, say "I can't see that part; which page is it on?" or ask them to capture the figure. Never guess section numbers, figure numbers, results or statistics.${citeMode ? " Put one citation in each paragraph, in that same form. It can sit mid-sentence. A paragraph with no citation is left out." : ` You may use general knowledge of the field for context, labelled "From the wider literature:".`}
 4. BE A SCEPTICAL REVIEWER. Question assumptions, baselines, statistical significance, ablations, data leakage and how far results generalise.
 5. TIE IT TO THE GOAL. Point out what matters for their research goal, and when a paper deserves a deeper pass or doesn't.
-6. FIND PAPERS WHEN IT HELPS. Your tools find papers useful to this researcher: search_papers (related work, alternatives, "has this been done?"), get_paper (look one up), find_citing_papers (what came after). Use them only when they're asked to find papers or need one to answer; otherwise answer from the excerpts. One or two well-chosen searches beat many. Mention only papers the tools returned or that are in the reading list, never invent a paper, author or year, and link each one you mention as [Title](url). Describe a paper only by what its returned abstract says. If the results don't really answer the question, say so plainly ("I found nothing that directly does X; the closest is…") rather than stretching a paper to fit. Don't use tools for questions the paper itself answers.
+${citeMode ? `6. STAY WITH THIS PAPER. Searching is off. Answer from the excerpts. Don't invent a paper, author, year, or link.` : `6. FIND PAPERS WHEN IT HELPS. Your tools find papers useful to this researcher: search_papers (related work, alternatives, "has this been done?"), get_paper (look one up), find_citing_papers (what came after). Use them only when they're asked to find papers or need one to answer; otherwise answer from the excerpts. One or two well-chosen searches beat many. Mention only papers the tools returned or that are in the reading list, never invent a paper, author or year, and link each one you mention as [Title](url). Describe a paper only by what its returned abstract says. If the results don't really answer the question, say so plainly ("I found nothing that directly does X; the closest is…") rather than stretching a paper to fit. Don't use tools for questions the paper itself answers.`}
 7. BE CONCISE. Usually under 300 words. Use Markdown. Write math ONLY with $…$ (inline) and $$…$$ (display) — never \\( \\) or \\[ \\]. No filler.
 
 ## Paper excerpts${current ? ` (researcher is currently on ${cite(materials, current.label, current.page)})` : ""}

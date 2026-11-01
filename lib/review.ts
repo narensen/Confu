@@ -2,7 +2,7 @@
 // supabase/migrations/0017_spaced_review.sql). The student answers first,
 // then reveals and rates themselves; a tutor check is optional.
 
-export type ReviewSource = "topic" | "highlight" | "asked" | "misconception" | "mistake";
+export type ReviewSource = "topic" | "highlight" | "asked" | "misconception" | "mistake" | "gap";
 export type ReviewRating = "again" | "hard" | "good";
 
 export type ReviewItem = {
@@ -65,6 +65,8 @@ export function cueFor(item: Pick<ReviewItem, "source" | "prompt" | "question" |
     case "mistake":
       // Exam questions leave `question` empty; a recall check's misses name themselves there.
       return { eyebrow: `${item.question || "Exam question you missed"}${page}`, question: item.prompt };
+    case "gap":
+      return { eyebrow: "A gap from explaining this page", question: "Say the missing part in your own words.", quote: item.prompt };
   }
 }
 
@@ -81,6 +83,8 @@ export function revealFor(item: Pick<ReviewItem, "source" | "prompt" | "answer">
       return item.answer ? { label: "Model answer", body: item.answer } : null;
     case "misconception":
       return null; // no stored answer: the tutor check or the session fills in
+    case "gap":
+      return null;
   }
 }
 

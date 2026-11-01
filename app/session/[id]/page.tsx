@@ -155,6 +155,7 @@ async function SessionWorkspace({ params, searchParams }: { params: Promise<{ id
           researchGoal: session.data.research_goal ?? "",
           examDate: session.data.exam_date ?? null,
           draftGoal: (session.data as { draft_goal?: string }).draft_goal ?? "",
+          citeMode: (session.data as { cite_mode?: boolean }).cite_mode === true,
         }}
         initialDocs={sessionDocs}
         initialDocId={sessionDocs.find((d) => d.id === wanted)?.id ?? sessionDocs.find((d) => d.id === recent?.id)?.id ?? sessionDocs[0]?.id ?? null}

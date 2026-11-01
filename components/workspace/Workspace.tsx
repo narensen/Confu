@@ -1,14 +1,14 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { deleteDocument } from "@/components/dashboard/actions";
 import type { RegionCapture, TextSelection } from "@/components/pdf/PdfViewer";
 import { JSON_HEADERS, KEY_ERROR_EVENT, notifyAiUsed, readAiError } from "@/lib/ai-errors";
 import { hashText } from "@/lib/hash";
 import type { KeyInfo } from "@/lib/groq-keys";
 import { emptyReview, isPaperDoc, type PaperReview } from "@/lib/paper";
-import type { Attempt } from "@/lib/exam";
+import { daysUntil, type Attempt } from "@/lib/exam";
 import { useExamPractice } from "@/components/exam/useExamPractice";
 import { addPaperFromMeta, type PaperMeta } from "@/lib/pdf/add-paper";
 import { docForResource, FIND_PAPER_EVENT, isPaperResource } from "@/lib/find-paper";
@@ -67,7 +67,7 @@ const PdfViewer = dynamic(() => import("@/components/pdf/PdfViewer"), {
 });
 
 type Props = {
-  session: { id: string; title: string; kind: SessionKind; researchGoal: string; examDate: string | null; draftGoal?: string };
+  session: { id: string; title: string; kind: SessionKind; researchGoal: string; examDate: string | null; draftGoal?: string; citeMode?: boolean };
   initialDocs: SessionDoc[];
   initialDocId: string | null;
   initialPlan: StudyPlan | null;
@@ -154,6 +154,7 @@ export function Workspace({
   const [passesOpen, setPassesOpen] = useState(false);
   const practice = useExamPractice(session.id, initialAttempts);
   const [examDate, setExamDate] = useState(session.examDate);
+  const [citeMode, setCiteModeOn] = useState(session.citeMode === true);
   const [researchGoal, setResearchGoal] = useState(session.researchGoal);
   const [storedReviews, setStoredReviews] = useState<Record<string, PaperReview>>(() =>
     Object.fromEntries(initialReviews.map((r) => [r.document_id, r])),
@@ -180,6 +181,8 @@ export function Workspace({
   // layout saved on this device. Cleared once the student opens or folds it themselves.
   const foldTutor = useRef(false);
   const preferTutorOpen = useRef(true);
+  // Read once, inside the layout effect. A later date change does not re-fold.
+  const foldSource = useRef({ kind: session.kind, examDate: session.examDate });
   const [pinDraft, setPinDraft] = useState<{ page: number; text: string } | null>(null);
   const [explain, setExplain] = useState<{ documentId: string; page: number; topic: string } | null>(null);
   // A change the student made: kept for next time.
@@ -327,6 +330,8 @@ export function Workspace({
     if (q.get("tutor") === "closed") {
       foldTutor.current = true;
       setMobileView("pdf");
+      // Direct set. updateLayout would clear the fold and write the preference.
+      setLayout((l) => ({ ...l, tutorOpen: false }));
     }
     if (!q.has("page") && q.get("tutor") !== "closed") return;
     window.history.replaceState(null, "", window.location.pathname);
@@ -336,8 +341,12 @@ export function Workspace({
     }
   }, [docs, jumpTo]);
 
-  // Restore the layout from last time.
-  useEffect(() => {
+  // Restore the layout, and fold an exam that's inside two weeks, before paint.
+  // today is computed here once. It is not useToday(), and not a render-time Date.
+  useLayoutEffect(() => {
+    const today = toISODate(new Date());
+    const left = daysUntil(foldSource.current.examDate, today);
+    if (foldSource.current.kind === "exam" && left !== null && left >= 0 && left <= 14) foldTutor.current = true;
     try {
       const saved = JSON.parse(localStorage.getItem(LAYOUT_KEY) ?? "null") as Partial<Layout> | null;
       const open = saved ? saved.tutorOpen !== false : true;
@@ -1263,6 +1272,22 @@ export function Workspace({
     [session.id, supabase],
   );
 
+  const setCiteMode = useCallback(
+    (on: boolean) => {
+      setCiteModeOn(on);
+      void supabase
+        .from("study_sessions")
+        .update({ cite_mode: on })
+        .eq("id", session.id)
+        .then(({ error }) => {
+          if (!error) return;
+          setCiteModeOn(!on);
+          toast(/cite_mode/i.test(error.message) ? "Cite mode needs migration 0035 to be run." : "Couldn't save that.", "error");
+        });
+    },
+    [session.id, supabase],
+  );
+
   // Keyboard shortcuts (see Shortcuts.tsx). Only when not typing and no
   // dialog is open; one listener, reading the latest state through a ref.
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
@@ -1460,7 +1485,9 @@ export function Workspace({
       onPassesOpen: setPassesOpen,
       onTool: (t) => (t === "bibtex" ? exportBibtex(paperDocs, session.title) : setPaperTool(t)),
     },
-    exam: { practice, examDate, onExamDate: saveExamDate },
+    exam: { practice, examDate, onExamDate: saveExamDate, onTrial },
+    citeMode,
+    onCiteMode: setCiteMode,
     onView: showView,
   };
 

@@ -144,6 +144,111 @@ Return ONLY JSON: {"questions": [{"kind": "mcq" | "short", "question": "", "opti
   return questions.slice(0, count);
 }
 
+// The section paper's key. sourceTitle is the rep's document title, never a document id.
+export type SectionQuestion = {
+  id: string;
+  kind: "mcq";
+  question: string;
+  options: string[];
+  correct: number;
+  explanation: string;
+  topic: string;
+  documentId: string | null;
+  sourceTitle: string;
+  page: number;
+};
+
+export function publicSectionQuestion(q: SectionQuestion) {
+  return { id: q.id, question: q.question, options: q.options, topic: q.topic, sourceTitle: q.sourceTitle, page: q.page };
+}
+
+// One paper for the section. The lines are the scope, not a list of weaknesses.
+// Drops anything that isn't a valid MCQ. Fewer than 10 stores nothing.
+export async function generateSectionPaper(
+  supabase: SupabaseClient,
+  groq: Groq,
+  opts: { sessionId: string; lines: string[] },
+): Promise<SectionQuestion[]> {
+  const lines = opts.lines.map((l) => l.trim()).filter(Boolean).slice(0, 8);
+  if (!lines.length) throw new Error("Add a line for what the paper covers.");
+  const { data: docRows } = await supabase
+    .from("documents")
+    .select("id, title, page_count")
+    .eq("session_id", opts.sessionId)
+    .eq("status", "ready")
+    .order("position")
+    .order("created_at");
+  const all = ((docRows ?? []) as Omit<Doc, "label">[]).map((d, i) => ({ ...d, label: docLabel(i) }));
+  if (!all.length) throw new Error("Add your study material first.");
+
+  const [pages, history] = await Promise.all([
+    pickPages(supabase, opts.sessionId, all, lines),
+    supabase.from("exam_attempts").select("question, topic").eq("session_id", opts.sessionId).order("created_at", { ascending: false }).limit(40),
+  ]);
+  if (!pages.length) throw new Error("Couldn't find readable text in your PDFs. Scanned PDFs need text to make questions.");
+
+  const recent = (history.data ?? []) as { question: string; topic: string }[];
+  const prompt = `You set one shared exam paper for a college section, from the course material below.
+
+COURSE MATERIAL (excerpts, each labelled with its source):
+${pages.map((p) => `[${p.doc.label} p. ${p.page}] from "${p.doc.title}"\n${middle(p.text, PAGE_CHARS)}`).join("\n\n---\n\n")}
+
+Write 10 exam-style questions, all multiple choice.
+The scope of this paper, written by the person setting it. These are not a list of the student's weaknesses:
+${lines.join("; ")}
+Rules:
+- Every question must be answerable from ONE excerpt above; set "source" to its label exactly, e.g. "${all.length === 1 ? "p. 12" : "D1 p. 12"}". Never use outside facts.
+- Test understanding and application, the way a college exam would: explain, compare, calculate, apply. Avoid trivia like page titles or author names.
+- Multiple choice only: exactly 4 options, one clearly correct, three plausible distractors based on real misconceptions. "correct" is the 0-based index of the right option. Don't use "all of the above".
+- "explanation": under 60 words, why the answer is right and why the tempting wrong option is wrong. Refer to options by their text, never by number or letter.
+- "topic": 2–5 words naming the concept tested.
+${recent.length ? `- Don't repeat these recent questions:\n${recent.slice(0, 20).map((r) => `  - ${r.question.slice(0, 120)}`).join("\n")}` : ""}
+- Plain text, no Markdown. Write math with $…$.
+
+Return ONLY JSON: {"questions": [{"kind": "mcq", "question": "", "options": ["", "", "", ""], "correct": 0, "explanation": "", "topic": "", "source": "${all.length === 1 ? "p. 12" : "D1 p. 12"}"}]}`;
+
+  const res = await groq.chat.completions.create({
+    model: MODELS.chat,
+    messages: [{ role: "user", content: prompt }],
+    response_format: { type: "json_object" },
+    temperature: 0.4,
+    ...modelBudget(MODELS.chat, 3600),
+  });
+  const parsed = z.object({ questions: z.array(z.unknown()) }).parse(parseJsonObject(res.choices[0]?.message?.content ?? ""));
+  const byLabel = new Map(all.map((d) => [d.label.toLowerCase(), d]));
+  const questions: SectionQuestion[] = [];
+  for (const raw of parsed.questions) {
+    const q = Question.safeParse(raw);
+    if (!q.success) continue;
+    const v = q.data;
+    if (v.kind !== "mcq" || !v.options || v.options.length !== 4 || v.correct === undefined || v.correct < 0 || v.correct > 3) continue;
+    if (!v.explanation.trim() || !v.topic.trim()) continue;
+    const labeled = v.source.match(/(D\d+)\s*p\.?\s*(\d+)/i);
+    const bare = v.source.match(/\bp{1,2}\.?\s*(\d+)/i);
+    let doc = labeled ? byLabel.get(labeled[1].toLowerCase()) : undefined;
+    let page = labeled && doc ? Number(labeled[2]) : null;
+    if ((!doc || !page) && all.length === 1 && bare) {
+      doc = all[0];
+      page = Number(bare[1]);
+    }
+    if (!doc || !page || page < 1 || page > 5000) continue;
+    questions.push({
+      id: crypto.randomUUID(),
+      kind: "mcq",
+      question: v.question.trim(),
+      options: v.options.map((o) => o.trim()),
+      correct: v.correct,
+      explanation: v.explanation.trim(),
+      topic: v.topic.trim().slice(0, 80),
+      documentId: doc.id,
+      sourceTitle: doc.title.slice(0, 300),
+      page,
+    });
+  }
+  if (questions.length < 10) throw new Error("Couldn't make questions this time. Try again.");
+  return questions.slice(0, 10);
+}
+
 const Grade = z.object({
   score: z.coerce.number().catch(0),
   feedback: z.string().catch(""),

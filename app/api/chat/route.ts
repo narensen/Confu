@@ -13,6 +13,7 @@ import type { PageRef } from "@/lib/tutor/context";
 import { buildPaperInstruction, buildPaperSystemPrompt } from "@/lib/tutor/paper-prompts";
 import { buildExamSystemPrompt } from "@/lib/tutor/exam-prompts";
 import { daysUntil, topicStats, type Attempt } from "@/lib/exam";
+import { CITE_FALLBACK, keepCited, retrievedKeys } from "@/lib/tutor/keep-cited";
 import { PAPER_TOOLS, runPaperTool, type Source } from "@/lib/tutor/tools";
 import { buildSystemPrompt, buildUserInstruction } from "@/lib/tutor/prompts";
 import { TUTOR_ACTIONS } from "@/lib/types";
@@ -62,6 +63,7 @@ export async function POST(request: Request) {
 
   const isPaper = state.session.kind === "paper";
   const isExam = state.session.kind === "exam";
+  const citeMode = state.citeMode;
   // Paper and exam sessions have no topic plan.
   const topic = isPaper || isExam ? null : (state.topics.find((t) => t.id === topicId) ?? currentTopic(state.topics));
   const schedule = state.plan ? scheduleStatus(state.plan, state.topics, toISODate(new Date())) : null;
@@ -136,6 +138,7 @@ export async function POST(request: Request) {
         excerpts,
         figures,
         current: current ? { label: current.label, page: current.page } : null,
+        citeMode,
       })
     : isPaper
     ? buildPaperSystemPrompt({
@@ -148,6 +151,7 @@ export async function POST(request: Request) {
         excerpts,
         figures,
         current: current ? { label: current.label, page: current.page } : null,
+        citeMode,
       })
     : buildSystemPrompt({
         sessionTitle: state.session.title,
@@ -160,6 +164,7 @@ export async function POST(request: Request) {
         excerpts,
         figures,
         current: current ? { label: current.label, page: current.page } : null,
+        citeMode,
       });
   const instruction =
     ((isPaper || passAction) && buildPaperInstruction(action, paper, review, message)) ||
@@ -187,7 +192,7 @@ export async function POST(request: Request) {
 
   // Paper sessions get tools for finding papers. One tool round, then an
   // answer: a second hop resends the whole prompt and its reasoning budget.
-  const tools = isPaper ? PAPER_TOOLS : undefined;
+  const tools = isPaper && !citeMode ? PAPER_TOOLS : undefined;
   const MAX_TOOL_ROUNDS = 1;
   const messages: ChatCompletionMessageParam[] = [
     { role: "system", content: system },
@@ -226,7 +231,9 @@ export async function POST(request: Request) {
       const write = (text: string) => {
         if (!text) return;
         reply += text;
-        controller.enqueue(encoder.encode(text));
+        // Cite mode keeps the meter on the stream and holds the tutor text
+        // until the filter has run. Status lines still go out as they happen.
+        if (!citeMode) controller.enqueue(encoder.encode(text));
       };
       const status = (label: string) => controller.enqueue(encoder.encode(`\u001e${JSON.stringify({ type: "status", label })}\n`));
 
@@ -282,12 +289,21 @@ export async function POST(request: Request) {
           status("Reading the results…");
           completion = await askModel(round + 1);
         }
-        if (sources.length) {
+        if (sources.length && !citeMode) {
           write(`\n\n**Sources**\n${sources.slice(0, 10).map((x) => `- [${x.title.replace(/[[\]]/g, "")}](${x.url})`).join("\n")}`);
         }
       } catch {
         write("\n\n_(The answer was cut off — please try again.)_");
       } finally {
+        if (citeMode) {
+          const retrieved = retrievedKeys(
+            multi,
+            [...excerpts, ...figures].map((e) => ({ label: e.label, page: e.page })),
+          );
+          const filtered = keepCited(reply, retrieved, multi).trim();
+          reply = filtered || CITE_FALLBACK;
+          controller.enqueue(encoder.encode(reply));
+        }
         controller.close();
         resolveDone(reply);
       }

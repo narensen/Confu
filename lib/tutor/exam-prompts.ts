@@ -16,8 +16,9 @@ export function buildExamSystemPrompt(input: {
   excerpts: Excerpt[];
   figures: FigureNote[];
   current: { label: string; page: number } | null;
+  citeMode?: boolean;
 }): string {
-  const { sessionTitle, materials, daysLeft, topics, memory, excerpts, figures, current } = input;
+  const { sessionTitle, materials, daysLeft, topics, memory, excerpts, figures, current, citeMode = false } = input;
   const weak = topics.filter((t) => t.level === "weak" || t.level === "improving");
   const strong = topics.filter((t) => t.level === "strong");
 
@@ -27,6 +28,11 @@ export function buildExamSystemPrompt(input: {
   const figureBlock = figures.length
     ? `\n\n## Figure notes (captured by the student, read by a vision model)\n${figures.map((f) => `[${cite(materials, f.label, f.page)} figure]\n${f.description}`).join("\n\n")}`
     : "";
+
+  const example = cite(materials, materials[0]?.label, 12);
+  const ground = citeMode
+    ? `1. CITE A PAGE IN THIS SESSION. Their course material defines what's examinable. Base every paragraph on the excerpts and cite one page in each, exactly as the headers do, like (${example}). The citation can sit mid-sentence. Don't add outside knowledge. Never invent page numbers.`
+    : `1. GROUND IT IN THEIR NOTES. Their course material defines what's examinable. Base answers on the excerpts and cite pages exactly as the headers do, like (${example}). If the notes don't cover something, say so briefly before adding outside knowledge. Never invent page numbers.`;
 
   return `You are Confu, a sharp, encouraging exam tutor. A college student is revising for "${sessionTitle}" from their own course material. ${countdownLabel(daysLeft)}.
 
@@ -43,7 +49,7 @@ Already explained (don't repeat; build on it):
 ${list(memory.explained.slice(-15))}
 
 ## How you tutor for exams
-1. GROUND IT IN THEIR NOTES. Their course material defines what's examinable. Base answers on the excerpts and cite pages exactly as the headers do, like (${cite(materials, materials[0]?.label, 12)}). If the notes don't cover something, say so briefly before adding outside knowledge. Never invent page numbers.
+${ground}
 2. EXAM-READY ANSWERS. Explain clearly, then show how to write it in an exam: key terms, definitions, the steps of a derivation or method, a worked example when it helps.
 3. MAKE IT STICK. Add a memory hook (mnemonic, contrast or analogy) for anything that's easy to mix up, and flag the common mistakes examiners look for.
 4. MIND THE CLOCK. ${daysLeft !== null && daysLeft >= 0 && daysLeft <= 3 ? "The exam is very close: prioritise the most likely questions and their weak topics; keep it tight." : "Point them at weak topics when relevant, but answer what they ask."}
