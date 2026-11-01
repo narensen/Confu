@@ -4,9 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { chime } from "@/components/pdf/FocusTimer";
-import { Mic } from "@/components/rooms/VoiceRoom";
-import { clock, currentRoom, heartbeat, leaveRoom, roomState, subscribeRoom, timerNow, type RoomState } from "@/lib/rooms";
-import { joinVoice, leaveVoice, setVoiceMuted, useVoice } from "@/lib/voice-store";
+import { Mic, ScreenIcon } from "@/components/rooms/VoiceRoom";
+import { touchPresence } from "@/lib/friends";
+import { clock, currentRoom, heartbeat, leaveRoom, onRoomChange, roomState, stayIfJoined, subscribeRoom, timerNow, type RoomState } from "@/lib/rooms";
+import { joinVoice, leaveVoice, setVoiceMuted, stopScreenShare, useVoice } from "@/lib/voice-store";
 
 // The header's room slot: "Rooms" until you join one, then the room you're
 // in with its timer ("Focus 23:41"), a link back to it, and a way out. Also
@@ -24,21 +25,46 @@ export function RoomStatus() {
   useEffect(() => {
     if (!room) return;
     let live = true;
-    const sync = async () => {
-      await heartbeat();
-      const s = await roomState(room.slug).catch(() => null);
+    const apply = (s: RoomState | null) => {
       if (!live) return;
       setState(s);
       setNow(Date.now());
       if (s) setSkew(Date.parse(s.now) - Date.now());
+      stayIfJoined(s);
+    };
+    const refresh = () => {
+      void roomState(room.slug).then(apply).catch(() => {});
+    };
+    const sync = async () => {
+      await heartbeat();
+      void touchPresence();
+      apply(await roomState(room.slug).catch(() => null));
     };
     void sync();
-    const beat = window.setInterval(sync, 30_000);
+    // A reload's leave can land after the first check-in. Check in again.
+    const timers = [1_500, 4_000, 8_000].map((ms) => window.setTimeout(() => void sync(), ms));
+    const beat = window.setInterval(() => void sync(), 30_000);
+    const poll = window.setInterval(() => {
+      if (document.visibilityState === "visible") refresh();
+    }, 5_000);
     const tick = window.setInterval(() => setNow(Date.now()), 1000);
+    const off = onRoomChange(room.slug, (left) => {
+      refresh();
+      if (!left) return;
+      timers.push(window.setTimeout(refresh, 400), window.setTimeout(refresh, 1_200));
+    });
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void sync();
+    };
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       live = false;
+      off();
+      timers.forEach((id) => window.clearTimeout(id));
       window.clearInterval(beat);
+      window.clearInterval(poll);
       window.clearInterval(tick);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [room]);
 
@@ -96,6 +122,17 @@ export function RoomStatus() {
         >
           <Mic off={voice.muted || voice.deafened} size={13} />
           <span className="font-mono text-[11px] tabular-nums">{voice.people.length}</span>
+        </button>
+      )}
+      {inVoice && voice.sharing && (
+        <button
+          type="button"
+          onClick={() => stopScreenShare()}
+          title="Stop sharing your screen"
+          aria-label="Stop sharing your screen"
+          className="flex items-center self-stretch border-l border-ink/20 px-1.5 text-danger transition hover:bg-paper"
+        >
+          <ScreenIcon size={13} />
         </button>
       )}
       {voice.resumable && voice.slug === room.slug && !inVoice && (

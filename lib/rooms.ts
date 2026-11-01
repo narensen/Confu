@@ -6,6 +6,9 @@ import { createClient } from "@/lib/supabase/client";
 // header can show it (and its timer) all over the app. Presence is a
 // check-in every 30 seconds; changes (someone joins, the timer starts) are
 // announced on a Realtime channel so everyone refreshes at once.
+//
+// Closing the tab leaves the room. The check-in is remembered in
+// localStorage, so a reload (which also fires pagehide) joins again.
 
 export type RoomMember = { name: string; studying: string | null; me: boolean; joined_at: string };
 export type RoomState = {
@@ -26,6 +29,8 @@ export type Current = { slug: string; name: string; studying: string };
 
 const KEY = "confu:room";
 let current: Current | null = null;
+// Set when this tab is unloading, so a check-in still in flight can't undo the leave.
+let leavingPage = false;
 let loaded = false;
 const listeners = new Set<() => void>();
 
@@ -66,6 +71,8 @@ export async function displayName() {
 }
 
 export async function joinRoom(slug: string, name: string, studying = "") {
+  armRoomExit();
+  await cacheToken();
   const supabase = createClient();
   const { error } = await supabase.rpc("join_room", { p_slug: slug, p_name: await displayName(), p_studying: studying || null });
   if (error) throw new Error(/No such room/.test(error.message) ? "That room doesn't exist any more." : /join_room/.test(error.message) ? "Study rooms need migration 0025 to be run." : error.message);
@@ -87,10 +94,27 @@ export function setStudying(studying: string) {
 }
 
 export async function heartbeat() {
+  // The tab is closing. A check-in now would undo the leave.
+  if (leavingPage) return;
+  armRoomExit();
   const room = currentRoom();
   if (!room) return;
+  await cacheToken();
+  if (leavingPage) return;
   const { error } = await createClient().rpc("join_room", { p_slug: room.slug, p_name: await displayName(), p_studying: room.studying || null });
+  if (leavingPage) {
+    beaconLeaveRoom();
+    return;
+  }
   if (error && /No such room/.test(error.message)) save(null);
+}
+
+// The tab still thinks it's in the room, but the server has dropped it
+// (the other tab closed, or a reload's leave arrived late). Check in again.
+export function stayIfJoined(state: RoomState | null) {
+  if (leavingPage) return;
+  const mine = currentRoom();
+  if (state && mine?.slug === state.slug && !state.members.some((member) => member.me)) void heartbeat();
 }
 
 export async function roomState(slug: string): Promise<RoomState | null> {
@@ -99,32 +123,117 @@ export async function roomState(slug: string): Promise<RoomState | null> {
   return (data as RoomState | null) ?? null;
 }
 
-// Everyone in the room refreshes when something changes.
+// Everyone in the room refreshes when something changes. Several parts of the
+// page can listen; the channel stays up while at least one of them does.
 const channels = new Map<string, ReturnType<ReturnType<typeof createClient>["channel"]>>();
-export function onRoomChange(slug: string, cb: () => void) {
+const roomListeners = new Map<string, Set<(left: boolean) => void>>();
+
+function leftFlag(payload: unknown) {
+  return Boolean(payload && typeof payload === "object" && (payload as { left?: unknown }).left === true);
+}
+
+export function onRoomChange(slug: string, cb: (left: boolean) => void) {
   const supabase = createClient();
-  const channel = supabase.channel(`room:${slug}`, { config: { broadcast: { self: false } } });
-  channel.on("broadcast", { event: "refresh" }, cb).subscribe();
-  channels.set(slug, channel);
+  let listeners = roomListeners.get(slug);
+  if (!listeners) {
+    listeners = new Set();
+    roomListeners.set(slug, listeners);
+    const channel = supabase.channel(`room:${slug}`, { config: { broadcast: { self: false } } });
+    channel
+      .on("broadcast", { event: "refresh" }, ({ payload }) => {
+        const left = leftFlag(payload);
+        roomListeners.get(slug)?.forEach((fn) => fn(left));
+      })
+      .subscribe();
+    channels.set(slug, channel);
+  }
+  listeners.add(cb);
+  const mine = listeners;
   return () => {
+    mine.delete(cb);
+    if (mine.size > 0 || roomListeners.get(slug) !== mine) return;
+    roomListeners.delete(slug);
+    const channel = channels.get(slug);
     channels.delete(slug);
-    void supabase.removeChannel(channel);
+    if (channel) void supabase.removeChannel(channel);
   };
 }
 
-export function ping(slug: string) {
+export function ping(slug: string, payload: Record<string, unknown> = {}) {
   const supabase = createClient();
   // supabase.channel() hands back an existing channel with the same topic, so
   // a one-off must never be made (and removed) while another is open.
   const open = channels.get(slug) ?? supabase.getChannels().find((c) => c.topic === `realtime:room:${slug}`);
-  if (open) void open.send({ type: "broadcast", event: "refresh", payload: {} });
+  if (open) void open.send({ type: "broadcast", event: "refresh", payload }).catch(() => {});
   else {
     // Not watching the room (e.g. leaving from the header): a one-off message.
     const once = supabase.channel(`room:${slug}`);
     once.subscribe((status) => {
-      if (status === "SUBSCRIBED") void once.send({ type: "broadcast", event: "refresh", payload: {} }).finally(() => void supabase.removeChannel(once));
+      if (status === "SUBSCRIBED") void once.send({ type: "broadcast", event: "refresh", payload }).finally(() => void supabase.removeChannel(once));
     });
   }
+}
+
+// The access token can't be fetched during pagehide (that promise never
+// finishes), so it's kept from the last check-in.
+let accessToken = "";
+let exitArmed = false;
+
+async function cacheToken() {
+  try {
+    const { data } = await createClient().auth.getSession();
+    if (data.session?.access_token) accessToken = data.session.access_token;
+  } catch {
+    // The last token we saw is still the one to try.
+  }
+}
+
+function beaconRpc(fn: string, body: unknown) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key || !accessToken) return;
+  try {
+    void fetch(`${url}/rest/v1/rpc/${fn}`, {
+      method: "POST",
+      headers: { apikey: key, Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      keepalive: true,
+    });
+  } catch {
+    // The tab is going away. The next check-in, or the room's own timeout, covers a miss.
+  }
+}
+
+// Closing the tab, or leaving the site. A reload fires this too, and the new
+// page checks in again. localStorage is left alone so that reload still
+// knows the room.
+function beaconLeaveRoom() {
+  const room = currentRoom();
+  if (!room) return;
+  leavingPage = true;
+  beaconRpc("leave_room", { p_slug: room.slug });
+  beaconRpc("set_friend_presence", { p_slug: null, p_voice: false });
+  const open = channels.get(room.slug);
+  if (open) void open.send({ type: "broadcast", event: "refresh", payload: { left: true } }).catch(() => {});
+}
+
+export function armRoomExit() {
+  if (exitArmed || typeof window === "undefined") return;
+  exitArmed = true;
+  void cacheToken();
+  createClient().auth.onAuthStateChange((event, session) => {
+    if (session?.access_token) accessToken = session.access_token;
+    else if (event === "SIGNED_OUT") accessToken = "";
+  });
+  window.addEventListener("pagehide", (event) => {
+    // Frozen into the back/forward cache: the page is still open.
+    if (event.persisted) return;
+    beaconLeaveRoom();
+  });
+  window.addEventListener("pageshow", () => {
+    // The page is on screen again (a reload, or back from the cache).
+    leavingPage = false;
+  });
 }
 
 // The timer as it stands right now: clock rooms cycle on the hour; others

@@ -118,7 +118,7 @@ export function RoomsLobby() {
         <div>
           <p className={eyebrowClass}>Your rooms</p>
           <h2 className="mt-1 font-serif text-3xl tracking-tight">Private, for the people you study with</h2>
-          <p className="mt-1 max-w-xl text-sm text-muted">You run the timer. Invite friends, talk in voice (audio only, peer to peer, never recorded), and share the link with anyone else.</p>
+          <p className="mt-1 max-w-xl text-sm text-muted">You run the timer. Invite friends, talk or share a screen (peer to peer, never recorded), and share the link with anyone else.</p>
           {mine.length ? (
             <ul className="mt-5 grid gap-3 sm:grid-cols-2">
               {mine.map((r) => (

@@ -206,7 +206,8 @@ export default function PrivacyPage() {
             </>,
             <>
               <b>Voice.</b> In a private study room, voice goes directly between the browsers of the people who joined it. Confu
-              does not record it or store the audio. Joining still works from the room link, the same as before.
+              does not record it or store the audio. A screen share is the same: live, between those browsers, and not
+              recorded by Confu. Joining still works from the room link, the same as before.
             </>,
             <>
               <b>Threads.</b> A question you post on Threads, and the replies, are visible to people signed in to Confu, with

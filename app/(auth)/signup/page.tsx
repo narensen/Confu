@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Suspense } from "react";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { SignupForm } from "@/components/auth/AuthForms";
 
@@ -17,10 +16,7 @@ export default function SignupPage() {
         </>
       }
     >
-      {/* Reads ?next and ?ref from the address. */}
-      <Suspense>
-        <SignupForm />
-      </Suspense>
+      <SignupForm />
     </AuthCard>
   );
 }

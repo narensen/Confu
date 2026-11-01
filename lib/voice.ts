@@ -1,7 +1,8 @@
 // Voice in a private room is a mesh: each browser talks to the others directly.
 // Eight is the cap because every extra person is another connection each way.
-// Nothing here is recorded or sent to Confu's servers; signaling rides the
-// same realtime channel study rooms already use.
+// Nothing here is recorded or sent to Confu's servers. A screen share is the
+// same: live between the browsers, not recorded. Signaling rides the same
+// realtime channel study rooms already use.
 
 export const VOICE_CAP = 8;
 

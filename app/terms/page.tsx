@@ -144,7 +144,8 @@ export default function TermsPage() {
             </>,
             <>
               In study rooms, use a name you&apos;re comfortable showing and keep what you write respectful. In a private
-              room&apos;s voice, don&apos;t record the others without them agreeing. Voice isn&apos;t recorded by Confu.
+              room&apos;s voice, don&apos;t record the others without them agreeing. Voice isn&apos;t recorded by Confu. A screen
+              share is the same: live between the browsers, and not recorded by Confu.
             </>,
             <>
               A class pack can grant its author Pro for the term, once, about four months, after 30 classmates copy it.

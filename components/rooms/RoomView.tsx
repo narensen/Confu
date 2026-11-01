@@ -8,7 +8,7 @@ import { chime } from "@/components/pdf/FocusTimer";
 import { RoomFriends } from "@/components/rooms/RoomFriends";
 import { Mic, VoiceRoom } from "@/components/rooms/VoiceRoom";
 import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
-import { clock, currentRoom, heartbeat, joinRoom, leaveRoom, onRoomChange, ping, roomState, setStudying, subscribeRoom, timerNow, type RoomState } from "@/lib/rooms";
+import { clock, currentRoom, heartbeat, joinRoom, leaveRoom, onRoomChange, ping, roomState, setStudying, stayIfJoined, subscribeRoom, timerNow, type RoomState } from "@/lib/rooms";
 import { SITE } from "@/lib/site";
 import { createClient } from "@/lib/supabase/client";
 import { track } from "@/lib/telemetry";
@@ -33,6 +33,7 @@ export function RoomView({ slug }: { slug: string }) {
         setRoom(s);
         setNow(Date.now());
         if (s) setSkew(Date.parse(s.now) - Date.now());
+        stayIfJoined(s);
       },
       (err: unknown) => setError(err instanceof Error ? err.message : "Couldn't open the room."),
     );
@@ -44,14 +45,27 @@ export function RoomView({ slug }: { slug: string }) {
       if (live) void load(slug);
     };
     sync();
-    const off = onRoomChange(slug, sync);
-    const poll = window.setInterval(sync, 15_000);
+    const timers: number[] = [];
+    const off = onRoomChange(slug, (left) => {
+      sync();
+      if (!left) return;
+      timers.push(window.setTimeout(sync, 400), window.setTimeout(sync, 1_200));
+    });
+    const poll = window.setInterval(() => {
+      if (document.visibilityState === "visible") sync();
+    }, 5_000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") sync();
+    };
+    document.addEventListener("visibilitychange", onVisible);
     const tick = window.setInterval(() => setNow(Date.now()), 1000);
     return () => {
       live = false;
       off();
+      timers.forEach((id) => window.clearTimeout(id));
       window.clearInterval(poll);
       window.clearInterval(tick);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [slug]);
 

@@ -9,6 +9,9 @@ export const CHANGELOG: Release[] = [
     title: "Every subject has a space",
     summary: "Threads organised by subject, answers you can trust, rooms that feel alive, and voice that stays with you.",
     items: [
+      "Leave voice is immediate. The person who left disappears, instead of sitting on Connecting.",
+      "Share your screen in a private room. It's live between the browsers, with no camera, and Confu doesn't record it.",
+      "Closing the tab takes you out of the study room.",
       "33 subject spaces, from Mathematics and Physics to Law, Medicine and exam prep. Follow the ones you study; asking in one follows it for you.",
       "Threads: search, and sort by active, new, top or unanswered. Vote up the replies that helped, and the person who asked can mark the one that answered it.",
       "Write questions and replies in Markdown, with maths: $x^2$ and $$…$$ render properly, and there's a preview before you post. Edit your own posts any time.",

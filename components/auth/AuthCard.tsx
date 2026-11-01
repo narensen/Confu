@@ -20,9 +20,9 @@ export function AuthCard({ title, subtitle, children, footer }: { title: string;
                 {subtitle}
               </p>
             )}
-            <div className="animate-enter mt-8" style={{ animationDelay: "100ms" }}>
-              {children}
-            </div>
+            {/* No transform here. Chrome will not attach its password manager,
+                or paste into the password field, while an ancestor is transformed. */}
+            <div className="mt-8">{children}</div>
             {footer && (
               <div className="animate-enter mt-8 border-t border-line pt-6 text-sm text-muted" style={{ animationDelay: "150ms" }}>
                 {footer}

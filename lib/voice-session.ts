@@ -4,7 +4,8 @@ import { createClient } from "@/lib/supabase/client";
 import { ICE_SERVERS, VOICE_CAP, isSpeaking, shouldOffer } from "@/lib/voice";
 
 // One private room's voice. The channel only carries "who is here" and the
-// WebRTC handshake. Audio goes browser to browser and is never uploaded.
+// WebRTC handshake. Audio, and a screen share, go browser to browser and are
+// never uploaded or recorded.
 //
 // Every join gets its own session id (sid), sent with everything. A page
 // that reloaded, or rejoined, is a new sid: offers, answers and ICE meant for
@@ -21,22 +22,29 @@ export type VoicePerson = {
   me: boolean;
 };
 
-type Tracked = { name: string; muted: boolean; deafened: boolean; speaking: boolean; sid: string; at: number };
+export type ScreenShare = { id: string; name: string; stream: MediaStream; mine: boolean };
+
+type Tracked = { name: string; muted: boolean; deafened: boolean; speaking: boolean; sharing: boolean; sid: string; at: number };
 
 type Signal =
   | { kind: "hello"; from: string; sid: string; name: string }
   | { kind: "bye"; from: string; sid: string }
+  | { kind: "screen"; from: string; sid: string; on: boolean }
   | { kind: "offer" | "answer"; from: string; sid: string; to: string; toSid: string; sdp: string }
   | { kind: "ice"; from: string; sid: string; to: string; toSid: string; candidate: RTCIceCandidateInit };
 
 type Peer = {
   pc: RTCPeerConnection;
   audio: HTMLAudioElement;
+  videoSender: RTCRtpSender;
   ice: RTCIceCandidateInit[];
   remoteSet: boolean;
   remoteSid: string;
   offerer: boolean;
   startedAt: number;
+  // What this connection was built to carry. A change means rebuild it.
+  localShared: boolean;
+  remoteShared: boolean;
 };
 
 const STALL_MS = 15_000; // an offer that hasn't connected by then is tried again
@@ -55,6 +63,7 @@ function asTracked(value: unknown): Tracked | null {
     muted: row.muted === true,
     deafened: row.deafened === true,
     speaking: row.speaking === true,
+    sharing: row.sharing === true,
     sid: str(row.sid, 64),
     at: typeof row.at === "number" && Number.isFinite(row.at) ? row.at : 0,
   };
@@ -68,6 +77,7 @@ function asSignal(value: unknown): Signal | null {
   if (!from || !sid) return null;
   if (row.kind === "bye") return { kind: "bye", from, sid };
   if (row.kind === "hello") return { kind: "hello", from, sid, name: str(row.name, 40) };
+  if (row.kind === "screen") return { kind: "screen", from, sid, on: row.on === true };
   const to = str(row.to, 64);
   const toSid = str(row.toSid, 64);
   if (!to || !toSid) return null;
@@ -95,9 +105,17 @@ async function loadIceServers(): Promise<RTCIceServer[]> {
 
 const newSid = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`);
 
+// A missing connection is not "connecting": that was the tile left behind after someone hung up.
+function stillConnecting(audioOn: boolean, pc: RTCPeerConnection | undefined) {
+  if (!audioOn || !pc) return false;
+  const state = pc.connectionState;
+  return state !== "connected" && state !== "closed" && state !== "failed";
+}
+
 export class VoiceSession {
   private channel: RealtimeChannel | null = null;
   private stream: MediaStream | null = null;
+  private screen: MediaStream | null = null;
   private ctx: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
   private samples = new Uint8Array(0);
@@ -105,6 +123,12 @@ export class VoiceSession {
   private presence = new Map<string, Tracked>();
   // The latest sid heard from each person (presence lags behind "hello").
   private heard = new Map<string, { sid: string; at: number; name: string }>();
+  // A bye for this sid. Presence keeps them until untrack lands; without this
+  // they pop back as "Connecting…" the whole time.
+  private gone = new Map<string, string>();
+  // Whether each person is sharing, learned from their signal before presence catches up.
+  private knownSharing = new Map<string, boolean>();
+  private remoteScreens = new Map<string, MediaStream>();
   private earlyIce = new Map<string, RTCIceCandidateInit[]>();
   private tries = new Map<string, number>();
   private audioOn = false;
@@ -112,6 +136,7 @@ export class VoiceSession {
   private muted = false;
   private deafened = false;
   private speaking = false;
+  private sharePending = false;
   private pendingLoud = false;
   private speakTimer: ReturnType<typeof setTimeout> | null = null;
   private meter: ReturnType<typeof setInterval> | null = null;
@@ -135,6 +160,7 @@ export class VoiceSession {
     // False once a newer session has taken over, so a page that's closing
     // can't tear down the channel the new one just opened.
     private isCurrent: () => boolean = () => true,
+    private onScreens: (screens: ScreenShare[]) => void = () => {},
   ) {
     this.ready = new Promise((resolve) => {
       this.resolveReady = resolve;
@@ -243,7 +269,7 @@ export class VoiceSession {
       track.addEventListener("ended", () => {
         if (!this.audioOn) return;
         this.onError("The microphone stopped. Join voice again when it's available.");
-        void this.leave();
+        this.leave();
       });
     }
     this.startMeter(stream);
@@ -267,8 +293,12 @@ export class VoiceSession {
     this.deafened = deafened;
   }
 
-  async leave() {
+  // Local only, then a bye. Untrack runs after the others have already been
+  // told, so Leave doesn't sit there while the network call finishes.
+  leave() {
     this.joinGen += 1;
+    this.sharePending = false;
+    this.stopScreenTracks();
     if (!this.audioOn) return;
     this.send({ kind: "bye", from: this.userId, sid: this.sid });
     this.audioOn = false;
@@ -278,18 +308,25 @@ export class VoiceSession {
     this.watchdog = null;
     if (this.pulse) clearInterval(this.pulse);
     this.pulse = null;
-    await this.channel?.untrack().catch(() => {});
     this.stopAudio();
     this.closePeers();
     this.sid = "";
     this.emit();
+    void this.channel?.untrack().catch(() => {});
   }
 
   // The page is going away (reload, closing the tab): tell the others now,
   // rather than leaving them on "Connecting" until the connection times out.
   goodbye() {
-    if (!this.audioOn) return;
+    this.stopScreenTracks();
+    if (!this.audioOn || !this.sid) return;
     this.send({ kind: "bye", from: this.userId, sid: this.sid });
+    // Stop the hello loop. A tick after this would put them straight back.
+    this.audioOn = false;
+    if (this.pulse) clearInterval(this.pulse);
+    this.pulse = null;
+    if (this.watchdog) clearInterval(this.watchdog);
+    this.watchdog = null;
     void this.channel?.untrack().catch(() => {});
   }
 
@@ -298,10 +335,53 @@ export class VoiceSession {
   async close(opts?: { force?: boolean }) {
     this.closed = true;
     const channel = this.channel;
-    await this.leave();
+    this.leave();
     if (this.channel !== channel) return;
     this.channel = null;
     if (channel && (opts?.force || this.isCurrent())) await createClient().removeChannel(channel).catch(() => {});
+  }
+
+  async shareScreen() {
+    if (!this.audioOn) throw new Error("Join voice before sharing your screen.");
+    if (this.screen || this.sharePending) return;
+    if (!window.isSecureContext) throw new Error("Screen share needs a secure page (https).");
+    if (!navigator.mediaDevices?.getDisplayMedia) throw new Error("This browser can't share a screen.");
+    this.sharePending = true;
+    let stream: MediaStream;
+    try {
+      // No audio: the mic is already shared, and nothing is recorded.
+      stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+    } catch (err) {
+      const name = err instanceof DOMException ? err.name : "";
+      if (name === "NotAllowedError" || name === "AbortError" || name === "NotFoundError") {
+        throw new Error("Screen share was cancelled.");
+      }
+      throw new Error("Couldn't share the screen.");
+    } finally {
+      this.sharePending = false;
+    }
+    if (!this.audioOn || this.closed) {
+      stream.getTracks().forEach((track) => track.stop());
+      return;
+    }
+    const track = stream.getVideoTracks()[0];
+    if (!track) {
+      stream.getTracks().forEach((item) => item.stop());
+      throw new Error("Couldn't share the screen.");
+    }
+    this.screen = stream;
+    track.onended = () => {
+      // The browser's own "Stop sharing" control.
+      if (this.screen === stream) this.stopScreen();
+    };
+    this.renegotiate(true);
+  }
+
+  stopScreen() {
+    if (!this.screen) return;
+    this.stopScreenTracks();
+    if (this.audioOn && !this.closed) this.renegotiate(false);
+    else this.emit();
   }
 
   setMuted(on: boolean) {
@@ -393,6 +473,15 @@ export class VoiceSession {
     });
   }
 
+  private stopScreenTracks() {
+    const stream = this.screen;
+    this.screen = null;
+    stream?.getTracks().forEach((track) => {
+      track.onended = null;
+      track.stop();
+    });
+  }
+
   private stopAudio() {
     if (this.speakTimer) clearTimeout(this.speakTimer);
     this.speakTimer = null;
@@ -406,17 +495,21 @@ export class VoiceSession {
   }
 
   private async publish() {
-    if (!this.channel || !this.audioOn) return;
+    if (!this.channel || !this.audioOn || !this.sid) return;
+    const sid = this.sid;
     await this.channel
       .track({
         name: this.name,
-        sid: this.sid,
+        sid,
         at: Date.now(),
         muted: this.muted || this.deafened,
         deafened: this.deafened,
         speaking: this.speaking && !this.muted && !this.deafened,
+        sharing: Boolean(this.screen),
       })
       .catch(() => {});
+    // Leave won the race: take the presence this call just restored.
+    if (!this.audioOn || this.sid !== sid) void this.channel.untrack().catch(() => {});
   }
 
   private send(payload: Signal) {
@@ -453,7 +546,12 @@ export class VoiceSession {
         const tracked = asTracked(meta);
         if (tracked && (!best || tracked.at >= best.at)) best = tracked;
       }
-      if (best) this.presence.set(id, best);
+      if (!best) continue;
+      const buried = this.gone.get(id);
+      // Same sid that said bye: keep them out until a newer page shows up.
+      if (buried && best.sid === buried) continue;
+      if (buried && best.sid !== buried) this.gone.delete(id);
+      this.presence.set(id, best);
     }
   }
 
@@ -465,20 +563,36 @@ export class VoiceSession {
     return fromPresence;
   }
 
+  private wantsShare(id: string) {
+    const known = this.knownSharing.get(id);
+    if (known !== undefined) return known;
+    return this.presence.get(id)?.sharing === true;
+  }
+
   // Line up a connection with everyone in voice: rebuild any whose sid
   // changed, drop anyone who left, and offer where it's our turn.
   private connectAll() {
     if (!this.audioOn || !this.userId) return;
     for (const [id, peer] of [...this.peers]) {
       const sid = this.sidOf(id);
+      const buried = this.gone.get(id);
+      if (buried && peer.remoteSid === buried) {
+        this.dropPeer(id);
+        continue;
+      }
       const gone = !this.presence.has(id) && Date.now() - (this.heard.get(id)?.at ?? 0) > 10_000 && Date.now() - peer.startedAt > 10_000;
       if (gone || (sid && sid !== peer.remoteSid)) this.dropPeer(id);
+    }
+    const sharing = Boolean(this.screen);
+    for (const [id, peer] of [...this.peers]) {
+      if (peer.localShared !== sharing || peer.remoteShared !== this.wantsShare(id)) this.dropPeer(id);
     }
     const ids = new Set([...this.presence.keys(), ...this.heard.keys()]);
     for (const id of ids) {
       if (id === this.userId || this.peers.has(id)) continue;
       const sid = this.sidOf(id);
-      if (sid && shouldOffer(this.userId, id)) void this.offer(id, sid);
+      if (!sid || this.gone.get(id) === sid) continue;
+      if (shouldOffer(this.userId, id)) void this.offer(id, sid);
     }
   }
 
@@ -500,6 +614,8 @@ export class VoiceSession {
     this.emit();
   }
 
+  // One video line from the start, so either side can send a screen later.
+  // Audio tracks first, then that one video line: both browsers build it the same way.
   private makePeer(id: string, remoteSid: string, offerer: boolean) {
     const pc = new RTCPeerConnection({ iceServers: this.iceServers });
     const audio = document.createElement("audio");
@@ -507,15 +623,33 @@ export class VoiceSession {
     audio.setAttribute("playsinline", "true");
     audio.muted = this.deafened;
     this.host.appendChild(audio);
-    const peer: Peer = { pc, audio, ice: [], remoteSet: false, remoteSid, offerer, startedAt: Date.now() };
-    this.stream?.getTracks().forEach((track) => {
+    this.stream?.getAudioTracks().forEach((track) => {
       if (this.stream) pc.addTrack(track, this.stream);
     });
+    const video = pc.addTransceiver("video", { direction: "sendrecv" });
+    const peer: Peer = {
+      pc,
+      audio,
+      videoSender: video.sender,
+      ice: [],
+      remoteSet: false,
+      remoteSid,
+      offerer,
+      startedAt: Date.now(),
+      localShared: Boolean(this.screen),
+      remoteShared: this.wantsShare(id),
+    };
     pc.onicecandidate = (event) => {
       if (!event.candidate || this.peers.get(id) !== peer) return;
       this.send({ kind: "ice", from: this.userId, sid: this.sid, to: id, toSid: remoteSid, candidate: event.candidate.toJSON() });
     };
     pc.ontrack = (event) => {
+      if (this.peers.get(id) !== peer) return;
+      if (event.track.kind === "video") {
+        this.takeScreen(id, event.track);
+        return;
+      }
+      if (event.track.kind !== "audio") return;
       audio.srcObject = event.streams[0] ?? new MediaStream([event.track]);
       void audio.play().then(
         () => this.onHear(false),
@@ -543,6 +677,22 @@ export class VoiceSession {
     return peer;
   }
 
+  private takeScreen(id: string, track: MediaStreamTrack) {
+    if (!this.wantsShare(id)) return;
+    const stream = new MediaStream([track]);
+    this.remoteScreens.set(id, stream);
+    track.onended = () => {
+      if (this.remoteScreens.get(id) === stream) this.remoteScreens.delete(id);
+      this.emit();
+    };
+    this.emit();
+  }
+
+  private async applyScreen(peer: Peer) {
+    const track = this.screen?.getVideoTracks()[0] ?? null;
+    await peer.videoSender.replaceTrack(track).catch(() => {});
+  }
+
   private dropPeer(id: string) {
     const peer = this.peers.get(id);
     if (!peer) return;
@@ -553,12 +703,14 @@ export class VoiceSession {
     peer.pc.close();
     peer.audio.srcObject = null;
     peer.audio.remove();
+    this.remoteScreens.delete(id);
   }
 
   private closePeers() {
     for (const id of [...this.peers.keys()]) this.dropPeer(id);
     this.earlyIce.clear();
     this.tries.clear();
+    this.remoteScreens.clear();
   }
 
   private async flushIce(peer: Peer) {
@@ -568,10 +720,25 @@ export class VoiceSession {
     }
   }
 
+  // Drop every connection and let the offerer build a new one, so the screen
+  // track is in the offer. Audio drops for a moment while that happens.
+  private renegotiate(on: boolean) {
+    if (!this.audioOn || !this.sid || !this.userId) {
+      this.emit();
+      return;
+    }
+    this.send({ kind: "screen", from: this.userId, sid: this.sid, on });
+    for (const id of [...this.peers.keys()]) this.dropPeer(id);
+    this.connectAll();
+    this.emit();
+  }
+
   private async offer(id: string, remoteSid: string) {
     if (!this.audioOn || this.closed || this.peers.has(id) || !this.stream) return;
     const peer = this.makePeer(id, remoteSid, true);
     try {
+      await this.applyScreen(peer);
+      if (this.peers.get(id) !== peer) return;
       const offer = await peer.pc.createOffer();
       if (this.peers.get(id) !== peer) return;
       await peer.pc.setLocalDescription(offer);
@@ -593,7 +760,12 @@ export class VoiceSession {
       // A reloading page says bye for the sid that's going away. That must
       // not forget a hello from the page that just replaced it.
       const known = this.heard.get(signal.from);
-      if (!known || known.sid === signal.sid) this.heard.delete(signal.from);
+      const stale = Boolean(known && known.sid !== signal.sid);
+      this.gone.set(signal.from, signal.sid);
+      if (!stale) {
+        this.heard.delete(signal.from);
+        this.knownSharing.delete(signal.from);
+      }
       if (this.peers.get(signal.from)?.remoteSid === signal.sid) this.dropPeer(signal.from);
       const meta = this.presence.get(signal.from);
       if (meta?.sid === signal.sid) this.presence.delete(signal.from);
@@ -601,9 +773,26 @@ export class VoiceSession {
       return;
     }
     if (signal.kind === "hello") {
+      if (this.gone.get(signal.from) === signal.sid) return;
+      if (this.gone.has(signal.from)) this.gone.delete(signal.from);
       const prev = this.heard.get(signal.from);
+      if (prev && prev.sid !== signal.sid) this.knownSharing.delete(signal.from);
       this.heard.set(signal.from, { sid: signal.sid, at: Date.now(), name: signal.name || prev?.name || "" });
       this.connectAll();
+      this.emit();
+      return;
+    }
+    if (signal.kind === "screen") {
+      const current = this.sidOf(signal.from);
+      if (current && current !== signal.sid) return;
+      this.knownSharing.set(signal.from, signal.on);
+      if (!signal.on) this.remoteScreens.delete(signal.from);
+      if (!this.audioOn) {
+        this.emit();
+        return;
+      }
+      this.dropPeer(signal.from);
+      if (shouldOffer(this.userId, signal.from)) void this.offer(signal.from, signal.sid);
       this.emit();
       return;
     }
@@ -617,6 +806,8 @@ export class VoiceSession {
       this.dropPeer(signal.from);
       const peer = this.makePeer(signal.from, signal.sid, false);
       try {
+        await this.applyScreen(peer);
+        if (this.peers.get(signal.from) !== peer) return;
         await peer.pc.setRemoteDescription({ type: "offer", sdp: signal.sdp });
         if (this.peers.get(signal.from) !== peer) return;
         peer.remoteSet = true;
@@ -683,25 +874,38 @@ export class VoiceSession {
         muted: meta.muted,
         deafened: meta.deafened,
         speaking: meta.speaking && !meta.muted,
-        connecting: this.audioOn && pc?.connectionState !== "connected",
+        connecting: stillConnecting(this.audioOn, pc),
         me: false,
       });
     }
     // Presence can lag a reload. A hello is enough to show them and to start
     // the connection; presence fills in mute and speaking once it catches up.
     for (const [id, hello] of this.heard) {
-      if (id === this.userId || this.presence.has(id)) continue;
+      if (id === this.userId || this.presence.has(id) || this.gone.get(id) === hello.sid) continue;
       rest.push({
         id,
         name: hello.name || "Someone",
         muted: false,
         deafened: false,
         speaking: false,
-        connecting: this.audioOn && this.peers.get(id)?.pc.connectionState !== "connected",
+        connecting: stillConnecting(this.audioOn, this.peers.get(id)?.pc),
         me: false,
       });
     }
     rest.sort((a, b) => a.name.localeCompare(b.name));
     this.onChange([...people, ...rest]);
+
+    const screens: ScreenShare[] = [];
+    if (this.screen) screens.push({ id: this.userId || "me", name: this.name, stream: this.screen, mine: true });
+    for (const [id, stream] of this.remoteScreens) {
+      if (!this.wantsShare(id)) continue;
+      screens.push({
+        id,
+        name: this.presence.get(id)?.name || this.heard.get(id)?.name || "Someone",
+        stream,
+        mine: false,
+      });
+    }
+    this.onScreens(screens);
   }
 }

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
-import { hearVoice, joinVoice, leaveVoice, setVoiceDeafened, setVoiceMuted, useVoice, watchVoice } from "@/lib/voice-store";
-import type { VoicePerson } from "@/lib/voice-session";
+import { useEffect, useRef } from "react";
+import { hearVoice, joinVoice, leaveVoice, setVoiceDeafened, setVoiceMuted, shareScreen, stopScreenShare, useVoice, watchVoice } from "@/lib/voice-store";
+import type { ScreenShare, VoicePerson } from "@/lib/voice-session";
 
 // Voice for a private room, like a voice channel: everyone in it as a tile
 // (a ring when they talk), and mic, deafen and leave. You stay in voice when
@@ -54,6 +54,7 @@ function VoiceLive({ slug }: { slug: string }) {
   const others = people.filter((p) => !p.me);
   const talking = others.filter((p) => !p.connecting || !inVoice);
   const connecting = inVoice && others.some((p) => p.connecting);
+  const screens = mine ? v.screens : [];
 
   return (
     <>
@@ -74,11 +75,18 @@ function VoiceLive({ slug }: { slug: string }) {
             <Mic off={false} size={22} />
           </span>
           <p className="mt-3 font-serif text-xl">Nobody&apos;s talking yet</p>
-          <p className="mt-1 max-w-sm text-sm text-muted">Hop in, then invite a friend from the panel on the right. It&apos;s audio only, peer to peer, and nothing is recorded.</p>
+          <p className="mt-1 max-w-sm text-sm text-muted">Hop in, then invite a friend from the panel on the right. It&apos;s peer to peer, and nothing is recorded. You can share a screen once you&apos;re in.</p>
           <JoinButton slug={slug} joining={v.joining} className="mt-5" />
         </div>
       ) : (
         <>
+          {screens.length > 0 && (
+            <div className={`grid gap-3 border-b border-ink bg-ink/[0.03] p-4 ${screens.length > 1 ? "sm:grid-cols-2" : ""}`}>
+              {screens.map((screen) => (
+                <ScreenView key={screen.id} screen={screen} />
+              ))}
+            </div>
+          )}
           <ul className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 sm:p-5 lg:grid-cols-4">
             {people.map((p) => (
               <Tile key={p.id} person={p} />
@@ -108,6 +116,9 @@ function VoiceLive({ slug }: { slug: string }) {
           <RoundButton label={v.deafened ? "Undeafen (D)" : "Deafen (D)"} pressed={v.deafened} onClick={() => setVoiceDeafened(!v.deafened)}>
             <Headphones off={v.deafened} />
           </RoundButton>
+          <RoundButton label={v.sharing ? "Stop sharing" : "Share your screen"} pressed={v.sharing} onClick={() => void (v.sharing ? stopScreenShare() : shareScreen())}>
+            <ScreenIcon />
+          </RoundButton>
           <button
             type="button"
             onClick={() => void leaveVoice()}
@@ -119,7 +130,7 @@ function VoiceLive({ slug }: { slug: string }) {
             </svg>
             Leave
           </button>
-          <span className="ml-auto hidden text-xs text-muted sm:inline">M mute · D deafen · you stay in voice on other pages</span>
+          <span className="ml-auto hidden text-xs text-muted sm:inline">M mute · D deafen · voice and a screen stay with you on other pages</span>
         </div>
       )}
 
@@ -134,7 +145,7 @@ function VoiceLive({ slug }: { slug: string }) {
       {inVoice && others.length === 0 && <p className="border-t border-line px-5 py-3 text-xs text-muted">You&apos;re the only one here. Invite a friend and they can join from this room.</p>}
       {connecting && (
         <p className="border-t border-line px-5 py-3 text-xs text-muted">
-          Still connecting? It retries on its own. If someone stays stuck, their network may block voice: home networks usually work; some school and office networks don&apos;t.
+          Connecting. It keeps trying. Home networks usually work; some school and office networks block voice.
         </p>
       )}
       {mine && v.error && <p className="border-t border-danger/30 bg-danger/5 px-5 py-3 text-sm text-danger">{v.error}</p>}
@@ -155,7 +166,7 @@ function Heading({ live }: { live: number }) {
             </span>
           )}
         </p>
-        <p className="text-xs text-muted">Only this private room. No camera, and nothing is recorded.</p>
+        <p className="text-xs text-muted">Only this private room. Share a screen if you want. No camera, and nothing is recorded.</p>
       </div>
     </div>
   );
@@ -172,6 +183,29 @@ function JoinButton({ slug, joining, className = "" }: { slug: string; joining: 
       <Mic off={false} />
       {joining ? "Joining…" : "Join voice"}
     </button>
+  );
+}
+
+function ScreenView({ screen }: { screen: ScreenShare }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.srcObject = screen.stream;
+    void el.play().catch(() => {});
+    return () => {
+      el.srcObject = null;
+    };
+  }, [screen.stream]);
+  const label = screen.mine ? "Your screen" : `${screen.name}'s screen`;
+  return (
+    <figure className="overflow-hidden rounded-xl border border-ink bg-ink">
+      <video ref={ref} autoPlay playsInline muted className="aspect-video w-full bg-ink object-contain" aria-label={label} />
+      <figcaption className="flex items-center justify-between gap-2 bg-panel px-3 py-1.5 text-xs">
+        <span className="truncate font-medium">{label}</span>
+        <span className="shrink-0 text-muted">Live · not recorded</span>
+      </figcaption>
+    </figure>
   );
 }
 
@@ -224,6 +258,15 @@ export function Mic({ off, size = 16 }: { off: boolean; size?: number }) {
       <rect x="9" y="3" width="6" height="11" rx="3" />
       <path d="M6 11a6 6 0 0 0 12 0M12 17v4" />
       {off && <path d="M4 4l16 16" />}
+    </svg>
+  );
+}
+
+export function ScreenIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden>
+      <rect x="3" y="4" width="18" height="12" rx="2" />
+      <path d="M8 20h8M12 16v4" />
     </svg>
   );
 }

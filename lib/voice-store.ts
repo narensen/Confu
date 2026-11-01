@@ -2,9 +2,9 @@
 
 import { useSyncExternalStore } from "react";
 import { setInVoice, touchPresence } from "@/lib/friends";
-import { currentRoom, subscribeRoom } from "@/lib/rooms";
+import { armRoomExit, currentRoom, subscribeRoom } from "@/lib/rooms";
 import { track } from "@/lib/telemetry";
-import { VoiceSession, type VoicePerson } from "@/lib/voice-session";
+import { VoiceSession, type ScreenShare, type VoicePerson } from "@/lib/voice-session";
 
 // Voice belongs to the app, not to the room's page: once you're in, you stay
 // in while you go to your library or a session (the header shows who's
@@ -21,9 +21,28 @@ export type VoiceState = {
   needsTap: boolean; // the browser blocked playback until a click
   error: string | null;
   resumable: boolean; // you were in voice before the reload; one click rejoins
+  screens: ScreenShare[];
+  sharing: boolean;
 };
 
-const IDLE: VoiceState = { slug: null, people: [], inVoice: false, joining: false, muted: false, deafened: false, needsTap: false, error: null, resumable: false };
+const IDLE: VoiceState = {
+  slug: null,
+  people: [],
+  inVoice: false,
+  joining: false,
+  muted: false,
+  deafened: false,
+  needsTap: false,
+  error: null,
+  resumable: false,
+  screens: [],
+  sharing: false,
+};
+
+function sameScreens(a: ScreenShare[], b: ScreenShare[]) {
+  if (a.length !== b.length) return false;
+  return a.every((screen, i) => screen.id === b[i]?.id && screen.stream === b[i]?.stream && screen.name === b[i]?.name && screen.mine === b[i]?.mine);
+}
 const RESUME_KEY = "confu:voice";
 
 let state: VoiceState = IDLE;
@@ -99,6 +118,12 @@ function sessionFor(slug: string) {
       if (session === holder.current) set({ needsTap });
     },
     () => session === holder.current,
+    (screens) => {
+      if (session !== holder.current) return;
+      const sharing = screens.some((screen) => screen.mine);
+      if (sharing === state.sharing && sameScreens(state.screens, screens)) return;
+      set({ screens, sharing });
+    },
   );
   holder.current = next;
   // Point at the new session before the old one closes, so its teardown
@@ -120,8 +145,13 @@ function closeSession() {
 function start() {
   if (started || typeof window === "undefined") return;
   started = true;
-  // Going away (reload, closing the tab): tell the others now.
-  window.addEventListener("pagehide", () => session?.goodbye());
+  // Closing the tab also leaves the study room. A reload checks back in.
+  armRoomExit();
+  // Going away (reload, closing the tab): tell the others in voice now.
+  // A page frozen for back/forward is still in the call.
+  window.addEventListener("pagehide", (event) => {
+    if (!event.persisted) session?.goodbye();
+  });
   // Leaving the room (or switching rooms) leaves its voice.
   subscribeRoom(() => {
     if (session && currentRoom()?.slug !== session.slug) void leaveVoice();
@@ -212,13 +242,30 @@ export async function joinVoice(slug: string) {
   }
 }
 
-export async function leaveVoice() {
+export function leaveVoice() {
   forget();
   const s = session;
-  if (!s) return set({ resumable: false });
-  await s.leave();
-  set({ muted: false, deafened: false, needsTap: false, resumable: false, error: null });
+  if (!s) return set({ resumable: false, screens: [], sharing: false });
+  // Don't wait on the network. The other person is told before we return.
+  s.leave();
+  set({ muted: false, deafened: false, needsTap: false, resumable: false, error: null, screens: [], sharing: false });
   if (watchers <= 0 || currentRoom()?.slug !== s.slug) closeSession();
+}
+
+export async function shareScreen() {
+  const s = session;
+  if (!s?.inVoice) return;
+  set({ error: null });
+  try {
+    await s.shareScreen();
+    track("voice.screen", {});
+  } catch (err) {
+    set({ error: err instanceof Error ? err.message : "Couldn't share the screen." });
+  }
+}
+
+export function stopScreenShare() {
+  session?.stopScreen();
 }
 
 export function setVoiceMuted(on: boolean) {
