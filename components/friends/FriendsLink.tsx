@@ -40,7 +40,7 @@ export function FriendsLink() {
     <Link
       href="/friends"
       aria-label={count > 0 ? `Friends, ${count} waiting` : "Friends"}
-      className="mr-1 inline-flex items-center rounded-md px-2 py-1 text-sm font-medium text-muted transition hover:bg-paper hover:text-ink"
+      className="inline-flex items-center rounded-full px-2.5 py-1 text-sm font-medium text-muted transition hover:bg-paper hover:text-ink"
     >
       Friends
       {count > 0 && (

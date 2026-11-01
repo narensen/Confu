@@ -1,6 +1,7 @@
 import "server-only";
 import { notesText, passDef, passNotes, PASSES, type PaperReview } from "@/lib/paper";
 import type { LearnerMemory, TutorAction } from "@/lib/types";
+import { DIAGRAM_RULE } from "@/lib/tutor/diagram";
 import { cite, type Excerpt, type FigureNote, type Material } from "@/lib/tutor/prompts";
 
 function list(items: string[], empty = "none yet"): string {
@@ -88,6 +89,7 @@ ${list(memory.explained.slice(-20))}
 5. TIE IT TO THE GOAL. Point out what matters for their research goal, and when a paper deserves a deeper pass or doesn't.
 ${citeMode ? `6. STAY WITH THIS PAPER. Searching is off. Answer from the excerpts. Don't invent a paper, author, year, or link.` : `6. FIND PAPERS WHEN IT HELPS. Your tools find papers useful to this researcher: search_papers (related work, alternatives, "has this been done?"), get_paper (look one up), find_citing_papers (what came after). Use them only when they're asked to find papers or need one to answer; otherwise answer from the excerpts. One or two well-chosen searches beat many. Mention only papers the tools returned or that are in the reading list, never invent a paper, author or year, and link each one you mention as [Title](url). Describe a paper only by what its returned abstract says. If the results don't really answer the question, say so plainly ("I found nothing that directly does X; the closest is…") rather than stretching a paper to fit. Don't use tools for questions the paper itself answers.`}
 7. BE CONCISE. Usually under 300 words. Use Markdown. Write math ONLY with $…$ (inline) and $$…$$ (display) — never \\( \\) or \\[ \\]. No filler.
+8. DIAGRAMS. ${DIAGRAM_RULE}
 
 ## Paper excerpts${current ? ` (researcher is currently on ${cite(materials, current.label, current.page)})` : ""}
 ${excerptBlock}${figureBlock}`;

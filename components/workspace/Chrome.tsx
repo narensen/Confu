@@ -136,11 +136,22 @@ export function ToolRail({ sections, active, onPick, onShortcuts }: { sections: 
   );
 }
 
-// Left edge, when the tutor is folded away: one click brings it back.
+// Left edge, when the tutor is folded: only the logo, so the reader isn't squeezed.
 export function TutorRail({ busy, onOpen }: { busy: boolean; onOpen: () => void }) {
   return (
-    <nav aria-label="Tutor" className="flex w-14 shrink-0 flex-col items-stretch gap-1 border-r border-ink bg-panel px-1 py-2">
-      <RailItem icon="chat" label="Tutor" active={false} dot={busy} title="Show the tutor (T)" onClick={onOpen} />
+    <nav aria-label="Tutor" className="flex w-8 shrink-0 flex-col items-center border-r border-ink bg-panel pt-3">
+      <button
+        type="button"
+        onClick={onOpen}
+        aria-label="Show the tutor"
+        title="Show the tutor (T)"
+        className="relative rounded-md px-0.5 py-2 text-ink transition hover:bg-paper"
+      >
+        <span className="font-serif text-[13px] font-semibold tracking-tight [writing-mode:vertical-rl] rotate-180">
+          Confu<span className="text-yellow-500">.</span>
+        </span>
+        {busy && <span aria-hidden className="absolute top-1 right-0 size-1.5 animate-pulse rounded-full border border-ink bg-yellow-300" />}
+      </button>
     </nav>
   );
 }

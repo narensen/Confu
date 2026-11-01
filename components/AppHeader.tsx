@@ -18,26 +18,32 @@ export function Logo() {
   );
 }
 
+const navLink = "rounded-full px-2.5 py-1 text-sm font-medium text-muted transition hover:bg-paper hover:text-ink";
+
 async function UserMenu() {
   const user = await getUser();
   if (!user) return null;
   const supabase = await createClient();
   const [role, firstTime, key] = await Promise.all([getCurrentRole(), getFirstTime(), getKeyInfo(supabase, user.id, null)]);
   return (
-    <div className="animate-fade flex items-center">
+    <div className="animate-fade flex items-center gap-1">
       {/* No button: opens by itself for new accounts, or from Settings. */}
       <Guide userId={user.id} firstTime={firstTime} needsKey={planOf(role) !== "pro"} />
-      <Link href="/review" className="rounded-md px-2 py-1 text-sm font-medium text-muted transition hover:bg-paper hover:text-ink">
-        Review
-      </Link>
-      <Link href="/threads" className="hidden rounded-md px-2 py-1 text-sm font-medium text-muted transition hover:bg-paper hover:text-ink sm:inline">
-        Threads
-      </Link>
-      <NotificationBell userId={user.id} />
-      <FriendsLink />
-      {/* "Rooms", or the room you're in with its timer. */}
+      <nav aria-label="App" className="hidden items-center md:flex">
+        <Link href="/review" className={navLink}>
+          Review
+        </Link>
+        <Link href="/threads" className={navLink}>
+          Threads
+        </Link>
+        <FriendsLink />
+      </nav>
+      {/* "Rooms" from md up. A room you're actually in stays, including on a phone. */}
       <RoomStatus />
-      <AccountMenu name={user.name} email={user.email} plan={planOf(role)} owner={isOwner(role)} keyLast4={key?.last4 ?? null} />
+      <div className="ml-1 flex shrink-0 items-center gap-2 border-l border-line pl-3">
+        <NotificationBell userId={user.id} />
+        <AccountMenu name={user.name} email={user.email} plan={planOf(role)} owner={isOwner(role)} keyLast4={key?.last4 ?? null} />
+      </div>
     </div>
   );
 }
@@ -45,12 +51,12 @@ async function UserMenu() {
 export function AppHeader({ children }: { children?: ReactNode }) {
   return (
     // Its own layer above the page, so the account dropdown is never painted over.
-    <header className="relative z-40 flex h-14 shrink-0 items-center gap-4 border-b border-ink bg-panel px-5">
-      <Link href="/dashboard" className="transition hover:opacity-70">
+    <header className="glass-bar sticky top-0 z-40 flex h-14 shrink-0 items-center gap-3 border-b border-ink px-3 sm:px-5">
+      <Link href="/dashboard" className="shrink-0 transition hover:opacity-70">
         <Logo />
       </Link>
       <div className="flex min-w-0 flex-1 items-center gap-2">{children}</div>
-      <Suspense fallback={<div className="skeleton h-8 w-32 rounded-lg" />}>
+      <Suspense fallback={<div className="skeleton h-8 w-24 rounded-full" />}>
         <UserMenu />
       </Suspense>
     </header>

@@ -137,6 +137,7 @@ export type TutorAction =
   | "figure"
   | "quiz"
   | "teach"
+  | "diagram"
   // Paper sessions (three-pass method)
   | "pass1_check"
   | "pass2_figures"
@@ -153,6 +154,7 @@ export const TUTOR_ACTIONS = [
   "figure",
   "quiz",
   "teach",
+  "diagram",
   "pass1_check",
   "pass2_figures",
   "pass2_check",

@@ -47,10 +47,18 @@ export function ChatPanel({ messages, busy, plan, docs, activeTopic, topics, onS
     stick.current = true;
   }
 
+  function draw() {
+    if (busy) return;
+    const text = draft.trim();
+    onSend({ action: "diagram", message: text || undefined });
+    if (text) setDraft("");
+    stick.current = true;
+  }
+
   const last = messages[messages.length - 1];
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-w-0 flex-col">
       {paperFocus && (
         <div className="flex shrink-0 items-center gap-3 border-b border-line bg-paper px-5 py-2.5 text-xs">
           <span className={eyebrowClass}>Reading</span>
@@ -88,7 +96,7 @@ export function ChatPanel({ messages, busy, plan, docs, activeTopic, topics, onS
           const el = e.currentTarget;
           stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
         }}
-        className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5"
+        className="min-h-0 min-w-0 flex-1 space-y-5 overflow-x-hidden overflow-y-auto px-5 py-5"
       >
         {messages.length === 0 &&
           (kind === "paper" ? (
@@ -145,25 +153,27 @@ export function ChatPanel({ messages, busy, plan, docs, activeTopic, topics, onS
       </div>
 
       <div className="shrink-0 border-t border-ink bg-panel p-3">
-        {kind === "exam" && (
-          <div className="mb-2.5 flex flex-wrap gap-1.5">
-            {EXAM_PROMPTS.map((p) => (
+        <div className="mb-2.5 flex flex-wrap gap-1.5">
+          {kind === "exam" &&
+            EXAM_PROMPTS.map((p) => (
               <QuickAction key={p.label} disabled={Boolean(busy)} onClick={() => onSend({ action: "chat", message: p.message })}>
                 {p.label}
               </QuickAction>
             ))}
-          </div>
-        )}
-        {plan && activeTopic && (
-          <div className="mb-2.5 flex flex-wrap gap-1.5">
-            <QuickAction disabled={Boolean(busy)} onClick={() => onSend({ action: "teach" })}>
-              Teach me this topic
-            </QuickAction>
-            <QuickAction disabled={Boolean(busy)} onClick={() => onSend({ action: "quiz" })}>
-              Check my understanding
-            </QuickAction>
-          </div>
-        )}
+          {plan && activeTopic && (
+            <>
+              <QuickAction disabled={Boolean(busy)} onClick={() => onSend({ action: "teach" })}>
+                Teach me this topic
+              </QuickAction>
+              <QuickAction disabled={Boolean(busy)} onClick={() => onSend({ action: "quiz" })}>
+                Check my understanding
+              </QuickAction>
+            </>
+          )}
+          <QuickAction disabled={Boolean(busy)} onClick={draw}>
+            Draw a diagram
+          </QuickAction>
+        </div>
         <label className="mb-2 flex cursor-pointer items-start gap-2 px-1 text-xs leading-snug text-muted">
           <input type="checkbox" checked={citeMode} onChange={(e) => onCiteMode(e.target.checked)} className="mt-0.5" />
           <span>Answers have to cite a page in this session.</span>
@@ -234,6 +244,7 @@ function EmptyState({ hasPlan, onOpenPlan }: { hasPlan: boolean; onOpenPlan: () 
     ["Select text", "in the PDF to ask a doubt, summarize it, see its context, or get it explained simply."],
     ["Capture", "in the toolbar, then drag over a figure, table or equation. A vision model reads it and the tutor explains it."],
     ["Teach me / Check my understanding", "work through your plan one idea at a time, including topics beyond the PDF. Your progress is remembered."],
+    ["Draw a diagram", "asks for a picture of the idea. It shows up in the chat as an image you can look at."],
   ];
   return (
     <div className="animate-enter py-4">

@@ -52,11 +52,11 @@ export function AuthShowcase() {
   );
 
   return (
-    <div ref={root} aria-hidden className="relative hidden overflow-hidden border-l border-ink bg-ink text-white select-none lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col lg:self-start">
+    <div ref={root} aria-hidden className="auth-stage relative hidden overflow-hidden border-l border-ink select-none lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col lg:self-start">
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgb(255_255_255/0.06)_1px,transparent_1px),linear-gradient(90deg,rgb(255_255_255/0.06)_1px,transparent_1px)] bg-size-[44px_44px] mask-[radial-gradient(ellipse_at_center,black,transparent_75%)]" />
 
       <div className="relative px-12 pt-14">
-        <p className="animate-enter font-mono text-[11px] tracking-[0.14em] text-white/50 uppercase">Confu</p>
+        <p className="auth-stage-muted animate-enter font-mono text-[11px] tracking-[0.14em] uppercase">Confu</p>
         <p className="animate-enter mt-3 max-w-md font-serif text-4xl leading-[1.1] tracking-tight" style={{ animationDelay: "80ms" }}>
           Understand it deeply, <span className="text-yellow-300">not just skim it.</span>
         </p>
@@ -100,7 +100,7 @@ export function AuthShowcase() {
         </Card>
       </div>
 
-      <p className="relative px-12 pb-10 font-mono text-[11px] text-white/45">Free to start · Pro in early access · Your notes stay yours</p>
+      <p className="auth-stage-muted relative px-12 pb-10 font-mono text-[11px]">Free to start · Pro in early access · Your notes stay yours</p>
     </div>
   );
 }

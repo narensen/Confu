@@ -1,6 +1,7 @@
 import "server-only";
 import { countdownLabel, type TopicStat } from "@/lib/exam";
 import type { LearnerMemory } from "@/lib/types";
+import { DIAGRAM_RULE } from "@/lib/tutor/diagram";
 import { cite, type Excerpt, type FigureNote, type Material } from "@/lib/tutor/prompts";
 
 function list(items: string[], empty = "none yet"): string {
@@ -54,6 +55,7 @@ ${ground}
 3. MAKE IT STICK. Add a memory hook (mnemonic, contrast or analogy) for anything that's easy to mix up, and flag the common mistakes examiners look for.
 4. MIND THE CLOCK. ${daysLeft !== null && daysLeft >= 0 && daysLeft <= 3 ? "The exam is very close: prioritise the most likely questions and their weak topics; keep it tight." : "Point them at weak topics when relevant, but answer what they ask."}
 5. BE CONCISE. Usually under 250 words, Markdown, short paragraphs. Write math ONLY with $…$ (inline) and $$…$$ (display), never \\( \\) or \\[ \\].
+6. DIAGRAMS. ${DIAGRAM_RULE}
 
 ## Excerpts from their material${current ? ` (they're on ${cite(materials, current.label, current.page)})` : ""}
 ${excerptBlock}${figureBlock}`;

@@ -100,7 +100,7 @@ const LAYOUT_KEY = "confu:layout";
 type Layout = { tutor: number; sheet: number; tutorOpen: boolean; pinned: boolean };
 const DEFAULT_LAYOUT: Layout = { tutor: 400, sheet: 440, tutorOpen: true, pinned: false };
 const RAIL = 72; // the tools rail (w-18)
-const TUTOR_RAIL = 56; // the folded tutor (w-14)
+const TUTOR_RAIL = 32; // the folded tutor (w-8): only the logo peeks out
 const READER_MIN = 440; // a tool is only pinned beside the reader if this much is left for it
 const SHEET_MIN = 340;
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
@@ -1505,7 +1505,7 @@ export function Workspace({
         onFold={onFold}
         usage={<UsageMeter sessionId={session.id} keyId={needsKey ? keyInfo?.id : undefined} keyLast4={needsKey ? keyInfo?.last4 : undefined} />}
       />
-      <div className="min-h-0 flex-1">
+      <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
         {locked ? (
           <KeyGate
             sessionId={session.id}
@@ -1572,7 +1572,7 @@ export function Workspace({
         ) : mobileShown === "tool" && tool ? (
           <aside aria-label={sectionOf(tool).label} className="@container flex w-full min-w-0 flex-col bg-panel">
             <ToolHeader section={sectionOf(tool)} />
-            <div className="min-h-0 flex-1">
+            <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
               <TutorPanel view={tool} {...panelProps} />
             </div>
           </aside>
@@ -1711,7 +1711,7 @@ export function Workspace({
               onPin={() => updateLayout({ pinned: !sheetDocked })}
               onClose={() => setTool(null)}
             />
-            <div className="min-h-0 flex-1">
+            <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
               <TutorPanel view={lastTool} {...panelProps} />
             </div>
           </aside>

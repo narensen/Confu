@@ -9,6 +9,11 @@ export const CHANGELOG: Release[] = [
     title: "Every subject has a space",
     summary: "Threads organised by subject, answers you can trust, rooms that feel alive, and voice that stays with you.",
     items: [
+      "The bell sits at the right of the bar, next to your account, instead of in among the links.",
+      "Dark mode is glossy glass: a lit background, frosted bars, and soft edges instead of flat black frames.",
+      "Draw a diagram. The tutor can answer with a picture, and it shows up in the chat as an image.",
+      "Wide tables slide sideways, the way long equations do, instead of squeezing every column.",
+      "Fold the tutor and only the logo stays, a thin strip down the side.",
       "Leave voice is immediate. The person who left disappears, instead of sitting on Connecting.",
       "Share your screen in a private room. It's live between the browsers, with no camera, and Confu doesn't record it.",
       "Closing the tab takes you out of the study room.",

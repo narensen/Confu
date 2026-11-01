@@ -15,8 +15,8 @@ export const SITE_LINKS = [
 
 export function SiteNav({ links = SITE_LINKS }: { links?: { href: string; label: string }[] }) {
   return (
-    <nav className="sticky top-0 z-30 border-b border-ink bg-panel/90 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3.5">
+    <nav className="glass-bar sticky top-0 z-30 border-b border-ink">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-6">
         <Link href="/" className="transition hover:opacity-70">
           <Logo />
         </Link>

@@ -1,5 +1,6 @@
 import "server-only";
 import type { LearnerMemory, PlanTopic, StudyPlan, TutorAction } from "@/lib/types";
+import { DIAGRAM_RULE } from "@/lib/tutor/diagram";
 import type { ScheduleStatus } from "@/lib/schedule";
 
 // A PDF in the session, referred to by its label ("D1", "D2", …).
@@ -106,6 +107,7 @@ ${ground}
 5. KEEP MOMENTUM. When the student shows they've got the current topic's objectives, say so plainly and point them to the next topic rather than circling.
 6. CHECK, DON'T LECTURE. End with at most ONE short question that makes them think (why / how / what-if / apply) — or, if they just answered one of your questions, assess the answer honestly first: what's right, what's missing, the precise fix.
 7. BE CONCISE. Usually under 250 words. Use Markdown and short paragraphs. Write math ONLY with $…$ (inline) and $$…$$ (display) — never \\( \\) or \\[ \\]. No filler, no "Great question!".
+8. DIAGRAMS. ${DIAGRAM_RULE}
 
 ## Document excerpts${current ? ` (student is currently on ${cite(materials, current.label, current.page)})` : ""}
 ${excerptBlock}${figureBlock}`;
@@ -152,6 +154,9 @@ ${q || "Help me read this: what it shows, how to read it (axes, symbols, arrows,
       return `Check my understanding of ${topicName}. Ask me ONE question that tests understanding (why / how / apply / predict), not recall, targeting an objective I haven't clearly demonstrated yet. Do not reveal the answer.${q ? `\nFocus: ${q}` : ""}`;
     case "teach":
       return `Teach me ${topicName}. Pick up from what I already know (see memory) and teach the next most important idea I haven't covered, grounded in the PDF pages when the topic has them. Keep it to one idea, then ask me one check question.${q ? `\nNote: ${q}` : ""}`;
+    case "diagram":
+      return `${passage}Draw a diagram${topic ? ` of ${topicName}` : ""}${q ? `: ${q}` : "."}
+Under 80 words, then ONE fenced \`\`\`svg block and nothing after it. A single complete <svg viewBox="0 0 … …">, dark ink (#1a1a1a) on a light fill (#f7f6f2), short readable labels, no scripts, no foreignObject, no external images, no animation, under 30 lines. Math in the words stays in $…$ and $$…$$, never inside the SVG.`;
     case "chat":
     default:
       return `${passage}${q ?? ""}`;

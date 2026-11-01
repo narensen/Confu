@@ -24,55 +24,63 @@
 }
 
 /* Dark: chosen in the account menu (data-theme), or the system's setting when
-   none is chosen. Every colour is a token, so components need no dark: classes.
-   "white" becomes the dark surface, so ink-filled buttons (bg-ink text-white)
-   flip to light buttons with dark text; pale yellow tints become dark amber;
-   bright yellows keep dark text on them. PDF pages stay white. */
+   none is chosen. Glossy glass: a lit gradient under translucent surfaces,
+   soft shadows, and a hairline of white along the top of bars. Tokens only,
+   so components need no dark: classes. "white" becomes the dark surface, so
+   ink-filled buttons (bg-ink text-white) flip to light glass buttons; bright
+   yellows keep dark text. PDF pages stay their own colour (--viewer).
+   No backdrop-filter on a plain panel: a password field whose ancestor is
+   filtered will not accept paste or the password manager. Blur stays on
+   .glass-bar, which never wraps a password field. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --paper: #121211;
-    --panel: #1a1a18;
-    --ink: #ecebe4;
-    --muted: #a3a29b;
-    --line: #2f2e2a;
-    --accent: #ecebe4;
-    --accent-soft: #24231f;
-    --accent-ink: #121211;
-    --danger: #f87171;
-    --ok: #4ade80;
-    --warn: #fbbf24;
-    --hl-region: rgba(236, 235, 228, 0.08);
-    --viewer: #0b0b0a;
-    --shadow: #000000;
-    --marker: #8a6a0c;
-    --color-white: #121211;
-    --color-yellow-50: #23200f;
-    --color-yellow-100: #2c2711;
-    --color-yellow-200: #3a3313;
+    --paper: rgba(8, 10, 16, 0.62);
+    --panel: rgba(22, 26, 38, 0.72);
+    --ink: #f6f4ee;
+    --muted: #b7b4aa;
+    --line: rgba(255, 255, 255, 0.12);
+    --accent: #f6f4ee;
+    --accent-soft: rgba(255, 255, 255, 0.06);
+    --accent-ink: #101218;
+    --danger: #fca5a5;
+    --ok: #86efac;
+    --warn: #fcd34d;
+    --hl-region: rgba(246, 244, 238, 0.08);
+    --viewer: #05060a;
+    --shadow: rgba(0, 0, 0, 0.55);
+    --marker: #e8c547;
+    --shadow-hard: 0 18px 50px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+    --shadow-hard-sm: 0 8px 24px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    --color-white: #101218;
+    --color-yellow-50: rgba(250, 204, 21, 0.1);
+    --color-yellow-100: rgba(250, 204, 21, 0.16);
+    --color-yellow-200: rgba(250, 204, 21, 0.24);
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --paper: #121211;
-  --panel: #1a1a18;
-  --ink: #ecebe4;
-  --muted: #a3a29b;
-  --line: #2f2e2a;
-  --accent: #ecebe4;
-  --accent-soft: #24231f;
-  --accent-ink: #121211;
-  --danger: #f87171;
-  --ok: #4ade80;
-  --warn: #fbbf24;
-  --hl-region: rgba(236, 235, 228, 0.08);
-  --viewer: #0b0b0a;
-  --shadow: #000000;
-  --marker: #8a6a0c;
-  --color-white: #121211;
-  --color-yellow-50: #23200f;
-  --color-yellow-100: #2c2711;
-  --color-yellow-200: #3a3313;
+  --paper: rgba(8, 10, 16, 0.62);
+  --panel: rgba(22, 26, 38, 0.72);
+  --ink: #f6f4ee;
+  --muted: #b7b4aa;
+  --line: rgba(255, 255, 255, 0.12);
+  --accent: #f6f4ee;
+  --accent-soft: rgba(255, 255, 255, 0.06);
+  --accent-ink: #101218;
+  --danger: #fca5a5;
+  --ok: #86efac;
+  --warn: #fcd34d;
+  --hl-region: rgba(246, 244, 238, 0.08);
+  --viewer: #05060a;
+  --shadow: rgba(0, 0, 0, 0.55);
+  --marker: #e8c547;
+  --shadow-hard: 0 18px 50px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  --shadow-hard-sm: 0 8px 24px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  --color-white: #101218;
+  --color-yellow-50: rgba(250, 204, 21, 0.1);
+  --color-yellow-100: rgba(250, 204, 21, 0.16);
+  --color-yellow-200: rgba(250, 204, 21, 0.24);
 }
 
 /* On bright yellow (badges, highlights) text stays dark in either theme. */
@@ -109,6 +117,105 @@ body {
   color: var(--ink);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
+
+/* Frosted bars: header, public nav, account menu, notification panel.
+   Never wrap a password field with one of these. */
+.glass-bar {
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  backdrop-filter: blur(18px) saturate(1.35);
+  -webkit-backdrop-filter: blur(18px) saturate(1.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+
+/* The dark page is a lit sheet of glass: warm light at the top left, cool at
+   the top right, panels floating on it. Hard black frames soften into a rim. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) body {
+    background-color: #07080d;
+    background-image:
+      radial-gradient(1100px 640px at -5% -10%, rgba(250, 204, 21, 0.42), transparent 56%),
+      radial-gradient(980px 680px at 108% -8%, rgba(132, 168, 255, 0.46), transparent 54%),
+      radial-gradient(820px 560px at 50% 115%, rgba(255, 255, 255, 0.12), transparent 52%),
+      radial-gradient(640px 480px at 42% 28%, rgba(186, 150, 255, 0.16), transparent 60%);
+    background-attachment: fixed;
+  }
+  :root:not([data-theme="light"]) .border-ink:not(.bg-yellow-300):not(.bg-yellow-400) { border-color: rgba(255, 255, 255, 0.18); }
+  :root:not([data-theme="light"]) .bg-ink {
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 48%);
+  }
+  :root:not([data-theme="light"]) .bg-panel {
+    background-image: linear-gradient(165deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.03) 42%, transparent 70%);
+  }
+  :root:not([data-theme="light"]) .glass-bar {
+    background: rgba(14, 16, 26, 0.42);
+    backdrop-filter: blur(22px) saturate(1.6);
+    -webkit-backdrop-filter: blur(22px) saturate(1.6);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.38), 0 12px 40px rgba(0, 0, 0, 0.28);
+  }
+  :root:not([data-theme="light"]) .auth-stage {
+    background-color: rgba(8, 10, 18, 0.34);
+    background-image:
+      radial-gradient(680px 440px at 12% 0%, rgba(250, 204, 21, 0.38), transparent 62%),
+      radial-gradient(560px 420px at 100% 8%, rgba(132, 168, 255, 0.42), transparent 58%);
+    backdrop-filter: blur(22px) saturate(1.5);
+    -webkit-backdrop-filter: blur(22px) saturate(1.5);
+    color: #f6f4ee;
+    box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.16);
+  }
+  :root:not([data-theme="light"]) .auth-stage [data-float] {
+    box-shadow: 0 22px 50px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  }
+  :root:not([data-theme="light"]) .glow-page {
+    background-color: transparent;
+    background-image: none;
+  }
+  :root:not([data-theme="light"]) [data-parallax="grid"] { opacity: 0.16; }
+}
+:root[data-theme="dark"] body {
+  background-color: #07080d;
+  background-image:
+    radial-gradient(1100px 640px at -5% -10%, rgba(250, 204, 21, 0.42), transparent 56%),
+    radial-gradient(980px 680px at 108% -8%, rgba(132, 168, 255, 0.46), transparent 54%),
+    radial-gradient(820px 560px at 50% 115%, rgba(255, 255, 255, 0.12), transparent 52%),
+    radial-gradient(640px 480px at 42% 28%, rgba(186, 150, 255, 0.16), transparent 60%);
+  background-attachment: fixed;
+}
+:root[data-theme="dark"] .border-ink:not(.bg-yellow-300):not(.bg-yellow-400) { border-color: rgba(255, 255, 255, 0.18); }
+:root[data-theme="dark"] .bg-ink {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 48%);
+}
+:root[data-theme="dark"] .bg-panel {
+  background-image: linear-gradient(165deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.03) 42%, transparent 70%);
+}
+:root[data-theme="dark"] .glass-bar {
+  background: rgba(14, 16, 26, 0.42);
+  backdrop-filter: blur(22px) saturate(1.6);
+  -webkit-backdrop-filter: blur(22px) saturate(1.6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.38), 0 12px 40px rgba(0, 0, 0, 0.28);
+}
+:root[data-theme="dark"] .auth-stage {
+  background-color: rgba(8, 10, 18, 0.34);
+  background-image:
+    radial-gradient(680px 440px at 12% 0%, rgba(250, 204, 21, 0.38), transparent 62%),
+    radial-gradient(560px 420px at 100% 8%, rgba(132, 168, 255, 0.42), transparent 58%);
+  backdrop-filter: blur(22px) saturate(1.5);
+  -webkit-backdrop-filter: blur(22px) saturate(1.5);
+  color: #f6f4ee;
+  box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.16);
+}
+:root[data-theme="dark"] .auth-stage [data-float] {
+  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+:root[data-theme="dark"] .glow-page {
+  background-color: transparent;
+  background-image: none;
+}
+:root[data-theme="dark"] [data-parallax="grid"] { opacity: 0.16; }
+
+/* The product glimpse beside sign-in. Light mode stays a black slab. The blur
+   lives only here: this column is not an ancestor of the password field. */
+.auth-stage { background: #0d0d0c; color: #fff; }
+.auth-stage-muted { color: rgba(255, 255, 255, 0.5); }
 
 ::selection { background: rgba(253, 216, 53, 0.55); color: var(--ink); }
 
@@ -217,6 +324,8 @@ html { scroll-behavior: smooth; }
   line-height: 1.7;
   font-size: 0.925rem;
   overflow-wrap: anywhere;
+  min-width: 0;
+  max-width: 100%;
 }
 .prose-tutor > * + * { margin-top: 0.75em; }
 .prose-tutor h1, .prose-tutor h2, .prose-tutor h3, .prose-tutor h4 {
@@ -260,15 +369,47 @@ html { scroll-behavior: smooth; }
 }
 .prose-tutor pre { background: var(--paper); border: 1px solid var(--ink); border-radius: 8px; padding: 0.8rem; overflow-x: auto; }
 .prose-tutor pre code { border: 0; padding: 0; background: none; }
+.prose-tutor pre:has(> .tutor-diagram) { background: none; border: 0; padding: 0; overflow: visible; }
 .prose-tutor blockquote {
   border-left: 3px solid var(--ink);
   padding: 0.15em 0 0.15em 0.8rem;
   color: color-mix(in srgb, var(--ink) 82%, var(--paper));
 }
-.prose-tutor table { border-collapse: collapse; font-size: 0.86em; display: block; overflow-x: auto; }
-.prose-tutor th, .prose-tutor td { border: 1px solid var(--ink); padding: 0.35em 0.6em; text-align: left; }
+/* Same idea as a display equation: the table keeps its own width and the
+   row slides. display:block on the table itself was squashing the columns. */
+.prose-tutor .tutor-table-scroll {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin: 0.8em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink) transparent;
+}
+.prose-tutor .tutor-table-scroll::-webkit-scrollbar { height: 8px; }
+.prose-tutor .tutor-table-scroll::-webkit-scrollbar-thumb { background: var(--ink); border-radius: 99px; }
+.prose-tutor table { border-collapse: collapse; font-size: 0.86em; width: max-content; min-width: 100%; }
+.prose-tutor th, .prose-tutor td {
+  border: 1px solid var(--ink);
+  padding: 0.35em 0.75em;
+  text-align: left;
+  overflow-wrap: normal;
+  word-break: normal;
+  white-space: nowrap;
+}
 .prose-tutor th { background: var(--paper); font-weight: 600; }
 .prose-tutor .katex-display { overflow-x: auto; overflow-y: hidden; padding: 0.35em 0; }
+.tutor-diagram {
+  margin: 0.85em 0;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f7f6f2;
+  padding: 0.75rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+.tutor-diagram img { display: block; width: 100%; height: auto; }
 .prose-compact { font-size: 0.875rem; line-height: 1.6; }
 
 /* ---------------------------------------------------------------- viewer */

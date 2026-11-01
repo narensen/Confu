@@ -105,7 +105,7 @@ export async function POST(request: Request) {
     message,
     sel?.text,
     figure?.description?.slice(0, 300),
-    action === "teach" || action === "quiz" ? `${topic?.title ?? ""} ${topic?.key_concepts.join(" ") ?? ""}` : "",
+    action === "teach" || action === "quiz" || action === "diagram" ? `${topic?.title ?? ""} ${topic?.key_concepts.join(" ") ?? ""}` : "",
     paper && action.startsWith("pass") ? `${paper.title} ${action === "pass2_figures" ? "figure table results experiments" : action.startsWith("pass3") ? "method assumption derivation experiment limitation" : ""}` : "",
   ]
     .filter(Boolean)

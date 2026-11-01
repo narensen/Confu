@@ -72,14 +72,18 @@ export function AccountMenu({ name, email, plan, owner, keyLast4 }: Props) {
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-label={display}
         onClick={() => {
           const next = !open;
           setOpen(next);
           if (next && !pro) void loadUsage();
         }}
-        className="flex max-w-56 items-center gap-2 rounded-lg border border-ink bg-ink px-3 py-1.5 text-sm font-medium text-white transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[2px_2px_0_0_#facc15] active:translate-y-0"
+        className="flex max-w-40 items-center gap-2 rounded-full border border-ink bg-ink py-1 pr-2.5 pl-1 text-sm font-medium text-white transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-hard-sm active:translate-y-0 sm:max-w-56"
       >
-        <span className="truncate">{display}</span>
+        <span aria-hidden className="flex size-6 shrink-0 items-center justify-center rounded-full bg-yellow-300 font-serif text-xs text-ink">
+          {display.slice(0, 1).toUpperCase()}
+        </span>
+        <span className="hidden truncate sm:inline">{display}</span>
         {pro && <span className="shrink-0 rounded bg-yellow-400 px-1 font-mono text-[9px] font-bold tracking-wider text-ink uppercase">{owner ? "Admin" : "Pro"}</span>}
         <svg
           width="12"
@@ -99,7 +103,7 @@ export function AccountMenu({ name, email, plan, owner, keyLast4 }: Props) {
         <div
           role="menu"
           aria-label="Account"
-          className="animate-pop absolute top-full right-0 z-50 mt-2 w-80 origin-top-right overflow-hidden rounded-xl border border-ink bg-panel shadow-hard"
+          className="glass-bar animate-pop absolute top-full right-0 z-50 mt-2 w-80 origin-top-right overflow-hidden rounded-2xl border border-ink"
         >
           {/* Who */}
           <div className="border-b border-line px-4 py-3.5">

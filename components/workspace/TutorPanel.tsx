@@ -125,7 +125,7 @@ export function TutorPanel({ view, ...props }: PanelProps & { view: Tab }) {
   const activePaper = props.docs.find((d) => d.id === props.paper.activeDocId && (props.kind === "paper" || props.paper.paperIds.has(d.id)));
 
   return (
-    <div key={view} className="animate-fade h-full min-h-0">
+    <div key={view} className="animate-fade h-full min-h-0 min-w-0">
       {view === "chat" && (
         <ChatPanel
           messages={props.messages}

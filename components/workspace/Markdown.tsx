@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
+import { sanitizeSvg } from "@/lib/tutor/diagram";
 
 // Models emit typographic characters KaTeX has no glyphs for (e.g. the
 // non-breaking hyphen in "positive‑definite"). They look identical as ASCII.
@@ -41,11 +42,29 @@ export const Markdown = memo(function Markdown({
   className?: string;
 }) {
   return (
-    <div className={className}>
+    <div className={`${className} min-w-0 max-w-full`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[[rehypeKatex, { strict: "ignore", throwOnError: false }]]}
         components={{
+          table({ children }) {
+            return (
+              <div className="tutor-table-scroll">
+                <table>{children}</table>
+              </div>
+            );
+          },
+          code({ className: codeClass, children }) {
+            const text = String(children).replace(/\n$/, "");
+            const lang = /language-([\w-]+)/.exec(codeClass || "")?.[1];
+            const block = Boolean(codeClass) || text.includes("\n");
+            const drawing = lang === "svg" || ((lang === "xml" || lang === "html" || !lang) && /^\s*<svg\b/i.test(text));
+            if (block && drawing) {
+              const svg = sanitizeSvg(text);
+              if (svg) return <SvgDiagram svg={svg} />;
+            }
+            return <code className={codeClass}>{children}</code>;
+          },
           a({ href, children }) {
             const cite = href?.match(/^#cite-(D\d+)?-(\d+)$/);
             if (cite && onPage) {
@@ -69,3 +88,14 @@ export const Markdown = memo(function Markdown({
     </div>
   );
 });
+
+// Shown as an image, so a diagram cannot run script even if the sanitiser misses one.
+function SvgDiagram({ svg }: { svg: string }) {
+  const src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  return (
+    <figure className="tutor-diagram">
+      {/* eslint-disable-next-line @next/next/no-img-element -- data-URL SVG; an img will not run a script */}
+      <img src={src} alt="Diagram" draggable={false} />
+    </figure>
+  );
+}

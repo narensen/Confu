@@ -78,7 +78,7 @@ export function RoomStatus() {
 
   if (!room) {
     return (
-      <Link href="/rooms" className="mr-2 rounded-md px-2 py-1 text-sm font-medium text-muted transition hover:bg-paper hover:text-ink">
+      <Link href="/rooms" className="hidden rounded-full px-2.5 py-1 text-sm font-medium text-muted transition hover:bg-paper hover:text-ink md:inline">
         Rooms
       </Link>
     );
@@ -89,7 +89,7 @@ export function RoomStatus() {
   // Who's here: you first, then by who came first.
   const members = state ? [...state.members].sort((a, b) => Number(b.me) - Number(a.me) || a.joined_at.localeCompare(b.joined_at)) : [];
   return (
-    <div className="group relative mr-2 flex shrink-0 items-center rounded-md border border-ink/30 text-xs">
+    <div className="group relative flex shrink-0 items-center rounded-full border border-ink/25 text-xs">
       <Link
         href={`/rooms/${room.slug}`}
         aria-describedby="room-members"

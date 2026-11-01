@@ -136,7 +136,7 @@ export async function retrieveContext(
   if (current && !(focus && focus.docId === current.docId && focus.page === current.page)) {
     wanted.push({ ...current, reason: "page the student is reading", max: 2200 });
   }
-  if (topic?.document_id && topic.page_start && topic.page_end && (action === "teach" || action === "quiz")) {
+  if (topic?.document_id && topic.page_start && topic.page_end && (action === "teach" || action === "quiz" || action === "diagram")) {
     for (let p = topic.page_start; p <= Math.min(topic.page_end, topic.page_start + 2); p++) {
       wanted.push({ docId: topic.document_id, page: p, reason: "current topic", max: 2500 });
     }

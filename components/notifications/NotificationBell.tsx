@@ -143,7 +143,7 @@ export function NotificationBell({ userId }: { userId: string }) {
         onClick={() => (open ? setOpen(false) : void show())}
         aria-label={unread ? `Notifications, ${unread} new` : "Notifications"}
         aria-expanded={open}
-        className="relative mr-1 flex size-8 items-center justify-center rounded-md text-muted transition hover:bg-paper hover:text-ink aria-expanded:bg-paper aria-expanded:text-ink"
+        className="relative flex size-9 items-center justify-center rounded-full border border-ink/20 bg-paper/70 text-muted shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition hover:text-ink aria-expanded:border-ink/40 aria-expanded:text-ink"
       >
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="M6 8a6 6 0 1 1 12 0c0 7 3 8.5 3 8.5H3S6 15 6 8" />
@@ -162,7 +162,7 @@ export function NotificationBell({ userId }: { userId: string }) {
             <aside
               role="dialog"
               aria-label="Notifications"
-              className="animate-notify absolute top-0 right-0 bottom-0 flex w-[min(26rem,100vw)] flex-col border-l border-ink bg-panel shadow-[-12px_0_32px_-16px_rgba(13,13,12,0.45)]"
+              className="glass-bar animate-notify absolute top-0 right-0 bottom-0 flex w-[min(26rem,100vw)] flex-col border-l border-ink"
             >
               <div className="flex items-center justify-between gap-3 border-b border-ink px-5 py-3.5">
                 <p className="font-serif text-xl">Notifications</p>

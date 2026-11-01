@@ -141,7 +141,7 @@ const FAQ: { q: string; a: ReactNode }[] = [
 
 export default function Home() {
   return (
-    <LandingMotion className="flex flex-1 flex-col bg-panel">
+    <LandingMotion className="glow-page flex flex-1 flex-col bg-panel">
       {/* Without JavaScript, show everything the motion script would reveal. */}
       <noscript>
         <style>{`.motion-pending [data-hero],.motion-pending [data-word],.motion-pending [data-split],.motion-pending [data-reveal],.motion-pending [data-reveal-item],.motion-pending [data-slide-item]{visibility:visible!important}`}</style>
@@ -150,8 +150,8 @@ export default function Home() {
         <AccountDeletedNotice />
       </Suspense>
       {/* Nav */}
-      <nav className="sticky top-0 z-30 border-b border-ink bg-panel/90 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3.5">
+      <nav className="glass-bar sticky top-0 z-30 border-b border-ink">
+        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-4 px-6">
           <Logo />
           <div className="hidden items-center gap-6 text-sm text-muted md:flex">
             <a href="#demo" className="transition hover:text-ink">

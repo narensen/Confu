@@ -12,7 +12,21 @@ export function retrievedKeys(multi: boolean, pages: { label: string; page: numb
   return keys;
 }
 
+const SVG_FENCE = /```svg\b[\s\S]*?```/gi;
+
+// A diagram is a picture, not a claim. Cite mode drops paragraphs with no
+// page, which would throw the fence away (and split it on blank lines).
 export function keepCited(text: string, retrieved: Set<string>, multi: boolean): string {
+  const diagrams: string[] = [];
+  const body = text.replace(SVG_FENCE, (block) => {
+    diagrams.push(block.trim());
+    return "";
+  });
+  const kept = keepCitedParagraphs(body, retrieved, multi);
+  return [kept, ...diagrams].filter(Boolean).join("\n\n");
+}
+
+function keepCitedParagraphs(text: string, retrieved: Set<string>, multi: boolean): string {
   const kept: string[] = [];
   const cite = new RegExp(CITE_SRC, "gi");
   for (const para of text.split(/\n\s*\n/)) {
