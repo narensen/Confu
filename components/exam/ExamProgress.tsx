@@ -31,7 +31,7 @@ export function ExamProgress({
   return (
     <div className="h-full space-y-6 overflow-y-auto p-6 text-sm">
       <section className="animate-enter">
-        <p className={eyebrowClass}>Progress</p>
+        <p className={eyebrowClass}>Exam</p>
         <h2 className="mt-1 font-serif text-2xl">{today ? countdownLabel(daysUntil(examDate, today)) : "\u00a0"}</h2>
       </section>
 

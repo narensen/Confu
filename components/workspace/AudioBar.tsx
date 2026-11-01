@@ -5,12 +5,13 @@ import { speechPause, speechRate, speechResume, speechStop, useSpeech } from "@/
 const RATES = [0.85, 1, 1.25, 1.5];
 
 // The audio overview being read aloud: what it is, how far along, pause,
-// speed and stop. Floats at the bottom left of the workspace.
+// speed and stop. Floats at the bottom of the reader (above the tab bar on
+// phones), clear of the tutor's message box on the left.
 export function AudioBar() {
   const s = useSpeech();
   if (!s) return null;
   return (
-    <div role="region" aria-label="Audio overview" className="animate-pop fixed bottom-4 left-4 z-40 w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-ink bg-panel shadow-hard">
+    <div role="region" aria-label="Audio overview" className="animate-pop fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] left-1/2 z-40 w-[min(22rem,calc(100vw-2rem))] -translate-x-1/2 md:bottom-4 md:left-auto md:right-20 md:translate-x-0 overflow-hidden rounded-xl border border-ink bg-panel shadow-hard">
       <div className="h-0.5 bg-line">
         <div className="h-full bg-ink transition-[width] duration-500" style={{ width: `${Math.round(s.progress * 100)}%` }} />
       </div>

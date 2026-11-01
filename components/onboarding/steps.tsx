@@ -184,13 +184,14 @@ const PlanArt = (
 );
 
 const ReadingArt = (
-  <Frame className="flex h-full overflow-hidden text-[9px] shadow-hard">
-    <div className="flex w-[22%] shrink-0 flex-col gap-0.5 border-r border-ink bg-panel p-1.5">
-      <span className="px-1 pb-0.5 font-mono text-[7px] tracking-wider text-muted uppercase">This session</span>
-      <span className="rounded bg-ink px-1.5 py-0.5 font-medium text-white">Plan</span>
-      <span className="px-1.5 py-0.5 text-muted">Highlights</span>
-      <span className="px-1.5 py-0.5 text-muted">Progress</span>
-      <span className="px-1.5 py-0.5 text-muted">Files</span>
+  <Frame className="relative flex h-full overflow-hidden text-[9px] shadow-hard">
+    <div className="flex w-[27%] shrink-0 flex-col border-r border-ink bg-panel">
+      <span className="border-b border-ink px-2 py-1.5 font-medium">Tutor</span>
+      <div className="flex-1 space-y-1.5 p-1.5">
+        <p className="ml-auto w-4/5 rounded border border-ink px-1 py-0.5">Why the square?</p>
+        <Line w="90%" />
+        <Line w="70%" />
+      </div>
     </div>
     <div className="flex min-w-0 flex-1 flex-col">
       <div className="flex border-b border-ink bg-paper">
@@ -204,7 +205,6 @@ const ReadingArt = (
       <div className="flex items-center gap-1.5 border-b border-ink px-2 py-1.5">
         <span className="rounded border border-ink/30 px-1 font-mono">12</span>
         <span className="text-muted">Contents · Search</span>
-        <span className="font-mono">− 100% +</span>
         <span className="rounded border border-ink px-1.5">Capture</span>
       </div>
       <div className="flex flex-1 justify-center bg-viewer p-2.5">
@@ -217,13 +217,22 @@ const ReadingArt = (
         </div>
       </div>
     </div>
-    <div className="flex w-[26%] shrink-0 flex-col border-l border-ink bg-panel">
-      <span className="border-b border-ink px-2 py-1.5 font-medium">Tutor</span>
-      <div className="flex-1 space-y-1.5 p-1.5">
-        <p className="ml-auto w-4/5 rounded border border-ink px-1 py-0.5">Why the square?</p>
-        <Line w="90%" />
-        <Line w="70%" />
+    {/* A tool slid out over the page, from the rail */}
+    <div className="absolute inset-y-0 right-[11%] flex w-[30%] flex-col border-l border-ink bg-panel shadow-[-6px_0_14px_-8px_rgba(13,13,12,0.4)]">
+      <span className="flex items-center justify-between border-b border-ink px-2 py-1.5 font-medium">
+        Plan <span className="rounded border border-ink/40 px-1 font-mono text-[7px] text-muted">Pin</span>
+      </span>
+      <div className="space-y-1.5 p-1.5">
+        <Line w="80%" dark />
+        <Line w="95%" />
+        <Line w="60%" />
       </div>
+    </div>
+    <div className="flex w-[11%] shrink-0 flex-col items-center gap-1 border-l border-ink bg-panel py-1.5 text-[7px]">
+      <span className="w-[85%] rounded bg-ink py-1 text-center text-white">Plan</span>
+      <span className="py-1 text-muted">Highlights</span>
+      <span className="py-1 text-muted">Progress</span>
+      <span className="py-1 text-muted">Files</span>
     </div>
   </Frame>
 );
@@ -464,14 +473,14 @@ export const GUIDE_STEPS: GuideStep[] = [
     id: "goal",
     eyebrow: "Your goal",
     title: "Tell it exactly what you want to be able to do",
-    intro: "In a new session, the Plan tab asks for your goal. This is the most important step: the more specific it is, the better everything else gets.",
+    intro: "In a new session, Plan slides out and asks for your goal. This is the most important step: the more specific it is, the better everything else gets.",
     points: [
       {
         label: "Be specific",
         body: "Say what you want to be able to do or explain, why, and what you already know. “Understand PCA” is weak; “explain PCA to my lab and apply it to our assay data” is strong.",
       },
       { label: "Use any AI", body: <>Press <b>Open in ChatGPT</b> or <b>Open in Claude</b> (or copy the prompt for any other AI) to draft your goal. It asks for each paper&apos;s title, authors and DOI and each lecture&apos;s YouTube link; paste the result back.</> },
-      { label: "Papers and lectures", body: "Papers and YouTube lectures your goal names are added for you. Anything Confu can't pin down waits in the Files tab, under “From your goal”." },
+      { label: "Papers and lectures", body: "Papers and YouTube lectures your goal names are added for you. Anything Confu can't pin down waits in Files, under “From your goal”." },
       { label: "Pace is optional", body: "Leave it and the plan is sized to your goal; or set hours a day or a deadline (the other follows). You can change it later with Custom pace." },
     ],
     tip: "Plans are AI-generated and can contain mistakes. You can edit your goal and rebuild the plan any time.",
@@ -492,12 +501,12 @@ export const GUIDE_STEPS: GuideStep[] = [
   {
     id: "reading",
     eyebrow: "Reading",
-    title: "Everything in view at once",
-    intro: "The workspace has three parts: your plan, files and notes on the left, what you're reading in the middle, the tutor on the right. Drag the dividers to resize, or fold either side away with its arrows.",
+    title: "The tutor beside you, your tools a click away",
+    intro: "The tutor sits on the left, what you're reading is in the middle, and your tools (Plan, Highlights, Progress, Files) are in the rail on the right. Each one slides out over the page when you need it.",
     points: [
-      { label: "Files and tabs", body: <>Everything you add lands in <b>Files</b> on the left; open one and it becomes a tab (D1, D2, …). ✕ on a tab only closes it; delete files from Files. PDFs, slides and Word docs all work.</> },
-      { label: "The toolbar", body: "Grouped by job: find your way (page, Contents, Search), read (zoom, theme, listen), capture a figure, and focus (sound, timer, full screen). When the reader is narrow, the rest is under More. It remembers where you left off; press ? for keyboard shortcuts." },
-      { label: "Full screen", body: "Press ⛶ (or the . key) to read distraction-free. Both sides hide; the tutor opens as a drawer from the “Tutor” button in the toolbar. Prefer dark? Appearance is in your account menu." },
+      { label: "Tools", body: <>Press a tool in the right rail (or its key: <b>p</b>, <b>h</b>, <b>f</b>) to slide it out. Click back into the page, or press Esc, to put it away. <b>Pin</b> keeps it open beside the page instead.</> },
+      { label: "Files and tabs", body: <>Everything you add lands in <b>Files</b>; open one and it becomes a tab (D1, D2, …). ✕ on a tab only closes it; delete files from Files. PDFs, slides and Word docs all work.</> },
+      { label: "Make room", body: "Drag any edge to resize, or fold the tutor away (t) to read wider; it comes back when it answers. Full screen (⛶ or the . key) keeps the same layout without the header. Press ? for every shortcut." },
     ],
     art: ReadingArt,
   },
@@ -509,7 +518,7 @@ export const GUIDE_STEPS: GuideStep[] = [
     points: [
       { label: "Ask a doubt", body: "Type what confuses you about that exact passage." },
       { label: "Summarize · Context · Simplify", body: "Get the core claim, see how it fits with what comes before and after, or have it explained in plain words with an example." },
-      { label: "Highlight", body: "Save it in a colour. Saved passages are listed in the Highlights tab, where you can jump back, ask about them later, or export the whole session (Markdown, or Anki cards)." },
+      { label: "Highlight", body: "Save it in a colour. Saved passages are listed in Highlights, where you can jump back, ask about them later, or export the whole session (Markdown, or Anki cards)." },
     ],
     art: HighlightArt,
   },
@@ -530,7 +539,7 @@ export const GUIDE_STEPS: GuideStep[] = [
     id: "tutor",
     eyebrow: "The tutor",
     title: "Learn one idea at a time",
-    intro: "The tutor, on the right, is where the learning happens. It always knows your goal, the current topic and what you already understand.",
+    intro: "The tutor, on the left, is where the learning happens. It always knows your goal, the current topic and what you already understand.",
     points: [
       { label: "Teach me / Check my understanding", body: "Teach covers the next idea in your current topic. Check asks one question that tests understanding, not memory, and grades your answer honestly." },
       { label: "Citations", body: <>Page references like <span className="rounded bg-paper px-1 font-mono text-xs underline">D1 p. 12</span> are clickable and jump straight to that page.</> },
@@ -542,7 +551,7 @@ export const GUIDE_STEPS: GuideStep[] = [
     id: "progress",
     eyebrow: "Progress",
     title: "See what the tutor knows about you",
-    intro: "After every exchange, Confu updates its notes on you. The Progress tab shows them.",
+    intro: "After every exchange, Confu updates its notes on you. Progress, in the tools on the right, shows them.",
     points: [
       { label: "Your profile", body: "A short summary of where you are and how you learn best." },
       { label: "Understood · shaky · misconceptions · open questions", body: "What you've shown you understand, what needs work, and what's still unresolved." },
@@ -561,7 +570,7 @@ export const GUIDE_STEPS: GuideStep[] = [
       { label: "Pass 2, the content (~1 hour)", body: "Read it properly, skip the proofs, scrutinise the figures, and explain the main idea and evidence. The tutor grades your explanation." },
       { label: "Pass 3, re-implementation (hours)", body: "Rebuild it from its assumptions with the tutor; list hidden assumptions, missing experiments and weaknesses. That's where research ideas come from." },
     ],
-    tip: "Write your research goal in the Passes tab and press “Suggest a pass for each paper”. The tutor can also search the literature and find who cites a paper.",
+    tip: "Write your research goal in Passes and press “Suggest a pass for each paper”. The tutor can also search the literature and find who cites a paper.",
     art: PapersArt,
   },
   {
@@ -584,7 +593,7 @@ export const GUIDE_STEPS: GuideStep[] = [
     intro: "That's everything. The fastest way to learn the app is to use it.",
     points: [
       { label: "1", body: <>Press <b>+ New session</b>, choose Study, Exam prep or Papers, and name it.</> },
-      { label: "2", body: "Write your goal in the Plan tab (Open in ChatGPT helps) and build your plan." },
+      { label: "2", body: "Write your goal in Plan (Open in ChatGPT helps) and build your plan." },
       { label: "3", body: <>Open the first topic&apos;s pages, or press <b>Teach me</b>. Highlight anything you don&apos;t get.</> },
     ],
     tip: <>Reopen this guide any time from <b>Settings → Help &amp; legal</b>.</>,

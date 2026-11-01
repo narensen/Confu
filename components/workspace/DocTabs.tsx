@@ -16,12 +16,11 @@ type Props = {
   // Study sessions: which files are papers (recognised automatically), and the way to their passes.
   paperIds?: Set<string>;
   onPaper?: (docId: string) => void;
-  onShortcuts?: () => void;
 };
 
 // The PDFs open as tabs above the viewer. Closing one only hides it: every
 // PDF is in the Files tab, where they're opened again or deleted.
-export function DocTabs({ docs, activeId, uploadStatus, onSelect, onAdd, onClose, onAddClick, addLabel = "+ Add PDF", paperIds, onPaper, onShortcuts }: Props) {
+export function DocTabs({ docs, activeId, uploadStatus, onSelect, onAdd, onClose, onAddClick, addLabel = "+ Add PDF", paperIds, onPaper }: Props) {
   const input = useRef<HTMLInputElement>(null);
   const active = docs.find((d) => d.id === activeId);
   const activeIsPaper = Boolean(active && paperIds?.has(active.id));
@@ -109,17 +108,6 @@ export function DocTabs({ docs, activeId, uploadStatus, onSelect, onAdd, onClose
           addLabel
         )}
       </button>
-      {onShortcuts && (
-        <button
-          type="button"
-          onClick={onShortcuts}
-          aria-label="Keyboard shortcuts"
-          title="Keyboard shortcuts (?)"
-          className="hidden shrink-0 items-center border-l border-ink px-3 font-mono text-xs text-muted transition hover:bg-paper hover:text-ink sm:flex"
-        >
-          ?
-        </button>
-      )}
     </div>
   );
 }

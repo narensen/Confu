@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "@/components/dialogs";
-import { eyebrowClass } from "@/components/ui";
 import { COLOR_ORDER, colorOf, HIGHLIGHT_COLORS, type HighlightColor } from "@/lib/highlights";
 import { createClient } from "@/lib/supabase/client";
 import { track } from "@/lib/telemetry";
@@ -72,8 +71,7 @@ export function HighlightsPanel({ sessionId, highlights, docs, busy, onJump, onD
   if (!highlights.length) {
     return (
       <div className="animate-enter p-6">
-        <p className={eyebrowClass}>Highlights</p>
-        <h3 className="mt-1 font-serif text-2xl">Nothing marked yet</h3>
+        <h3 className="font-serif text-2xl">Nothing marked yet</h3>
         <p className="mt-2 text-sm leading-relaxed text-muted">Select text in the PDF and pick a highlighter:</p>
         <ul className="mt-3 space-y-1.5 text-sm">
           {COLOR_ORDER.map((c) => (

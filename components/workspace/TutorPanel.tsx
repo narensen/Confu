@@ -1,12 +1,9 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
 import { PassesPanel, type PaperTool } from "@/components/paper/PassesPanel";
-import { UsageMeter } from "@/components/usage/UsageMeter";
 import { ExamProgress } from "@/components/exam/ExamProgress";
 import { PracticePanel } from "@/components/exam/PracticePanel";
 import type { ExamPractice } from "@/components/exam/useExamPractice";
-import type { KeyInfo } from "@/lib/groq-keys";
 import type { PaperReview } from "@/lib/paper";
 import type { ChatMessage, Highlight, LearnerMemory, PlanTopic, SessionDoc, SessionKind, StudyPlan, TopicStatus } from "@/lib/types";
 import { ChatPanel } from "./ChatPanel";
@@ -17,7 +14,15 @@ import { PlanPanel, type PlanSetup } from "./PlanPanel";
 import { FilesPanel, type FilesProps } from "./FilesPanel";
 import type { SendRequest } from "./Workspace";
 
+// What can be on screen beside the PDF: the tutor's chat, or one of the
+// session's tools (the plan, a paper's passes, practice, highlights, progress,
+// files). The workspace decides where each is shown; this only draws it.
 export type Tab = "chat" | "plan" | "passes" | "practice" | "highlights" | "memory" | "files";
+export type ToolTab = Exclude<Tab, "chat">;
+
+// A tool as it's listed in the rail: its name, what it's for, a short count
+// and whether it's waiting on the student (a dot).
+export type Section = { id: ToolTab; label: string; hint: string; badge?: string; dot?: boolean; shortcut?: string };
 
 export type ExamProps = { practice: ExamPractice; examDate: string | null; onExamDate: (date: string | null) => void };
 
@@ -40,9 +45,7 @@ export type PaperProps = {
   onPassesOpen: (open: boolean) => void;
 };
 
-type Props = {
-  tab: Tab;
-  onTab: (tab: Tab) => void;
+export type PanelProps = {
   sessionId: string;
   docs: SessionDoc[];
   plan: StudyPlan | null;
@@ -66,301 +69,176 @@ type Props = {
   draftGoal: string; // a template's or pack's goal, to start the plan from
   setup: PlanSetup;
   files: FilesProps; // every PDF: open, close its tab, delete
-  onClose?: () => void;
-  // Where it's shown: everything with tabs (phones, full screen), the study
-  // sections on the left (no chat), or the tutor chat on the right.
-  layout?: "full" | "sections" | "chat";
-  onCollapse?: () => void; // the side layouts can fold away
-  keyInfo?: KeyInfo | null; // the user's own Groq key in use here (never the key itself)
   kind: SessionKind;
   paper: PaperProps;
   exam: ExamProps;
+  // Moving to another view from inside one ("Open the plan", "Practise these").
+  onView: (view: Tab) => void;
 };
 
-export function TutorPanel(props: Props) {
-  const { tab, onTab, plan, topics, highlights } = props;
-  const done = topics.filter((t) => t.status === "completed").length;
+// The tools of a session, in the order they're listed. Exam sessions keep it
+// simple: practise, see progress, files.
+export function toolSections(p: Pick<PanelProps, "kind" | "docs" | "plan" | "topics" | "highlights" | "files" | "paper" | "exam">): Section[] {
+  const done = p.topics.filter((t) => t.status === "completed").length;
   // Papers inside a study session get the paper session's three-pass tools.
-  const studyPapers = props.kind === "study" ? props.docs.filter((d) => props.paper.paperIds.has(d.id)) : [];
-  const passDocs = props.kind === "paper" ? props.docs : studyPapers;
-  const passesBadge = passDocs.length
-    ? `${passDocs.filter((d) => (props.paper.reviews[d.id]?.passes_done ?? 0) >= (props.paper.reviews[d.id]?.target_pass ?? 1)).length}/${passDocs.length}`
-    : undefined;
-  const answered = props.exam.practice.attempts.length;
-  // Files: how many, and "+n" for what's still coming in or waiting to be added from the goal.
-  const waiting = props.files.uploads.length + (props.files.later ? props.files.later.later.papers.length + props.files.later.later.links.length : 0);
-  const filesBadge = props.files.docs.length || waiting ? `${props.files.docs.length}${waiting ? ` +${waiting}` : ""}` : undefined;
-  // Exam sessions keep it simple: ask, practise, see progress.
-  const tabs: { id: Tab; label: string; badge?: string }[] =
-    props.kind === "exam"
-      ? [
-          { id: "chat", label: "Tutor" },
-          { id: "practice", label: "Practice" },
-          { id: "memory", label: "Progress", badge: answered ? String(answered) : undefined },
-          { id: "files", label: "Files", badge: filesBadge },
-        ]
-      : [
-          { id: "chat", label: "Tutor" },
-          props.kind === "paper"
-            ? { id: "passes", label: "Passes", badge: passesBadge }
-            : { id: "plan", label: "Plan", badge: plan ? `${done}/${topics.length}` : "Set goal" },
-          ...(studyPapers.length ? [{ id: "passes" as const, label: "Papers", badge: passesBadge }] : []),
-          { id: "highlights", label: "Highlights", badge: highlights.length ? String(highlights.length) : undefined },
-          { id: "memory", label: "Progress" },
-          { id: "files", label: "Files", badge: filesBadge },
-        ];
-  const layout = props.layout ?? "full";
-  const navTabs = layout === "sections" ? tabs.filter((t) => t.id !== "chat") : tabs;
-  // What's on screen: the chat side always shows the chat; the sections side
-  // shows the chosen section (its first one while the chat is "the tab").
-  const shown: Tab = layout === "chat" ? "chat" : navTabs.some((t) => t.id === tab) ? tab : navTabs[0].id;
+  const studyPapers = p.kind === "study" ? p.docs.filter((d) => p.paper.paperIds.has(d.id)) : [];
+  const passDocs = p.kind === "paper" ? p.docs : studyPapers;
+  const finished = passDocs.filter((d) => (p.paper.reviews[d.id]?.passes_done ?? 0) >= (p.paper.reviews[d.id]?.target_pass ?? 1)).length;
+  const passesBadge = passDocs.length ? `${finished}/${passDocs.length}` : undefined;
+  // Files: how many, and a dot for what's still coming in or waiting to be added from the goal.
+  const waiting = p.files.uploads.length + (p.files.later ? p.files.later.later.papers.length + p.files.later.later.links.length : 0);
+  const files: Section = {
+    id: "files",
+    label: "Files",
+    hint: waiting ? `Everything in this session, ${waiting} still to come in` : "Everything in this session",
+    badge: p.files.docs.length ? String(p.files.docs.length) : undefined,
+    dot: waiting > 0,
+    shortcut: "F",
+  };
+  const answered = p.exam.practice.attempts.length;
+
+  if (p.kind === "exam")
+    return [
+      { id: "practice", label: "Practice", hint: "Exam-style questions from your notes", shortcut: "P" },
+      { id: "memory", label: "Progress", hint: "Your accuracy and weak topics", badge: answered ? String(answered) : undefined },
+      files,
+    ];
+
+  return [
+    p.kind === "paper"
+      ? { id: "passes", label: "Passes", hint: "Read each paper in three passes", badge: passesBadge, shortcut: "P" }
+      : p.plan
+        ? { id: "plan", label: "Plan", hint: "Your goal, broken into topics", badge: `${done}/${p.topics.length}`, shortcut: "P" }
+        : { id: "plan", label: "Plan", hint: "Set your goal to get a plan", dot: true, shortcut: "P" },
+    ...(studyPapers.length ? [{ id: "passes" as const, label: "Papers", hint: "The research papers here, read in three passes", badge: passesBadge }] : []),
+    { id: "highlights", label: "Highlights", hint: "Everything you've marked", badge: p.highlights.length ? String(p.highlights.length) : undefined, shortcut: "H" },
+    { id: "memory", label: "Progress", hint: "What the tutor knows about you" },
+    files,
+  ];
+}
+
+export function TutorPanel({ view, ...props }: PanelProps & { view: Tab }) {
+  const { onView, plan, topics, highlights } = props;
   const activePaper = props.docs.find((d) => d.id === props.paper.activeDocId && (props.kind === "paper" || props.paper.paperIds.has(d.id)));
 
-  // Sliding underline under the active tab.
-  const navRef = useRef<HTMLDivElement>(null);
-  const [bar, setBar] = useState<{ left: number; width: number } | null>(null);
-  useLayoutEffect(() => {
-    const measure = () => {
-      const el = navRef.current?.querySelector<HTMLElement>(`[data-tab="${tab}"]`);
-      if (el) setBar({ left: el.offsetLeft, width: el.offsetWidth });
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    if (navRef.current) ro.observe(navRef.current);
-    return () => ro.disconnect();
-  }, [tab, plan, topics.length, highlights.length]);
-
-  const closeButton = props.onClose && (
-    <button
-      onClick={props.onClose}
-      aria-label="Hide tutor"
-      className="my-2 flex w-8 items-center justify-center rounded-md text-muted transition hover:bg-paper hover:text-ink"
-    >
-      ✕
-    </button>
-  );
-  const collapseButton = (side: "left" | "right") =>
-    props.onCollapse && (
-      <button
-        type="button"
-        onClick={props.onCollapse}
-        aria-label={side === "left" ? "Fold the sections away" : "Fold the tutor away"}
-        title={side === "left" ? "Fold away" : "Fold the tutor away"}
-        className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted transition hover:bg-paper hover:text-ink"
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-          {side === "left" ? <path d="M11 17l-5-5 5-5M18 17l-5-5 5-5" /> : <path d="M13 17l5-5-5-5M6 17l5-5-5-5" />}
-        </svg>
-      </button>
-    );
-
   return (
-    <div className="@container flex h-full min-h-0 flex-col">
-      {layout === "chat" ? (
-        <div className="flex h-12 shrink-0 items-center gap-2 border-b border-ink pr-2 pl-4">
-          <p className="font-medium">Tutor</p>
-          <div className="flex-1" />
-          <UsageMeter sessionId={props.sessionId} keyId={props.keyInfo?.id} keyLast4={props.keyInfo?.last4} />
-          {closeButton}
-          {collapseButton("right")}
-        </div>
-      ) : layout === "sections" ? (
-        // Every section listed, none hidden behind scrolling.
-        <nav className="shrink-0 border-b border-ink px-2 py-2" role="tablist" aria-orientation="vertical" aria-label="Sections">
-          <div className="flex items-center justify-between px-2 pb-1">
-            <p className="font-mono text-[10px] tracking-wider text-muted uppercase">This session</p>
-            {collapseButton("left")}
-          </div>
-          {navTabs.map((t) => (
-            <button
-              key={t.id}
-              role="tab"
-              aria-selected={shown === t.id}
-              onClick={() => onTab(t.id)}
-              className={`flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left text-sm transition-colors duration-150 ${
-                shown === t.id ? "bg-ink font-medium text-white" : "text-muted hover:bg-paper hover:text-ink"
-              }`}
-            >
-              {t.label}
-              {t.badge && (
-                <span
-                  className={`rounded px-1.5 py-px font-mono text-[10px] ${
-                    shown === t.id ? "bg-white/15" : t.id === "plan" && !plan ? "bg-ink text-white" : "border border-line"
-                  }`}
-                >
-                  {t.badge}
-                </span>
-              )}
-            </button>
-          ))}
-        </nav>
-      ) : (
-      <nav className="relative flex h-12 shrink-0 items-stretch gap-2 border-b border-ink px-3">
-        {/* Only the tabs scroll when there are many; the usage meter stays put at the right. */}
-        <div className="flex min-w-0 flex-1 items-stretch overflow-x-auto [mask-image:linear-gradient(to_right,#000_calc(100%-28px),transparent)] [scrollbar-width:none]" role="tablist">
-        <div ref={navRef} className="relative flex items-stretch gap-1">
-          {tabs.map((t) => (
-            <button
-              key={t.id}
-              data-tab={t.id}
-              role="tab"
-              aria-selected={tab === t.id}
-              onClick={() => onTab(t.id)}
-              className={`flex shrink-0 items-center gap-1.5 px-2.5 text-sm whitespace-nowrap transition-colors duration-200 ${
-                tab === t.id ? "font-medium text-ink" : "text-muted hover:text-ink"
-              }`}
-            >
-              {t.label}
-              {t.badge && (
-                <span
-                  className={`rounded px-1.5 py-px font-mono text-[10px] ${
-                    t.id === "plan" && !plan ? "bg-ink text-white" : "border border-line text-muted"
-                  }`}
-                >
-                  {t.badge}
-                </span>
-              )}
-            </button>
-          ))}
-          {bar && (
-            <span
-              aria-hidden
-              className="absolute -bottom-px h-0.5 bg-ink transition-all duration-300 ease-fluid"
-              style={{ left: bar.left, width: bar.width }}
-            />
-          )}
-        </div>
-        </div>
-        <UsageMeter sessionId={props.sessionId} keyId={props.keyInfo?.id} keyLast4={props.keyInfo?.last4} />
-        {props.onClose && (
-          <button
-            onClick={props.onClose}
-            aria-label="Hide tutor"
-            className="my-2 flex w-8 items-center justify-center rounded-md text-muted transition hover:bg-paper hover:text-ink"
-          >
-            ✕
-          </button>
-        )}
-      </nav>
+    <div key={view} className="animate-fade h-full min-h-0">
+      {view === "chat" && (
+        <ChatPanel
+          messages={props.messages}
+          busy={props.busy}
+          plan={plan}
+          docs={props.docs}
+          activeTopic={props.activeTopic}
+          topics={topics}
+          onSend={props.onSend}
+          onJump={props.onJump}
+          onCite={props.onCite}
+          onOpenPlan={() => onView(props.kind === "paper" ? "passes" : props.kind === "exam" ? "practice" : "plan")}
+          onOpenPaper={() => onView("passes")}
+          kind={props.kind}
+          paperFocus={(() => {
+            const r = activePaper ? props.paper.reviews[activePaper.id] : undefined;
+            return activePaper && r ? { label: activePaper.label, title: activePaper.title, done: r.passes_done, target: r.target_pass } : null;
+          })()}
+        />
       )}
-      <div key={shown} className="animate-fade min-h-0 flex-1">
-        {shown === "chat" && (
-          <ChatPanel
-            messages={props.messages}
-            busy={props.busy}
-            plan={plan}
-            docs={props.docs}
-            activeTopic={props.activeTopic}
-            topics={topics}
-            onSend={props.onSend}
-            onJump={props.onJump}
-            onCite={props.onCite}
-            onOpenPlan={() => onTab(props.kind === "paper" ? "passes" : props.kind === "exam" ? "practice" : "plan")}
-            onOpenPaper={() => onTab("passes")}
-            kind={props.kind}
-            paperFocus={(() => {
-              const r = activePaper ? props.paper.reviews[activePaper.id] : undefined;
-              return activePaper && r ? { label: activePaper.label, title: activePaper.title, done: r.passes_done, target: r.target_pass } : null;
-            })()}
-          />
-        )}
-        {shown === "practice" && (
-          <PracticePanel
+      {view === "practice" && (
+        <PracticePanel
+          practice={props.exam.practice}
+          docs={props.docs}
+          examDate={props.exam.examDate}
+          onExamDate={props.exam.onExamDate}
+          onJump={props.onJump}
+          onAsk={(message) => props.onSend({ action: "chat", message })}
+        />
+      )}
+      {view === "passes" && (
+        <PassesPanel
+          sessionId={props.sessionId}
+          inStudy={props.kind === "study"}
+          docs={props.kind === "paper" ? props.docs : props.docs.filter((d) => props.paper.paperIds.has(d.id))}
+          onMarkPaper={props.paper.onMarkPaper}
+          onAddPapers={props.paper.onAddPapers}
+          studyGoal={props.paper.studyGoal}
+          onOpenMap={props.paper.onOpenMap}
+          onTool={props.paper.onTool}
+          activeDocId={props.paper.activeDocId}
+          reviews={props.paper.reviews}
+          researchGoal={props.paper.researchGoal}
+          busy={Boolean(props.busy)}
+          onSelectDoc={props.paper.onSelectDoc}
+          onUpdate={props.paper.onUpdate}
+          onResearchGoal={props.paper.onResearchGoal}
+          fetching={props.paper.fetching}
+          onSend={props.onSend}
+          passesOpen={props.paper.passesOpen}
+          onPassesOpen={props.paper.onPassesOpen}
+        />
+      )}
+      {view === "plan" && (
+        <PlanPanel
+          sessionId={props.sessionId}
+          docs={props.docs}
+          plan={plan}
+          topics={topics}
+          activeTopic={props.activeTopic}
+          busy={Boolean(props.busy)}
+          onJump={props.onJump}
+          onFocusTopic={props.onFocusTopic}
+          onTopicStatus={props.onTopicStatus}
+          onRecall={props.onRecall}
+          onListen={props.onListen}
+          papers={props.paper.paperIds}
+          reviews={props.paper.reviews}
+          onOpenPaper={(docId) => {
+            props.paper.onSelectDoc(docId);
+            props.paper.onPassesOpen(true);
+            onView("passes");
+          }}
+          onMarkPaper={(docId) => {
+            props.paper.onMarkPaper(docId);
+            props.paper.onSelectDoc(docId);
+            onView("passes");
+          }}
+          onTeach={(t) => {
+            props.onFocusTopic(t);
+            if (t.source === "pdf" && t.page_start && t.document_id) props.onJump(t.page_start, t.document_id);
+            props.onSend({ action: "teach", topicId: t.id });
+          }}
+          onPlanCreated={props.onPlanCreated}
+          onRepace={props.onRepace}
+          draftGoal={props.draftGoal}
+          setup={props.setup}
+        />
+      )}
+      {view === "files" && <FilesPanel {...props.files} />}
+      {view === "highlights" && (
+        <HighlightsPanel
+          sessionId={props.sessionId}
+          highlights={highlights}
+          docs={props.docs}
+          busy={Boolean(props.busy)}
+          onJump={props.onJump}
+          onDelete={props.onDeleteHighlight}
+          onUpdate={props.onUpdateHighlight}
+          onSend={props.onSend}
+        />
+      )}
+      {view === "memory" &&
+        (props.kind === "exam" ? (
+          <ExamProgress
             practice={props.exam.practice}
-            docs={props.docs}
             examDate={props.exam.examDate}
-            onExamDate={props.exam.onExamDate}
-            onJump={props.onJump}
-            onAsk={(message) => props.onSend({ action: "chat", message })}
-          />
-        )}
-        {shown === "passes" && (
-          <PassesPanel
-            sessionId={props.sessionId}
-            inStudy={props.kind === "study"}
-            docs={passDocs}
-            onMarkPaper={props.paper.onMarkPaper}
-            onAddPapers={props.paper.onAddPapers}
-            studyGoal={props.paper.studyGoal}
-            onOpenMap={props.paper.onOpenMap}
-            onTool={props.paper.onTool}
-            activeDocId={props.paper.activeDocId}
-            reviews={props.paper.reviews}
-            researchGoal={props.paper.researchGoal}
-            busy={Boolean(props.busy)}
-            onSelectDoc={props.paper.onSelectDoc}
-            onUpdate={props.paper.onUpdate}
-            onResearchGoal={props.paper.onResearchGoal}
-            fetching={props.paper.fetching}
-            onSend={props.onSend}
-            passesOpen={props.paper.passesOpen}
-            onPassesOpen={props.paper.onPassesOpen}
-          />
-        )}
-        {shown === "plan" && (
-          <PlanPanel
-            sessionId={props.sessionId}
-            docs={props.docs}
-            plan={plan}
-            topics={topics}
-            activeTopic={props.activeTopic}
-            busy={Boolean(props.busy)}
-            onJump={props.onJump}
-            onFocusTopic={props.onFocusTopic}
-            onTopicStatus={props.onTopicStatus}
-            onRecall={props.onRecall}
-            onListen={props.onListen}
-            papers={props.paper.paperIds}
-            reviews={props.paper.reviews}
-            onOpenPaper={(docId) => {
-              props.paper.onSelectDoc(docId);
-              props.paper.onPassesOpen(true);
-              onTab("passes");
+            memorySummary={props.memory.summary}
+            onPractiseWeak={(weak) => {
+              onView("practice");
+              void props.exam.practice.start({ topics: weak });
             }}
-            onMarkPaper={(docId) => {
-              props.paper.onMarkPaper(docId);
-              props.paper.onSelectDoc(docId);
-              onTab("passes");
-            }}
-            onTeach={(t) => {
-              props.onFocusTopic(t);
-              if (t.source === "pdf" && t.page_start && t.document_id) props.onJump(t.page_start, t.document_id);
-              props.onSend({ action: "teach", topicId: t.id });
-            }}
-            onPlanCreated={props.onPlanCreated}
-            onRepace={props.onRepace}
-            draftGoal={props.draftGoal}
-            setup={props.setup}
           />
-        )}
-        {shown === "files" && <FilesPanel {...props.files} />}
-        {shown === "highlights" && (
-          <HighlightsPanel
-            sessionId={props.sessionId}
-            highlights={highlights}
-            docs={props.docs}
-            busy={Boolean(props.busy)}
-            onJump={props.onJump}
-            onDelete={props.onDeleteHighlight}
-            onUpdate={props.onUpdateHighlight}
-            onSend={props.onSend}
-          />
-        )}
-        {shown === "memory" &&
-          (props.kind === "exam" ? (
-            <ExamProgress
-              practice={props.exam.practice}
-              examDate={props.exam.examDate}
-              memorySummary={props.memory.summary}
-              onPractiseWeak={(weak) => {
-                onTab("practice");
-                void props.exam.practice.start({ topics: weak });
-              }}
-            />
-          ) : (
-            <MemoryPanel memory={props.memory} plan={plan} topics={topics} />
-          ))}
-      </div>
+        ) : (
+          <MemoryPanel memory={props.memory} plan={plan} topics={topics} />
+        ))}
     </div>
   );
 }

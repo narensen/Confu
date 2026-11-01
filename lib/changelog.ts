@@ -5,6 +5,19 @@ export type Release = { date: string; title: string; summary: string; items: str
 
 export const CHANGELOG: Release[] = [
   {
+    date: "2026-11-01",
+    title: "Room to read",
+    summary: "The tutor beside you, your tools a click away, and the page in the middle.",
+    items: [
+      "The tutor now sits on the left, in full screen too, so it's always in the same place.",
+      "Plan, Highlights, Progress and Files live in a rail on the right. Press one and it slides out over the page; click back into the page (or press Esc) and it slides away. Pin it to keep it open beside the page.",
+      "A tool you put away keeps its place: a half-written answer or a scrolled list is still there when it comes back.",
+      "Fold the tutor away (or press t) to read wider. It comes back on its own when it answers.",
+      "Full screen keeps the same layout, just without the header, and dialogs now show in full screen too.",
+      "On phones, a tab bar at the bottom switches between reading, the tutor and each tool.",
+    ],
+  },
+  {
     date: "2026-10-28",
     title: "Everything in view",
     summary: "Your plan, what you're reading and the tutor, side by side.",

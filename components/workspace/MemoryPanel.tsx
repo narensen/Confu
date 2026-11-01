@@ -10,9 +10,7 @@ export function MemoryPanel({ memory, plan, topics }: { memory: LearnerMemory; p
   return (
     <div className="h-full space-y-7 overflow-y-auto p-6 text-sm">
       <section className="animate-enter">
-        <p className={eyebrowClass}>Progress</p>
-        <h2 className="mt-1 font-serif text-2xl">What your tutor knows about you</h2>
-        <p className="mt-2 text-xs leading-relaxed text-muted">
+        <p className="text-xs leading-relaxed text-muted">
           Updated after every exchange, so the tutor builds on what you know instead of repeating it.
         </p>
         {empty ? (

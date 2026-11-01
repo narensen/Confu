@@ -34,9 +34,7 @@ export function FilesPanel({ docs, activeId, open, addLabel, onAdd, onAddPapers,
     <div className="h-full overflow-y-auto px-6 py-6">
       <header className="flex flex-col gap-3 @md:flex-row @md:items-start @md:justify-between @md:gap-4">
         <div>
-          <p className={eyebrowClass}>Files</p>
-          <h2 className="mt-1 font-serif text-2xl leading-tight">Everything in this session</h2>
-          <p className="mt-1.5 text-sm leading-relaxed text-muted">
+          <p className="text-sm leading-relaxed text-muted">
             {docs.length
               ? `${docs.length} ${docs.length === 1 ? "file" : "files"}, ${openCount} open as ${openCount === 1 ? "a tab" : "tabs"}. New files land here: open one to read it. Closing a tab keeps the file here.`
               : "Nothing yet."}

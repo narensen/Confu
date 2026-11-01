@@ -8,13 +8,19 @@ import { eyebrowClass } from "@/components/ui";
 // box and no dialog is open). "?" shows this list.
 export const SHORTCUTS: { group: string; keys: [string, string][] }[] = [
   {
-    group: "Panels",
+    group: "Tutor",
     keys: [
-      ["t", "Tutor"],
-      ["p", "Plan (Passes in a paper session, Practice in exam prep)"],
-      ["f", "Files"],
-      ["h", "Highlights"],
+      ["t", "Show or fold away the tutor"],
       ["/", "Write to the tutor"],
+    ],
+  },
+  {
+    group: "Tools (they slide out on the right; press again to put away)",
+    keys: [
+      ["p", "Plan (Passes in a paper session, Practice in exam prep)"],
+      ["h", "Highlights"],
+      ["f", "Files"],
+      ["Esc", "Put away a tool that isn't pinned"],
     ],
   },
   {
@@ -27,7 +33,7 @@ export const SHORTCUTS: { group: string; keys: [string, string][] }[] = [
       ["Ctrl F  ⌘ F", "Search in this file"],
     ],
   },
-  { group: "Anywhere", keys: [["?", "This list"], ["Esc", "Close a dialog or panel"]] },
+  { group: "Anywhere", keys: [["?", "This list"], ["Esc", "Close a dialog"]] },
 ];
 
 export function ShortcutsDialog({ onClose }: { onClose: () => void }) {

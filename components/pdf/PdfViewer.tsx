@@ -73,7 +73,6 @@ type Props = {
   highlights: Highlight[];
   busy: boolean;
   focusMode: boolean;
-  toolbarStart?: ReactNode;
   onToggleFocus: () => void;
   onPageChange: (page: number) => void;
   onLoaded?: () => void; // the PDF is open (its first page measured)
@@ -167,7 +166,7 @@ function cropCanvas(pageEl: HTMLElement, rect: Rect): string | null {
 }
 
 export default function PdfViewer(props: Props) {
-  const { url, documentId, initialPage, goTo, highlights, busy, focusMode, toolbarStart, onToggleFocus, onPageChange } = props;
+  const { url, documentId, initialPage, goTo, highlights, busy, focusMode, onToggleFocus, onPageChange } = props;
   const source = usePdfSource(url);
   const scrollRef = useRef<HTMLDivElement>(null);
   const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -507,7 +506,6 @@ export default function PdfViewer(props: Props) {
           the viewer is wide enough; the rarely used Read tools fold into More
           when it isn't. */}
       <div className="@container flex h-12 shrink-0 items-center gap-1 border-b border-ink bg-panel px-2 text-sm">
-        {toolbarStart}
         <div role="group" aria-label="Navigate" className="flex items-center gap-0.5">
           <form
             className="flex items-center gap-1 px-1"

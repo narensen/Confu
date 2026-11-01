@@ -54,7 +54,9 @@ import { AudioBar } from "./AudioBar";
 import { RecallCheck, recallOffered } from "./RecallCheck";
 import { ShortcutsDialog } from "./Shortcuts";
 import type { PlanJob } from "./PlanPanel";
-import { TutorPanel, type Tab } from "./TutorPanel";
+import { toolSections, TutorPanel, type PanelProps, type Section, type Tab, type ToolTab } from "./TutorPanel";
+import { MobileNav, ResizeHandle, ToolHeader, ToolRail, TutorHeader, TutorRail, type MobileItem } from "./Chrome";
+import { UsageMeter } from "@/components/usage/UsageMeter";
 import { ask, toast } from "@/components/dialogs";
 
 const PdfViewer = dynamic(() => import("@/components/pdf/PdfViewer"), {
@@ -90,8 +92,17 @@ export type SendRequest = {
   figure?: { page: number; documentId: string } | null;
 };
 
-const ZONES_KEY = "confu:zones"; // the two side panels' widths
-// Three zones from this width up (sections · PDF · tutor); below it, one panel at a time.
+// The layout, remembered on this device: the tutor's and the tools' widths,
+// whether the tutor is folded away and whether tools are pinned beside the reader.
+const LAYOUT_KEY = "confu:layout";
+type Layout = { tutor: number; sheet: number; tutorOpen: boolean; pinned: boolean };
+const DEFAULT_LAYOUT: Layout = { tutor: 400, sheet: 440, tutorOpen: true, pinned: false };
+const RAIL = 72; // the tools rail (w-18)
+const TUTOR_RAIL = 56; // the folded tutor (w-14)
+const READER_MIN = 440; // a tool is only pinned beside the reader if this much is left for it
+const SHEET_MIN = 340;
+const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
+// Side by side from this width up (tutor · reader · tools); below it, one thing at a time.
 const WIDE = "(min-width: 768px)";
 const subscribeWide = (fn: () => void) => {
   const m = window.matchMedia(WIDE);
@@ -137,9 +148,8 @@ export function Workspace({
   const [goTo, setGoTo] = useState<{ page: number; n: number } | null>(null);
   const isPaper = session.kind === "paper";
   const isExam = session.kind === "exam";
-  // The Papers tab: one paper's passes, or (false) just the reading list.
+  // The Papers tool: one paper's passes, or (false) just the reading list.
   const [passesOpen, setPassesOpen] = useState(false);
-  const [tab, setTab] = useState<Tab>(isExam ? "practice" : isPaper ? "passes" : initialPlan ? "chat" : "plan");
   const practice = useExamPractice(session.id, initialAttempts);
   const [examDate, setExamDate] = useState(session.examDate);
   const [researchGoal, setResearchGoal] = useState(session.researchGoal);
@@ -148,19 +158,12 @@ export function Workspace({
   );
   const [activeTopicId, setActiveTopicId] = useState<string | null>(null);
   const [focusMode, setFocusMode] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  // In full screen, a short tip under the Tutor button explains it toggles.
-  const [tutorTip, setTutorTip] = useState(false);
-  useEffect(() => {
-    if (!tutorTip) return;
-    const id = setTimeout(() => setTutorTip(false), 5000);
-    return () => clearTimeout(id);
-  }, [tutorTip]);
-  const [mobileView, setMobileView] = useState<"tutor" | "pdf">("pdf");
-  // Three zones: the session's sections on the left, the PDF, the tutor on the
-  // right. Each side can be dragged wider or folded away. A folded side opens
-  // again by itself when it's needed: the left when another section is opened
-  // (the plan, a paper's passes), the right when a new message arrives.
+
+  // The layout: the tutor on the left, what you're reading in the middle, and
+  // the session's tools in a rail on the right. A tool slides out over the
+  // reader and goes away when you click back into the page, or is pinned
+  // beside it. Full screen is the same layout without the app's header.
+  // Phones show one thing at a time, switched from a tab bar.
   const wide = useSyncExternalStore(
     subscribeWide,
     () => window.matchMedia(WIDE).matches,
@@ -170,14 +173,44 @@ export function Workspace({
   useEffect(() => {
     wideRef.current = wide;
   }, [wide]);
-  const [zones, setZones] = useState({ left: 320, right: 380 });
-  const [leftFoldedOn, setLeftFoldedOn] = useState<Tab | null>(null); // the section shown when folded
-  const [rightFoldedAt, setRightFoldedAt] = useState<number | null>(null); // how many messages there were
-  // Bringing up a section also unfolds the left side.
-  const showSection = useCallback((t: Tab) => {
-    setTab(t);
-    setLeftFoldedOn(null);
+  const [layout, setLayout] = useState<Layout>(DEFAULT_LAYOUT);
+  // A change the student made: kept for next time.
+  const updateLayout = useCallback((patch: Partial<Layout>) => {
+    setLayout((l) => {
+      const next = { ...l, ...patch };
+      try {
+        localStorage.setItem(LAYOUT_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
   }, []);
+  // The tool that's out. A new session opens on what it needs first: the goal,
+  // the research question, or practice.
+  const [tool, setTool] = useState<ToolTab | null>(() =>
+    isExam ? (initialAttempts.length ? null : "practice") : isPaper ? (session.researchGoal ? null : "passes") : initialPlan ? null : "plan",
+  );
+  // The last tool out stays mounted (hidden) after it's put away, so a half-
+  // written answer or a scrolled list is still there when it comes back.
+  const [lastTool, setLastTool] = useState<ToolTab | null>(tool);
+  if (tool && tool !== lastTool) setLastTool(tool);
+  const [mobileView, setMobileView] = useState<"pdf" | "tutor" | "tool">(!isExam && !isPaper && !initialPlan ? "tool" : "pdf");
+  const openTool = useCallback((t: ToolTab) => {
+    setTool(t);
+    setMobileView("tool");
+  }, []);
+  const revealTutor = useCallback(() => {
+    setLayout((l) => {
+      if (l.tutorOpen) return l;
+      const next = { ...l, tutorOpen: true };
+      try {
+        localStorage.setItem(LAYOUT_KEY, JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    setMobileView("tutor");
+  }, []);
+  // Moving to another view from inside one ("Open the plan", "Practise these").
+  const showView = useCallback((v: Tab) => (v === "chat" ? revealTutor() : openTool(v)), [openTool, revealTutor]);
   const rootRef = useRef<HTMLDivElement>(null);
   const [keyInfo, setKeyInfo] = useState(initialKey);
   const [keyNotice, setKeyNotice] = useState<string | null>(null);
@@ -190,18 +223,14 @@ export function Workspace({
       setKeyNotice((e as CustomEvent<{ message: string }>).detail.message);
       setKeyInfo(null);
       setOnTrial(false); // the trial ran out (or there never was one)
-      setDrawerOpen(true);
-      setMobileView("tutor");
+      revealTutor();
     };
     window.addEventListener(KEY_ERROR_EVENT, onKeyError);
     return () => window.removeEventListener(KEY_ERROR_EVENT, onKeyError);
-  }, []);
+  }, [revealTutor]);
 
-  // Without a key, AI actions open the tutor panel, where the key form is.
-  const revealGate = useCallback(() => {
-    setDrawerOpen(true);
-    setMobileView("tutor");
-  }, []);
+  // Without a key, AI actions open the tutor, where the key form is.
+  const revealGate = revealTutor;
 
   // The tabs above the viewer: every PDF the student hasn't closed.
   // PDFs are added to Files without opening a tab; opening one does.
@@ -275,12 +304,6 @@ export function Workspace({
     [activeDoc?.id, docs, selectDoc],
   );
 
-  // Citations from the tutor: "p. 12" (current PDF) or "D2 p. 12".
-  const jumpToCitation = useCallback(
-    (p: number, label?: string) => jumpTo(p, label ? docs.find((d) => d.label === label)?.id : undefined),
-    [docs, jumpTo],
-  );
-
   // Deep links from the review page: /session/:id?doc=…&page=…
   const deepLinked = useRef(false);
   useEffect(() => {
@@ -294,13 +317,39 @@ export function Workspace({
     if (doc && p >= 1 && docs.some((d) => d.id === doc)) jumpTo(p, doc);
   }, [docs, jumpTo]);
 
-  // Restore the side panels' widths.
+  // Restore the layout from last time.
   useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem(ZONES_KEY) ?? "null") as { left?: number; right?: number } | null;
-      if (saved?.left && saved?.right) setZones({ left: Math.min(480, Math.max(220, saved.left)), right: Math.min(600, Math.max(300, saved.right)) });
+      const saved = JSON.parse(localStorage.getItem(LAYOUT_KEY) ?? "null") as Partial<Layout> | null;
+      if (!saved) return;
+      setLayout({
+        tutor: clamp(Number(saved.tutor) || DEFAULT_LAYOUT.tutor, 300, 720),
+        sheet: clamp(Number(saved.sheet) || DEFAULT_LAYOUT.sheet, SHEET_MIN, 760),
+        tutorOpen: saved.tutorOpen !== false,
+        pinned: saved.pinned === true,
+      });
     } catch {}
   }, []);
+
+  // How wide the workspace is: what fits beside the reader depends on it.
+  const [rootWidth, setRootWidth] = useState(1440);
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(([entry]) => setRootWidth(Math.round(entry.contentRect.width)));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  // The tutor never takes more than ~45% of the width, and a tool never covers
+  // the tutor. A pinned tool sits beside the reader (narrower if it must) only
+  // while the reader keeps enough room; otherwise it floats over it.
+  const tutorWidth = clamp(layout.tutor, 300, Math.max(300, Math.round(rootWidth * 0.45)));
+  const leftWidth = layout.tutorOpen ? tutorWidth : TUTOR_RAIL;
+  const floatWidth = clamp(layout.sheet, SHEET_MIN, Math.max(SHEET_MIN, Math.min(Math.round(rootWidth * 0.55), rootWidth - leftWidth - RAIL - 120)));
+  const roomBeside = rootWidth - leftWidth - RAIL - READER_MIN;
+  const canPin = roomBeside >= SHEET_MIN;
+  const docked = layout.pinned && canPin;
+  const sheetWidth = docked ? Math.min(floatWidth, roomBeside) : floatWidth;
 
   // Remember the reading position per PDF.
   const activeId = activeDoc?.id;
@@ -326,15 +375,15 @@ export function Workspace({
     return () => document.removeEventListener("fullscreenchange", onChange);
   }, []);
 
+  // The whole page goes full screen, not just the workspace: dialogs and
+  // notices are drawn over the page, and would be hidden behind the workspace.
   const toggleFocus = useCallback(() => {
     if (focusMode) {
       setFocusMode(false);
       if (document.fullscreenElement) void document.exitFullscreen();
     } else {
       setFocusMode(true);
-      setDrawerOpen(true); // the tutor starts open in full screen
-      setTutorTip(true);
-      rootRef.current?.requestFullscreen?.().catch(() => {});
+      document.documentElement.requestFullscreen?.().catch(() => {});
     }
   }, [focusMode]);
 
@@ -371,10 +420,7 @@ export function Workspace({
         { id: userId, role: "user", action: req.action, content, ...meta, highlight_id: req.highlightId ?? null, created_at: now },
         { id: replyId, role: "assistant", action: req.action, content: "", ...meta, highlight_id: null, created_at: now },
       ]);
-      if (!wideRef.current) setTab("chat"); // on wide screens the tutor is always beside the PDF
-      setRightFoldedAt(null);
-      setDrawerOpen(true);
-      setMobileView("tutor");
+      revealTutor();
       setBusy("Thinking…");
 
       const setReply = (text: string) => setMessages((m) => m.map((x) => (x.id === replyId ? { ...x, content: text } : x)));
@@ -432,7 +478,7 @@ export function Workspace({
         window.setTimeout(refreshProgress, 10000);
       }
     },
-    [activeDoc, activeTopic, labelOf, locked, multi, page, refreshProgress, revealGate, session.id, topics],
+    [activeDoc, activeTopic, labelOf, locked, multi, page, refreshProgress, revealGate, revealTutor, session.id, topics],
   );
 
   const onTextAction = useCallback(
@@ -471,10 +517,7 @@ export function Workspace({
       const documentId = activeDoc.id;
       busyRef.current = true;
       setBusy("Reading the figure…");
-      if (!wideRef.current) setTab("chat");
-      setRightFoldedAt(null);
-      setDrawerOpen(true);
-      setMobileView("tutor");
+      revealTutor();
       let highlight: Highlight | null = null;
       try {
         const res = await fetch("/api/figure", {
@@ -507,7 +550,7 @@ export function Workspace({
       }
       if (highlight) await send({ action: "figure", message, highlightId: highlight.id, figure: { page: capture.page, documentId } });
     },
-    [activeDoc, locked, revealGate, send],
+    [activeDoc, locked, revealGate, revealTutor, send],
   );
 
   // Change a highlight's colour or note (optimistic; restored on failure).
@@ -882,31 +925,6 @@ export function Workspace({
   }, [reloadPlan]);
   const onPlanCreated = useCallback(() => reloadPlanRef.current(), []);
 
-  const startDrag = (side: "left" | "right") => (e: React.PointerEvent) => {
-    const root = rootRef.current;
-    if (!root) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    const box = root.getBoundingClientRect();
-    const move = (ev: PointerEvent) =>
-      setZones((z) =>
-        side === "left"
-          ? { ...z, left: Math.min(480, Math.max(220, ev.clientX - box.left)) }
-          : { ...z, right: Math.min(600, Math.max(300, box.right - ev.clientX)) },
-      );
-    const up = () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
-      setZones((z) => {
-        try {
-          localStorage.setItem(ZONES_KEY, JSON.stringify(z));
-        } catch {}
-        return z;
-      });
-    };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
-  };
-
   // Every paper has a review, even before its first note is saved.
   const reviews = useMemo(
     () => Object.fromEntries(docs.map((d) => [d.id, storedReviews[d.id] ?? emptyReview(d.id)])),
@@ -982,18 +1000,19 @@ export function Workspace({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detectKey]);
 
-  // Opening a paper in a study session brings up its passes; leaving papers goes back to the plan.
+  // Opening a paper in a study session switches a tool that's out to its
+  // passes (it doesn't slide one out over the page you asked to read);
+  // leaving the papers switches back to the plan.
   const openDocTab = useCallback(
     (docId: string) => {
       selectDoc(docId);
       if (isPaper || isExam) return;
       if (paperIds.has(docId)) {
         setPassesOpen(true);
-        showSection("passes");
-        setDrawerOpen(true);
-      } else setTab((t) => (t === "passes" ? (plan ? "plan" : "chat") : t));
+        setTool((t) => (t ? "passes" : t));
+      } else setTool((t) => (t === "passes" ? (plan ? "plan" : null) : t));
     },
-    [isExam, isPaper, paperIds, plan, selectDoc, showSection],
+    [isExam, isPaper, paperIds, plan, selectDoc],
   );
 
   // The literature map and the paper tools (BibTeX, Zotero, related work, compare).
@@ -1001,28 +1020,31 @@ export function Workspace({
   const [paperTool, setPaperTool] = useState<Exclude<PaperTool, "bibtex"> | null>(null);
   const paperDocs = useMemo(() => docs.filter((d) => paperIds.has(d.id)), [docs, paperIds]);
 
-  // Uploaded through "Add paper" in a study session: mark them as papers.
+  // Uploaded through "Add paper" in a study session: mark them as papers,
+  // and show them in Papers.
   const addPaperPdfs = useCallback(
     async (files: File[]) => {
       const added = await addPdfs(files);
       if (isPaper || !added.length) return;
       for (const d of added) markPaper(d.id);
-      showSection("passes");
+      openTool("passes");
     },
-    [addPdfs, isPaper, markPaper, showSection],
+    [addPdfs, isPaper, markPaper, openTool],
   );
 
   // Papers found by arXiv ID, DOI, title, Zotero or a suggestion. In a study
   // session they're marked as papers (some have no DOI or arXiv ID to tell).
+  // `reveal`: show them in Papers. Not for papers added in the background
+  // (from the goal or the plan): nothing slides out unasked.
   const addPaperMetas = useCallback(
-    async (papers: PaperMeta[]) => {
+    async (papers: PaperMeta[], reveal = true) => {
       const added = await addPapers(papers);
       if (isPaper || !added.length) return added;
       for (const d of added) markPaper(d.id);
-      showSection("passes");
+      if (reveal) openTool("passes");
       return added;
     },
-    [addPapers, isPaper, markPaper, showSection],
+    [addPapers, isPaper, markPaper, openTool],
   );
 
   // What the goal names that isn't in the session yet: the "To add" tab.
@@ -1132,7 +1154,10 @@ export function Workspace({
       const squash = (t: string) => t.toLowerCase().replace(/[^a-z0-9]+/g, "");
       const notes: string[] = [];
       if (sure.length) {
-        const added = await act.addPaperMetas(sure.map((p) => p.paper!));
+        const added = await act.addPaperMetas(
+          sure.map((p) => p.paper!),
+          false,
+        );
         const missed = sure.filter((p) => !added.some((d) => squash(d.title) === squash(p.paper!.title)));
         if (missed.length) addLater(session.id, { papers: missed.map(hint) });
         if (added.length) notes.push(`${added.length} ${added.length === 1 ? "paper" : "papers"}`);
@@ -1191,7 +1216,7 @@ export function Workspace({
         await act.uploadsSettled();
         const sure = papers.flatMap((p) => (p.paper && !docsNow.current.some((d) => d.title.toLowerCase() === p.paper!.title.toLowerCase()) ? [p.paper] : []));
         if (sure.length) {
-          const added = await act.addPaperMetas(sure);
+          const added = await act.addPaperMetas(sure, false);
           if (added.length) toast(`Added ${added.length} ${added.length === 1 ? "paper" : "papers"} your plan recommends. They're in Files.`);
         }
       }
@@ -1256,27 +1281,22 @@ export function Workspace({
       const el = e.target as HTMLElement | null;
       if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
       if (document.querySelector('[role="dialog"][aria-modal="true"]')) return;
-      const show = (t: Tab) => {
-        setDrawerOpen(true);
-        setMobileView("tutor");
-        if (t === "chat" && wideRef.current) {
-          setRightFoldedAt(null);
-          window.setTimeout(() => document.getElementById("tutor-input")?.focus(), 50);
-          return;
-        }
-        showSection(t);
+      // A tool's key brings it out, or puts it away if it's already out.
+      const toggleTool = (t: ToolTab) => (wideRef.current && tool === t ? setTool(null) : openTool(t));
+      const writeToTutor = () => {
+        revealTutor();
+        window.setTimeout(() => document.getElementById("tutor-input")?.focus(), 50);
       };
       const i = openDocs.findIndex((d) => d.id === activeDoc?.id);
-      const go: Record<string, () => void> = {
+      const go: Record<string, (() => void) | undefined> = {
         "?": () => setShortcutsOpen(true),
-        t: () => show("chat"),
-        p: () => show(isExam ? "practice" : isPaper ? "passes" : "plan"),
-        f: () => show("files"),
-        h: () => !isExam && show("highlights"),
-        "/": () => {
-          show("chat");
-          window.setTimeout(() => document.getElementById("tutor-input")?.focus(), 50);
-        },
+        t: () => (wideRef.current && layout.tutorOpen ? updateLayout({ tutorOpen: false }) : writeToTutor()),
+        "/": writeToTutor,
+        p: () => toggleTool(isExam ? "practice" : isPaper ? "passes" : "plan"),
+        f: () => toggleTool("files"),
+        h: isExam ? undefined : () => toggleTool("highlights"),
+        // A floating tool; a pinned one stays until it's closed.
+        Escape: wideRef.current && tool && !docked ? () => setTool(null) : undefined,
         "[": () => openDocs.length > 1 && selectDoc(openDocs[(i - 1 + openDocs.length) % openDocs.length].id),
         "]": () => openDocs.length > 1 && selectDoc(openDocs[(i + 1) % openDocs.length].id),
         w: () => activeDoc && closeDocTab(activeDoc),
@@ -1287,7 +1307,7 @@ export function Workspace({
             jumpTo(next.page_start, next.document_id);
           } else if (next) {
             setActiveTopicId(next.id);
-            show("plan");
+            openTool("plan");
           }
         },
         ".": () => toggleFocus(),
@@ -1304,308 +1324,339 @@ export function Workspace({
     return () => window.removeEventListener("keydown", listener);
   }, []);
 
-  const tutorPanel = (layout: "full" | "sections" | "chat", onCollapse?: () => void) =>
-    locked && layout !== "sections" ? (
-    <KeyGate
-      sessionId={session.id}
-      notice={keyNotice}
-      onSaved={(info) => {
-        setKeyInfo(info);
-        setKeyNotice(null);
-      }}
-      onClose={focusMode ? () => setDrawerOpen(false) : undefined}
-    />
-  ) : (
-    <TutorPanel
-      layout={layout}
-      onCollapse={onCollapse}
-      tab={tab}
-      onTab={setTab}
-      sessionId={session.id}
-      docs={docs}
-      plan={plan}
-      topics={topics}
-      activeTopic={activeTopic}
-      memory={memory}
-      highlights={highlights}
-      messages={messages}
-      busy={busy}
-      onSend={send}
-      onJump={jumpTo}
-      onCite={jumpToCitation}
-      onFocusTopic={(t) => setActiveTopicId(t.id)}
-      onTopicStatus={(t, s) => {
-        void setTopicStatus(t, s);
-        // Just finished: offer a quick recall check (unless turned off).
-        if (s === "completed" && recallOffered()) setRecall({ topic: t, offer: true });
-      }}
-      onRecall={(t) => setRecall({ topic: t, offer: false })}
-      onListen={listen}
-      onDeleteHighlight={deleteHighlight}
-      onUpdateHighlight={updateHighlight}
-      onPlanCreated={onPlanCreated}
-      onRepace={repace}
-      files={{
-        docs,
-        activeId: activeDoc?.id ?? null,
-        open: openIds,
-        addLabel: isPaper ? "+ Add paper" : "+ Add material",
-        onAdd: isPaper ? () => setAddPaperOpen(true) : () => setAddMaterialOpen(true),
-        onAddPapers: isPaper || isExam ? undefined : () => setAddPaperOpen(true),
-        uploads,
-        onRetry: retryUpload,
-        onDismiss: (key) => {
-          retries.current.delete(key);
-          patchUpload(key, null);
-        },
-        later:
-          isPaper || isExam
-            ? undefined
-            : {
-                later,
-                busy: false,
-                onFind: openGoalSearch,
-                onRemovePaper: (name) => removeLater(session.id, { papers: [name] }),
-                // They leave this list at once for "Coming in" (with progress); any that fail come back.
-                onImport: async (links) => {
-                  removeLater(session.id, { links: links.map((l) => l.url) });
-                  const { failed } = await importLinks(links);
-                  if (failed.length) {
-                    addLater(session.id, { links: failed });
-                    toast(`Couldn't bring in:\n${failed.map((l) => l.url).join("\n")}\n\nThey're back under “From your goal”; try them from + Add material too.`, "error");
-                  }
-                },
-                onPlaylist: (url) => {
-                  setMaterialStart({ tab: "youtube", url });
-                  setAddMaterialOpen(true);
-                },
-                onRemoveLink: (url) => removeLater(session.id, { links: [url] }),
-              },
-        // Shows it, and stays on Files (no jump to a paper's passes).
-        onOpen: (docId) => {
-          selectDoc(docId);
-          setMobileView("pdf");
-        },
-        onCloseTab: closeDocTab,
-        onDelete: removePdf,
-        paperIds: isPaper || isExam ? undefined : paperIds,
-      }}
-      draftGoal={session.draftGoal ?? ""}
-      setup={{ upload: uploading, incoming, settled: uploadsSettled, job: planJob, setJob: setPlanJob }}
-      onClose={focusMode ? () => setDrawerOpen(false) : undefined}
-      keyInfo={needsKey ? keyInfo : null}
-      kind={session.kind}
-      paper={{
-        reviews,
-        researchGoal,
-        activeDocId: activeDoc?.id ?? null,
-        onSelectDoc: selectDoc,
-        onUpdate: updateReview,
-        onResearchGoal: saveResearchGoal,
-        fetching: uploadStatus,
-        paperIds,
-        onMarkPaper: markPaper,
-        onAddPapers: () => setAddPaperOpen(true),
-        studyGoal: plan ? plan.goal_title || plan.goal : "",
-        onOpenMap: () => setMapOpen(true),
-        passesOpen,
-        onPassesOpen: setPassesOpen,
-        onTool: (t) => (t === "bibtex" ? exportBibtex(paperDocs, session.title) : setPaperTool(t)),
-      }}
-      exam={{ practice, examDate, onExamDate: saveExamDate }}
-    />
+  // Going to a page from a floating tool (or a citation) puts the tool away,
+  // so the page is in view. A pinned tool stays.
+  const jumpIntoView = useCallback(
+    (p: number, docId?: string | null) => {
+      if (wideRef.current && !docked) setTool(null);
+      jumpTo(p, docId);
+    },
+    [docked, jumpTo],
+  );
+  // Citations from the tutor: "p. 12" (current PDF) or "D2 p. 12".
+  const citeIntoView = useCallback(
+    (p: number, label?: string) => jumpIntoView(p, label ? docs.find((d) => d.label === label)?.id : undefined),
+    [docs, jumpIntoView],
   );
 
-  // The folded sides, and when they open again by themselves (see zones above).
-  const sideTab = tab === "chat" ? null : tab;
-  const leftOpen = leftFoldedOn === null || (sideTab !== null && sideTab !== leftFoldedOn);
-  const rightOpen = rightFoldedAt === null || messages.length !== rightFoldedAt;
-  const handle = (side: "left" | "right") => (
-    <div
-      role="separator"
-      aria-orientation="vertical"
-      aria-label={side === "left" ? "Resize the sections" : "Resize the tutor"}
-      onPointerDown={startDrag(side)}
-      className="group flex w-1.5 shrink-0 cursor-col-resize justify-center bg-panel"
-    >
-      <span className="h-full w-px bg-ink transition-all duration-200 group-hover:w-0.75 group-active:w-0.75" />
-    </div>
+  // Everything the tutor and the tools draw from.
+  const panelProps: PanelProps = {
+    sessionId: session.id,
+    docs,
+    plan,
+    topics,
+    activeTopic,
+    memory,
+    highlights,
+    messages,
+    busy,
+    onSend: send,
+    onJump: jumpIntoView,
+    onCite: citeIntoView,
+    onFocusTopic: (t) => setActiveTopicId(t.id),
+    onTopicStatus: (t, s) => {
+      void setTopicStatus(t, s);
+      // Just finished: offer a quick recall check (unless turned off).
+      if (s === "completed" && recallOffered()) setRecall({ topic: t, offer: true });
+    },
+    onRecall: (t) => setRecall({ topic: t, offer: false }),
+    onListen: listen,
+    onDeleteHighlight: deleteHighlight,
+    onUpdateHighlight: updateHighlight,
+    onPlanCreated,
+    onRepace: repace,
+    files: {
+      docs,
+      activeId: activeDoc?.id ?? null,
+      open: openIds,
+      addLabel: isPaper ? "+ Add paper" : "+ Add material",
+      onAdd: isPaper ? () => setAddPaperOpen(true) : () => setAddMaterialOpen(true),
+      onAddPapers: isPaper || isExam ? undefined : () => setAddPaperOpen(true),
+      uploads,
+      onRetry: retryUpload,
+      onDismiss: (key) => {
+        retries.current.delete(key);
+        patchUpload(key, null);
+      },
+      later:
+        isPaper || isExam
+          ? undefined
+          : {
+              later,
+              busy: false,
+              onFind: openGoalSearch,
+              onRemovePaper: (name) => removeLater(session.id, { papers: [name] }),
+              // They leave this list at once for "Coming in" (with progress); any that fail come back.
+              onImport: async (links) => {
+                removeLater(session.id, { links: links.map((l) => l.url) });
+                const { failed } = await importLinks(links);
+                if (failed.length) {
+                  addLater(session.id, { links: failed });
+                  toast(`Couldn't bring in:\n${failed.map((l) => l.url).join("\n")}\n\nThey're back under “From your goal”; try them from + Add material too.`, "error");
+                }
+              },
+              onPlaylist: (url) => {
+                setMaterialStart({ tab: "youtube", url });
+                setAddMaterialOpen(true);
+              },
+              onRemoveLink: (url) => removeLater(session.id, { links: [url] }),
+            },
+      // Shows it in the reader (Files stays out if it's pinned).
+      onOpen: (docId) => {
+        selectDoc(docId);
+        if (wideRef.current && !docked) setTool(null);
+        setMobileView("pdf");
+      },
+      onCloseTab: closeDocTab,
+      onDelete: removePdf,
+      paperIds: isPaper || isExam ? undefined : paperIds,
+    },
+    draftGoal: session.draftGoal ?? "",
+    setup: { upload: uploading, incoming, settled: uploadsSettled, job: planJob, setJob: setPlanJob },
+    kind: session.kind,
+    paper: {
+      reviews,
+      researchGoal,
+      activeDocId: activeDoc?.id ?? null,
+      onSelectDoc: selectDoc,
+      onUpdate: updateReview,
+      onResearchGoal: saveResearchGoal,
+      fetching: uploadStatus,
+      paperIds,
+      onMarkPaper: markPaper,
+      onAddPapers: () => setAddPaperOpen(true),
+      studyGoal: plan ? plan.goal_title || plan.goal : "",
+      onOpenMap: () => setMapOpen(true),
+      passesOpen,
+      onPassesOpen: setPassesOpen,
+      onTool: (t) => (t === "bibtex" ? exportBibtex(paperDocs, session.title) : setPaperTool(t)),
+    },
+    exam: { practice, examDate, onExamDate: saveExamDate },
+    onView: showView,
+  };
+
+  const sections = toolSections(panelProps);
+  const sectionOf = (id: ToolTab): Section => sections.find((s) => s.id === id) ?? { id, label: id === "passes" ? "Papers" : "Tool", hint: "" };
+
+  // The tutor: its header (what page it's reading along with, usage), then
+  // the chat, or the key form while there's no key.
+  const where = activeDoc?.hasPdf ? `Reading ${multi ? `${activeDoc.label} · ` : ""}p. ${page}` : null;
+  const tutor = (onFold?: () => void) => (
+    <>
+      <TutorHeader
+        where={where}
+        busy={Boolean(busy)}
+        onFold={onFold}
+        usage={<UsageMeter sessionId={session.id} keyId={needsKey ? keyInfo?.id : undefined} keyLast4={needsKey ? keyInfo?.last4 : undefined} />}
+      />
+      <div className="min-h-0 flex-1">
+        {locked ? (
+          <KeyGate
+            sessionId={session.id}
+            notice={keyNotice}
+            onSaved={(info) => {
+              setKeyInfo(info);
+              setKeyNotice(null);
+            }}
+          />
+        ) : (
+          <TutorPanel view="chat" {...panelProps} />
+        )}
+      </div>
+    </>
   );
-  // A folded side: a slim strip that opens it again.
-  const strip = (side: "left" | "right") => (
-    <button
-      type="button"
-      onClick={() => (side === "left" ? setLeftFoldedOn(null) : setRightFoldedAt(null))}
-      title={side === "left" ? "Show the sections" : "Show the tutor"}
-      className={`flex w-9 shrink-0 flex-col items-center gap-3 bg-panel py-3 text-muted transition hover:bg-paper hover:text-ink ${side === "left" ? "border-r" : "border-l"} border-ink`}
-    >
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-        {side === "left" ? <path d="M13 17l5-5-5-5M6 17l5-5-5-5" /> : <path d="M11 17l-5-5 5-5M18 17l-5-5 5-5" />}
-      </svg>
-      <span className="text-xs font-medium [writing-mode:vertical-rl]">{side === "left" ? "Sections" : "Tutor"}</span>
-    </button>
-  );
+
+  // Resizing: the tutor from its right edge, a tool from its left edge.
+  const dragTutor = (x: number) => {
+    const box = rootRef.current?.getBoundingClientRect();
+    if (box) setLayout((l) => ({ ...l, tutor: clamp(Math.round(x - box.left), 300, 720) }));
+  };
+  const dragSheet = (x: number) => {
+    const box = rootRef.current?.getBoundingClientRect();
+    if (box) setLayout((l) => ({ ...l, sheet: clamp(Math.round(box.right - RAIL - x), SHEET_MIN, 760) }));
+  };
+
+  // Phones: one thing at a time.
+  const mobileShown = mobileView === "tool" && !tool ? "pdf" : mobileView;
+  const mobileItems: MobileItem[] = [
+    { id: "pdf", label: "Read", icon: "reader" },
+    { id: "chat", label: "Tutor", icon: "chat", dot: Boolean(busy) },
+    ...sections.map((s) => ({ id: s.id, label: s.label, icon: s.id, badge: s.badge, dot: s.dot })),
+  ];
+
+  const sheetOpen = Boolean(tool);
+  const sheetDocked = sheetOpen && docked;
 
   return (
-    <div ref={rootRef} className={`flex min-h-0 flex-1 bg-paper ${focusMode ? "fixed inset-0 z-40" : "relative"}`}>
-      {!focusMode &&
-        (wide ? (
-          // Left zone: the session's sections, all listed.
-          leftOpen ? (
+    <div ref={rootRef} className={`flex min-h-0 flex-1 flex-col bg-paper ${focusMode ? "fixed inset-0 z-40" : "relative"}`}>
+      <div className="relative flex min-h-0 flex-1">
+        {/* Left: the tutor, or (phones) the tutor or a tool in place of the reader. */}
+        {wide ? (
+          layout.tutorOpen ? (
             <>
-              <aside className="flex min-w-0 shrink-0 flex-col bg-panel" style={{ width: zones.left }}>
-                {tutorPanel("sections", () => setLeftFoldedOn(sideTab ?? "plan"))}
+              <aside aria-label="Tutor" className="@container flex min-w-0 shrink-0 flex-col bg-panel" style={{ width: tutorWidth }}>
+                {tutor(() => updateLayout({ tutorOpen: false }))}
               </aside>
-              {handle("left")}
+              <ResizeHandle
+                label="Resize the tutor"
+                className="relative -mx-1"
+                onDrag={dragTutor}
+                onDone={() => updateLayout({})}
+                onNudge={(by) => updateLayout({ tutor: clamp(tutorWidth + by, 300, 720) })}
+                onReset={() => updateLayout({ tutor: DEFAULT_LAYOUT.tutor })}
+              />
             </>
           ) : (
-            strip("left")
+            <TutorRail busy={Boolean(busy)} onOpen={revealTutor} />
           )
-        ) : (
-          // Phones: one panel at a time, everything in tabs.
-          mobileView === "tutor" && <aside className="flex w-full min-w-0 flex-col bg-panel">{tutorPanel("full")}</aside>
-        ))}
-
-      {/* Full screen: the tutor sits beside the PDF (not over it), and the PDF
-          refits to the space that's left. */}
-      {focusMode && drawerOpen && (
-        <aside className="animate-slide-in flex w-[min(480px,40%)] min-w-80 shrink-0 flex-col border-r border-ink bg-panel">
-          {tutorPanel("full")}
-        </aside>
-      )}
-
-      <section className={`relative min-w-0 flex-1 flex-col ${focusMode || wide || mobileView === "pdf" ? "flex" : "hidden"}`}>
-        <PackSources sessionId={session.id} docs={docs} busy={Boolean(uploadStatus)} onAttach={attachPdf} onSelect={openDocTab} />
-        <DocTabs
-          docs={openDocs}
-          activeId={activeDoc?.id ?? null}
-          uploadStatus={uploadStatus}
-          onSelect={openDocTab}
-          onAdd={addPdfs}
-          onClose={closeDocTab}
-          onAddClick={isPaper ? () => setAddPaperOpen(true) : () => setAddMaterialOpen(true)}
-          addLabel={isPaper ? "+ Add paper" : "+ Add material"}
-          paperIds={isPaper || isExam ? undefined : paperIds}
-          onShortcuts={() => setShortcutsOpen(true)}
-          onPaper={
-            isPaper || isExam
-              ? undefined
-              : () => {
-                  // Its passes, beside the PDF.
-                  setPassesOpen(true);
-                  showSection("passes");
-                  setDrawerOpen(true);
-                  setMobileView("tutor");
-                }
-          }
-        />
-        <div className="relative min-h-0 flex-1">
-          {activeDoc && !activeDoc.hasPdf && pendingSource(activeDoc) && pendingSource(activeDoc)!.kind !== "paper" ? (
-            <PendingSourceCard key={activeDoc.id} doc={activeDoc} busy={Boolean(uploadStatus)} onAttach={attachPdf} />
-          ) : activeDoc && !activeDoc.hasPdf ? (
-            <PaperCard key={activeDoc.id} doc={activeDoc} busy={Boolean(uploadStatus)} onAttach={(file) => void attachPdf(activeDoc.id, file)} />
-          ) : activeDoc && !tabsKnown ? (
-            <div className="h-full bg-viewer" />
-          ) : activeDoc ? (
-            <PdfViewer
-              key={activeDoc.id}
-              url={activeDoc.url}
-              documentId={activeDoc.id}
-              initialPage={activeDoc.lastPage}
-              goTo={goTo}
-              highlights={docHighlights}
-              busy={Boolean(busy)}
-              focusMode={focusMode}
-              onToggleFocus={toggleFocus}
-              onPageChange={onPageChange}
-              onLoaded={viewerLoaded}
-              onTextAction={onTextAction}
-              onSaveHighlight={saveHighlight}
-              onUpdateHighlight={updateHighlight}
-              onDeleteHighlight={deleteHighlight}
-              onRegion={onRegion}
-              toolbarStart={
-                focusMode ? (
-                  <div className="relative mr-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDrawerOpen((v) => !v);
-                        setTutorTip(false);
-                      }}
-                      aria-pressed={drawerOpen}
-                      title={drawerOpen ? "Hide the tutor" : "Show the tutor"}
-                      className="flex h-7 items-center gap-1.5 rounded-md border border-ink bg-ink px-2.5 text-xs font-medium text-white shadow-[2px_2px_0_0_#facc15] transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[3px_3px_0_0_#facc15] active:translate-y-0 active:shadow-[1px_1px_0_0_#facc15]"
-                    >
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                        <rect x="3" y="4" width="18" height="16" rx="2" />
-                        <path d="M9 4v16" />
-                        {drawerOpen ? <path d="M15 10l-2 2 2 2" /> : <path d="M13 10l2 2-2 2" />}
-                      </svg>
-                      Tutor{busy ? " ·" : ""}
-                    </button>
-                    {tutorTip && (
-                      <div role="status" className="animate-pop absolute top-full left-0 z-40 mt-2.5 w-max max-w-60 origin-top-left rounded-lg border border-ink bg-ink px-3 py-2 text-xs text-white shadow-[3px_3px_0_0_#facc15]">
-                        <span className="absolute -top-1.5 left-4 size-2.5 rotate-45 border-t border-l border-ink bg-ink" />
-                        Press <b className="text-yellow-400">Tutor</b> anytime to hide or show the tutor.
-                      </div>
-                    )}
-                  </div>
-                ) : null
-              }
-            />
-          ) : docs.length ? (
-            <div className="animate-enter flex h-full flex-col items-center justify-center gap-2 bg-viewer px-6 text-center">
-              <p className="font-serif text-2xl">Nothing open</p>
-              <p className="max-w-sm text-sm text-muted">Everything is in Files. Open something there to read it here.</p>
-              <button
-                type="button"
-                onClick={() => {
-                  showSection("files");
-                  setDrawerOpen(true);
-                  setMobileView("tutor");
-                }}
-                className="mt-3 rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-white transition hover:-translate-y-px hover:shadow-hard-sm"
-              >
-                Open Files
-              </button>
+        ) : mobileShown === "tutor" ? (
+          <aside aria-label="Tutor" className="@container flex w-full min-w-0 flex-col bg-panel">
+            {tutor()}
+          </aside>
+        ) : mobileShown === "tool" && tool ? (
+          <aside aria-label={sectionOf(tool).label} className="@container flex w-full min-w-0 flex-col bg-panel">
+            <ToolHeader section={sectionOf(tool)} />
+            <div className="min-h-0 flex-1">
+              <TutorPanel view={tool} {...panelProps} />
             </div>
-          ) : (
-            <div className="animate-enter flex h-full flex-col items-center justify-center gap-2 bg-viewer px-6 text-center">
-              <p className="font-serif text-2xl">{isPaper ? "No papers yet" : "Nothing in this session yet"}</p>
-              <p className="max-w-sm text-sm text-muted">
-                {isPaper
-                  ? "Add papers by arXiv ID, DOI, link or title. No PDF needed."
-                  : "Use “+ Add material” above: PDFs, slides, Word docs, web pages, YouTube lectures, Google Drive or Zotero. The tutor still works from your goal meanwhile."}
-              </p>
-              {isPaper && (
+          </aside>
+        ) : null}
+
+        {/* Middle: what you're reading. Clicking back into it puts a floating tool away. */}
+        <section
+          aria-label="Reader"
+          onPointerDownCapture={() => {
+            if (wide && tool && !docked) setTool(null);
+          }}
+          className={`relative min-w-0 flex-1 flex-col ${wide || mobileShown === "pdf" ? "flex" : "hidden"}`}
+        >
+          <PackSources sessionId={session.id} docs={docs} busy={Boolean(uploadStatus)} onAttach={attachPdf} onSelect={openDocTab} />
+          <DocTabs
+            docs={openDocs}
+            activeId={activeDoc?.id ?? null}
+            uploadStatus={uploadStatus}
+            onSelect={openDocTab}
+            onAdd={addPdfs}
+            onClose={closeDocTab}
+            onAddClick={isPaper ? () => setAddPaperOpen(true) : () => setAddMaterialOpen(true)}
+            addLabel={isPaper ? "+ Add paper" : "+ Add material"}
+            paperIds={isPaper || isExam ? undefined : paperIds}
+            onPaper={
+              isPaper || isExam
+                ? undefined
+                : () => {
+                    // Its passes, beside the PDF.
+                    setPassesOpen(true);
+                    openTool("passes");
+                  }
+            }
+          />
+          <div className="relative min-h-0 flex-1">
+            {activeDoc && !activeDoc.hasPdf && pendingSource(activeDoc) && pendingSource(activeDoc)!.kind !== "paper" ? (
+              <PendingSourceCard key={activeDoc.id} doc={activeDoc} busy={Boolean(uploadStatus)} onAttach={attachPdf} />
+            ) : activeDoc && !activeDoc.hasPdf ? (
+              <PaperCard key={activeDoc.id} doc={activeDoc} busy={Boolean(uploadStatus)} onAttach={(file) => void attachPdf(activeDoc.id, file)} />
+            ) : activeDoc && !tabsKnown ? (
+              <div className="h-full bg-viewer" />
+            ) : activeDoc ? (
+              <PdfViewer
+                key={activeDoc.id}
+                url={activeDoc.url}
+                documentId={activeDoc.id}
+                initialPage={activeDoc.lastPage}
+                goTo={goTo}
+                highlights={docHighlights}
+                busy={Boolean(busy)}
+                focusMode={focusMode}
+                onToggleFocus={toggleFocus}
+                onPageChange={onPageChange}
+                onLoaded={viewerLoaded}
+                onTextAction={onTextAction}
+                onSaveHighlight={saveHighlight}
+                onUpdateHighlight={updateHighlight}
+                onDeleteHighlight={deleteHighlight}
+                onRegion={onRegion}
+              />
+            ) : docs.length ? (
+              <div className="animate-enter flex h-full flex-col items-center justify-center gap-2 bg-viewer px-6 text-center">
+                <p className="font-serif text-2xl">Nothing open</p>
+                <p className="max-w-sm text-sm text-muted">Everything is in Files. Open something there to read it here.</p>
+                <button
+                  type="button"
+                  onClick={() => openTool("files")}
+                  className="mt-3 rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-white transition hover:-translate-y-px hover:shadow-hard-sm"
+                >
+                  Open Files
+                </button>
+              </div>
+            ) : (
+              <div className="animate-enter flex h-full flex-col items-center justify-center gap-2 bg-viewer px-6 text-center">
+                <p className="font-serif text-2xl">{isPaper ? "No papers yet" : "Nothing in this session yet"}</p>
+                <p className="max-w-sm text-sm text-muted">
+                  {isPaper
+                    ? "Add papers by arXiv ID, DOI, link or title. No PDF needed."
+                    : "Add PDFs, slides, Word docs, web pages, YouTube lectures, Google Drive or Zotero. The tutor still works from your goal meanwhile."}
+                </p>
                 <div className="mt-3 flex flex-wrap justify-center gap-2">
-                  <button onClick={() => setAddPaperOpen(true)} className="rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-white transition hover:-translate-y-px hover:shadow-hard-sm">
-                    + Add papers
+                  <button
+                    onClick={isPaper ? () => setAddPaperOpen(true) : () => setAddMaterialOpen(true)}
+                    className="rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-white transition hover:-translate-y-px hover:shadow-hard-sm"
+                  >
+                    {isPaper ? "+ Add papers" : "+ Add material"}
                   </button>
-                  <button onClick={openRecommendPapers} className="rounded-lg border border-ink bg-panel px-4 py-2 text-sm font-medium transition hover:-translate-y-px hover:shadow-hard-sm">
-                    Suggest papers for my goal
-                  </button>
+                  {isPaper && (
+                    <button onClick={openRecommendPapers} className="rounded-lg border border-ink bg-panel px-4 py-2 text-sm font-medium transition hover:-translate-y-px hover:shadow-hard-sm">
+                      Suggest papers for my goal
+                    </button>
+                  )}
                 </div>
-              )}
-            </div>
-          )}
-        </div>
-      </section>
+              </div>
+            )}
+          </div>
+        </section>
 
-      {/* Right zone: the tutor, always beside the PDF. */}
-      {!focusMode &&
-        wide &&
-        (rightOpen ? (
-          <>
-            {handle("right")}
-            <aside className="flex min-w-0 shrink-0 flex-col bg-panel" style={{ width: zones.right }}>
-              {tutorPanel("chat", () => setRightFoldedAt(messages.length))}
-            </aside>
-          </>
-        ) : (
-          strip("right")
-        ))}
+        {/* Right: the tool that's out (floating over the reader, or pinned
+            beside it), then the rail of every tool. */}
+        {wide && lastTool && (
+          <aside
+            aria-label={sectionOf(lastTool).label}
+            aria-hidden={!sheetOpen}
+            inert={!sheetOpen}
+            style={{ width: sheetWidth, right: sheetDocked ? undefined : RAIL }}
+            className={`@container flex min-w-0 flex-col border-l border-ink bg-panel transition-[translate,opacity,visibility] duration-200 ease-fluid ${
+              sheetDocked ? "relative shrink-0" : "absolute inset-y-0 z-20 shadow-[-12px_0_32px_-16px_rgba(13,13,12,0.45)]"
+            } ${sheetOpen ? "visible translate-x-0 opacity-100" : "pointer-events-none invisible translate-x-6 opacity-0"}`}
+          >
+            <ResizeHandle
+              label="Resize the panel"
+              className="absolute inset-y-0 -left-1"
+              onDrag={dragSheet}
+              onDone={() => updateLayout({})}
+              onNudge={(by) => updateLayout({ sheet: clamp(sheetWidth - by, SHEET_MIN, 760) })}
+              onReset={() => updateLayout({ sheet: DEFAULT_LAYOUT.sheet })}
+            />
+            <ToolHeader
+              section={sectionOf(lastTool)}
+              pinned={sheetDocked}
+              canPin={canPin}
+              onPin={() => updateLayout({ pinned: !sheetDocked })}
+              onClose={() => setTool(null)}
+            />
+            <div className="min-h-0 flex-1">
+              <TutorPanel view={lastTool} {...panelProps} />
+            </div>
+          </aside>
+        )}
+        {wide && <ToolRail sections={sections} active={tool} onPick={(id) => (tool === id ? setTool(null) : openTool(id))} onShortcuts={() => setShortcutsOpen(true)} />}
+      </div>
+
+      {!wide && (
+        <MobileNav
+          items={mobileItems}
+          active={mobileShown === "pdf" ? "pdf" : mobileShown === "tutor" ? "chat" : (tool ?? "pdf")}
+          onPick={(id) => (id === "pdf" ? setMobileView("pdf") : id === "chat" ? setMobileView("tutor") : openTool(id))}
+        />
+      )}
 
       {!isExam && (
         <RecommendPapers
@@ -1681,15 +1732,6 @@ export function Workspace({
         />
       )}
 
-      {!focusMode && (
-        <button
-          type="button"
-          onClick={() => setMobileView((v) => (v === "pdf" ? "tutor" : "pdf"))}
-          className="fixed right-4 bottom-4 z-30 rounded-full border border-ink bg-ink px-5 py-2.5 text-sm font-medium text-white shadow-hard transition active:scale-95 md:hidden"
-        >
-          {mobileView === "pdf" ? "Tutor" : "Reader"}
-        </button>
-      )}
     </div>
   );
 }
