@@ -5,6 +5,22 @@ export type Release = { date: string; title: string; summary: string; items: str
 
 export const CHANGELOG: Release[] = [
   {
+    date: "2026-11-02",
+    title: "Every subject has a space",
+    summary: "Threads organised by subject, answers you can trust, rooms that feel alive, and voice that stays with you.",
+    items: [
+      "33 subject spaces, from Mathematics and Physics to Law, Medicine and exam prep. Follow the ones you study; asking in one follows it for you.",
+      "Threads: search, and sort by active, new, top or unanswered. Vote up the replies that helped, and the person who asked can mark the one that answered it.",
+      "Write questions and replies in Markdown, with maths: $x^2$ and $$…$$ render properly, and there's a preview before you post. Edit your own posts any time.",
+      "Study rooms have a new look: a timer ring that fills as the block goes by, and everyone in the room at a glance.",
+      "Voice stays with you: go to your library or a session and you're still in, with mute and leave in the header. Reload the page and you're back in, with the same mute.",
+      "Voice reconnects more reliably after a reload or a dropped connection, and retries by itself when a connection stalls.",
+      "Door cards are now reading lists: paste links, share or print the list, and anyone can start a session from it in one click.",
+      "Friend requests, room invites and replies show up on the right as they happen, and stay in the bell until you've seen them.",
+      "A reply that states something wrong gets a labelled correction. The original is one click away, and the author is told.",
+    ],
+  },
+  {
     date: "2026-11-01",
     title: "The section, the week of the paper",
     summary: "One paper for the section, a miss map with no names, and a tutor that has to cite a page.",

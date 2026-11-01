@@ -29,7 +29,7 @@ export default function PrivacyPage() {
               sessions. We never sell Google data, use it for ads, or train AI on it.
             </>,
             <>Payments are handled by Lemon Squeezy. We never see your card number.</>,
-            <>Nothing you make is public unless you choose to share it (a study pack, a Wrapped page, a sitting card, a miss map, a crib, a door card, a library hour, or a section page), and you can take it down any time.</>,
+            <>Nothing you make is public unless you choose to share it (a study pack, a Wrapped page, a sitting card, a miss map, a crib, a reading list, a library hour, or a section page), and you can take it down any time.</>,
             <>We don&apos;t sell your data, show ads, or use tracking or analytics cookies, and we don&apos;t train AI models on your material.</>,
           ]}
         />
@@ -210,11 +210,18 @@ export default function PrivacyPage() {
             </>,
             <>
               <b>Threads.</b> A question you post on Threads, and the replies, are visible to people signed in to Confu, with
-              your first name. Remove your own posts any time.
+              your first name. Confu may check a post for a clear mistake. If it finds one, readers see a short note and,
+              on a reply, a corrected version labelled as such. Your original stays, one click away. Remove your own posts
+              any time.
             </>,
             <>
-              <b>Learning spaces.</b> A space is private to people with its link. Members see the space&apos;s name, your first
-              name, and the questions posted there. It isn&apos;t listed publicly.
+              <b>Notifications.</b> A friend request, an accepted request, a room invite, a reply, an accepted answer, or a
+              note on your post is stored for you and shown only to you. Read ones are deleted after 60 days.
+            </>,
+            <>
+              <b>Learning spaces.</b> A subject space (Mathematics, Law, and the others) is visible to anyone signed in.
+              A space you create is private to people with its link. Members see the space&apos;s name, your first name, and
+              the questions posted there. A private space isn&apos;t listed publicly.
             </>,
             <>
               <b>Roadmaps.</b> Sharing a session as a roadmap publishes the same page as a study pack, with the plan shown as a
@@ -253,7 +260,7 @@ export default function PrivacyPage() {
               <b>A library hour.</b> The time, a place name the owner typed, and a topic. Not who attended.
             </>,
             <>
-              <b>A door card.</b> The titles and URLs the owner entered, and a plan only if they generated one. No files.
+              <b>A reading list (door card).</b> The titles and URLs the owner entered, and a plan only if they generated one. No files.
               Confu doesn&apos;t fetch NCERT textbooks. A file you already have can still be uploaded into your own session.
             </>,
             <>

@@ -135,8 +135,9 @@ export default function TermsPage() {
               information.
             </>,
             <>
-              Threads are visible to people signed in. A learning space is visible only to people with its link. Don&apos;t post
-              someone else&apos;s personal information, and don&apos;t post anything you wouldn&apos;t say in a class.
+              Threads are visible to people signed in. A subject space is too. A space you create is visible only to people
+              with its link. Don&apos;t post someone else&apos;s personal information, and don&apos;t post anything you wouldn&apos;t say in a
+              class. If a post states something wrong, Confu may show a labelled correction. The original stays.
             </>,
             <>
               When someone copies your pack, the copy is theirs. Unpublishing your pack doesn&apos;t remove copies already made.
@@ -156,7 +157,7 @@ export default function TermsPage() {
             <>
               A section hand-in stays private. A sitting card exists only if that person chooses to share one. A miss map
               shows topic names and counts, not names of people. A crib shows objectives and pages, not a file. A library
-              hour doesn&apos;t record who came. A door card is titles and links, not files, and Confu doesn&apos;t fetch NCERT
+              hour doesn&apos;t record who came. A reading list is titles and links, not files, and Confu doesn&apos;t fetch NCERT
               textbooks. A section page after the paper is counts, labelled as copies, not a ranking.
             </>,
             <>
@@ -164,7 +165,7 @@ export default function TermsPage() {
               a reply that doesn&apos;t cite a page in that session. An explain-back gap stays on the account that made it
               and comes back in review.
             </>,
-            <>We may remove packs, roadmaps, threads, spaces, shared pages, sitting cards, pins, miss maps, cribs, door cards, library hours, section pages or rooms that break these terms.</>,
+            <>We may remove packs, roadmaps, threads, spaces, shared pages, sitting cards, pins, miss maps, cribs, reading lists, library hours, section pages or rooms that break these terms.</>,
           ]}
         />
       </Section>

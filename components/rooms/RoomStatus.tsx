@@ -4,14 +4,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { chime } from "@/components/pdf/FocusTimer";
+import { Mic } from "@/components/rooms/VoiceRoom";
 import { clock, currentRoom, heartbeat, leaveRoom, roomState, subscribeRoom, timerNow, type RoomState } from "@/lib/rooms";
+import { joinVoice, leaveVoice, setVoiceMuted, useVoice } from "@/lib/voice-store";
 
 // The header's room slot: "Rooms" until you join one, then the room you're
 // in with its timer ("Focus 23:41"), a link back to it, and a way out. Also
 // keeps your presence fresh (every 30 seconds) and chimes when focus turns
-// to break (or back) while you're elsewhere in the app.
+// to break (or back) while you're elsewhere in the app. In voice, it carries
+// the mic (mute with a click) and who's talking, on every page.
 export function RoomStatus() {
   const room = useSyncExternalStore(subscribeRoom, currentRoom, () => null);
+  const voice = useVoice();
   const pathname = usePathname();
   const [state, setState] = useState<RoomState | null>(null);
   const [skew, setSkew] = useState(0);
@@ -54,6 +58,8 @@ export function RoomStatus() {
     );
   }
   const timer = t && t.phase !== "idle" ? `${t.phase === "focus" ? "Focus" : "Break"} ${clock(t.left)}` : null;
+  const inVoice = voice.inVoice && voice.slug === room.slug;
+  const talking = inVoice ? voice.people.filter((p) => p.speaking) : [];
   // Who's here: you first, then by who came first.
   const members = state ? [...state.members].sort((a, b) => Number(b.me) - Number(a.me) || a.joined_at.localeCompare(b.joined_at)) : [];
   return (
@@ -78,6 +84,30 @@ export function RoomStatus() {
           </span>
         )}
       </Link>
+      {inVoice && (
+        <button
+          type="button"
+          onClick={() => setVoiceMuted(!voice.muted)}
+          disabled={voice.deafened}
+          aria-pressed={voice.muted || voice.deafened}
+          title={voice.muted || voice.deafened ? "Unmute" : "Mute"}
+          aria-label={voice.muted || voice.deafened ? "Unmute" : "Mute"}
+          className={`flex items-center gap-1 self-stretch border-l border-ink/20 px-1.5 transition hover:bg-paper ${voice.muted || voice.deafened ? "text-danger" : talking.length ? "text-ok" : "text-ink"}`}
+        >
+          <Mic off={voice.muted || voice.deafened} size={13} />
+          <span className="font-mono text-[11px] tabular-nums">{voice.people.length}</span>
+        </button>
+      )}
+      {voice.resumable && voice.slug === room.slug && !inVoice && (
+        <button
+          type="button"
+          onClick={() => void joinVoice(room.slug)}
+          className="self-stretch border-l border-ink/20 px-2 text-[11px] font-medium text-ok transition hover:bg-paper"
+          title="You were in voice before the page reloaded"
+        >
+          Rejoin voice
+        </button>
+      )}
       <button
         type="button"
         onClick={() => void leaveRoom()}
@@ -102,6 +132,30 @@ export function RoomStatus() {
             </p>
           </div>
           <p className="mt-0.5 font-mono text-[11px] text-muted">{timer ? `${timer} left` : "Timer not running"}</p>
+          {inVoice && (
+            <div className="mt-2.5 border-t border-line pt-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <p className="flex items-center gap-1.5 text-xs font-medium text-ok">
+                  <span className="size-1.5 animate-pulse rounded-full bg-ok" aria-hidden />
+                  In voice · {voice.people.length}
+                </p>
+                <button type="button" onClick={() => void leaveVoice()} className="rounded-md border border-danger/40 px-2 py-0.5 text-[11px] font-medium text-danger transition hover:bg-danger/5">
+                  Leave voice
+                </button>
+              </div>
+              <ul className="mt-2 flex flex-wrap gap-1.5">
+                {voice.people.map((p) => (
+                  <li
+                    key={p.id}
+                    className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] ${p.speaking ? "border-ok text-ok" : "border-line"}`}
+                  >
+                    {(p.muted || p.deafened) && <Mic off size={10} />}
+                    {p.me ? "You" : p.name}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {members.length > 0 && (
             <ul className="mt-2.5 max-h-60 space-y-1.5 overflow-y-auto border-t border-line pt-2.5">
               {members.slice(0, 12).map((m, i) => (

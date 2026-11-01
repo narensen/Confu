@@ -9,12 +9,12 @@ export default function ThreadsPage() {
   return (
     <div className="flex min-h-dvh flex-col bg-paper">
       <AppHeader />
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
-        <div className="animate-enter">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
+        <div className="animate-enter max-w-3xl">
           <p className={eyebrowClass}>Threads</p>
-          <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">Ask anything</h1>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
-            A question about a class, a paper, or something you&apos;re stuck on. Anyone signed in can answer. This isn&apos;t the tutor in a session, and it isn&apos;t a private space.
+          <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">Stuck? Someone&apos;s been there.</h1>
+          <p className="mt-2 text-sm leading-relaxed text-muted">
+            Ask about a class, a paper, or a problem you can&apos;t crack, in the subject it belongs to. Vote up what helped, and mark the reply that answered it.
           </p>
         </div>
         <ThreadsView />

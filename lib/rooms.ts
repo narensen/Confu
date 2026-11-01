@@ -113,11 +113,13 @@ export function onRoomChange(slug: string, cb: () => void) {
 }
 
 export function ping(slug: string) {
-  const channel = channels.get(slug);
-  if (channel) void channel.send({ type: "broadcast", event: "refresh", payload: {} });
+  const supabase = createClient();
+  // supabase.channel() hands back an existing channel with the same topic, so
+  // a one-off must never be made (and removed) while another is open.
+  const open = channels.get(slug) ?? supabase.getChannels().find((c) => c.topic === `realtime:room:${slug}`);
+  if (open) void open.send({ type: "broadcast", event: "refresh", payload: {} });
   else {
     // Not watching the room (e.g. leaving from the header): a one-off message.
-    const supabase = createClient();
     const once = supabase.channel(`room:${slug}`);
     once.subscribe((status) => {
       if (status === "SUBSCRIBED") void once.send({ type: "broadcast", event: "refresh", payload: {} }).finally(() => void supabase.removeChannel(once));

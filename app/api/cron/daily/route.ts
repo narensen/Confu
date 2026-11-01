@@ -2,6 +2,7 @@ import { emailConfigured, sendEmail, unsubscribeUrl } from "@/lib/notify/email";
 import { pushConfigured, sendPush, type PushTarget } from "@/lib/notify/push";
 import { digestEmail, reminderEmail } from "@/lib/notify/templates";
 import { logError } from "@/lib/log";
+import { sweepChecks } from "@/lib/moderation";
 import { SITE } from "@/lib/site";
 import { adminClient } from "@/lib/supabase/admin";
 import { citingSince, resolveWork } from "@/lib/openalex";
@@ -149,7 +150,12 @@ export async function GET(request: Request) {
     }
   }
 
-  return Response.json(result);
+  // Community posts no page has asked to check yet (migration 0039).
+  const moderation = await sweepChecks(admin, 40).catch((err: unknown) => {
+    logError("cron moderation sweep", err);
+    return { checked: 0 };
+  });
+  return Response.json({ ...result, moderation });
 }
 
 // New papers (last two weeks) citing the papers someone is reading, for their

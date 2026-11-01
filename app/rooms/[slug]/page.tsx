@@ -9,7 +9,7 @@ export default function RoomPage({ params }: PageProps<"/rooms/[slug]">) {
   return (
     <div className="flex min-h-dvh flex-col bg-paper">
       <AppHeader />
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
         <Suspense fallback={<div className="skeleton h-80 rounded-2xl" />}>
           <Room params={params} />
         </Suspense>

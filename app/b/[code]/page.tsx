@@ -9,6 +9,8 @@ import { eyebrowClass } from "@/components/ui";
 import { SITE } from "@/lib/site";
 
 type Item = { title: string; url: string; kind: string; license: string };
+
+const KIND_LABEL: Record<string, string> = { web: "Web page", paper: "Paper", youtube: "Lecture", sample: "Sample" };
 type Card = { code: string; title: string; kind: string; items: Item[]; plan: { plan?: { goal_title?: string; overview?: string } } | null };
 
 const getCard = cache(async (code: string): Promise<Card | null> => {
@@ -22,7 +24,7 @@ const getCard = cache(async (code: string): Promise<Card | null> => {
 export async function generateMetadata({ params }: PageProps<"/b/[code]">): Promise<Metadata> {
   const card = await getCard((await params).code.toLowerCase());
   return {
-    title: card ? `${card.title} — Confu` : "A reading list — Confu",
+    title: card ? `${card.title}: a reading list — Confu` : "A reading list — Confu",
     robots: { index: false, follow: false },
   };
 }
@@ -53,19 +55,23 @@ async function Body({ params }: { params: PageProps<"/b/[code]">["params"] }) {
   return (
     <article className="rounded-3xl border border-ink bg-panel p-8 print:rounded-none print:border-0 print:p-0">
       <div className="flex items-start justify-between gap-3 print:hidden">
-        <p className={eyebrowClass}>Door card</p>
+        <p className={eyebrowClass}>Reading list · {card.items.length} {card.items.length === 1 ? "link" : "links"}</p>
         <PrintButton />
       </div>
       <h1 className="mt-2 font-serif text-3xl leading-tight">{card.title}</h1>
       {card.plan?.plan?.overview && <p className="mt-3 text-sm leading-relaxed text-muted">{card.plan.plan.overview}</p>}
       <ol className="mt-6 space-y-3 text-sm">
-        {card.items.map((item) => (
-          <li key={item.url}>
-            <a href={item.url} className="font-medium underline decoration-ink/30 underline-offset-2">
-              {item.title}
-            </a>
-            <span className="mt-0.5 block font-mono text-[11px] text-muted">
-              {item.kind} · {item.license}
+        {card.items.map((item, i) => (
+          <li key={item.url} className="flex gap-3">
+            <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border border-ink font-mono text-[10px]">{i + 1}</span>
+            <span className="min-w-0">
+              <a href={item.url} className="font-medium underline decoration-ink/30 underline-offset-2">
+                {item.title}
+              </a>
+              <span className="mt-0.5 block font-mono text-[11px] text-muted">
+                {KIND_LABEL[item.kind] ?? item.kind}
+                {item.license === "link" ? " · link only" : ""}
+              </span>
             </span>
           </li>
         ))}
@@ -74,8 +80,13 @@ async function Body({ params }: { params: PageProps<"/b/[code]">["params"] }) {
         {SITE.url}/b/{card.code}
       </p>
       {openstax && <p className="mt-2 text-xs text-muted">Samuel J. Ling, Jeff Sanny and William Moebs, OpenStax University Physics Volume 2, CC BY 4.0.</p>}
-      <div className="mt-6 print:hidden">
-        <CopyDoorCard code={card.code} />
+      <div className="mt-6 rounded-2xl border border-ink bg-yellow-100 p-4 print:hidden">
+        <p className="text-sm text-muted">
+          Start a Confu session with all of this: the links come in as your reading{card.plan ? ", with a study plan" : ""}, and a tutor helps you through them.
+        </p>
+        <div className="mt-3">
+          <CopyDoorCard code={card.code} />
+        </div>
       </div>
     </article>
   );

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
-import { ask, toast } from "@/components/dialogs";
+import { ask, notify, toast } from "@/components/dialogs";
 import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
 import { classifyFriendQuery } from "@/lib/friend-query";
 import {
@@ -62,6 +62,11 @@ export function FriendsView() {
       track("friend.request", { accepted: result.status === "accepted" });
       setQuery("");
       setFormNote(result.status === "accepted" ? `You and ${result.name} are friends now.` : `Request sent to ${result.name}.`);
+      notify(
+        result.status === "accepted"
+          ? { title: `You and ${result.name} are friends now`, body: "They'd already asked you. Invite them into a room from the room's page.", avatar: result.name, tone: "success" }
+          : { title: `Friend request sent to ${result.name}`, body: "They get a notification now. You'll get one when they accept.", avatar: result.name, tone: "success" },
+      );
       await reload();
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Couldn't send that.");
@@ -132,7 +137,7 @@ export function FriendsView() {
                       void respondFriend(row.id, true).then(
                         () => {
                           track("friend.accept", {});
-                          toast(`You and ${row.name} are friends.`);
+                          notify({ title: `You and ${row.name} are friends now`, body: "Invite them into a private room from the room's page.", avatar: row.name, tone: "success" });
                           return reload();
                         },
                         (err: unknown) => toast(err instanceof Error ? err.message : "Couldn't accept.", "error"),

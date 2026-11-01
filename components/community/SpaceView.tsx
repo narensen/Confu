@@ -3,28 +3,21 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { QuestionForm } from "@/components/community/QuestionForm";
-import { ThreadList } from "@/components/community/ThreadList";
+import { AskButton, ErrorNote, SpaceIcon } from "@/components/community/kit";
+import { ThreadBrowser } from "@/components/community/ThreadBrowser";
 import { ask, toast } from "@/components/dialogs";
 import { buttonClass, eyebrowClass, ghostButtonClass } from "@/components/ui";
 import { deleteSpace, joinSpace, leaveSpace, loadSpace, type SpaceState } from "@/lib/community";
 import { SITE } from "@/lib/site";
 import { track } from "@/lib/telemetry";
 
+// One space: a public subject (read freely, follow to keep it close) or a
+// private group (join with the link to see anything).
 export function SpaceView({ slug }: { slug: string }) {
   const router = useRouter();
   const [space, setSpace] = useState<SpaceState | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-
-  const reload = () =>
-    loadSpace(slug).then(
-      (next) => {
-        setSpace(next);
-        setError(null);
-      },
-      (err: unknown) => setError(err instanceof Error ? err.message : "Couldn't open that space."),
-    );
 
   useEffect(() => {
     let live = true;
@@ -45,105 +38,140 @@ export function SpaceView({ slug }: { slug: string }) {
     setPending(true);
     try {
       const next = await joinSpace(slug);
-      track("space.join");
+      track(next.visibility === "public" ? "space.follow" : "space.join", { slug });
       setSpace(next);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't join.");
+      toast(err instanceof Error ? err.message : "Couldn't join.", "error");
     } finally {
       setPending(false);
     }
   }
 
   async function leave() {
-    if (!(await ask({ title: "Leave this space?", body: "You can join again with the link.", confirm: "Leave" }))) return;
+    if (space?.visibility === "private" && !(await ask({ title: "Leave this space?", body: "You can join again with the link.", confirm: "Leave" }))) return;
+    setPending(true);
     try {
       await leaveSpace(slug);
-      router.push("/spaces");
+      if (space?.visibility === "private") router.push("/spaces");
+      else setSpace((s) => (s ? { ...s, joined: false, members: Math.max(0, s.members - 1) } : s));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't leave.");
+      toast(err instanceof Error ? err.message : "Couldn't leave.", "error");
+    } finally {
+      setPending(false);
     }
   }
 
   async function remove() {
-    if (!(await ask({ title: "Delete this space?", body: "The link stops working, and the questions go with it.", confirm: "Delete", danger: true }))) return;
+    if (!(await ask({ title: "Delete this space?", body: "The link stops working, and its questions go with it.", confirm: "Delete", danger: true }))) return;
     try {
       await deleteSpace(slug);
       router.push("/spaces");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't delete it.");
+      toast(err instanceof Error ? err.message : "Couldn't delete it.", "error");
     }
   }
 
-  if (error) return <p className="mt-8 rounded-xl border border-danger/40 bg-danger/5 px-4 py-3 text-sm text-danger">{error}</p>;
-  if (!space) return <div className="skeleton mt-8 h-64 rounded-2xl" />;
+  if (error) {
+    return (
+      <div className="space-y-4">
+        <ErrorNote>{error}</ErrorNote>
+        <Link href="/spaces" className={ghostButtonClass}>
+          ← All spaces
+        </Link>
+      </div>
+    );
+  }
+  if (!space) {
+    return (
+      <div className="space-y-4">
+        <div className="skeleton h-40 rounded-3xl" />
+        <div className="skeleton h-64 rounded-2xl" />
+      </div>
+    );
+  }
 
+  const isPublic = space.visibility === "public";
+  const readable = isPublic || space.joined;
   const link = `${SITE.url}/spaces/${space.slug}`;
 
   return (
-    <div className="mt-8 space-y-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className={eyebrowClass}>Learning space</p>
-          <h1 className="mt-1 font-serif text-4xl tracking-tight">{space.name}</h1>
-          {space.about && <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">{space.about}</p>}
-          <p className="mt-2 font-mono text-[11px] text-muted">
-            {space.members} {space.members === 1 ? "person" : "people"} · {space.questions} {space.questions === 1 ? "question" : "questions"}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {space.joined && (
-            <button
-              type="button"
-              onClick={() => navigator.clipboard.writeText(link).then(() => toast("Link copied."))}
-              className={ghostButtonClass}
-            >
-              Copy link
-            </button>
-          )}
-          {space.mine ? (
-            <button type="button" onClick={() => void remove()} className="text-sm text-muted underline underline-offset-2 hover:text-danger hover:underline">
-              Delete
-            </button>
-          ) : space.joined ? (
-            <button type="button" onClick={() => void leave()} className="text-sm text-muted underline underline-offset-2 hover:text-ink hover:underline">
-              Leave
-            </button>
-          ) : null}
-        </div>
-      </div>
+    <div className="animate-enter space-y-8">
+      <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted">
+        <Link href="/threads" className="hover:text-ink">
+          Threads
+        </Link>
+        <span aria-hidden>›</span>
+        <Link href="/spaces" className="hover:text-ink">
+          Spaces
+        </Link>
+      </nav>
 
-      {!space.joined ? (
-        <div className="rounded-2xl border border-ink bg-yellow-100 p-5">
-          <p className="font-serif text-2xl">This space is private</p>
-          <p className="mt-1 max-w-lg text-sm leading-relaxed text-muted">Join to see the questions and ask your own. Nothing here shows up on the public threads.</p>
-          <button type="button" onClick={() => void join()} disabled={pending} className={`${buttonClass} mt-4`}>
+      <header className={`relative overflow-hidden rounded-3xl border border-ink p-6 sm:p-8 ${isPublic ? "bg-panel" : "bg-yellow-100"}`}>
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+          <SpaceIcon space={space} size="lg" />
+          <div className="min-w-0 flex-1">
+            <p className={eyebrowClass}>{isPublic ? space.category || "Subject" : space.mine ? "Your private space" : "Private space"}</p>
+            <h1 className="mt-1 font-serif text-4xl leading-tight tracking-tight">{space.name}</h1>
+            {space.about && <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">{space.about}</p>}
+            <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px] text-muted">
+              <span>
+                {space.members} {isPublic ? "following" : space.members === 1 ? "member" : "members"}
+              </span>
+              <span>
+                {space.questions} {space.questions === 1 ? "question" : "questions"}
+              </span>
+              {isPublic && <span>Open to everyone signed in</span>}
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {readable && <AskButton spaceId={space.id} onPosted={(id) => router.push(`/threads/${id}`)} />}
+            {isPublic ? (
+              <button
+                type="button"
+                disabled={pending}
+                onClick={() => void (space.joined ? leave() : join())}
+                aria-pressed={space.joined}
+                className={space.joined ? ghostButtonClass : buttonClass}
+              >
+                {space.joined ? "Following" : "Follow"}
+              </button>
+            ) : space.joined ? (
+              <button type="button" onClick={() => navigator.clipboard.writeText(link).then(() => toast("Invite link copied."))} className={ghostButtonClass}>
+                Copy invite link
+              </button>
+            ) : null}
+          </div>
+        </div>
+        {!isPublic && space.joined && (
+          <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-ink/15 pt-4 text-xs text-muted">
+            <span>Only people with the link can join. Nothing here appears in public threads.</span>
+            {space.mine ? (
+              <button type="button" onClick={() => void remove()} className="font-medium underline underline-offset-2 hover:text-danger">
+                Delete space
+              </button>
+            ) : (
+              <button type="button" onClick={() => void leave()} className="font-medium underline underline-offset-2 hover:text-ink">
+                Leave space
+              </button>
+            )}
+          </div>
+        )}
+      </header>
+
+      {readable ? (
+        <ThreadBrowser space={space.slug} showSpace={false} />
+      ) : (
+        <div className="rounded-3xl border border-ink bg-panel px-6 py-12 text-center">
+          <p aria-hidden className="text-3xl">
+            🔒
+          </p>
+          <p className="mt-2 font-serif text-2xl">This space is private</p>
+          <p className="mx-auto mt-1 max-w-md text-sm leading-relaxed text-muted">You have the link, so you can join. Then you&apos;ll see its questions and can ask your own.</p>
+          <button type="button" onClick={() => void join()} disabled={pending} className={`${buttonClass} mt-5`}>
             {pending ? "Joining…" : "Join this space"}
           </button>
         </div>
-      ) : (
-        <div className="space-y-6">
-          <QuestionForm
-            spaceId={space.id}
-            onPosted={() => {
-              void reload();
-            }}
-          />
-          <ThreadList threads={space.threads} empty="Nothing here yet. Ask the first question." />
-          {space.questions > space.threads.length && (
-            <p className="text-xs text-muted">Showing the latest {space.threads.length}.</p>
-          )}
-        </div>
       )}
-
-      <p className="text-sm text-muted">
-        <Link href="/spaces" className="underline underline-offset-4 hover:text-ink">
-          Your spaces
-        </Link>
-        <span aria-hidden> · </span>
-        <Link href="/threads" className="underline underline-offset-4 hover:text-ink">
-          Public threads
-        </Link>
-      </p>
     </div>
   );
 }

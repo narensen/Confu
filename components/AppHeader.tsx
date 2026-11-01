@@ -3,6 +3,7 @@ import { Suspense, type ReactNode } from "react";
 import { AccountMenu } from "@/components/AccountMenu";
 import { Guide } from "@/components/onboarding/Guide";
 import { FriendsLink } from "@/components/friends/FriendsLink";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { RoomStatus } from "@/components/rooms/RoomStatus";
 import { getKeyInfo } from "@/lib/groq-keys";
 import { isOwner, planOf } from "@/lib/plans";
@@ -32,6 +33,7 @@ async function UserMenu() {
       <Link href="/threads" className="hidden rounded-md px-2 py-1 text-sm font-medium text-muted transition hover:bg-paper hover:text-ink sm:inline">
         Threads
       </Link>
+      <NotificationBell userId={user.id} />
       <FriendsLink />
       {/* "Rooms", or the room you're in with its timer. */}
       <RoomStatus />

@@ -12,8 +12,8 @@ export default function ThreadPage({ params }: { params: Promise<{ id: string }>
   return (
     <div className="flex min-h-dvh flex-col bg-paper">
       <AppHeader />
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10 sm:px-6">
-        <Suspense fallback={<div className="skeleton h-80 rounded-2xl" />}>
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
+        <Suspense fallback={<div className="skeleton mt-6 h-80 rounded-2xl" />}>
           <Thread params={params} />
         </Suspense>
       </main>

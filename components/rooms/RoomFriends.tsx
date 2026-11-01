@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { toast } from "@/components/dialogs";
+import { notify, toast } from "@/components/dialogs";
 import { ghostButtonClass } from "@/components/ui";
 import { inviteFriendToRoom, loadRoomFriends, revokeRoomInvite, type RoomFriend } from "@/lib/friends";
 import { track } from "@/lib/telemetry";
@@ -48,7 +48,7 @@ export function RoomFriends({ slug, link, canInvite }: { slug: string; link: str
         await inviteFriendToRoom(slug, friend.user_id);
         setFriends((rows) => rows?.map((row) => (row.user_id === friend.user_id ? { ...row, invited: true } : row)) ?? rows);
         track("room.invite", {});
-        toast(`Invited ${friend.name}.`);
+        notify({ title: `Invited ${friend.name}`, body: "They get a notification with a link to this room, and a card on their Friends page.", avatar: friend.name, tone: "success" });
       }
     } catch (err) {
       toast(err instanceof Error ? err.message : "Couldn't update the invite.", "error");
