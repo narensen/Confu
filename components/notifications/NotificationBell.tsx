@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { notify, toast, type NotifyAction } from "@/components/dialogs";
+import { plainExcerpt } from "@/lib/community";
 import { ago } from "@/lib/format-usage";
 import { respondFriend } from "@/lib/friends";
 import { loadNotices, readNotices, watchNotices, type Notice } from "@/lib/notifications";
@@ -86,7 +87,7 @@ export function NotificationBell({ userId }: { userId: string }) {
       for (const n of arrived.slice(0, 3).reverse()) {
         notify({
           title: n.title,
-          body: n.body,
+          body: plainExcerpt(n.body, 160),
           avatar: n.actor ?? undefined,
           icon: n.actor ? undefined : <KindIcon kind={n.kind} />,
           tone: n.kind === "post_hidden" ? "error" : n.kind === "friend_accepted" || n.kind === "reply_accepted" ? "success" : "info",
@@ -162,7 +163,7 @@ export function NotificationBell({ userId }: { userId: string }) {
             <aside
               role="dialog"
               aria-label="Notifications"
-              className="glass-bar animate-notify absolute top-0 right-0 bottom-0 flex w-[min(26rem,100vw)] flex-col border-l border-ink"
+              className="animate-notify absolute top-0 right-0 bottom-0 flex w-[min(26rem,100vw)] flex-col border-l border-ink bg-panel shadow-[-16px_0_40px_-20px_rgba(0,0,0,0.5)]"
             >
               <div className="flex items-center justify-between gap-3 border-b border-ink px-5 py-3.5">
                 <p className="font-serif text-xl">Notifications</p>
@@ -233,7 +234,7 @@ function Item({ notice: n, isNew, onOpen, onAnswer }: { notice: Notice; isNew: b
         )}
         <span className="min-w-0 flex-1">
           <span className="block text-sm leading-snug font-medium">{n.title}</span>
-          {n.body && <span className="mt-0.5 line-clamp-2 block text-xs leading-relaxed text-muted">{n.body}</span>}
+          {n.body && <span className="mt-0.5 line-clamp-2 block text-xs leading-relaxed text-muted">{plainExcerpt(n.body, 160)}</span>}
           <span className="mt-1 block font-mono text-[10px] text-muted">{ago(n.created_at)}</span>
         </span>
         {isNew && <span aria-label="New" className="mt-1.5 size-2 shrink-0 rounded-full bg-yellow-400" />}

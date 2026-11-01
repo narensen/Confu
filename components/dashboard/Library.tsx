@@ -123,7 +123,7 @@ export function Library({ name, sessions: all }: { name: string | null; sessions
             {sessions.length || archived.length ? "Pick up where you left off, or start something new." : "Start your first session: it takes a minute."}
           </p>
         </div>
-        <div data-intro className="flex items-center gap-2">
+        <div data-intro className="flex flex-wrap items-center gap-2 [&>*]:whitespace-nowrap">
           {all.some((x) => x.kind !== "exam" && x.docs.length > 0) && (
             <Link href="/map" className={`${ghostButtonClass} py-2.5`} title="Every paper across your sessions, and how they connect">
               Literature map
@@ -134,10 +134,21 @@ export function Library({ name, sessions: all }: { name: string | null; sessions
         </div>
       </header>
 
-      <div className="mt-8 empty:hidden">
-        <ReviewDue />
-      </div>
-      <StudyStreak />
+      {/* Today: where you left off, beside what's due and your streak. */}
+      {sessions.length > 0 && recent ? (
+        <section aria-label="Today" className="mt-8 flex flex-col gap-4 lg:flex-row">
+          <ContinueCard s={recent} today={today} />
+          <div className="grid gap-4 empty:hidden sm:grid-cols-2 lg:flex lg:w-[22rem] lg:shrink-0 lg:flex-col">
+            <ReviewDue compact />
+            <StudyStreak compact />
+          </div>
+        </section>
+      ) : (
+        <div className="mt-8 grid gap-4 empty:hidden lg:grid-cols-2">
+          <ReviewDue compact />
+          <StudyStreak compact />
+        </div>
+      )}
 
       {sessions.length === 0 ? (
         <>
@@ -162,28 +173,6 @@ export function Library({ name, sessions: all }: { name: string | null; sessions
         </>
       ) : (
         <>
-          {/* Continue */}
-          {recent && (
-            <Link
-              data-continue
-              href={`/session/${recent.id}`}
-              className="group mt-8 flex flex-col gap-5 rounded-2xl border border-ink bg-ink p-6 text-white transition-[translate,box-shadow] duration-300 ease-fluid hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#facc15] sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div className="min-w-0">
-                <p className="font-mono text-[11px] tracking-widest text-white/60 uppercase">
-                  Continue · {KIND_LABEL[recent.kind]} · updated <span suppressHydrationWarning>{ago(recent.updatedAt)}</span>
-                </p>
-                <p className="mt-2 truncate font-serif text-3xl">{recent.title}</p>
-                <p className="mt-1.5 text-sm text-white/70">
-                  <Summary s={recent} today={today} />
-                </p>
-              </div>
-              <span className="inline-flex shrink-0 items-center gap-2 self-start rounded-lg bg-white px-5 py-2.5 text-sm font-medium text-ink transition group-hover:gap-3 sm:self-center">
-                Continue <span aria-hidden>→</span>
-              </span>
-            </Link>
-          )}
-
           {/* Filter + search */}
           <div data-intro className="mt-10 flex flex-wrap items-center justify-between gap-4 border-b border-ink/15">
             <div ref={tabs} role="tablist" aria-label="Filter sessions" className="relative flex gap-1">
@@ -266,6 +255,69 @@ export function Library({ name, sessions: all }: { name: string | null; sessions
         </section>
       )}
     </div>
+  );
+}
+
+// Where you left off: the session you touched last, how far along it is,
+// and one button back in. The page's main call to action.
+function ContinueCard({ s, today }: { s: LibrarySession; today: string | null }) {
+  const progress =
+    s.kind === "study" && s.study
+      ? s.study.total
+        ? s.study.done / s.study.total
+        : 0
+      : s.kind === "paper" && s.paper
+        ? s.paper.total
+          ? s.paper.done / s.paper.total
+          : 0
+        : s.kind === "exam"
+          ? (s.exam?.accuracy ?? null)
+          : null;
+  const label = s.kind === "exam" ? "correct in practice" : s.kind === "paper" ? "of papers read" : "of the plan done";
+  return (
+    <Link
+      data-continue
+      href={`/session/${s.id}`}
+      className="group relative flex min-w-0 flex-1 flex-col justify-between gap-8 overflow-hidden rounded-2xl border border-ink bg-inverse p-6 text-inverse-ink shadow-[4px_4px_0_0_#facc15] transition-[translate,box-shadow] duration-300 ease-fluid hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#facc15] sm:p-7"
+    >
+      <div className="min-w-0">
+        <p className="font-mono text-[11px] tracking-widest text-inverse-muted uppercase">
+          <span className="text-yellow-400">Continue</span> · {KIND_LABEL[s.kind]} · updated <span suppressHydrationWarning>{ago(s.updatedAt)}</span>
+        </p>
+        <p className="mt-3 line-clamp-2 font-serif text-3xl leading-tight tracking-tight sm:text-4xl">{s.title}</p>
+        <p className="mt-2 line-clamp-2 text-sm text-inverse-muted">
+          <Summary s={s} today={today} />
+        </p>
+        {s.docs.length > 0 && (
+          <ul className="mt-5 flex flex-wrap gap-2" aria-label="Files">
+            {s.docs.slice(0, 3).map((d, i) => (
+              <li key={d.id} className="flex max-w-60 items-center gap-1.5 rounded-lg border border-inverse-ink/15 bg-inverse-ink/5 px-2 py-1 text-xs text-inverse-ink/85">
+                <span className="font-mono text-[10px] text-inverse-muted">D{i + 1}</span>
+                <span className="truncate">{d.title}</span>
+              </li>
+            ))}
+            {s.docs.length > 3 && <li className="px-1 py-1 text-xs text-inverse-muted">+{s.docs.length - 3} more</li>}
+          </ul>
+        )}
+      </div>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        {progress !== null ? (
+          <div className="min-w-40 flex-1 sm:max-w-xs">
+            <div className="h-1.5 overflow-hidden rounded-full bg-inverse-ink/15">
+              <div className="h-full rounded-full bg-yellow-400 transition-[width] duration-700 ease-fluid" style={{ width: `${Math.round(progress * 100)}%` }} />
+            </div>
+            <p className="mt-1.5 font-mono text-[11px] text-inverse-muted">
+              {Math.round(progress * 100)}% {label}
+            </p>
+          </div>
+        ) : (
+          <span />
+        )}
+        <span className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-inverse-ink px-5 py-2.5 text-sm font-medium text-inverse transition-[gap] group-hover:gap-3">
+          Continue <span aria-hidden>→</span>
+        </span>
+      </div>
+    </Link>
   );
 }
 

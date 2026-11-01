@@ -76,13 +76,8 @@ export function RoomStatus() {
     lastPhase.current = phase;
   }, [phase, pathname, room?.slug]);
 
-  if (!room) {
-    return (
-      <Link href="/rooms" className="hidden rounded-full px-2.5 py-1 text-sm font-medium text-muted transition hover:bg-paper hover:text-ink md:inline">
-        Rooms
-      </Link>
-    );
-  }
+  // Not in a room: nothing here (Rooms is in the header's places).
+  if (!room) return null;
   const timer = t && t.phase !== "idle" ? `${t.phase === "focus" ? "Focus" : "Break"} ${clock(t.left)}` : null;
   const inVoice = voice.inVoice && voice.slug === room.slug;
   const talking = inVoice ? voice.people.filter((p) => p.speaking) : [];

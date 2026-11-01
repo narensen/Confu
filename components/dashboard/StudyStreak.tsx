@@ -12,7 +12,8 @@ const WEEKS = 20;
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 const fmtMins = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m} min`);
 
-export function StudyStreak() {
+// compact: stacked for the library's Today column (number above the grid).
+export function StudyStreak({ compact = false }: { compact?: boolean }) {
   const [days, setDays] = useState<Map<string, Day> | null>(null);
 
   useEffect(() => {
@@ -71,19 +72,21 @@ export function StudyStreak() {
   const ALPHA = [0.06, 0.25, 0.45, 0.7, 0.95];
 
   return (
-    <section aria-label="Study streak" className="animate-enter mt-4 flex flex-col gap-5 rounded-2xl border border-ink bg-panel p-5 lg:flex-row lg:items-center">
+    <section
+      aria-label="Study streak"
+      className={`animate-enter flex flex-col gap-4 rounded-2xl border border-line bg-panel p-5 ${compact ? "" : "mt-4 gap-5 border-ink lg:flex-row lg:items-center"}`}
+    >
       <div className="shrink-0">
-        <p className="text-4xl font-semibold tracking-tight">
+        <p className="text-4xl font-semibold tracking-tight tabular-nums">
           {streak}
-          <span className="ml-2 text-sm font-normal text-muted">{streak === 1 ? "day" : "day"} streak</span>
+          <span className="ml-2 text-sm font-normal text-muted">day streak</span>
         </p>
         <p className="mt-1 text-xs text-muted">
           Best {best} · {fmtMins(weekMinutes)} this week
+          {!todayActive && <span className="font-medium text-ink"> · {streak > 0 ? "study today to keep it going" : "start one today"}</span>}
         </p>
-        {!todayActive && streak > 0 && <p className="mt-2 text-xs font-medium">Study today to keep it going.</p>}
-        {!todayActive && streak === 0 && <p className="mt-2 text-xs font-medium">Start a new streak today.</p>}
       </div>
-      <div className="min-w-0 flex-1 overflow-x-auto">
+      <div className="-m-1 min-w-0 flex-1 overflow-x-auto p-1">
         <div className="flex w-max gap-[3px]" role="img" aria-label={`Study activity over the last ${WEEKS} weeks. Current streak ${streak} days, best ${best}.`}>
           {columns.map((col, w) => (
             <div key={w} className="flex flex-col gap-[3px]">
@@ -95,7 +98,7 @@ export function StudyStreak() {
                   <span
                     key={iso(date)}
                     title={future ? "" : `${date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}: ${mins ? `${fmtMins(mins)} reading` : "no reading"}${day?.actions ? `, ${day.actions} actions` : ""}`}
-                    className={`block size-3 rounded-[3px] ${isToday ? "ring-2 ring-yellow-400 ring-offset-1" : ""}`}
+                    className={`block rounded-[3px] ${compact ? "size-2.5" : "size-3"} ${isToday ? "ring-2 ring-yellow-400 ring-offset-1 ring-offset-panel" : ""}`}
                     style={{ background: future ? "transparent" : `color-mix(in srgb, var(--ink) ${ALPHA[level(day)] * 100}%, transparent)` }}
                   />
                 );

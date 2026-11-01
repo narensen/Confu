@@ -80,7 +80,7 @@ export function AddMaterialDialog({
 
   return (
     <div
-      className="animate-fade fixed inset-0 z-60 flex items-center justify-center bg-ink/40 p-3 backdrop-blur-[2px] sm:p-6"
+      className="animate-fade fixed inset-0 z-60 flex items-center justify-center bg-scrim p-3 backdrop-blur-[2px] sm:p-6"
       onMouseDown={(e) => e.target === e.currentTarget && !busy && onClose()}
     >
       <div role="dialog" aria-modal="true" aria-labelledby="add-material-title" className="animate-pop flex max-h-full w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">

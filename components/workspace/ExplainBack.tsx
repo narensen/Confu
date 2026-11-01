@@ -146,7 +146,7 @@ export function ExplainBack({
   const label = result ? (result.score === 1 ? "Covers the page" : result.score > 0 ? "Partly there" : "The gap is wide") : "";
 
   return (
-    <div className="animate-fade fixed inset-0 z-[70] flex items-center justify-center bg-ink/40 p-3 backdrop-blur-[2px]" onMouseDown={(e) => e.target === e.currentTarget && phase !== "scoring" && onClose()}>
+    <div className="animate-fade fixed inset-0 z-[70] flex items-center justify-center bg-scrim p-3 backdrop-blur-[2px]" onMouseDown={(e) => e.target === e.currentTarget && phase !== "scoring" && onClose()}>
       <div role="dialog" aria-modal="true" aria-labelledby="explain-title" className="animate-pop w-full max-w-md rounded-2xl border border-ink bg-panel p-6 shadow-hard">
         <p className={eyebrowClass}>Explain back · p. {page}</p>
         <h2 id="explain-title" className="mt-1 font-serif text-2xl">

@@ -6,6 +6,18 @@ export type Release = { date: string; title: string; summary: string; items: str
 export const CHANGELOG: Release[] = [
   {
     date: "2026-11-02",
+    title: "A better dark mode, and everything where you'd look for it",
+    summary: "Glossy and solid in the dark, and a cleaner layout everywhere.",
+    items: [
+      "Dark mode is back to its warm charcoal, now with a gloss, and solid: cards, menus, dialogs and panels no longer let the page show through them.",
+      "Big cards like Continue, reviews due and a room's running timer are lit, raised charcoal panels in the dark instead of bright white blocks. Dialogs dim the page instead of washing it out.",
+      "Your library opens on where you left off, with what's due and your streak beside it, and your files right on the card.",
+      "The header's places (Library, Review, Threads, Rooms, Friends) sit next to the logo and show where you are. In a session they become icons, so the title has room.",
+      "Notifications and confirmations slide in at the bottom right, clear of each page's own buttons. Maths in them reads as text, not code.",
+    ],
+  },
+  {
+    date: "2026-11-02",
     title: "Every subject has a space",
     summary: "Threads organised by subject, answers you can trust, rooms that feel alive, and voice that stays with you.",
     items: [

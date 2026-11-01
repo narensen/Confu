@@ -101,7 +101,7 @@ export function Guide({ userId, firstTime, needsKey }: { userId: string; firstTi
           trapped in the header's stacking context and the page would paint over it. */}
       {open &&
         createPortal(
-          <div className="animate-fade fixed inset-0 z-60 flex items-center justify-center bg-ink/40 p-3 backdrop-blur-[2px] sm:p-6">
+          <div className="animate-fade fixed inset-0 z-60 flex items-center justify-center bg-scrim p-3 backdrop-blur-[2px] sm:p-6">
             <div
               role="dialog"
               aria-modal="true"

@@ -78,7 +78,7 @@ export function AccountMenu({ name, email, plan, owner, keyLast4 }: Props) {
           setOpen(next);
           if (next && !pro) void loadUsage();
         }}
-        className="flex max-w-40 items-center gap-2 rounded-full border border-ink bg-ink py-1 pr-2.5 pl-1 text-sm font-medium text-white transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-hard-sm active:translate-y-0 sm:max-w-56"
+        className="flex max-w-40 items-center gap-2 rounded-full border border-line bg-panel py-1 pr-2.5 pl-1 text-sm font-medium text-ink transition duration-200 ease-fluid hover:border-ink/40 hover:bg-paper aria-expanded:border-ink/40 aria-expanded:bg-paper sm:max-w-56"
       >
         <span aria-hidden className="flex size-6 shrink-0 items-center justify-center rounded-full bg-yellow-300 font-serif text-xs text-ink">
           {display.slice(0, 1).toUpperCase()}
@@ -103,7 +103,7 @@ export function AccountMenu({ name, email, plan, owner, keyLast4 }: Props) {
         <div
           role="menu"
           aria-label="Account"
-          className="glass-bar animate-pop absolute top-full right-0 z-50 mt-2 w-80 origin-top-right overflow-hidden rounded-2xl border border-ink"
+          className="animate-pop absolute top-full right-0 z-50 mt-2 w-80 origin-top-right overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard"
         >
           {/* Who */}
           <div className="border-b border-line px-4 py-3.5">

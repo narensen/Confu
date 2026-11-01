@@ -78,7 +78,7 @@ export function PaperTools({
 
   const titles: Record<typeof tool, string> = { zotero: "Send notes to Zotero", related: "Draft related work", compare: "Compare papers" };
   return createPortal(
-    <div className="animate-fade fixed inset-0 z-[60] flex items-center justify-center bg-ink/40 p-3 backdrop-blur-[2px] sm:p-6" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="animate-fade fixed inset-0 z-[60] flex items-center justify-center bg-scrim p-3 backdrop-blur-[2px] sm:p-6" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div role="dialog" aria-modal="true" aria-labelledby="tool-title" className={`animate-pop flex max-h-full w-full flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard ${tool === "compare" ? "max-w-6xl" : "max-w-2xl"}`}>
         <div className="flex items-start justify-between gap-4 border-b border-ink px-6 py-4">
           <div>

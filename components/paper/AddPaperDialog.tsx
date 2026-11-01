@@ -250,7 +250,7 @@ export function AddPaperDialog({
   const activeHint = hints?.find((h) => h.name === active);
 
   return (
-    <div className="animate-fade fixed inset-0 z-60 flex items-center justify-center bg-ink/40 p-3 backdrop-blur-[2px] sm:p-6" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="animate-fade fixed inset-0 z-60 flex items-center justify-center bg-scrim p-3 backdrop-blur-[2px] sm:p-6" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div role="dialog" aria-modal="true" aria-labelledby="add-paper-title" className="animate-pop flex max-h-full w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
         <div className="flex items-start justify-between gap-4 border-b border-ink px-6 pt-5 pb-4">
           <div>
@@ -383,7 +383,7 @@ export function AddPaperDialog({
       </div>
 
       {resultsOpen && (
-        <div className="animate-fade absolute inset-0 flex items-center justify-center bg-ink/30 p-3 sm:p-6" onMouseDown={(e) => e.target === e.currentTarget && closeResults()}>
+        <div className="animate-fade absolute inset-0 flex items-center justify-center bg-scrim p-3 sm:p-6" onMouseDown={(e) => e.target === e.currentTarget && closeResults()}>
           <div role="dialog" aria-modal="true" aria-labelledby="paper-results-title" className="animate-pop flex max-h-full w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
             <div className="flex items-start justify-between gap-4 border-b border-ink px-5 pt-4 pb-3">
               <div className="min-w-0">

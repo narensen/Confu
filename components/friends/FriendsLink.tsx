@@ -1,13 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { friendNotices, subscribeInVoice, touchPresence } from "@/lib/friends";
 import { subscribeRoom } from "@/lib/rooms";
 
-// Header entry. Also the heartbeat that tells friends you're online, in a
-// room, or in voice. A yellow count is requests plus room invites waiting.
-export function FriendsLink() {
+// How many friend requests and room invites are waiting (the yellow count on
+// Friends in the header). Also the heartbeat that tells friends you're
+// online, in a room, or in voice: mount it once, in the header.
+export function useFriendNotices() {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
@@ -36,16 +36,5 @@ export function FriendsLink() {
     };
   }, []);
 
-  return (
-    <Link
-      href="/friends"
-      aria-label={count > 0 ? `Friends, ${count} waiting` : "Friends"}
-      className="inline-flex items-center rounded-full px-2.5 py-1 text-sm font-medium text-muted transition hover:bg-paper hover:text-ink"
-    >
-      Friends
-      {count > 0 && (
-        <span className="ml-1 inline-flex min-w-4 items-center justify-center rounded bg-yellow-300 px-1 font-mono text-[10px] leading-4 font-medium">{count > 9 ? "9+" : count}</span>
-      )}
-    </Link>
-  );
+  return count;
 }

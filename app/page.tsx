@@ -421,7 +421,7 @@ export default function Home() {
               <article
                 key={p}
                 data-reveal-item
-                className={`flex flex-col rounded-2xl border border-ink p-8 ${p === "pro" ? "bg-ink text-white" : "bg-panel"}`}
+                className={`flex flex-col rounded-2xl border border-ink p-8 ${p === "pro" ? "surface-inverse" : "bg-panel"}`}
               >
                 <div className="flex items-center justify-between gap-3">
                   <h3 className="font-serif text-4xl">
@@ -497,7 +497,7 @@ export default function Home() {
       </section>
 
       {/* Final call to action */}
-      <section className="bg-ink text-white">
+      <section className="surface-inverse">
         <div className="mx-auto flex max-w-6xl flex-col items-start gap-8 px-6 py-24 md:flex-row md:items-end md:justify-between">
           <div>
             <h2 data-split className="max-w-2xl font-serif text-4xl leading-tight tracking-tight sm:text-5xl">

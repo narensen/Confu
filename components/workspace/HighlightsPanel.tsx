@@ -350,7 +350,7 @@ function FigureGallery({
       </div>
 
       {open && (
-        <div className="animate-fade fixed inset-0 z-[70] flex items-center justify-center bg-ink/50 p-4" onMouseDown={(e) => e.target === e.currentTarget && setOpen(null)}>
+        <div className="animate-fade fixed inset-0 z-[70] flex items-center justify-center bg-scrim p-4" onMouseDown={(e) => e.target === e.currentTarget && setOpen(null)}>
           <div role="dialog" aria-modal="true" className="animate-pop flex max-h-full w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
             <div className="flex items-center justify-between border-b border-line px-5 py-3">
               <p className="font-mono text-xs font-medium">{label(open)}</p>

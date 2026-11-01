@@ -33,7 +33,7 @@ export function WrappedCards({ w, name }: { w: Wrapped; name?: string | null }) 
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-3xl border border-ink bg-ink p-8 text-white shadow-[8px_8px_0_0_#facc15] sm:p-10">
+      <section className="overflow-hidden rounded-3xl border border-ink surface-inverse p-8 shadow-[8px_8px_0_0_#facc15] sm:p-10">
         <p className="font-mono text-xs tracking-[0.2em] text-white/60 uppercase">{name ? `${name}'s` : "Your"} {monthYear(w.month)} in Confu</p>
         {quiet ? (
           <p className="mt-6 font-serif text-4xl leading-tight">A quiet month. The next one starts with ten minutes.</p>

@@ -477,7 +477,7 @@ export function LiteratureMap({
 
   if (library) return box;
   return createPortal(
-    <div className="animate-fade fixed inset-0 z-[60] flex items-center justify-center bg-ink/40 p-2 backdrop-blur-[2px] sm:p-5" onMouseDown={(e) => e.target === e.currentTarget && onClose?.()}>
+    <div className="animate-fade fixed inset-0 z-[60] flex items-center justify-center bg-scrim p-2 backdrop-blur-[2px] sm:p-5" onMouseDown={(e) => e.target === e.currentTarget && onClose?.()}>
       {box}
     </div>,
     document.body,

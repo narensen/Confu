@@ -196,7 +196,7 @@ function NewSessionDialog({ initialKind, onClose }: { initialKind: SessionKind |
   return (
     <div
       ref={root}
-      className="fixed inset-0 z-60 flex items-center justify-center bg-ink/40 p-3 backdrop-blur-[2px] sm:p-6"
+      className="fixed inset-0 z-60 flex items-center justify-center bg-scrim p-3 backdrop-blur-[2px] sm:p-6"
       onMouseDown={(e) => e.target === e.currentTarget && close()}
     >
       <div

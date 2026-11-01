@@ -82,7 +82,7 @@ export default function PricingPage({ searchParams }: PageProps<"/pricing">) {
                 <FreeAction />
               </Suspense>
             </article>
-            <article className="flex flex-col rounded-2xl border border-ink bg-ink p-8 text-white shadow-[6px_6px_0_0_#facc15]">
+            <article className="flex flex-col rounded-2xl border border-ink surface-inverse p-8 shadow-[6px_6px_0_0_#facc15]">
               <div className="flex items-center justify-between gap-3">
                 <h2 className="font-serif text-4xl">
                   {PLANS.pro.name}

@@ -53,8 +53,8 @@ export function ThreadsView() {
             <p className={`${eyebrowClass} px-2`}>Browse</p>
             <ul className="mt-2 space-y-0.5">
               <li>
-                <span className="flex items-center gap-2.5 rounded-lg bg-ink px-2 py-1.5 text-sm font-medium text-white">
-                  <span aria-hidden className="flex size-6 items-center justify-center rounded-md border border-white/30 text-xs">
+                <span aria-current="page" className="flex items-center gap-2.5 rounded-lg bg-accent-soft px-2 py-1.5 text-sm font-medium text-ink">
+                  <span aria-hidden className="flex size-6 items-center justify-center rounded-md border border-ink/20 bg-panel text-xs">
                     💬
                   </span>
                   All questions

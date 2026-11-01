@@ -13,8 +13,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 //   notify({ title: "Ben sent you a friend request", avatar: "Ben", actions: [{ label: "Accept", onClick }] });
 //
 // <DialogHost /> (mounted once in the root layout) renders them. Toasts and
-// notifications slide in on the right, below the header, and wait while
-// the pointer is over them.
+// notifications slide in at the bottom right (clear of the header and of
+// each page's own buttons), and wait while the pointer is over them.
 
 type AskOptions = { title: string; body?: string; confirm?: string; cancel?: string; danger?: boolean };
 export type Choice = "confirm" | "alternative" | "cancel";
@@ -109,7 +109,7 @@ export function DialogHost() {
     <>
       {current && (
         <div
-          className="animate-fade fixed inset-0 z-[70] flex items-center justify-center bg-ink/40 p-4 backdrop-blur-[2px]"
+          className="animate-fade fixed inset-0 z-[70] flex items-center justify-center bg-scrim p-4 backdrop-blur-[2px]"
           onMouseDown={(e) => e.target === e.currentTarget && answer("cancel")}
         >
           <div
@@ -155,7 +155,7 @@ export function DialogHost() {
         </div>
       )}
 
-      <div aria-live="polite" className="pointer-events-none fixed top-[4.25rem] right-3 z-[80] flex w-[min(23rem,calc(100vw-1.5rem))] flex-col gap-2 sm:right-4">
+      <div aria-live="polite" className="pointer-events-none fixed right-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-[80] flex w-[min(23rem,calc(100vw-1.5rem))] flex-col justify-end gap-2 sm:right-5 md:bottom-5">
         {cards.map((c) => (
           <StackCard key={c.id} card={c} onDone={() => setCards((list) => list.filter((x) => x.id !== c.id))} />
         ))}

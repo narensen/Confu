@@ -239,7 +239,7 @@ export function AskDialog({ initialSpaceId, onClose, onPosted }: { initialSpaceI
   const picked = choices?.find((c) => c.id === spaceId);
 
   return createPortal(
-    <div className="animate-fade fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-ink/40 p-3 backdrop-blur-[2px] sm:items-center" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="animate-fade fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-scrim p-3 backdrop-blur-[2px] sm:items-center" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <form
         role="dialog"
         aria-modal="true"

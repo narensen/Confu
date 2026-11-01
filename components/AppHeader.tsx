@@ -2,8 +2,8 @@ import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { AccountMenu } from "@/components/AccountMenu";
 import { Guide } from "@/components/onboarding/Guide";
-import { FriendsLink } from "@/components/friends/FriendsLink";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { PrimaryNav } from "@/components/PrimaryNav";
 import { RoomStatus } from "@/components/rooms/RoomStatus";
 import { getKeyInfo } from "@/lib/groq-keys";
 import { isOwner, planOf } from "@/lib/plans";
@@ -18,29 +18,19 @@ export function Logo() {
   );
 }
 
-const navLink = "rounded-full px-2.5 py-1 text-sm font-medium text-muted transition hover:bg-paper hover:text-ink";
-
-async function UserMenu() {
+async function UserMenu({ workspace }: { workspace: boolean }) {
   const user = await getUser();
   if (!user) return null;
   const supabase = await createClient();
   const [role, firstTime, key] = await Promise.all([getCurrentRole(), getFirstTime(), getKeyInfo(supabase, user.id, null)]);
   return (
-    <div className="animate-fade flex items-center gap-1">
+    <div className="animate-fade flex shrink-0 items-center gap-1.5">
       {/* No button: opens by itself for new accounts, or from Settings. */}
       <Guide userId={user.id} firstTime={firstTime} needsKey={planOf(role) !== "pro"} />
-      <nav aria-label="App" className="hidden items-center md:flex">
-        <Link href="/review" className={navLink}>
-          Review
-        </Link>
-        <Link href="/threads" className={navLink}>
-          Threads
-        </Link>
-        <FriendsLink />
-      </nav>
-      {/* "Rooms" from md up. A room you're actually in stays, including on a phone. */}
+      {workspace && <PrimaryNav variant="icons" />}
+      {/* The room you're in, with its timer (and its voice, if you're talking). */}
       <RoomStatus />
-      <div className="ml-1 flex shrink-0 items-center gap-2 border-l border-line pl-3">
+      <div className="flex shrink-0 items-center gap-2 border-l border-line pl-2.5">
         <NotificationBell userId={user.id} />
         <AccountMenu name={user.name} email={user.email} plan={planOf(role)} owner={isOwner(role)} keyLast4={key?.last4 ?? null} />
       </div>
@@ -48,16 +38,33 @@ async function UserMenu() {
   );
 }
 
+// The main places, for signed-in people only.
+async function MainNav() {
+  return (await getUser()) ? <PrimaryNav /> : null;
+}
+
+// Logo, the app's places (or, in a session, its title), then the room
+// you're in, notifications and your account. In a session the places
+// shrink to icons on the right, so the title has the room it needs.
 export function AppHeader({ children }: { children?: ReactNode }) {
+  const workspace = Boolean(children);
   return (
     // Its own layer above the page, so the account dropdown is never painted over.
     <header className="glass-bar sticky top-0 z-40 flex h-14 shrink-0 items-center gap-3 border-b border-ink px-3 sm:px-5">
-      <Link href="/dashboard" className="shrink-0 transition hover:opacity-70">
+      <Link href="/dashboard" className="shrink-0 transition hover:opacity-70" aria-label="Confu, your library">
         <Logo />
       </Link>
-      <div className="flex min-w-0 flex-1 items-center gap-2">{children}</div>
+      {workspace ? (
+        <div className="flex min-w-0 flex-1 items-center gap-2 border-l border-line pl-3">{children}</div>
+      ) : (
+        <div className="flex min-w-0 flex-1 items-center pl-2">
+          <Suspense fallback={null}>
+            <MainNav />
+          </Suspense>
+        </div>
+      )}
       <Suspense fallback={<div className="skeleton h-8 w-24 rounded-full" />}>
-        <UserMenu />
+        <UserMenu workspace={workspace} />
       </Suspense>
     </header>
   );

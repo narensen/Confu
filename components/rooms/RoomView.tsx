@@ -117,14 +117,14 @@ export function RoomView({ slug }: { slug: string }) {
     <div className="animate-enter grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <div className="min-w-0">
         {/* The room */}
-        <section className={`overflow-hidden rounded-3xl border border-ink transition-colors duration-700 ${phase === "focus" ? "bg-ink text-white" : phase === "break" ? "bg-yellow-100" : "bg-panel"}`}>
+        <section className={`overflow-hidden rounded-3xl border border-ink transition-colors duration-700 ${phase === "focus" ? "bg-inverse text-inverse-ink" : phase === "break" ? "bg-yellow-100" : "bg-panel"}`}>
           <div className="flex flex-wrap items-start justify-between gap-3 px-6 pt-6 sm:px-8 sm:pt-8">
             <div className="min-w-0">
-              <Link href="/rooms" className={`${eyebrowClass} ${phase === "focus" ? "text-white/60! hover:text-white!" : "hover:text-ink"}`}>
+              <Link href="/rooms" className={`${eyebrowClass} ${phase === "focus" ? "text-inverse-muted! hover:text-inverse-ink!" : "hover:text-ink"}`}>
                 ← Study rooms
               </Link>
               <h1 className="mt-2 font-serif text-3xl leading-tight tracking-tight sm:text-4xl">{room.name}</h1>
-              <div className={`mt-2 flex flex-wrap items-center gap-2 text-xs ${phase === "focus" ? "text-white/70" : "text-muted"}`}>
+              <div className={`mt-2 flex flex-wrap items-center gap-2 text-xs ${phase === "focus" ? "text-inverse-muted" : "text-muted"}`}>
                 <Badge dark={phase === "focus"}>{room.is_public ? "Public · quiet" : "Private · voice"}</Badge>
                 <Badge dark={phase === "focus"}>{room.timer_mode === "clock" ? `${room.focus_minutes}/${room.break_minutes} on the clock` : room.mine ? "You run the timer" : `${room.focus_minutes} min focus blocks`}</Badge>
                 <span className="flex items-center gap-1.5">
@@ -140,17 +140,17 @@ export function RoomView({ slug }: { slug: string }) {
 
           <div className="flex flex-col items-center px-6 pt-6 pb-8 sm:pb-10">
             <TimerRing progress={progress} phase={phase}>
-              <p className={`font-mono text-[11px] tracking-[0.25em] uppercase ${phase === "focus" ? "text-white/60" : "text-muted"}`}>
+              <p className={`font-mono text-[11px] tracking-[0.25em] uppercase ${phase === "focus" ? "text-yellow-400" : "text-muted"}`}>
                 {phase === "focus" ? "Focus" : phase === "break" ? "Break" : "Ready"}
               </p>
               <p className="mt-1 font-sans text-6xl font-semibold tracking-tight tabular-nums sm:text-7xl" aria-live="polite">
                 {t && phase !== "idle" ? clock(t.left) : `${room.focus_minutes}:00`}
               </p>
-              <p className={`mt-1 text-xs ${phase === "focus" ? "text-white/60" : "text-muted"}`}>
+              <p className={`mt-1 text-xs ${phase === "focus" ? "text-inverse-muted" : "text-muted"}`}>
                 {phase === "focus" ? `of ${room.focus_minutes} min` : phase === "break" ? `of ${room.break_minutes} min` : "not running"}
               </p>
             </TimerRing>
-            <p className={`mt-6 max-w-md text-center text-sm ${phase === "focus" ? "text-white/70" : "text-muted"}`}>
+            <p className={`mt-6 max-w-md text-center text-sm ${phase === "focus" ? "text-inverse-muted" : "text-muted"}`}>
               {phase === "focus"
                 ? "Heads down. Everyone here is working too."
                 : phase === "break"
@@ -160,7 +160,7 @@ export function RoomView({ slug }: { slug: string }) {
                     : "The room's maker starts the timer."}
             </p>
             {room.mine && room.timer_mode === "manual" && (
-              <div className={`mt-5 flex rounded-xl border p-1 ${phase === "focus" ? "border-white/25" : "border-ink/20 bg-panel"}`}>
+              <div className={`mt-5 flex rounded-xl border p-1 ${phase === "focus" ? "border-inverse-ink/20" : "border-ink/20 bg-panel"}`}>
                 {(["focus", "break", "idle"] as const).map((next) => (
                   <button
                     key={next}
@@ -170,10 +170,10 @@ export function RoomView({ slug }: { slug: string }) {
                     className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
                       phase === next
                         ? phase === "focus"
-                          ? "bg-white text-ink"
+                          ? "bg-inverse-ink text-inverse"
                           : "bg-ink text-white"
                         : phase === "focus"
-                          ? "text-white/80 hover:bg-white/10"
+                          ? "text-inverse-ink/80 hover:bg-inverse-ink/10"
                           : "text-muted hover:bg-paper hover:text-ink"
                     }`}
                   >
@@ -304,7 +304,7 @@ export function RoomView({ slug }: { slug: string }) {
 }
 
 function Badge({ children, dark }: { children: React.ReactNode; dark: boolean }) {
-  return <span className={`rounded-full border px-2 py-0.5 ${dark ? "border-white/25" : "border-ink/20 bg-panel"}`}>{children}</span>;
+  return <span className={`rounded-full border px-2 py-0.5 ${dark ? "border-inverse-ink/25" : "border-ink/20 bg-panel"}`}>{children}</span>;
 }
 
 // The time left, inside a ring that fills as the block goes by.
@@ -314,7 +314,7 @@ function TimerRing({ progress, phase, children }: { progress: number; phase: "fo
   return (
     <div className="relative flex size-64 items-center justify-center sm:size-72">
       <svg viewBox="0 0 100 100" className="absolute inset-0 size-full -rotate-90" aria-hidden>
-        <circle cx="50" cy="50" r={r} fill="none" strokeWidth="2.5" className={phase === "focus" ? "stroke-white/15" : "stroke-ink/10"} />
+        <circle cx="50" cy="50" r={r} fill="none" strokeWidth="2.5" className={phase === "focus" ? "stroke-inverse-ink/15" : "stroke-ink/10"} />
         <circle
           cx="50"
           cy="50"
