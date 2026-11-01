@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { MODELS, parseJsonObject, type Groq } from "@/lib/groq";
+import { MODELS, modelBudget, parseJsonObject, type Groq } from "@/lib/groq";
 import { findByTitle, papersByArxivIds, sameTitle, searchPapers, titleWithin, type PaperMeta } from "@/lib/scholar";
 
 // Paper recommendations for "I want to get into research on X".
@@ -99,24 +99,14 @@ const Picks = z.object({
     .max(14),
 });
 
-async function json<T>(groq: Groq, schema: z.ZodType<T>, prompt: string, effort: "low" | "medium", maxTokens = 3500): Promise<T> {
-  const ask = (e: "low" | "medium") =>
-    groq.chat.completions.create({
-      model: MODELS.chat,
-      messages: [{ role: "user", content: prompt }],
-      response_format: { type: "json_object" },
-      temperature: 0.3,
-      max_completion_tokens: maxTokens,
-      reasoning_effort: e,
-    });
-  let res;
-  try {
-    res = await ask(effort);
-  } catch (err) {
-    // Reasoning can use up the budget before any JSON is written: retry lighter.
-    if ((err as { status?: number }).status !== 400 || effort === "low") throw err;
-    res = await ask("low");
-  }
+async function json<T>(groq: Groq, schema: z.ZodType<T>, prompt: string, maxTokens = 2200): Promise<T> {
+  const res = await groq.chat.completions.create({
+    model: MODELS.chat,
+    messages: [{ role: "user", content: prompt }],
+    response_format: { type: "json_object" },
+    temperature: 0.3,
+    ...modelBudget(MODELS.chat, maxTokens),
+  });
   return schema.parse(parseJsonObject(res.choices[0]?.message?.content ?? ""));
 }
 
@@ -150,7 +140,6 @@ Judge their level from the history (don't re-teach what they've shown they under
 If the goal names specific methods, models or techniques (e.g. an acronym), at least one query must search for each by its full name, so the paper that introduced it is found.
 Also list up to 8 "classics": the specific, well-known papers a researcher in this exact area is expected to have read, including the papers that introduced the methods named in the goal and the recent landmark results. Recall each by its first author, lab and year, then give its exact published title and, if it's on arXiv, its arXiv ID (e.g. "1707.06347"). No generic or descriptive titles: every paper is checked against arXiv and the literature, and any whose ID and title don't match are discarded.
 Return ONLY JSON: {"level": "one sentence on where they are", "queries": [{"q": "string", "stage": "start" | "core" | "frontier", "recent": boolean}], "classics": [{"title": "string", "year": number, "arxiv": "string or null", "stage": "start" | "core" | "frontier"}]}`,
-    "medium",
   );
 
   opts.onPlan?.(plan);
@@ -253,7 +242,6 @@ Order picks in the sequence they should read them.
 "summary": 2 sentences on the path and where it leads. If the candidates are poor for the goal, pick fewer and say so in the summary.
 The ids (P1, P2…) are only for your reply's "id" fields: never mention them in "summary" or "why"; the reader never sees them.
 Return ONLY JSON: {"summary": "string", "picks": [{"id": "P3", "stage": "start" | "core" | "frontier", "pass": 1 | 2 | 3, "why": "string"}]}`,
-    "medium",
   );
 
   // In case an id slips into the prose anyway: "(P1, P2)" or a bare "P3".

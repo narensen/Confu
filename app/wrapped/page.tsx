@@ -9,7 +9,7 @@ import { requireUser } from "@/lib/dal";
 import { createClient } from "@/lib/supabase/server";
 import { defaultMonth, monthYear, type Wrapped } from "@/lib/wrapped";
 
-export const metadata: Metadata = { title: "Your month — Confu" };
+export const metadata: Metadata = { title: "Your month — Confu", robots: { index: false } };
 
 export default function WrappedPage({ searchParams }: PageProps<"/wrapped">) {
   return (

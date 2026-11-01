@@ -8,7 +8,7 @@ import { SiteFooter, SiteNav } from "@/components/site/SiteNav";
 import { eyebrowClass } from "@/components/ui";
 import { getUser } from "@/lib/dal";
 import { SOURCE_LABEL, type Pack, type PackTopic } from "@/lib/packs";
-import { getPackForViewer, getPackPublic } from "@/lib/packs-server";
+import { courseCodeFor, getPackForViewer, getPackPublic } from "@/lib/packs-server";
 import { createClient } from "@/lib/supabase/server";
 
 const KIND: Record<Pack["kind"], string> = { study: "Study pack", paper: "Paper pack", exam: "Exam pack" };
@@ -17,9 +17,10 @@ export async function generateMetadata({ params }: PageProps<"/p/[slug]">): Prom
   const pack = await getPackPublic((await params).slug);
   if (!pack) return { title: "Study pack — Confu" };
   const sources = pack.content.sources?.length ?? 0;
-  const description = pack.description || `${KIND[pack.kind]} with ${sources} ${sources === 1 ? "source" : "sources"}${pack.content.plan ? " and a study plan" : ""}. Copy it into your Confu library for free.`;
+  const label = pack.content.roadmap ? "Roadmap" : KIND[pack.kind];
+  const description = pack.description || `${label} with ${sources} ${sources === 1 ? "source" : "sources"}${pack.content.plan ? " and a study plan" : ""}. Copy it into your Confu library for free.`;
   return {
-    title: `${pack.title} — ${KIND[pack.kind]} on Confu`,
+    title: `${pack.title} — ${label} on Confu`,
     description,
     openGraph: { title: pack.title, description, type: "article" },
     // Unlisted packs are for people with the link, not search engines.
@@ -43,7 +44,7 @@ export default function PackPage({ params }: PageProps<"/p/[slug]">) {
 
 async function PackBody({ params }: { params: PageProps<"/p/[slug]">["params"] }) {
   const { slug } = await params;
-  const [pack, user] = await Promise.all([getPackForViewer(slug), getUser()]);
+  const [pack, user, course] = await Promise.all([getPackForViewer(slug), getUser(), courseCodeFor(slug)]);
   if (!pack) notFound();
   if (!pack.mine) {
     after(async () => {
@@ -57,16 +58,18 @@ async function PackBody({ params }: { params: PageProps<"/p/[slug]">["params"] }
   const phases = c.plan?.phases?.length ? c.plan.phases : topics.length ? [{ title: "Plan", description: "" }] : [];
   const byPhase = (i: number): PackTopic[] => topics.filter((t) => (c.plan?.phases?.length ? t.phase === i : true));
   const highlights = (c.highlights ?? []).filter((h) => h.text);
+  const label = c.roadmap ? "Roadmap" : KIND[pack.kind];
 
   return (
     <>
       {pack.mine && (
         <div className="border-b border-ink bg-yellow-100">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-1 px-6 py-2.5 text-sm">
-            <span className="font-medium">This is your pack.</span>
+            <span className="font-medium">{c.roadmap ? "This is your roadmap." : "This is your pack."}</span>
             <span className="font-mono text-xs text-muted">
               {pack.views} views · {pack.copies} copies · {pack.visibility === "public" ? "listed in the gallery" : "unlisted: only people with the link"}
             </span>
+            {pack.class_mode && <span className="text-muted">Pro for the term once 30 classmates copy it.</span>}
             {pack.class_mode && (
               <Link href={`/p/${pack.slug}/class`} className="ml-auto font-medium underline underline-offset-4">
                 Class progress →
@@ -79,8 +82,13 @@ async function PackBody({ params }: { params: PageProps<"/p/[slug]">["params"] }
       <section className="border-b border-ink">
         <div className="mx-auto grid max-w-6xl gap-10 px-6 py-14 lg:grid-cols-[minmax(0,1fr)_22rem] lg:py-20">
           <div>
-            <p className={eyebrowClass}>{KIND[pack.kind]}</p>
+            <p className={eyebrowClass}>{label}</p>
             <h1 className="mt-3 font-serif text-4xl leading-tight tracking-tight sm:text-5xl">{pack.title}</h1>
+            {c.roadmap && (
+              <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted">
+                A roadmap: this session&apos;s plan, shared as a path. Copy it and the plan starts from today, with your own files.
+              </p>
+            )}
             {pack.description && <p className="mt-5 max-w-2xl text-lg leading-relaxed whitespace-pre-line text-muted">{pack.description}</p>}
             <p className="mt-6 flex flex-wrap gap-x-3 gap-y-1 font-mono text-xs text-muted">
               <span>{pack.author_name ? `Shared by ${pack.author_name}` : "Shared anonymously"}</span>
@@ -117,6 +125,17 @@ async function PackBody({ params }: { params: PageProps<"/p/[slug]">["params"] }
               {c.plan ? ", and the plan starts today, at your pace" : ""}. Your notes and progress stay private
               {pack.class_mode ? " unless you choose to share them" : ""}.
             </p>
+            <p className="mt-3 text-sm leading-relaxed text-muted">
+              You can read the plan on this page before you have an account. An account starts when you copy it, highlight, or ask. Reading this page doesn&apos;t use the tutor.
+            </p>
+            {course && (
+              <p className="mt-3 font-mono text-xs text-muted">
+                Course link{" "}
+                <a href={`/c/${course}`} className="text-ink underline underline-offset-2">
+                  /c/{course}
+                </a>
+              </p>
+            )}
             <div className="mt-5">
               <CopyButton
                 slug={pack.slug}

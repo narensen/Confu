@@ -15,7 +15,7 @@ export default function PrivacyPage() {
     <LegalPage
       eyebrow="Privacy"
       title="Privacy Policy"
-      updated="October 26, 2026"
+      updated="November 1, 2026"
       summary={
         <Bullets
           items={[
@@ -29,7 +29,7 @@ export default function PrivacyPage() {
               sessions. We never sell Google data, use it for ads, or train AI on it.
             </>,
             <>Payments are handled by Lemon Squeezy. We never see your card number.</>,
-            <>Nothing you make is public unless you choose to share it (a study pack or a Wrapped page), and you can take it down any time.</>,
+            <>Nothing you make is public unless you choose to share it (a study pack, a Wrapped page, or a sitting card), and you can take it down any time.</>,
             <>We don&apos;t sell your data, show ads, or use tracking or analytics cookies, and we don&apos;t train AI models on your material.</>,
           ]}
         />
@@ -44,11 +44,13 @@ export default function PrivacyPage() {
             </>,
             <>
               <b>Your materials:</b> the PDFs you upload or import (from web pages, YouTube lectures, Google Drive or
-              Zotero), the text extracted from them, and images of regions you capture.
+              Zotero), a photo of a board, which becomes a page you uploaded, the text extracted from them, and images of
+              regions you capture.
             </>,
             <>
               <b>Study data:</b> your goals, plans, highlights, paper notes, practice answers, review progress,
-              conversations with the tutor, and the tutor&apos;s notes on your progress.
+              conversations with the tutor, and the tutor&apos;s notes on your progress. An explain-back keeps only the
+              score and the gap, never the audio or the words you said.
             </>,
             <>
               <b>Your Groq API key</b>, if you add one (see below).
@@ -196,6 +198,40 @@ export default function PrivacyPage() {
               <b>Study rooms.</b> While you&apos;re in a room, the others in it see your first name and, if you write it, what
               you&apos;re working on.
             </>,
+            <>
+              <b>Friends.</b> People you accept as friends see your first name, whether you&apos;re online, and when you&apos;re in
+              voice. They see which room you&apos;re in if it&apos;s public, or if it&apos;s a private room they were invited to or
+              already share with you. Otherwise they only see that you&apos;re in a private room. A request can be sent to your
+              email address or your friend code.
+            </>,
+            <>
+              <b>Voice.</b> In a private study room, voice goes directly between the browsers of the people who joined it. Confu
+              does not record it or store the audio. Joining still works from the room link, the same as before.
+            </>,
+            <>
+              <b>Threads.</b> A question you post on Threads, and the replies, are visible to people signed in to Confu, with
+              your first name. Remove your own posts any time.
+            </>,
+            <>
+              <b>Learning spaces.</b> A space is private to people with its link. Members see the space&apos;s name, your first
+              name, and the questions posted there. It isn&apos;t listed publicly.
+            </>,
+            <>
+              <b>Roadmaps.</b> Sharing a session as a roadmap publishes the same page as a study pack, with the plan shown as a
+              path. The same rules apply: links and the plan, never your files or conversations.
+            </>,
+            <>
+              <b>Page pins.</b> A pin stores the passage, your question, and one answer written from that page. Classmates
+              see it only when you and they both share class progress on the same pack. Your chats are never included.
+            </>,
+            <>
+              <b>Explain-back.</b> Saying a page back stores the score and the one-line gap. The audio isn&apos;t recorded,
+              and the words you said aren&apos;t kept.
+            </>,
+            <>
+              <b>A sitting card.</b> Sharing a timed paper stores the score, the minutes, the weak topics, an optional band
+              when the exam is close, and your first name if you choose. Not the questions or your answers.
+            </>,
           ]}
         />
       </Section>
@@ -275,7 +311,7 @@ export default function PrivacyPage() {
               <Link href="/settings#danger" className={link}>
                 Settings
               </Link>
-              , deletes everything in it, including your usage records, feedback, packs, shared pages and rooms. Lemon
+              , deletes everything in it, including your usage records, feedback, packs, shared pages, friends, rooms, threads and learning spaces. Lemon
               Squeezy keeps its own payment records as the law requires.
             </>,
             <>

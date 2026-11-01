@@ -1,7 +1,8 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { MODELS, parseJsonObject, type Groq } from "@/lib/groq";
+import { MODELS, modelBudget, parseJsonObject, type Groq } from "@/lib/groq";
+import { createReasoningFilter } from "@/lib/visible-text";
 import { addDays, assignDueDates, daysBetween } from "@/lib/schedule";
 import { docLabel, type Level, type OutlineItem } from "@/lib/types";
 
@@ -207,27 +208,39 @@ Return ONLY JSON in this shape:
     },
     { role: "user" as const, content: prompt },
   ];
-  const settings = { model: MODELS.chat, messages, temperature: 0.3, max_completion_tokens: 9000, reasoning_effort: "medium" as const };
+  const settings = { model: MODELS.chat, messages, temperature: 0.3, ...modelBudget(MODELS.chat, 5200) };
 
   // Streamed, so each phase and topic can be shown as it's written. Streaming
-  // goes without JSON mode (the prompt asks for JSON only); if that text
-  // doesn't parse, the plan is asked for again the usual way.
+  // goes without JSON mode (the prompt asks for JSON only). A scratchpad in
+  // the stream used to break the JSON and the plan was paid for a second time.
+  // Ask again only when the first reply still doesn't parse.
+  const tryParse = (raw: string) => {
+    try {
+      return PlanSchema.parse(parseJsonObject(raw));
+    } catch {
+      return null;
+    }
+  };
   let parsed: z.infer<typeof PlanSchema> | null = null;
   if (onProgress) {
     let text = "";
     const seen = new TitleScanner(onProgress);
+    const visible = createReasoningFilter();
     const stream = await groq.chat.completions.create({ ...settings, stream: true });
     for await (const chunk of stream) {
       const delta = chunk.choices[0]?.delta?.content;
       if (!delta) continue;
-      text += delta;
+      const shown = visible.push(delta);
+      if (!shown) continue;
+      text += shown;
       seen.scan(text);
     }
-    try {
-      parsed = PlanSchema.parse(parseJsonObject(text));
-    } catch {
-      parsed = null;
+    const tail = visible.finish();
+    if (tail) {
+      text += tail;
+      seen.scan(text);
     }
+    parsed = tryParse(text);
   }
   if (!parsed) {
     const res = await groq.chat.completions.create({ ...settings, response_format: { type: "json_object" } });

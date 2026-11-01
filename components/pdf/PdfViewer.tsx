@@ -11,6 +11,7 @@ import { FocusSound } from "./FocusSound";
 import { FocusTimer } from "./FocusTimer";
 import { ReadAloudBar, useReadAloud } from "./ReadAloud";
 import { ReadingMap } from "./ReadingMap";
+import { placePopover } from "@/lib/popover-place";
 import { createClient } from "@/lib/supabase/client";
 import { track } from "@/lib/telemetry";
 import type { Highlight, OutlineItem, Rect, TutorAction } from "@/lib/types";
@@ -78,6 +79,7 @@ type Props = {
   onLoaded?: () => void; // the PDF is open (its first page measured)
   onTextAction: (action: TutorAction, selection: TextSelection, message?: string) => void;
   onSaveHighlight: (selection: TextSelection, color: HighlightColor, note?: string) => void;
+  onPin?: (selection: TextSelection) => void;
   onUpdateHighlight?: (h: Highlight, patch: { color?: HighlightColor; note?: string | null }) => void;
   onDeleteHighlight?: (h: Highlight) => void;
   onRegion: (capture: RegionCapture, message?: string) => void;
@@ -169,6 +171,7 @@ export default function PdfViewer(props: Props) {
   const { url, documentId, initialPage, goTo, highlights, busy, focusMode, onToggleFocus, onPageChange } = props;
   const source = usePdfSource(url);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const viewerRef = useRef<HTMLDivElement>(null);
   const slotRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [numPages, setNumPages] = useState(0);
   const [aspects, setAspects] = useState<Record<number, number>>({});
@@ -500,7 +503,7 @@ export default function PdfViewer(props: Props) {
   const zoomIn = () => setZoom(ZOOMS[Math.min(ZOOMS.length - 1, zoomIndex + 1)]);
 
   return (
-    <div className="flex h-full flex-col bg-viewer" data-reader={theme}>
+    <div ref={viewerRef} className="relative flex h-full flex-col bg-viewer" data-reader={theme}>
       {/* Toolbar (adapts to the panel's own width, not the screen's) */}
       {/* Grouped by job: Navigate · Read · Capture · Focus. Labels show when
           the viewer is wide enough; the rarely used Read tools fold into More
@@ -865,7 +868,7 @@ export default function PdfViewer(props: Props) {
       </div>
 
       {popover && (
-        <SelectionPopover popover={popover} onClose={closePopover}>
+        <SelectionPopover popover={popover} hostRef={viewerRef} onClose={closePopover}>
           {popover.kind === "text" ? (
             askText === null && noteText === null ? (
               <div className="flex flex-wrap items-center gap-0.5">
@@ -901,6 +904,16 @@ export default function PdfViewer(props: Props) {
                     </button>
                   ))}
                 </span>
+                {props.onPin && (
+                  <PopButton
+                    onClick={() => {
+                      props.onPin?.(popover.selection);
+                      closePopover();
+                    }}
+                  >
+                    Pin
+                  </PopButton>
+                )}
                 <PopButton onClick={() => setNoteText("")}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
                     <path d="M4 4h16v12H8l-4 4z" />
@@ -931,17 +944,20 @@ export default function PdfViewer(props: Props) {
               />
             )
           ) : (
-            <div className="w-72 space-y-2">
+            <div className="w-full">
+              {/* Height is reserved up front so the type field is in the first measure, before the preview decodes. */}
               {/* eslint-disable-next-line @next/next/no-img-element -- local data URL preview */}
-              <img src={popover.capture.image} alt="Captured region" className="max-h-28 w-full rounded-md border border-line object-contain" />
-              <AskInput
-                placeholder="Ask about this region (optional)…"
-                value={askText ?? ""}
-                onChange={setAskText}
-                disabled={busy}
-                onSubmit={() => runRegion(askText ?? undefined)}
-                submitLabel="Explain"
-              />
+              <img src={popover.capture.image} alt="Captured region" className="h-28 w-full rounded-md border border-line bg-paper object-contain" />
+              <div className="sticky bottom-0 bg-panel pt-2">
+                <AskInput
+                  placeholder="Ask about this region (optional)…"
+                  value={askText ?? ""}
+                  onChange={setAskText}
+                  disabled={busy}
+                  onSubmit={() => runRegion(askText ?? undefined)}
+                  submitLabel="Explain"
+                />
+              </div>
             </div>
           )}
         </SelectionPopover>
@@ -1329,7 +1345,7 @@ function AskInput(props: {
 }) {
   return (
     <form
-      className="flex w-72 items-center gap-1"
+      className="flex w-full min-w-0 max-w-72 items-center gap-1"
       onSubmit={(e) => {
         e.preventDefault();
         if (!props.disabled) props.onSubmit();
@@ -1352,22 +1368,74 @@ function AskInput(props: {
   );
 }
 
-// Positioned with `fixed` (not a portal) so it stays visible in full screen,
-// where only descendants of the full-screen element are rendered.
-function SelectionPopover({ popover, onClose, children }: { popover: Popover; onClose: () => void; children: ReactNode }) {
+// Absolute inside the reader (not a portal, not viewport-fixed). Full screen
+// only paints descendants of the full-screen element, and a fixed card was
+// landing past the reader once the preview grew. The field stays on screen.
+function SelectionPopover({
+  popover,
+  hostRef,
+  onClose,
+  children,
+}: {
+  popover: Popover;
+  hostRef: React.RefObject<HTMLElement | null>;
+  onClose: () => void;
+  children: ReactNode;
+}) {
   const ref = useRef<HTMLDivElement>(null);
-  const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+  const [pos, setPos] = useState<{ left: number; top: number; maxHeight: number; maxWidth: number } | null>(null);
+
+  const place = useCallback(() => {
+    const el = ref.current;
+    const host = hostRef.current;
+    if (!el || !host) return;
+    const box = host.getBoundingClientRect();
+    const vv = window.visualViewport;
+    const next = placePopover({
+      x: popover.x,
+      y: popover.y,
+      top: popover.top,
+      width: el.offsetWidth,
+      height: el.scrollHeight,
+      host: { left: box.left, top: box.top, right: box.right, bottom: box.bottom },
+      view: {
+        left: vv?.offsetLeft ?? 0,
+        top: vv?.offsetTop ?? 0,
+        right: (vv?.offsetLeft ?? 0) + (vv?.width ?? window.innerWidth),
+        bottom: (vv?.offsetTop ?? 0) + (vv?.height ?? window.innerHeight),
+      },
+    });
+    setPos((prev) =>
+      prev &&
+      Math.abs(prev.left - next.left) < 0.5 &&
+      Math.abs(prev.top - next.top) < 0.5 &&
+      prev.maxHeight === next.maxHeight &&
+      prev.maxWidth === next.maxWidth
+        ? prev
+        : next,
+    );
+  }, [hostRef, popover]);
 
   useLayoutEffect(() => {
+    place();
+  }, [place]);
+
+  useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const { width, height } = el.getBoundingClientRect();
-    const margin = 8;
-    const left = Math.min(Math.max(margin, popover.x - width / 2), window.innerWidth - width - margin);
-    const below = popover.y + margin;
-    const top = below + height > window.innerHeight - margin ? Math.max(margin, popover.top - height - margin) : below;
-    setPos({ left, top });
-  }, [popover]);
+    const ro = new ResizeObserver(() => place());
+    ro.observe(el);
+    const vv = window.visualViewport;
+    vv?.addEventListener("resize", place);
+    vv?.addEventListener("scroll", place);
+    window.addEventListener("resize", place);
+    return () => {
+      ro.disconnect();
+      vv?.removeEventListener("resize", place);
+      vv?.removeEventListener("scroll", place);
+      window.removeEventListener("resize", place);
+    };
+  }, [place]);
 
   useEffect(() => {
     const onDown = (e: MouseEvent) => {
@@ -1384,8 +1452,12 @@ function SelectionPopover({ popover, onClose, children }: { popover: Popover; on
     <div
       ref={ref}
       role="dialog"
-      className="animate-pop fixed z-50 rounded-xl border border-ink bg-panel p-1.5 shadow-hard"
-      style={pos ? { left: pos.left, top: pos.top } : { left: -9999, top: -9999 }}
+      className="animate-pop absolute z-50 overflow-y-auto overscroll-contain rounded-xl border border-ink bg-panel p-1.5 shadow-hard"
+      style={
+        pos
+          ? { left: pos.left, top: pos.top, maxHeight: pos.maxHeight, maxWidth: pos.maxWidth }
+          : { left: 0, top: 0, visibility: "hidden" }
+      }
     >
       {children}
     </div>

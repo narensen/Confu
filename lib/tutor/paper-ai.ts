@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { MODELS, parseJsonObject, type Groq } from "@/lib/groq";
+import { MODELS, modelBudget, parseJsonObject, type Groq } from "@/lib/groq";
 import { docLabel, type OutlineItem } from "@/lib/types";
 
 const TRIAGE_BUDGET = 14_000;
@@ -61,8 +61,7 @@ Return ONLY JSON: {"papers": [{"label": "D1", "pass": 1 | 2 | 3, "reason": "stri
     messages: [{ role: "user", content: prompt }],
     response_format: { type: "json_object" },
     temperature: 0.2,
-    max_completion_tokens: 3000,
-    reasoning_effort: "medium",
+    ...modelBudget(MODELS.chat, 2200),
   });
   const parsed = Triage.parse(parseJsonObject(res.choices[0]?.message?.content ?? ""));
   const byLabel = new Map(papers.map((p) => [p.label.toLowerCase(), p]));
@@ -110,8 +109,7 @@ Return ONLY JSON: {"category": "", "context": "", "correctness": "", "contributi
     messages: [{ role: "user", content: prompt }],
     response_format: { type: "json_object" },
     temperature: 0.2,
-    max_completion_tokens: 2000,
-    reasoning_effort: "low",
+    ...modelBudget(MODELS.chat, 1400),
   });
   return FiveCs.parse(parseJsonObject(res.choices[0]?.message?.content ?? ""));
 }

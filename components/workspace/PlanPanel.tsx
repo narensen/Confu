@@ -23,6 +23,7 @@ type Props = {
   onTopicStatus: (t: PlanTopic, s: TopicStatus) => void;
   onRecall: (t: PlanTopic) => void; // a quick recall check on a finished topic
   onListen: (t: PlanTopic) => void; // a two-minute audio overview, read aloud
+  onExplain: (t: PlanTopic) => void; // 45 seconds out loud, scored against the page
   onTeach: (t: PlanTopic) => void;
   onPlanCreated: () => void;
   onRepace: (minutesPerDay: number, deadline: string) => Promise<void>;
@@ -247,6 +248,7 @@ function TopicRow({
   topic: t,
   active,
   today,
+  sessionId,
   docs,
   busy,
   onJump,
@@ -254,6 +256,7 @@ function TopicRow({
   onTopicStatus,
   onRecall,
   onListen,
+  onExplain,
   onTeach,
   papers,
   reviews,
@@ -395,6 +398,10 @@ function TopicRow({
                 Teach me
               </SmallButton>
               <SmallButton onClick={() => onListen(t)}>Listen (2 min)</SmallButton>
+              <SmallButton title="One page from this topic. No AI." onClick={() => window.open(`/session/${sessionId}/sheet?topic=${t.id}`, "_blank", "noopener")}>
+                Sheet
+              </SmallButton>
+              <SmallButton onClick={() => onExplain(t)}>Explain (45s)</SmallButton>
               {inPdf && (
                 <SmallButton onClick={() => onJump(t.page_start!, doc!.id)}>
                   Open {docs.length > 1 ? `${doc!.label} ` : ""}p. {t.page_start}

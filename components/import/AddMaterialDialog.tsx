@@ -17,6 +17,7 @@ import {
   type ZoteroCollection,
   type ZoteroItem,
 } from "@/lib/import/zotero";
+import { boardPhotoPdf } from "@/lib/import/board-pdf";
 import { metaFor, type PaperMeta } from "@/lib/pdf/add-paper";
 import { track } from "@/lib/telemetry";
 
@@ -26,10 +27,11 @@ import { track } from "@/lib/telemetry";
 // the tutor and spaced review like any upload.
 
 export type ImportedFile = { file: File; title?: string; sourceUrl?: string | null; meta?: Record<string, unknown> };
-type Tab = "upload" | "web" | "youtube" | "drive" | "zotero";
+type Tab = "upload" | "web" | "youtube" | "drive" | "zotero" | "board";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "upload", label: "Upload" },
+  { id: "board", label: "Board" },
   { id: "web", label: "Web page" },
   { id: "youtube", label: "YouTube" },
   { id: "drive", label: "Google Drive" },
@@ -88,7 +90,7 @@ export function AddMaterialDialog({
             <h2 id="add-material-title" className="mt-1 font-serif text-2xl">
               Study from anything
             </h2>
-            <p className="mt-1 text-sm text-muted">PDFs, slides and Word docs, web pages, lecture videos, Google Drive and Zotero.</p>
+            <p className="mt-1 text-sm text-muted">PDFs, slides and Word docs, a photo of the board, web pages, lecture videos, Google Drive and Zotero.</p>
           </div>
           <button onClick={onClose} disabled={Boolean(busy)} aria-label="Close" className="flex size-8 items-center justify-center rounded-md text-muted hover:bg-paper disabled:opacity-30">
             ✕
@@ -139,6 +141,7 @@ export function AddMaterialDialog({
               )}
             </>
           )}
+          {tab === "board" && <BoardTab {...shared} />}
           {tab === "web" && <WebTab {...shared} />}
           {tab === "youtube" && (
             <YouTubeTab
@@ -840,6 +843,42 @@ function ZoteroTab({ busy, setBusy, setError, done, onPapers, close }: Shared & 
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------- board */
+
+function BoardTab({ busy, setBusy, setError, done }: Shared) {
+  const camera = useRef<HTMLInputElement>(null);
+  const library = useRef<HTMLInputElement>(null);
+  async function take(file: File | undefined) {
+    if (!file) return;
+    setError(null);
+    setBusy("Reading the photo…");
+    try {
+      const pdf = await boardPhotoPdf(file);
+      done([{ file: pdf, title: "Board", meta: { source: "board" } }], "board");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't read that photo.");
+      setBusy(null);
+    }
+  }
+  return (
+    <div className="space-y-3">
+      <p className="text-sm leading-relaxed text-muted">
+        Snap the board. It becomes a page in this session, and Confu reads it like a scan. A photo, not a video.
+      </p>
+      <input ref={camera} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => void take(e.target.files?.[0])} />
+      <input ref={library} type="file" accept="image/*" className="hidden" onChange={(e) => void take(e.target.files?.[0])} />
+      <div className="flex flex-wrap gap-2">
+        <button type="button" disabled={Boolean(busy)} onClick={() => camera.current?.click()} className={buttonClass}>
+          Take a photo
+        </button>
+        <button type="button" disabled={Boolean(busy)} onClick={() => library.current?.click()} className={ghostButtonClass}>
+          Choose a photo
+        </button>
+      </div>
     </div>
   );
 }

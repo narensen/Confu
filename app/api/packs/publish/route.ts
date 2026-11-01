@@ -13,6 +13,7 @@ const Body = z.object({
   visibility: z.enum(["public", "unlisted"]).default("unlisted"),
   classMode: z.boolean().default(false),
   includeHighlights: z.boolean().default(true),
+  asRoadmap: z.boolean().default(false),
 });
 
 const MAX_HIGHLIGHTS = 300;
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
   const index = new Map(docs.map((d, i) => [d.id, i]));
 
   const p = plan as StudyPlan | null;
+  if (o.asRoadmap && !p) return Response.json({ error: "Add a plan to this session before sharing it as a roadmap." }, { status: 400 });
   const topics = p ? (((await supabase.from("plan_topics").select("*").eq("plan_id", p.id).order("position")).data ?? []) as PlanTopic[]) : [];
   let highlights: PackHighlight[] = [];
   if (o.includeHighlights && docs.length) {
@@ -97,6 +99,7 @@ export async function POST(request: Request) {
     passes: ((reviews ?? []) as { document_id: string; target_pass: number }[])
       .filter((r) => index.has(r.document_id))
       .map((r) => ({ doc: index.get(r.document_id)!, target: Math.min(3, Math.max(1, r.target_pass)) as 1 | 2 | 3 })),
+    ...(o.asRoadmap ? { roadmap: true as const } : {}),
   };
 
   const first = ((profile?.full_name as string | null) ?? "").trim().split(/\s+/)[0] || null;

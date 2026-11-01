@@ -6,6 +6,43 @@ export type Release = { date: string; title: string; summary: string; items: str
 export const CHANGELOG: Release[] = [
   {
     date: "2026-11-01",
+    title: "The week before the exam",
+    summary: "A course link, a timed paper, one page to print, and a check that you can explain the page.",
+    items: [
+      "Share a short course link. Classmates can read the plan before they have an account. An account starts when they copy it, highlight, or ask. Once 30 classmates copy a class pack, you get Pro for the term, once.",
+      "Sit a timed paper: 10 questions, 15 minutes. Marks stay hidden until you hand it in. The share card shows the score, the minutes, and what you missed. Not the questions.",
+      "One page from a topic: the objectives, the ideas, and a few lines from the reading. Print it. It doesn't call the tutor. Anki export is still where it was, in Highlights.",
+      "Electric charges and fields, from OpenStax University Physics Volume 2 (CC BY 4.0). Copying it starts an exam session.",
+      "Pin a passage on the page. The answer is written once, from that page. Classmates see it only when you both share class progress. Chats stay yours.",
+      "Explain the page back in 45 seconds. Confu keeps the score and the gap. The words and the audio are thrown away.",
+      "A reminder opens the session on that page, with the tutor folded for the visit.",
+      "Snap the board from your phone. The photo becomes a page in the session and is read like a scan.",
+    ],
+  },
+  {
+    date: "2026-11-01",
+    title: "Threads, spaces, and roadmaps",
+    summary: "Ask a question in public, keep a group's questions private, or share a session as a path.",
+    items: [
+      "Threads: post a question about anything you're studying. Anyone signed in can reply. It isn't the tutor inside a session.",
+      "Learning spaces: a private link for your group. People who join can ask questions there. No timer and no voice. Those stay in study rooms.",
+      "Share a session as a roadmap. It's the same share as a study pack, with the plan shown as a path others can follow and copy.",
+      "Capturing a figure near the bottom of the page keeps the question box on screen.",
+    ],
+  },
+  {
+    date: "2026-11-01",
+    title: "Friends, and voice in private rooms",
+    summary: "Study with people you know, and talk in a private room when you want to.",
+    items: [
+      "Friends: add someone with their friend code or the email on their account. See when they're online, in a room, or in voice.",
+      "Invite a friend into a private room from the room. They get a join card on their Friends page.",
+      "Voice in private rooms: join, mute, or deafen. A ring shows who's talking. No camera, and nothing is recorded. Public rooms stay quiet.",
+      "Up to 8 people can be in voice at once. Some school networks block it; a home network usually works.",
+    ],
+  },
+  {
+    date: "2026-11-01",
     title: "Room to read",
     summary: "The tutor beside you, your tools a click away, and the page in the middle.",
     items: [

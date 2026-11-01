@@ -12,6 +12,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     page("/templates", 0.8),
     ...TEMPLATES.map((t) => page(`/templates/${t.slug}`, 0.7)),
     page("/packs", 0.6),
+    page("/roadmaps", 0.6),
     page("/changelog", 0.5),
     page("/privacy", 0.3),
     page("/terms", 0.3),

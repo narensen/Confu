@@ -5,7 +5,15 @@ import { SITE } from "@/lib/site";
 // due dates), for Google Calendar, Apple Calendar or Outlook to subscribe to.
 // The token in the URL is the only key; it can be reset in Settings.
 
-type Row = { topic_id: string; title: string; due_date: string; est_minutes: number; page_start: number | null; page_end: number | null; session_id: string; session_title: string; status: string };
+type Row = { topic_id: string; title: string; due_date: string; est_minutes: number; page_start: number | null; page_end: number | null; session_id: string; session_title: string; status: string; document_id?: string | null };
+
+// Opens the session on the topic's page, with the tutor folded for that visit.
+function sessionLink(r: Row) {
+  const q = new URLSearchParams({ tutor: "closed" });
+  if (r.page_start && r.page_start >= 1) q.set("page", String(r.page_start));
+  if (r.document_id) q.set("doc", r.document_id);
+  return `${SITE.url}/session/${r.session_id}?${q}`;
+}
 
 const esc = (s: string) => s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
 // Lines over 75 bytes are folded, as the format requires.
@@ -64,7 +72,7 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/calendar/[token
   for (const r of (data ?? []) as Row[]) {
     const done = r.status === "completed";
     const pages = r.page_start ? (r.page_start === r.page_end ? `p. ${r.page_start}` : `pp. ${r.page_start}–${r.page_end}`) : "";
-    const link = `${SITE.url}/session/${r.session_id}`;
+    const link = sessionLink(r);
     lines.push(
       "BEGIN:VEVENT",
       `UID:${r.topic_id}@confu`,
@@ -98,7 +106,7 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/calendar/[token
       const iso = date.toISOString().slice(0, 10);
       const topic = open.find((r) => r.due_date >= iso) ?? open[open.length - 1];
       const start = zonedToUtc(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate(), hh, mm, tz);
-      const link = topic ? `${SITE.url}/session/${topic.session_id}` : `${SITE.url}/dashboard`;
+      const link = topic ? sessionLink(topic) : `${SITE.url}/dashboard`;
       lines.push(
         "BEGIN:VEVENT",
         `UID:block-${iso.replace(/-/g, "")}@confu`,

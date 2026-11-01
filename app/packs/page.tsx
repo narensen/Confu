@@ -27,7 +27,11 @@ export default function PacksPage() {
               library, with a plan that starts today.
             </p>
             <p className="mt-4 text-sm text-muted">
-              Share your own from any session: the <span className="font-medium text-ink">Share</span> button next to its title.
+              Share your own from any session: the <span className="font-medium text-ink">Share</span> button next to its title. Plans shared as a path are also on{" "}
+              <Link href="/roadmaps" className="font-medium text-ink underline underline-offset-4">
+                Roadmaps
+              </Link>
+              .
             </p>
           </div>
         </section>

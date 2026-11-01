@@ -62,6 +62,7 @@ export type PanelProps = {
   onTopicStatus: (topic: PlanTopic, status: TopicStatus) => void;
   onRecall: (topic: PlanTopic) => void;
   onListen: (topic: PlanTopic) => void;
+  onExplain: (topic: PlanTopic) => void;
   onDeleteHighlight: (h: Highlight) => void;
   onUpdateHighlight: (h: Highlight, patch: { color?: HighlightColor; note?: string | null }) => void;
   onPlanCreated: () => void;
@@ -189,6 +190,7 @@ export function TutorPanel({ view, ...props }: PanelProps & { view: Tab }) {
           onTopicStatus={props.onTopicStatus}
           onRecall={props.onRecall}
           onListen={props.onListen}
+          onExplain={props.onExplain}
           papers={props.paper.paperIds}
           reviews={props.paper.reviews}
           onOpenPaper={(docId) => {

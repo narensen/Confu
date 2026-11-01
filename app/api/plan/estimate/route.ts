@@ -1,7 +1,7 @@
 import { after } from "next/server";
 import { z } from "zod";
 import { hasOwnAccess, resolveGroq } from "@/lib/ai-access";
-import { MODELS, parseJsonObject } from "@/lib/groq";
+import { MODELS, modelBudget, parseJsonObject } from "@/lib/groq";
 import { logError } from "@/lib/log";
 import { materialsEstimate, type PaceEstimate } from "@/lib/pace";
 import { isPaperDoc } from "@/lib/paper";
@@ -49,8 +49,7 @@ export async function POST(request: Request) {
       messages: [{ role: "user", content: estimatePrompt(goal, level, base) }],
       response_format: { type: "json_object" },
       temperature: 0,
-      max_completion_tokens: 800,
-      reasoning_effort: "low",
+      ...modelBudget(MODELS.fast, 500),
     });
     const r = Refined.parse(parseJsonObject(res.choices[0]?.message?.content ?? ""));
     const hours = Math.round(Math.min(1000, Math.max(1, r.hours)));

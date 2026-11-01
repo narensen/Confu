@@ -193,6 +193,18 @@ export function AccountMenu({ name, email, plan, owner, keyLast4 }: Props) {
             </Link>
             <Link
               role="menuitem"
+              href="/friends"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition hover:bg-paper"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                <circle cx="9" cy="8" r="3" />
+                <path d="M3 19v-1a4 4 0 0 1 4-4h4a4 4 0 0 1 1 .1M19 8v6M16 11h6" />
+              </svg>
+              Friends
+            </Link>
+            <Link
+              role="menuitem"
               href="/rooms"
               onClick={() => setOpen(false)}
               className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition hover:bg-paper"
@@ -201,6 +213,28 @@ export function AccountMenu({ name, email, plan, owner, keyLast4 }: Props) {
                 <path d="M16 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1M9 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM22 19v-1a4 4 0 0 0-3-3.9M16 4.1a3 3 0 0 1 0 5.8" />
               </svg>
               Study rooms
+            </Link>
+            <Link
+              role="menuitem"
+              href="/threads"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition hover:bg-paper"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                <path d="M5 5h14v10H8l-3 3z" />
+              </svg>
+              Threads
+            </Link>
+            <Link
+              role="menuitem"
+              href="/spaces"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition hover:bg-paper"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
+                <path d="M4 10.5 12 4l8 6.5V20H4zM9 20v-6h6v6" />
+              </svg>
+              Learning spaces
             </Link>
             <Link
               role="menuitem"

@@ -172,6 +172,10 @@ export async function POST(request: Request) {
       const name = ((claims.user_metadata ?? {}) as { full_name?: string }).full_name?.trim().split(/\s+/)[0] ?? null;
       const rec = await supabase.rpc("record_pack_copy", { p_slug: slug, p_session: sessionId, p_share: share, p_name: name });
       if (rec.error) logError("pack copy: record", rec.error);
+      else {
+        const grant = await supabase.rpc("grant_class_rep", { p_slug: slug });
+        if (grant.error && !/grant_class_rep|schema cache|Could not find the function/i.test(grant.error.message)) logError("pack copy: class rep", grant.error);
+      }
     }
     return Response.json({ sessionId });
   } catch (err) {

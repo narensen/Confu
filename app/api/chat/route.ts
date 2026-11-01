@@ -2,7 +2,8 @@ import { after } from "next/server";
 import { z } from "zod";
 import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
 import type { ChatCompletionMessageParam } from "groq-sdk/resources/chat/completions";
-import { MODELS } from "@/lib/groq";
+import { MODELS, modelBudget, stripReasoning } from "@/lib/groq";
+import { createReasoningFilter } from "@/lib/visible-text";
 import { currentTopic, scheduleStatus, toISODate } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/server";
 import { loadTutorState, retrieveContext } from "@/lib/tutor/context";
@@ -173,13 +174,21 @@ export async function POST(request: Request) {
     topicTitle: isPaper || (passAction && paper) ? paper?.title : topic?.title,
   });
 
+  // Strip first, then cut. A stored scratchpad is usually the start of the
+  // message; slicing first would keep the scratchpad and drop the answer,
+  // and the next turn would reason about it again.
   const pastTurns = ((history.data ?? []) as { role: "user" | "assistant"; content: string }[])
     .reverse()
-    .map((m) => ({ role: m.role, content: m.content.slice(0, 1800) }));
+    .map((m) => ({
+      role: m.role,
+      content: (m.role === "assistant" ? stripReasoning(m.content) : m.content).slice(0, 1800).trim(),
+    }))
+    .filter((m) => m.content);
 
-  // Paper sessions get tools for finding papers.
+  // Paper sessions get tools for finding papers. One tool round, then an
+  // answer: a second hop resends the whole prompt and its reasoning budget.
   const tools = isPaper ? PAPER_TOOLS : undefined;
-  const MAX_TOOL_ROUNDS = 2;
+  const MAX_TOOL_ROUNDS = 1;
   const messages: ChatCompletionMessageParam[] = [
     { role: "system", content: system },
     ...pastTurns,
@@ -191,9 +200,7 @@ export async function POST(request: Request) {
       messages,
       stream: true,
       temperature: 0.5,
-      max_completion_tokens: 2500,
-      reasoning_effort: "medium",
-      include_reasoning: false,
+      ...modelBudget(MODELS.chat, 1800),
       // On the last round, force an answer from what's been gathered.
       ...(tools ? { tools, tool_choice: round < MAX_TOOL_ROUNDS ? ("auto" as const) : ("none" as const) } : {}),
     });
@@ -227,13 +234,20 @@ export async function POST(request: Request) {
         let completion = firstRound;
         for (let round = 0; ; round++) {
           const calls: { id: string; name: string; args: string }[] = [];
+          const visible = createReasoningFilter();
           let roundText = "";
+          let hitCap = false;
+          const take = (delta: string) => {
+            const shown = visible.push(delta);
+            if (!shown) return;
+            roundText += shown;
+            write(shown);
+          };
           for await (const chunk of completion) {
-            const delta = chunk.choices[0]?.delta;
-            if (delta?.content) {
-              roundText += delta.content;
-              write(delta.content);
-            }
+            const choice = chunk.choices[0];
+            if (choice?.finish_reason === "length") hitCap = true;
+            const delta = choice?.delta;
+            if (delta?.content) take(delta.content);
             for (const tc of delta?.tool_calls ?? []) {
               const call = (calls[tc.index] ??= { id: "", name: "", args: "" });
               if (tc.id) call.id = tc.id;
@@ -241,12 +255,22 @@ export async function POST(request: Request) {
               if (tc.function?.arguments) call.args += tc.function.arguments;
             }
           }
+          const tail = visible.finish();
+          if (tail) {
+            roundText += tail;
+            write(tail);
+          }
           const pending = calls.filter((c) => c.name);
-          if (!pending.length || !tools) break;
+          // Stop even if the model asks for another tool. Another round would
+          // resend the whole prompt, and a model that keeps calling tools would
+          // never stop.
+          const lastRound = !pending.length || !tools || round >= MAX_TOOL_ROUNDS;
+          if (hitCap && lastRound) write("\n\n_(Stopped here so this stays short. Ask me to continue.)_");
+          if (lastRound) break;
 
           messages.push({
             role: "assistant",
-            content: roundText || null,
+            content: roundText.trim() || null,
             tool_calls: pending.map((c) => ({ id: c.id, type: "function" as const, function: { name: c.name, arguments: c.args } })),
           });
           for (const call of pending) {
@@ -319,7 +343,10 @@ export async function POST(request: Request) {
         sessionId,
         memory: state.memory,
         topic,
-        userTurn: instruction,
+        // The display turn, not the full instruction. The instruction repeats
+        // the passage and the excerpts already sent with the answer.
+        userTurn: display,
+        passage: sel?.text,
         assistantReply: reply,
       });
     } catch (err) {

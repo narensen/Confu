@@ -1,7 +1,7 @@
 import { after } from "next/server";
 import { z } from "zod";
 import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
-import { MODELS, parseJsonObject } from "@/lib/groq";
+import { MODELS, modelBudget, parseJsonObject } from "@/lib/groq";
 import { logError } from "@/lib/log";
 import { arxivByName, findByTitle, norm, openAlexByName, papersByArxivIds, resolvePaper, sameTitle, type PaperMeta } from "@/lib/scholar";
 import { videoIdFrom } from "@/lib/import/youtube";
@@ -71,8 +71,7 @@ export async function POST(request: Request) {
       messages: [{ role: "user", content: extractPrompt(goal) }],
       response_format: { type: "json_object" },
       temperature: 0,
-      max_completion_tokens: 2500,
-      reasoning_effort: "medium",
+      ...modelBudget(MODELS.chat, 1200),
     });
     named = Named.parse(parseJsonObject(res.choices[0]?.message?.content ?? ""));
   } catch (err) {

@@ -1,7 +1,7 @@
 import { after } from "next/server";
 import { z } from "zod";
 import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
-import { MODELS, parseJsonObject } from "@/lib/groq";
+import { MODELS, modelBudget, parseJsonObject } from "@/lib/groq";
 import { logError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 
@@ -69,8 +69,7 @@ export async function POST(request: Request) {
       messages: [{ role: "user", content: recallPrompt(topic, topic.study_plans.level, pages) }],
       response_format: { type: "json_object" },
       temperature: 0.3,
-      max_completion_tokens: 1500,
-      reasoning_effort: "low",
+      ...modelBudget(MODELS.chat, 1200),
     });
     const { questions } = Questions.parse(parseJsonObject(res.choices[0]?.message?.content ?? ""));
     return Response.json({ questions: questions.slice(0, 3) });

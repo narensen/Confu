@@ -1,7 +1,7 @@
 import { after } from "next/server";
 import { z } from "zod";
 import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
-import { MODELS } from "@/lib/groq";
+import { MODELS, modelBudget, stripReasoning } from "@/lib/groq";
 import { createClient } from "@/lib/supabase/server";
 
 export const maxDuration = 60;
@@ -75,10 +75,9 @@ ${(pageRow?.content ?? "").slice(0, 3000)}
         },
       ],
       temperature: 0.2,
-      max_completion_tokens: 1500,
-      reasoning_format: "hidden",
+      ...modelBudget(MODELS.vision, 1100),
     });
-    description = res.choices[0]?.message?.content?.trim() ?? "";
+    description = stripReasoning(res.choices[0]?.message?.content ?? "").trim();
   } catch (err) {
     return groqErrorResponse(err, "The vision model could not read this region. Try again.");
   }

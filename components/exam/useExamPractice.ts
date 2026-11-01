@@ -1,15 +1,25 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { JSON_HEADERS, notifyAiUsed, readAiError } from "@/lib/ai-errors";
 import { topicStats, type Attempt, type ExamQuestion, type QuestionKind } from "@/lib/exam";
+import { SITTING_COUNT, SITTING_SECONDS } from "@/lib/sitting";
 import { createClient } from "@/lib/supabase/client";
 
 export type Answer = { choice?: number; text?: string; score: number; feedback?: string };
 
-export type Quiz = { questions: ExamQuestion[]; index: number; answers: Record<string, Answer>; focus: string[] };
+export type Quiz = {
+  questions: ExamQuestion[];
+  index: number;
+  answers: Record<string, Answer>;
+  focus: string[];
+  sealed: boolean; // a sitting: hide marks until it's handed in
+  startedAt: number;
+  limitSec: number | null;
+  finishedAt: number | null;
+};
 
-export type StartOptions = { documentId?: string | null; topics?: string[]; mix?: "mixed" | QuestionKind; count?: number };
+export type StartOptions = { documentId?: string | null; topics?: string[]; mix?: "mixed" | QuestionKind; count?: number; sitting?: boolean };
 
 // Practice state for an exam session: the current quiz, marking, and the
 // history of answers that weak topics are computed from.
@@ -20,22 +30,38 @@ export function useExamPractice(sessionId: string, initialAttempts: Attempt[]) {
   const [loading, setLoading] = useState(false);
   const [marking, setMarking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const quizRef = useRef(quiz);
+  const finishing = useRef(false);
+  useEffect(() => {
+    quizRef.current = quiz;
+  }, [quiz]);
 
   const stats = useMemo(() => topicStats(attempts), [attempts]);
 
   const start = useCallback(
-    async ({ documentId = null, topics = [], mix = "mixed", count = 5 }: StartOptions = {}) => {
+    async ({ documentId = null, topics = [], mix = "mixed", count, sitting = false }: StartOptions = {}) => {
       setLoading(true);
       setError(null);
+      finishing.current = false;
+      const n = count ?? (sitting ? SITTING_COUNT : 5);
       try {
         const res = await fetch("/api/exam/quiz", {
           method: "POST",
           headers: JSON_HEADERS,
-          body: JSON.stringify({ sessionId, documentId, topics, mix, count }),
+          body: JSON.stringify({ sessionId, documentId, topics, mix, count: n }),
         });
         if (!res.ok) throw new Error(await readAiError(res));
         const { questions } = (await res.json()) as { questions: ExamQuestion[] };
-        setQuiz({ questions, index: 0, answers: {}, focus: topics });
+        setQuiz({
+          questions,
+          index: 0,
+          answers: {},
+          focus: topics,
+          sealed: sitting,
+          startedAt: Date.now(),
+          limitSec: sitting ? SITTING_SECONDS : null,
+          finishedAt: null,
+        });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Couldn't make questions.");
       } finally {
@@ -46,9 +72,8 @@ export function useExamPractice(sessionId: string, initialAttempts: Attempt[]) {
     [sessionId],
   );
 
-  const record = useCallback(
+  const persist = useCallback(
     async (q: ExamQuestion, answer: Answer) => {
-      setQuiz((cur) => (cur ? { ...cur, answers: { ...cur.answers, [q.id]: answer } } : cur));
       const { data } = await supabase
         .from("exam_attempts")
         .insert({
@@ -63,7 +88,6 @@ export function useExamPractice(sessionId: string, initialAttempts: Attempt[]) {
         .select("topic, score, created_at")
         .single();
       if (data) setAttempts((list) => [data as Attempt, ...list]);
-      // Missed or partly right: it comes back in spaced review, with its answer.
       if (answer.score < 1) {
         const model = q.kind === "mcq" && q.options && q.correct !== undefined ? q.options[q.correct] : (q.answer ?? "");
         await supabase.from("review_items").upsert(
@@ -83,7 +107,24 @@ export function useExamPractice(sessionId: string, initialAttempts: Attempt[]) {
     [sessionId, supabase],
   );
 
+  const record = useCallback(
+    async (q: ExamQuestion, answer: Answer) => {
+      setQuiz((cur) => (cur ? { ...cur, answers: { ...cur.answers, [q.id]: answer } } : cur));
+      await persist(q, answer);
+    },
+    [persist],
+  );
+
   const answerChoice = useCallback((q: ExamQuestion, choice: number) => record(q, { choice, score: choice === q.correct ? 1 : 0 }), [record]);
+
+  // During a sitting the choice is kept, and the mark waits until the end.
+  const holdChoice = useCallback((q: ExamQuestion, choice: number) => {
+    setQuiz((cur) => (cur ? { ...cur, answers: { ...cur.answers, [q.id]: { choice, score: choice === q.correct ? 1 : 0 } } } : cur));
+  }, []);
+
+  const holdText = useCallback((q: ExamQuestion, text: string) => {
+    setQuiz((cur) => (cur ? { ...cur, answers: { ...cur.answers, [q.id]: { text, score: -1 } } } : cur));
+  }, []);
 
   const answerText = useCallback(
     async (q: ExamQuestion, text: string) => {
@@ -108,10 +149,47 @@ export function useExamPractice(sessionId: string, initialAttempts: Attempt[]) {
     [record, sessionId],
   );
 
+  const finish = useCallback(async () => {
+    const cur = quizRef.current;
+    if (!cur?.sealed || finishing.current) return;
+    finishing.current = true;
+    setMarking(true);
+    setError(null);
+    const next = { ...cur.answers };
+    try {
+      for (const q of cur.questions) {
+        const a = next[q.id];
+        if (!a || a.score >= 0 || !a.text?.trim()) continue;
+        try {
+          const res = await fetch("/api/exam/grade", {
+            method: "POST",
+            headers: JSON_HEADERS,
+            body: JSON.stringify({ sessionId, question: q.question, expected: q.answer, answer: a.text }),
+          });
+          if (!res.ok) throw new Error(await readAiError(res));
+          const { score, feedback } = (await res.json()) as { score: number; feedback: string };
+          next[q.id] = { ...a, score, feedback };
+        } catch {
+          next[q.id] = { ...a, score: 0, feedback: "Couldn't mark this one." };
+        }
+      }
+      for (const q of cur.questions) {
+        const a = next[q.id];
+        if (!a || a.score < 0) continue;
+        await persist(q, a);
+      }
+      setQuiz((c) => (c ? { ...c, answers: { ...c.answers, ...next }, sealed: false, index: c.questions.length, finishedAt: Date.now() } : c));
+    } finally {
+      setMarking(false);
+      finishing.current = false;
+      notifyAiUsed();
+    }
+  }, [persist, sessionId]);
+
   const next = useCallback(() => setQuiz((cur) => (cur ? { ...cur, index: cur.index + 1 } : cur)), []);
   const reset = useCallback(() => setQuiz(null), []);
 
-  return { attempts, stats, quiz, loading, marking, error, start, answerChoice, answerText, next, reset };
+  return { sessionId, attempts, stats, quiz, loading, marking, error, start, answerChoice, holdChoice, holdText, answerText, finish, next, reset };
 }
 
 export type ExamPractice = ReturnType<typeof useExamPractice>;

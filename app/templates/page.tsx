@@ -44,6 +44,7 @@ export default function TemplatesPage() {
                     <span className="mt-2 text-sm leading-relaxed text-muted">{t.tagline}</span>
                     <span className="mt-auto pt-5 font-mono text-[11px] text-muted">
                       {t.sources.length} sources · {t.weeks} {t.weeks === 1 ? "week" : "weeks"} · {t.level}
+                      {t.kind === "exam" ? " · starts as an exam session" : ""}
                     </span>
                   </Link>
                 </li>

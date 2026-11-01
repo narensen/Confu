@@ -11,7 +11,7 @@ export type Template = {
   title: string;
   tagline: string;
   description: string; // for the template's page and search results
-  kind: "study" | "paper";
+  kind: "study" | "paper" | "exam";
   level: Level;
   weeks: number;
   minutesPerDay: number;
@@ -317,6 +317,31 @@ export const TEMPLATES: Template[] = [
       web("https://en.wikipedia.org/wiki/Spacing_effect", "Spacing effect (Wikipedia)"),
     ],
     tags: ["Study skills", "Beginner"],
+  },
+  {
+    slug: "electric-charges-and-fields",
+    title: "Electric charges and fields",
+    tagline: "Charge, Coulomb's law, fields and dipoles, from an open textbook.",
+    description:
+      "A first-year exam on electric charge and fields, from OpenStax University Physics Volume 2 (Samuel J. Ling, Jeff Sanny and William Moebs, CC BY 4.0). Copy it and Confu fetches the chapter into an exam session, so you can sit a timed paper from the text.",
+    kind: "exam",
+    level: "beginner",
+    weeks: 2,
+    minutesPerDay: 40,
+    goal: "Be ready for an exam on electric charges and fields: explain charge, conductors and insulators, Coulomb's law, the electric field, field lines and electric dipoles, and work a short problem on each.",
+    outline: [
+      { phase: "Charge", topics: ["What charge is", "Conductors and insulators", "Charging by induction"] },
+      { phase: "Forces and fields", topics: ["Coulomb's law", "The electric field", "Field of a point charge"] },
+      { phase: "Pictures", topics: ["Field lines", "Electric dipoles"] },
+    ],
+    sources: [
+      web("https://openstax.org/books/university-physics-volume-2/pages/5-introduction", "Electric charges and fields (OpenStax University Physics Volume 2)"),
+      web("https://openstax.org/books/university-physics-volume-2/pages/5-1-electric-charge", "Electric charge (OpenStax)"),
+      web("https://openstax.org/books/university-physics-volume-2/pages/5-3-coulombs-law", "Coulomb's law (OpenStax)"),
+      web("https://openstax.org/books/university-physics-volume-2/pages/5-4-electric-field", "Electric field (OpenStax)"),
+      web("https://openstax.org/books/university-physics-volume-2/pages/5-7-electric-dipoles", "Electric dipoles (OpenStax)"),
+    ],
+    tags: ["Physics", "Exam"],
   },
 ];
 

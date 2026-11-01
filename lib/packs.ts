@@ -59,6 +59,7 @@ export type PackContent = {
   highlights: PackHighlight[];
   passes: { doc: number; target: 1 | 2 | 3 }[]; // papers: how deep the author read each
   goal?: string; // templates: the goal to start from (no plan yet)
+  roadmap?: boolean; // this pack is a session shared as a path others can follow
 };
 
 export type Pack = {

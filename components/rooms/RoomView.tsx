@@ -5,6 +5,8 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "@/components/dialogs";
 import { FocusSound } from "@/components/pdf/FocusSound";
 import { chime } from "@/components/pdf/FocusTimer";
+import { RoomFriends } from "@/components/rooms/RoomFriends";
+import { VoiceRoom } from "@/components/rooms/VoiceRoom";
 import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
 import { clock, currentRoom, heartbeat, joinRoom, leaveRoom, onRoomChange, ping, roomState, setStudying, subscribeRoom, timerNow, type RoomState } from "@/lib/rooms";
 import { SITE } from "@/lib/site";
@@ -123,6 +125,8 @@ export function RoomView({ slug }: { slug: string }) {
           )}
         </div>
 
+        {!room.is_public && <VoiceRoom slug={room.slug} joined={joined} />}
+
         <div className="mt-8">
           <p className={eyebrowClass}>In the room</p>
           {room.members.length ? (
@@ -186,6 +190,7 @@ export function RoomView({ slug }: { slug: string }) {
             <>
               <p className="font-medium">Join this room</p>
               <p className="mt-1 text-sm text-muted">Others here will see your first name{studying.trim() ? " and what you're working on" : ""}. Nothing else.</p>
+              {!room.is_public && <p className="mt-1 text-sm text-muted">Once you&apos;re in, you can invite friends and turn on voice.</p>}
               <input value={studying} maxLength={120} onChange={(e) => setStudyingText(e.target.value)} placeholder="Working on… (optional)" className={`${inputClass} mt-4 py-1.5`} />
               <button
                 type="button"
@@ -210,16 +215,7 @@ export function RoomView({ slug }: { slug: string }) {
             </>
           )}
         </div>
-        {!room.is_public && (
-          <div className="rounded-2xl border border-ink bg-panel p-5">
-            <p className="font-medium">Invite people</p>
-            <p className="mt-1 text-sm text-muted">Anyone with a Confu account and this link can join.</p>
-            <code className="mt-3 block truncate rounded-lg border border-line bg-paper px-3 py-2 font-mono text-xs">{link}</code>
-            <button type="button" onClick={() => navigator.clipboard.writeText(link).then(() => toast("Room link copied."))} className={`${ghostButtonClass} mt-2 py-1 text-xs`}>
-              Copy link
-            </button>
-          </div>
-        )}
+        {!room.is_public && <RoomFriends slug={room.slug} link={link} canInvite={joined || room.mine} />}
       </aside>
     </div>
   );

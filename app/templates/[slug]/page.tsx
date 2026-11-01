@@ -67,8 +67,9 @@ export default async function TemplatePage({ params }: PageProps<"/templates/[sl
             <aside className="self-start rounded-2xl border border-ink bg-panel p-6 shadow-[6px_6px_0_0_var(--ink)]">
               <p className="font-serif text-xl">Start this goal</p>
               <p className="mt-2 text-sm leading-relaxed text-muted">
-                Confu brings the sources into a new session and fills in the goal. You set your level, deadline and hours, and get a plan made for
-                you.
+                {t.kind === "exam"
+                  ? "Copying this starts an exam session, so you can sit a timed paper from the chapter. You still set your level, deadline and hours."
+                  : "Confu brings the sources into a new session and fills in the goal. You set your level, deadline and hours, and get a plan made for you."}
               </p>
               <div className="mt-5">
                 <Suspense fallback={<div className="h-11" />}>

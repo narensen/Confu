@@ -12,7 +12,7 @@ export default function TermsPage() {
     <LegalPage
       eyebrow="Terms"
       title="Terms & Disclaimer"
-      updated="October 26, 2026"
+      updated="November 1, 2026"
       summary={
         <Bullets
           items={[
@@ -130,16 +130,30 @@ export default function TermsPage() {
           items={[
             <>
               You&apos;re responsible for what you publish. A study pack shares links, paper identifiers, your plan and, if you
-              choose, your highlights and notes; never files. Only share highlights and notes you&apos;re happy to make public,
-              and don&apos;t include other people&apos;s personal information.
+              choose, your highlights and notes; never files. A roadmap is that same page, with the plan shown as a path.
+              Only share highlights and notes you&apos;re happy to make public, and don&apos;t include other people&apos;s personal
+              information.
+            </>,
+            <>
+              Threads are visible to people signed in. A learning space is visible only to people with its link. Don&apos;t post
+              someone else&apos;s personal information, and don&apos;t post anything you wouldn&apos;t say in a class.
             </>,
             <>
               When someone copies your pack, the copy is theirs. Unpublishing your pack doesn&apos;t remove copies already made.
             </>,
             <>
-              In study rooms, use a name you&apos;re comfortable showing and keep what you write respectful.
+              In study rooms, use a name you&apos;re comfortable showing and keep what you write respectful. In a private
+              room&apos;s voice, don&apos;t record the others without them agreeing. Voice isn&apos;t recorded by Confu.
             </>,
-            <>We may remove packs, shared pages or rooms that break these terms.</>,
+            <>
+              A class pack can grant its author Pro for the term, once, about four months, after 30 classmates copy it.
+              That grant isn&apos;t a payment and doesn&apos;t renew.
+            </>,
+            <>
+              A sitting card and a page pin follow the same rule: don&apos;t publish other people&apos;s personal information.
+              A sitting shares a score, not the questions. A pin shares a passage and one answer, not a chat.
+            </>,
+            <>We may remove packs, roadmaps, threads, spaces, shared pages, sitting cards, pins or rooms that break these terms.</>,
           ]}
         />
       </Section>

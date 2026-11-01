@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Markdown } from "@/components/workspace/Markdown";
 import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
+import { JSON_HEADERS } from "@/lib/ai-errors";
 import { countdownLabel, daysUntil, type ExamQuestion, type QuestionKind } from "@/lib/exam";
+import { SITTING_COUNT, SITTING_SECONDS } from "@/lib/sitting";
+import { SITE } from "@/lib/site";
 import { useToday } from "@/lib/use-today";
 import type { SessionDoc } from "@/lib/types";
 import type { ExamPractice } from "./useExamPractice";
@@ -32,7 +35,6 @@ export function PracticePanel({ practice, docs, examDate, onExamDate, onJump, on
 
   return (
     <div className="h-full overflow-y-auto">
-      {/* Countdown */}
       <section className="flex items-center justify-between gap-4 border-b border-ink px-6 py-4">
         <div>
           <p className={eyebrowClass}>Exam</p>
@@ -52,6 +54,11 @@ export function PracticePanel({ practice, docs, examDate, onExamDate, onJump, on
       {loading ? (
         <div className="animate-fade flex min-h-[50vh] flex-col items-center justify-center gap-4 px-6 text-center">
           <p className="font-serif text-2xl">Writing questions from your notes…</p>
+          <div className="indeterminate h-[3px] w-48 rounded-full bg-line" />
+        </div>
+      ) : practice.marking && quiz?.sealed ? (
+        <div className="animate-fade flex min-h-[50vh] flex-col items-center justify-center gap-4 px-6 text-center">
+          <p className="font-serif text-2xl">Marking the paper…</p>
           <div className="indeterminate h-[3px] w-48 rounded-full bg-line" />
         </div>
       ) : quiz && quiz.index < quiz.questions.length ? (
@@ -100,6 +107,14 @@ export function PracticePanel({ practice, docs, examDate, onExamDate, onJump, on
           >
             Practise 5 questions
           </button>
+          <button
+            onClick={() => practice.start({ documentId: scope === "all" ? null : scope, mix, sitting: true })}
+            disabled={!docs.length}
+            className={`${ghostButtonClass} w-full py-2.5`}
+          >
+            Timed paper · {SITTING_COUNT} questions · {SITTING_SECONDS / 60} min
+          </button>
+          <p className="text-xs leading-relaxed text-muted">A timed paper hides the marks until you hand it in. Then you can share the score, not the questions.</p>
 
           {weak.length > 0 && (
             <div className="rounded-lg border border-dashed border-ink/40 bg-paper p-4">
@@ -131,12 +146,39 @@ function SourceLink({ q, onJump }: { q: ExamQuestion; onJump: Props["onJump"] })
   );
 }
 
+function SittingClock({ startedAt, limitSec, onDone }: { startedAt: number; limitSec: number; onDone: () => void }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 250);
+    return () => window.clearInterval(id);
+  }, []);
+  const left = Math.max(0, limitSec * 1000 - (now - startedAt));
+  const fired = useRef(false);
+  useEffect(() => {
+    if (left === 0 && !fired.current) {
+      fired.current = true;
+      onDone();
+    }
+  }, [left, onDone]);
+  const sec = Math.ceil(left / 1000);
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return (
+    <span className={`font-mono text-xs tabular-nums ${sec <= 60 ? "text-warn" : "text-muted"}`}>
+      {m}:{String(s).padStart(2, "0")}
+    </span>
+  );
+}
+
 function QuestionCard({ practice, onJump, onAsk }: Pick<Props, "practice" | "onJump" | "onAsk">) {
   const quiz = practice.quiz!;
   const q = quiz.questions[quiz.index];
   const answer = quiz.answers[q.id];
+  const sealed = quiz.sealed;
+  const show = Boolean(answer) && !sealed && (answer?.score ?? 0) >= 0;
   const [text, setText] = useState("");
   const total = quiz.questions.length;
+  const last = quiz.index + 1 >= total;
 
   return (
     <section className="animate-enter px-6 py-6">
@@ -147,8 +189,9 @@ function QuestionCard({ practice, onJump, onAsk }: Pick<Props, "practice" | "onJ
         <div className="h-1 flex-1 overflow-hidden rounded-full bg-line">
           <div className="h-full bg-ink transition-[width] duration-500 ease-fluid" style={{ width: `${(quiz.index / total) * 100}%` }} />
         </div>
-        <button onClick={practice.reset} className="text-xs text-muted hover:text-ink">
-          End
+        {sealed && quiz.limitSec ? <SittingClock startedAt={quiz.startedAt} limitSec={quiz.limitSec} onDone={() => void practice.finish()} /> : null}
+        <button onClick={() => (sealed ? void practice.finish() : practice.reset())} className="text-xs text-muted hover:text-ink">
+          {sealed ? "Hand in" : "End"}
         </button>
       </div>
 
@@ -163,28 +206,23 @@ function QuestionCard({ practice, onJump, onAsk }: Pick<Props, "practice" | "onJ
         <ul className="mt-5 space-y-2">
           {q.options!.map((opt, i) => {
             const chosen = answer?.choice === i;
-            const right = answer && i === q.correct;
+            const right = show && i === q.correct;
+            const wrong = show && chosen && i !== q.correct;
             return (
               <li key={i}>
                 <button
-                  disabled={Boolean(answer)}
-                  onClick={() => practice.answerChoice(q, i)}
+                  disabled={show}
+                  onClick={() => (sealed ? practice.holdChoice(q, i) : practice.answerChoice(q, i))}
                   className={`flex w-full items-start gap-3 rounded-lg border px-3 py-2.5 text-left text-sm transition duration-200 ease-fluid ${
-                    right
-                      ? "border-ok bg-ok/5"
-                      : chosen
-                        ? "border-danger bg-danger/5"
-                        : answer
-                          ? "border-line opacity-60"
-                          : "border-ink/30 hover:-translate-y-px hover:border-ink hover:shadow-hard-sm"
+                    right ? "border-ok bg-ok/5" : wrong ? "border-danger bg-danger/5" : chosen ? "border-ink" : show ? "border-line opacity-60" : "border-ink/30 hover:-translate-y-px hover:border-ink hover:shadow-hard-sm"
                   }`}
                 >
                   <span
                     className={`flex size-6 shrink-0 items-center justify-center rounded-full border font-mono text-[11px] ${
-                      right ? "border-ok bg-ok text-white" : chosen ? "border-danger bg-danger text-white" : "border-ink/40"
+                      right ? "border-ok bg-ok text-white" : wrong ? "border-danger bg-danger text-white" : chosen ? "border-ink bg-ink text-white" : "border-ink/40"
                     }`}
                   >
-                    {right ? "✓" : chosen ? "✕" : "ABCD"[i]}
+                    {right ? "✓" : wrong ? "✕" : "ABCD"[i]}
                   </span>
                   <span className="pt-0.5">
                     <Markdown content={opt} className="prose-tutor prose-compact" />
@@ -194,12 +232,14 @@ function QuestionCard({ practice, onJump, onAsk }: Pick<Props, "practice" | "onJ
             );
           })}
         </ul>
-      ) : !answer ? (
+      ) : !answer || (sealed && answer.score < 0 && !answer.text) ? (
         <form
           className="mt-5 space-y-3"
           onSubmit={(e) => {
             e.preventDefault();
-            if (text.trim()) void practice.answerText(q, text);
+            if (!text.trim()) return;
+            if (sealed) practice.holdText(q, text);
+            else void practice.answerText(q, text);
           }}
         >
           <textarea
@@ -212,12 +252,14 @@ function QuestionCard({ practice, onJump, onAsk }: Pick<Props, "practice" | "onJ
           />
           {practice.error && <p className="rounded-lg border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger">{practice.error}</p>}
           <button disabled={!text.trim() || practice.marking} className={`${buttonClass} w-full py-2.5`}>
-            {practice.marking ? "Marking…" : "Mark my answer"}
+            {practice.marking ? "Marking…" : sealed ? "Save answer" : "Mark my answer"}
           </button>
         </form>
+      ) : sealed && answer.text ? (
+        <p className="mt-5 text-sm text-muted">Saved. Marks wait until you hand the paper in.</p>
       ) : null}
 
-      {answer && (
+      {show && answer && (
         <div className="animate-enter mt-5 space-y-3">
           <p
             className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium ${
@@ -257,19 +299,27 @@ function QuestionCard({ practice, onJump, onAsk }: Pick<Props, "practice" | "onJ
           </div>
         </div>
       )}
+
+      {sealed && (q.kind === "mcq" ? answer : answer?.text) && (
+        <div className="mt-5 flex justify-end">
+          <button onClick={() => (last ? void practice.finish() : practice.next())} className={`${buttonClass} py-1.5`}>
+            {last ? "Hand in" : "Next question"}
+          </button>
+        </div>
+      )}
     </section>
   );
 }
 
 function Summary({ practice, onWeak }: { practice: ExamPractice; onWeak: (topics: string[]) => void }) {
   const quiz = practice.quiz!;
-  const answered = quiz.questions.filter((q) => quiz.answers[q.id]);
+  const answered = quiz.questions.filter((q) => quiz.answers[q.id] && quiz.answers[q.id].score >= 0);
   const score = answered.reduce((s, q) => s + quiz.answers[q.id].score, 0);
   const missed = [...new Set(answered.filter((q) => quiz.answers[q.id].score < 1).map((q) => q.topic))];
 
   return (
     <section className="animate-enter px-6 py-8 text-center">
-      <p className={eyebrowClass}>Results</p>
+      <p className={eyebrowClass}>{quiz.limitSec ? "Paper" : "Results"}</p>
       <p className="mt-2 font-serif text-5xl tabular-nums">
         {score % 1 ? score.toFixed(1) : score}
         <span className="text-2xl text-muted"> / {answered.length}</span>
@@ -290,13 +340,14 @@ function Summary({ practice, onWeak }: { practice: ExamPractice; onWeak: (topics
           </ul>
         </div>
       )}
+      {quiz.limitSec != null && <ShareSitting practice={practice} score={score} outOf={answered.length} missed={missed} />}
       <div className="mt-6 flex flex-wrap justify-center gap-2">
         {missed.length > 0 && (
           <button onClick={() => onWeak(missed)} className={`${buttonClass} py-1.5`}>
             Practise what I missed
           </button>
         )}
-        <button onClick={() => practice.start({ topics: quiz.focus })} className={`${ghostButtonClass} py-1.5`}>
+        <button onClick={() => practice.start({ topics: quiz.focus, sitting: quiz.limitSec != null })} className={`${ghostButtonClass} py-1.5`}>
           Another round
         </button>
         <button onClick={practice.reset} className={`${ghostButtonClass} py-1.5`}>
@@ -304,5 +355,58 @@ function Summary({ practice, onWeak }: { practice: ExamPractice; onWeak: (topics
         </button>
       </div>
     </section>
+  );
+}
+
+function ShareSitting({ practice, score, outOf, missed }: { practice: ExamPractice; score: number; outOf: number; missed: string[] }) {
+  const quiz = practice.quiz!;
+  const [showName, setShowName] = useState(true);
+  const [link, setLink] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function share() {
+    const minutes = Math.max(0, Math.round(((quiz.finishedAt ?? quiz.startedAt) - quiz.startedAt) / 60000));
+    setPending(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/sitting/share", {
+        method: "POST",
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ sessionId: practice.sessionId, score, outOf: Math.max(1, outOf), minutes, topics: missed, showName }),
+      });
+      const body = (await res.json().catch(() => ({}))) as { token?: string; error?: string };
+      if (!res.ok || !body.token) throw new Error(body.error ?? "Couldn't share it.");
+      setLink(`${SITE.url}/sit/${body.token}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't share it.");
+    } finally {
+      setPending(false);
+    }
+  }
+
+  if (!outOf) return null;
+  return (
+    <div className="mx-auto mt-5 max-w-sm text-left">
+      {link ? (
+        <div className="rounded-lg border border-ink bg-yellow-50 p-3">
+          <p className="text-xs text-muted">Card link. It shows the score, the time and the misses. Not the questions.</p>
+          <code className="mt-2 block truncate rounded-md border border-line bg-panel px-2 py-1 font-mono text-[11px]">{link}</code>
+          <button type="button" onClick={() => navigator.clipboard.writeText(link)} className={`${ghostButtonClass} mt-2 py-1 text-xs`}>
+            Copy link
+          </button>
+        </div>
+      ) : (
+        <div className="rounded-lg border border-dashed border-ink/40 p-3">
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" checked={showName} onChange={(e) => setShowName(e.target.checked)} className="mt-0.5 size-4 accent-[var(--ink)]" />
+            <span>Show my first name on the card</span>
+          </label>
+          {error && <p className="mt-2 text-xs text-danger">{error}</p>}
+          <button type="button" disabled={pending} onClick={() => void share()} className={`${ghostButtonClass} mt-3 py-1.5 text-xs`}>
+            {pending ? "Sharing…" : "Share a card"}
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

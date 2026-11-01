@@ -1,7 +1,7 @@
 import { after } from "next/server";
 import { z } from "zod";
 import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
-import { MODELS } from "@/lib/groq";
+import { MODELS, modelBudget, stripReasoning } from "@/lib/groq";
 import { logError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 
@@ -71,10 +71,9 @@ It will be read aloud by a speech engine, so write plain flowing sentences: no h
         },
       ],
       temperature: 0.5,
-      max_completion_tokens: 1800,
-      reasoning_effort: "low",
+      ...modelBudget(MODELS.chat, 1100),
     });
-    const script = (res.choices[0]?.message?.content ?? "").replace(/[#*_`>]/g, "").replace(/\n{3,}/g, "\n\n").trim();
+    const script = stripReasoning(res.choices[0]?.message?.content ?? "").replace(/[#*_`>]/g, "").replace(/\n{3,}/g, "\n\n").trim();
     if (script.length < 80) throw new Error("empty script");
     return Response.json({ script: script.slice(0, 4000) });
   } catch (err) {

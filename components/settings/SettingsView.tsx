@@ -88,6 +88,21 @@ export function SettingsView(d: SettingsData) {
             <Row label="Name" hint="Shown in the header and your account menu.">
               <NameField name={d.user.name ?? ""} />
             </Row>
+            <Row label="Friends" hint="Add people you study with. They can see when you're in a room, and you can invite them to talk in a private one.">
+              <Link href="/friends" className={`${ghostButtonClass} py-1.5`}>
+                Friends
+              </Link>
+            </Row>
+            <Row label="Threads" hint="Ask a question in public. For a group, make a private learning space and send the link.">
+              <span className="flex flex-wrap gap-2">
+                <Link href="/threads" className={`${ghostButtonClass} py-1.5`}>
+                  Threads
+                </Link>
+                <Link href="/spaces" className={`${ghostButtonClass} py-1.5`}>
+                  Spaces
+                </Link>
+              </span>
+            </Row>
             <Row label="Email" hint="You sign in with it. A change takes effect once you confirm it from your inbox.">
               <EmailField email={d.user.email ?? ""} pending={d.pendingEmail} />
             </Row>
@@ -158,7 +173,7 @@ export function SettingsView(d: SettingsData) {
               modelLabels={{
                 [MODELS.chat]: "Tutor, plans, practice",
                 [MODELS.fast]: "Progress notes",
-                [MODELS.vision]: "Figure reading",
+                [MODELS.vision]: "Scans and figures",
               }}
             />
           </Section>

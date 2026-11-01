@@ -24,6 +24,8 @@ import { needsConversion } from "@/lib/import/drive";
 import { openRecommendPapers, RecommendPapers } from "@/components/paper/RecommendDialog";
 import { PaperCard } from "@/components/paper/PaperCard";
 import { PackSources, PendingSourceCard, pendingSource } from "@/components/packs/PackSources";
+import { ExplainBack } from "@/components/workspace/ExplainBack";
+import { PagePins } from "@/components/workspace/PagePins";
 import { LiteratureMap } from "@/components/paper/LiteratureMap";
 import { exportBibtex, PaperTools } from "@/components/paper/PaperTools";
 import type { PaperTool } from "@/components/paper/PassesPanel";
@@ -174,12 +176,20 @@ export function Workspace({
     wideRef.current = wide;
   }, [wide]);
   const [layout, setLayout] = useState<Layout>(DEFAULT_LAYOUT);
+  // A calendar link can fold the tutor for this visit without replacing the
+  // layout saved on this device. Cleared once the student opens or folds it themselves.
+  const foldTutor = useRef(false);
+  const preferTutorOpen = useRef(true);
+  const [pinDraft, setPinDraft] = useState<{ page: number; text: string } | null>(null);
+  const [explain, setExplain] = useState<{ documentId: string; page: number; topic: string } | null>(null);
   // A change the student made: kept for next time.
   const updateLayout = useCallback((patch: Partial<Layout>) => {
     setLayout((l) => {
       const next = { ...l, ...patch };
+      if ("tutorOpen" in patch) foldTutor.current = false;
+      const stored = foldTutor.current ? { ...next, tutorOpen: preferTutorOpen.current } : next;
       try {
-        localStorage.setItem(LAYOUT_KEY, JSON.stringify(next));
+        localStorage.setItem(LAYOUT_KEY, JSON.stringify(stored));
       } catch {}
       return next;
     });
@@ -201,6 +211,7 @@ export function Workspace({
   const revealTutor = useCallback(() => {
     setLayout((l) => {
       if (l.tutorOpen) return l;
+      foldTutor.current = false;
       const next = { ...l, tutorOpen: true };
       try {
         localStorage.setItem(LAYOUT_KEY, JSON.stringify(next));
@@ -304,7 +315,8 @@ export function Workspace({
     [activeDoc?.id, docs, selectDoc],
   );
 
-  // Deep links from the review page: /session/:id?doc=…&page=…
+  // Deep links: /session/:id?doc=…&page=…&tutor=closed
+  // tutor=closed folds the tutor for this visit and is not written back.
   const deepLinked = useRef(false);
   useEffect(() => {
     if (deepLinked.current) return;
@@ -312,21 +324,30 @@ export function Workspace({
     const q = new URLSearchParams(window.location.search);
     const doc = q.get("doc");
     const p = Number(q.get("page"));
-    if (!q.has("page")) return;
+    if (q.get("tutor") === "closed") {
+      foldTutor.current = true;
+      setMobileView("pdf");
+    }
+    if (!q.has("page") && q.get("tutor") !== "closed") return;
     window.history.replaceState(null, "", window.location.pathname);
-    if (doc && p >= 1 && docs.some((d) => d.id === doc)) jumpTo(p, doc);
+    if (q.has("page") && p >= 1) {
+      if (doc && docs.some((d) => d.id === doc)) jumpTo(p, doc);
+      else jumpTo(p);
+    }
   }, [docs, jumpTo]);
 
   // Restore the layout from last time.
   useEffect(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(LAYOUT_KEY) ?? "null") as Partial<Layout> | null;
-      if (!saved) return;
+      const open = saved ? saved.tutorOpen !== false : true;
+      preferTutorOpen.current = open;
+      if (!saved && !foldTutor.current) return;
       setLayout({
-        tutor: clamp(Number(saved.tutor) || DEFAULT_LAYOUT.tutor, 300, 720),
-        sheet: clamp(Number(saved.sheet) || DEFAULT_LAYOUT.sheet, SHEET_MIN, 760),
-        tutorOpen: saved.tutorOpen !== false,
-        pinned: saved.pinned === true,
+        tutor: clamp(Number(saved?.tutor) || DEFAULT_LAYOUT.tutor, 300, 720),
+        sheet: clamp(Number(saved?.sheet) || DEFAULT_LAYOUT.sheet, SHEET_MIN, 760),
+        tutorOpen: foldTutor.current ? false : open,
+        pinned: saved?.pinned === true,
       });
     } catch {}
   }, []);
@@ -1361,6 +1382,14 @@ export function Workspace({
     },
     onRecall: (t) => setRecall({ topic: t, offer: false }),
     onListen: listen,
+    onExplain: (t) => {
+      const docId = t.document_id ?? activeDoc?.id ?? null;
+      const pageNo = t.page_start ?? activeDoc?.lastPage ?? 1;
+      if (!docId) return;
+      if (t.page_start && t.document_id) jumpTo(t.page_start, t.document_id);
+      setMobileView("pdf");
+      setExplain({ documentId: docId, page: pageNo, topic: t.title });
+    },
     onDeleteHighlight: deleteHighlight,
     onUpdateHighlight: updateHighlight,
     onPlanCreated,
@@ -1575,6 +1604,7 @@ export function Workspace({
                 onSaveHighlight={saveHighlight}
                 onUpdateHighlight={updateHighlight}
                 onDeleteHighlight={deleteHighlight}
+                onPin={(selection) => setPinDraft({ page: selection.page, text: selection.text.slice(0, 500) })}
                 onRegion={onRegion}
               />
             ) : docs.length ? (
@@ -1611,6 +1641,18 @@ export function Workspace({
                   )}
                 </div>
               </div>
+            )}
+            {activeDoc?.hasPdf && (
+              <PagePins
+                sessionId={session.id}
+                documentId={activeDoc.id}
+                page={activeDoc.lastPage || 1}
+                draft={pinDraft}
+                onExplain={() => {
+                  setMobileView("pdf");
+                  setExplain({ documentId: activeDoc.id, page: activeDoc.lastPage || 1, topic: activeTopic?.title ?? "" });
+                }}
+              />
             )}
           </div>
         </section>
@@ -1709,6 +1751,7 @@ export function Workspace({
         />
       )}
       {converting && <ConvertFiles files={converting} onDone={(pdfs) => void addPdfs(pdfs)} onClose={() => setConverting(null)} />}
+      {explain && <ExplainBack sessionId={session.id} documentId={explain.documentId} page={explain.page} topic={explain.topic} onClose={() => setExplain(null)} />}
       {addMaterialOpen && (
         <AddMaterialDialog
           initialTab={materialStart?.tab ?? (isPaper ? "zotero" : "upload")}

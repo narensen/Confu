@@ -1,7 +1,7 @@
 import { after } from "next/server";
 import { z } from "zod";
 import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
-import { MODELS } from "@/lib/groq";
+import { MODELS, modelBudget, stripReasoning } from "@/lib/groq";
 import { createClient } from "@/lib/supabase/server";
 
 export const maxDuration = 60;
@@ -33,6 +33,17 @@ export async function POST(request: Request) {
   const { data: doc } = await supabase.from("documents").select("title, session_id").eq("id", documentId).maybeSingle();
   if (!doc) return Response.json({ error: "Not found" }, { status: 404 });
 
+  // A retry, or a page that already has a text layer, must not call the vision
+  // model again. Checked before the trial counter, so it doesn't spend a page.
+  const { data: pageRow } = await supabase
+    .from("document_pages")
+    .select("content")
+    .eq("document_id", documentId)
+    .eq("page_number", page)
+    .maybeSingle();
+  const already = (pageRow?.content ?? "").trim();
+  if (already.length >= 25) return Response.json({ chars: already.length });
+
   const access = await resolveGroq(supabase, userId, doc.session_id, "ocr");
   if ("error" in access) return access.error;
   after(() => access.meter.flush());
@@ -61,10 +72,9 @@ Rules:
         },
       ],
       temperature: 0,
-      max_completion_tokens: 3000,
-      reasoning_format: "hidden",
+      ...modelBudget(MODELS.vision, 2200),
     });
-    text = (res.choices[0]?.message?.content ?? "").replace(/\u0000/g, "").trim();
+    text = stripReasoning(res.choices[0]?.message?.content ?? "").trim();
   } catch (err) {
     return groqErrorResponse(err, "Couldn't read this page.");
   }

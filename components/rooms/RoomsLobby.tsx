@@ -114,7 +114,7 @@ export function RoomsLobby() {
             <button type="button" onClick={create} disabled={pending} className={`${buttonClass} py-2`}>
               {pending ? "Creating…" : "Create room"}
             </button>
-            <p className="text-xs text-muted">Anyone with its link can join. You run its timer.</p>
+            <p className="text-xs text-muted">Anyone with its link can join. You run the timer. From inside the room you can invite friends and turn on voice.</p>
           </div>
         </div>
         <div>

@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { MODELS, parseJsonObject, type Groq } from "@/lib/groq";
+import { MODELS, modelBudget, parseJsonObject, type Groq } from "@/lib/groq";
 import type { LearnerMemory, PlanTopic } from "@/lib/types";
 
 const str = z.array(z.string().max(200)).max(8).catch([]);
@@ -44,10 +44,12 @@ export async function updateLearnerMemory(
     memory: LearnerMemory;
     topic: PlanTopic | null;
     userTurn: string;
+    passage?: string | null;
     assistantReply: string;
   },
 ) {
   const { userId, sessionId, memory, topic, userTurn, assistantReply } = input;
+  const passage = input.passage?.replace(/\s+/g, " ").trim().slice(0, 400);
 
   const prompt = `You maintain a tutor's private notes about ONE student working toward a learning goal. Update the notes from the latest exchange.
 
@@ -57,8 +59,8 @@ ${JSON.stringify(memory)}
 CURRENT TOPIC: ${topic ? `${topic.title}\nObjectives: ${topic.objectives.join("; ")}\nCurrent mastery estimate: ${topic.mastery.toFixed(2)}` : "none"}
 
 LATEST EXCHANGE
-Student: ${userTurn.slice(0, 2500)}
-Tutor: ${assistantReply.slice(0, 3500)}
+Student: ${userTurn.replace(/\s+/g, " ").trim().slice(0, 500)}
+${passage ? `Passage they asked about: ${passage}\n` : ""}Tutor: ${assistantReply.slice(0, 900)}
 
 Return ONLY a JSON object:
 {
@@ -78,8 +80,7 @@ Be conservative: asking a question is not understanding. Keep items short (≤8 
     messages: [{ role: "user", content: prompt }],
     response_format: { type: "json_object" },
     temperature: 0.2,
-    max_completion_tokens: 1200,
-    reasoning_effort: "low",
+    ...modelBudget(MODELS.fast, 700),
   });
 
   const parsed = MemoryUpdate.safeParse(parseJsonObject(res.choices[0]?.message?.content ?? "{}"));

@@ -19,7 +19,7 @@ export function SharePack({ sessionId, title }: { sessionId: string; title: stri
       <button
         type="button"
         onClick={() => setOpen(true)}
-        title="Share this session as a study pack"
+        title="Share this session as a study pack or a roadmap"
         className="ml-auto flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted transition hover:bg-paper hover:text-ink"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
@@ -40,19 +40,23 @@ function ShareDialog({ sessionId, sessionTitle, onClose }: { sessionId: string; 
   const [listed, setListed] = useState(false);
   const [highlights, setHighlights] = useState(true);
   const [classMode, setClassMode] = useState(false);
+  const [roadmap, setRoadmap] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [course, setCourse] = useState<string | null>(null);
+  const [codeDraft, setCodeDraft] = useState("");
+  const [codePending, setCodePending] = useState(false);
 
   useEffect(() => {
     let live = true;
     void createClient()
       .from("packs")
-      .select("slug, title, description, visibility, class_mode, author_name, views, copies")
+      .select("slug, title, description, visibility, class_mode, author_name, views, copies, content")
       .eq("session_id", sessionId)
       .maybeSingle()
       .then(({ data }) => {
         if (!live) return;
-        const p = data as Existing | null;
+        const p = data as (Existing & { content?: { roadmap?: boolean } | null }) | null;
         setExisting(p);
         if (p) {
           setTitle(p.title);
@@ -60,6 +64,7 @@ function ShareDialog({ sessionId, sessionTitle, onClose }: { sessionId: string; 
           setListed(p.visibility === "public");
           setClassMode(p.class_mode);
           setShowName(p.author_name !== null);
+          setRoadmap(p.content?.roadmap === true);
         }
       });
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -70,6 +75,37 @@ function ShareDialog({ sessionId, sessionTitle, onClose }: { sessionId: string; 
     };
   }, [sessionId, onClose]);
 
+  useEffect(() => {
+    if (!existing?.slug) return;
+    let live = true;
+    void createClient()
+      .rpc("course_of", { p_slug: existing.slug })
+      .then(({ data }) => {
+        if (!live) return;
+        const code = typeof data === "string" ? data : "";
+        setCourse(code || null);
+        setCodeDraft(code);
+      });
+    return () => {
+      live = false;
+    };
+  }, [existing?.slug]);
+
+  async function saveCode() {
+    setCodePending(true);
+    setError(null);
+    const { data, error: rpcError } = await createClient().rpc("set_course_code", { p_session: sessionId, p_code: codeDraft });
+    setCodePending(false);
+    if (rpcError) {
+      setError(/set_course_code|schema cache|Could not find the function/i.test(rpcError.message) ? "Course links need migration 0028 to be run." : rpcError.message);
+      return;
+    }
+    const code = typeof data === "string" ? data : "";
+    setCourse(code || null);
+    setCodeDraft(code);
+    toast(code ? "Course link saved." : "Couldn't save the course link.");
+  }
+
   async function publish() {
     setPending(true);
     setError(null);
@@ -77,11 +113,11 @@ function ShareDialog({ sessionId, sessionTitle, onClose }: { sessionId: string; 
       const res = await fetch("/api/packs/publish", {
         method: "POST",
         headers: JSON_HEADERS,
-        body: JSON.stringify({ sessionId, title, description, showName, visibility: listed ? "public" : "unlisted", classMode, includeHighlights: highlights }),
+        body: JSON.stringify({ sessionId, title, description, showName, visibility: listed ? "public" : "unlisted", classMode, includeHighlights: highlights, asRoadmap: roadmap }),
       });
       const j = (await res.json().catch(() => ({}))) as { slug?: string; error?: string; updated?: boolean };
       if (!res.ok || !j.slug) throw new Error(j.error ?? "Couldn't publish it.");
-      track(j.updated ? "pack.update" : "pack.publish", { listed, classMode });
+      track(j.updated ? "pack.update" : "pack.publish", { listed, classMode, roadmap });
       setExisting((e) => ({
         slug: j.slug!,
         title,
@@ -107,9 +143,9 @@ function ShareDialog({ sessionId, sessionTitle, onClose }: { sessionId: string; 
       <div role="dialog" aria-modal="true" aria-labelledby="share-title" className="animate-pop flex max-h-full w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
         <div className="flex items-start justify-between gap-4 px-6 pt-5">
           <div>
-            <p className={eyebrowClass}>Study pack</p>
+            <p className={eyebrowClass}>{roadmap ? "Roadmap" : "Study pack"}</p>
             <h2 id="share-title" className="mt-1 font-serif text-2xl">
-              {existing ? "Your pack is live" : "Share this session"}
+              {existing ? (roadmap ? "Your roadmap is live" : "Your pack is live") : roadmap ? "Share this as a roadmap" : "Share this session"}
             </h2>
           </div>
           <button onClick={onClose} aria-label="Close" className="flex size-8 items-center justify-center rounded-md text-muted hover:bg-paper">
@@ -145,6 +181,29 @@ function ShareDialog({ sessionId, sessionTitle, onClose }: { sessionId: string; 
                       {existing.views} views · {existing.copies} copies
                     </span>
                   </div>
+                  <div className="space-y-1.5">
+                    <p className="text-xs leading-relaxed text-muted">
+                      Course link. Anyone can read the plan before they have an account. Copying, highlighting or asking is when they sign up. Reading the page doesn&apos;t use the tutor.
+                    </p>
+                    <div className="flex gap-2">
+                      <input
+                        value={codeDraft}
+                        maxLength={10}
+                        onChange={(e) => setCodeDraft(e.target.value.toLowerCase())}
+                        placeholder="phy12"
+                        aria-label="Course code"
+                        className={`${inputClass} py-1 font-mono text-xs`}
+                      />
+                      <button type="button" disabled={codePending} onClick={() => void saveCode()} className="shrink-0 rounded-md border border-ink bg-ink px-3 py-1 text-xs font-medium text-white disabled:opacity-40">
+                        {codePending ? "Saving…" : course ? "Update" : "Make link"}
+                      </button>
+                    </div>
+                    {course && (
+                      <code className="block truncate rounded-md border border-line bg-panel px-2.5 py-1.5 font-mono text-xs">
+                        {SITE.url}/c/{course}
+                      </code>
+                    )}
+                  </div>
                 </div>
               )}
               <label className="block">
@@ -164,15 +223,22 @@ function ShareDialog({ sessionId, sessionTitle, onClose }: { sessionId: string; 
               </label>
               <Toggle checked={showName} onChange={setShowName} label="Show my first name" hint="Otherwise it's shared without a name." />
               <Toggle checked={listed} onChange={setListed} label="List it in the public gallery" hint="Off: only people with the link can find it." />
+              <Toggle
+                checked={roadmap}
+                onChange={setRoadmap}
+                label="Share as a roadmap"
+                hint="The plan is shown as a path others can follow. Listed ones also appear on the Roadmaps page. Same link as the study pack. Needs a plan in this session."
+              />
               <Toggle checked={highlights} onChange={setHighlights} label="Include my highlights" hint="The passages you marked, with your notes on them." />
               <Toggle
                 checked={classMode}
                 onChange={setClassMode}
                 label="Class mode"
-                hint="People who copy it can choose to share their progress with you (topics done, days active), never their notes or chats."
+                hint="People who copy it can choose to share their progress with you (topics done, days active), never their notes or chats. Once 30 classmates copy it, you get Pro for the term, once."
               />
               <p className="rounded-lg border border-line bg-paper px-3 py-2.5 text-xs leading-relaxed text-muted">
                 <span className="font-medium text-ink">What&apos;s shared:</span> your sources as links and paper IDs, your plan
+                {roadmap ? " as a roadmap" : ""}
                 {highlights ? " and highlights" : ""}. <span className="font-medium text-ink">Never shared:</span> your conversations, pass notes,
                 answers or uploaded files. People add their own copy of those.
               </p>
@@ -200,7 +266,7 @@ function ShareDialog({ sessionId, sessionTitle, onClose }: { sessionId: string; 
             <span />
           )}
           <button type="button" onClick={publish} disabled={pending || existing === undefined || !title.trim()} className={`${buttonClass} py-2`}>
-            {pending ? "Publishing…" : existing ? "Update pack" : "Publish pack"}
+            {pending ? "Publishing…" : existing ? (roadmap ? "Update roadmap" : "Update pack") : roadmap ? "Publish roadmap" : "Publish pack"}
           </button>
         </div>
       </div>

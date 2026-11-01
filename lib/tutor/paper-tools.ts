@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { MODELS, parseJsonObject, type Groq } from "@/lib/groq";
+import { MODELS, modelBudget, parseJsonObject, stripReasoning, type Groq } from "@/lib/groq";
 import { notesText, type PaperReview } from "@/lib/paper";
 
 // Paper tools run on request: a related-work draft built from the student's
@@ -60,10 +60,9 @@ Write 2 to 4 paragraphs that group the papers by theme or approach (not one para
     model: MODELS.chat,
     messages: [{ role: "user", content: prompt }],
     temperature: 0.4,
-    max_completion_tokens: 2500,
-    reasoning_effort: "medium",
+    ...modelBudget(MODELS.chat, 1600),
   });
-  const text = (res.choices[0]?.message?.content ?? "").trim();
+  const text = stripReasoning(res.choices[0]?.message?.content ?? "").trim();
   // Only real keys survive: anything else the model cites is dropped.
   const known = new Set(keys);
   return text.replace(/\[@([^\]\s;,]+)\]/g, (m, k: string) => (known.has(k) ? m : "")).replace(/\s+([.,;])/g, "$1");
@@ -103,8 +102,7 @@ Return ONLY JSON: {"papers": [{"index": 0, "problem": "", "approach": "", "data"
     messages: [{ role: "user", content: prompt }],
     response_format: { type: "json_object" },
     temperature: 0.2,
-    max_completion_tokens: 4000,
-    reasoning_effort: "medium",
+    ...modelBudget(MODELS.chat, 3600),
   });
   const parsed = Compare.parse(parseJsonObject(res.choices[0]?.message?.content ?? ""));
   return papers.map((p, i) => {

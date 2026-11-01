@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { AccountMenu } from "@/components/AccountMenu";
 import { Guide } from "@/components/onboarding/Guide";
+import { FriendsLink } from "@/components/friends/FriendsLink";
 import { RoomStatus } from "@/components/rooms/RoomStatus";
 import { getKeyInfo } from "@/lib/groq-keys";
 import { isOwner, planOf } from "@/lib/plans";
@@ -28,6 +29,10 @@ async function UserMenu() {
       <Link href="/review" className="rounded-md px-2 py-1 text-sm font-medium text-muted transition hover:bg-paper hover:text-ink">
         Review
       </Link>
+      <Link href="/threads" className="hidden rounded-md px-2 py-1 text-sm font-medium text-muted transition hover:bg-paper hover:text-ink sm:inline">
+        Threads
+      </Link>
+      <FriendsLink />
       {/* "Rooms", or the room you're in with its timer. */}
       <RoomStatus />
       <AccountMenu name={user.name} email={user.email} plan={planOf(role)} owner={isOwner(role)} keyLast4={key?.last4 ?? null} />

@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import type { ExamQuestion, QuestionKind } from "@/lib/exam";
-import { MODELS, parseJsonObject, type Groq } from "@/lib/groq";
+import { MODELS, modelBudget, parseJsonObject, type Groq } from "@/lib/groq";
 import { docLabel } from "@/lib/types";
 
 const PAGE_CHARS = 1700;
@@ -112,8 +112,7 @@ Return ONLY JSON: {"questions": [{"kind": "mcq" | "short", "question": "", "opti
     messages: [{ role: "user", content: prompt }],
     response_format: { type: "json_object" },
     temperature: 0.6,
-    max_completion_tokens: 5000,
-    reasoning_effort: "medium",
+    ...modelBudget(MODELS.chat, 3600),
   });
   const parsed = z.object({ questions: z.array(z.unknown()) }).parse(parseJsonObject(res.choices[0]?.message?.content ?? ""));
 
@@ -173,8 +172,7 @@ Return ONLY JSON: {"score": 0 | 0.5 | 1, "feedback": ""}`,
     ],
     response_format: { type: "json_object" },
     temperature: 0.1,
-    max_completion_tokens: 800,
-    reasoning_effort: "low",
+    ...modelBudget(MODELS.chat, 700),
   });
   const g = Grade.parse(parseJsonObject(res.choices[0]?.message?.content ?? "{}"));
   const score = g.score >= 0.75 ? 1 : g.score >= 0.25 ? 0.5 : 0;

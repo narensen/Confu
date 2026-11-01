@@ -21,6 +21,7 @@ export function routeOf(pathname: string) {
     .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, ":id")
     .replace(/^\/w\/[^/]+/, "/w/:token")
     .replace(/^\/rooms\/r-[^/]+/, "/rooms/:room")
+    .replace(/^\/spaces\/s-[^/]+/, "/spaces/:space")
     .replace(/^\/p\/[^/]+/, "/p/:pack")
     .replace(/^\/r\/[^/]+/, "/r/:code")
     .slice(0, 300);

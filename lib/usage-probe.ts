@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getRole, PRO_DAILY_TOKENS, proUsedLast24h, resolveGroq, TRIAL_PROMPTS, trialState, userKeyRef } from "@/lib/ai-access";
-import { MODELS } from "@/lib/groq";
+import { MODELS, modelBudget } from "@/lib/groq";
 import { getKeyInfo } from "@/lib/groq-keys";
 import { planOf } from "@/lib/plans";
 import { FREE_TIER_DAILY_TOKENS, usageSummary, type KeyUsage, type ModelUsage } from "@/lib/usage-summary";
@@ -31,7 +31,7 @@ export async function probeKey(supabase: SupabaseClient, userId: string, session
   if ("error" in access) return;
   try {
     await access.groq.chat.completions.create(
-      { model: MODELS.chat, messages: [{ role: "user", content: "." }], max_completion_tokens: 1, reasoning_effort: "low" },
+      { model: MODELS.chat, messages: [{ role: "user", content: "." }], ...modelBudget(MODELS.chat, 1) },
       { maxRetries: 0 },
     );
   } catch {

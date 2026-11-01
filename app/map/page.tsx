@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { AppHeader } from "@/components/AppHeader";
 import { LibraryMap } from "@/components/paper/LibraryMap";
 
-export const metadata: Metadata = { title: "Your literature — Confu" };
+export const metadata: Metadata = { title: "Your literature — Confu", robots: { index: false } };
 
 export default function MapPage() {
   return (

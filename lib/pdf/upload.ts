@@ -90,11 +90,12 @@ async function readScannedPages(file: File, documentId: string, pages: string[],
   if (!scanned.length) return { read: 0, note: null };
   onStatus(`Reading scanned pages of ${short}…`);
   try {
-    const { read, stopped } = await ocrPages(file, documentId, scanned, (done, total) => onStatus(`Reading scanned pages of ${short}: ${done}/${total}`));
+    const { read, stopped, skipped } = await ocrPages(file, documentId, scanned, (done, total) => onStatus(`Reading scanned pages of ${short}: ${done}/${total}`));
+    const attempted = scanned.length - skipped;
     const note = stopped
-      ? `Read ${read} of ${scanned.length} scanned pages, then stopped: ${stopped}`
-      : read < scanned.length
-        ? `Read ${read} of ${scanned.length} scanned pages; drag over the others to ask about them.`
+      ? `Read ${read} of ${attempted} scanned pages, then stopped: ${stopped}`
+      : read < attempted
+        ? `Read ${read} of ${attempted} scanned pages; drag over the others to ask about them.`
         : null;
     return { read, note };
   } catch {
