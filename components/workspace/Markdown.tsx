@@ -6,6 +6,7 @@ import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { sanitizeSvg } from "@/lib/tutor/diagram";
+import { MermaidDiagram, SvgDiagram } from "./Diagram";
 
 // Models emit typographic characters KaTeX has no glyphs for (e.g. the
 // non-breaking hyphen in "positive‑definite"). They look identical as ASCII.
@@ -149,22 +150,32 @@ function normaliseMath(md: string): string {
 }
 
 // Turn page citations like "(p. 12)", "pp. 4–6" or "D2 p. 12" into links that
-// jump the viewer (switching PDFs when a label is given).
+// jump the viewer (switching PDFs when a label is given). Not inside a fence:
+// a diagram that labels a box "p. 3" would stop parsing.
 function linkPages(md: string): string {
-  return md.replace(
-    /\b(?:(D\d{1,2})[,\s·]*)?(pp?\.)\s?(\d{1,4})(\s?[–-]\s?\d{1,4})?/g,
-    (match, label: string | undefined, _p, start) => `[${match}](#cite-${label ?? ""}-${start})`,
-  );
+  return md
+    .split(/(```[\s\S]*?(?:```|$))/)
+    .map((part, i) =>
+      i % 2
+        ? part
+        : part.replace(
+            /\b(?:(D\d{1,2})[,\s·]*)?(pp?\.)\s?(\d{1,4})(\s?[–-]\s?\d{1,4})?/g,
+            (match, label: string | undefined, _p, start) => `[${match}](#cite-${label ?? ""}-${start})`,
+          ),
+    )
+    .join("");
 }
 
 export const Markdown = memo(function Markdown({
   content,
   onPage,
   className = "prose-tutor",
+  live = false,
 }: {
   content: string;
   onPage?: (page: number, docLabel?: string) => void;
   className?: string;
+  live?: boolean; // still being written: a diagram waits until it's whole
 }) {
   return (
     <div className={`${className} min-w-0 max-w-full`}>
@@ -189,6 +200,7 @@ export const Markdown = memo(function Markdown({
             const text = String(children).replace(/\n$/, "");
             const lang = /language-([\w-]+)/.exec(codeClass || "")?.[1];
             const block = Boolean(codeClass) || text.includes("\n");
+            if (block && lang === "mermaid") return <MermaidDiagram code={text} live={live} />;
             const drawing = lang === "svg" || ((lang === "xml" || lang === "html" || !lang) && /^\s*<svg\b/i.test(text));
             if (block && drawing) {
               const svg = sanitizeSvg(text);
@@ -222,14 +234,3 @@ export const Markdown = memo(function Markdown({
     </div>
   );
 });
-
-// Shown as an image, so a diagram cannot run script even if the sanitiser misses one.
-function SvgDiagram({ svg }: { svg: string }) {
-  const src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-  return (
-    <figure className="tutor-diagram">
-      {/* eslint-disable-next-line @next/next/no-img-element -- data-URL SVG; an img will not run a script */}
-      <img src={src} alt="Diagram" draggable={false} />
-    </figure>
-  );
-}

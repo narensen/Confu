@@ -174,6 +174,22 @@ export function Workspace({
   );
   const [activeTopicId, setActiveTopicId] = useState<string | null>(null);
   const [focusMode, setFocusMode] = useState(false);
+  // In full screen the tutor can take the whole screen. It widens over the
+  // reader, which keeps its size underneath (the page isn't laid out again),
+  // and shrinks back the same way. Going to a page or a tool brings it back.
+  const [tutorFull, setTutorFull] = useState(false);
+  const [tutorMotion, setTutorMotion] = useState(false);
+  const tutorFullNow = useRef(false);
+  const motionTimer = useRef(0);
+  const showTutorFull = useCallback((on: boolean, animate = true) => {
+    if (tutorFullNow.current === on) return;
+    tutorFullNow.current = on;
+    window.clearTimeout(motionTimer.current);
+    setTutorMotion(animate);
+    if (animate) motionTimer.current = window.setTimeout(() => setTutorMotion(false), 360);
+    setTutorFull(on);
+  }, []);
+  useEffect(() => () => window.clearTimeout(motionTimer.current), []);
 
   // The layout: the tutor on the left, what you're reading in the middle, and
   // the session's tools in a rail on the right. A tool slides out over the
@@ -220,10 +236,14 @@ export function Workspace({
   const [lastTool, setLastTool] = useState<ToolTab | null>(tool);
   if (tool && tool !== lastTool) setLastTool(tool);
   const [mobileView, setMobileView] = useState<"pdf" | "tutor" | "tool">(!isExam && !isPaper && !initialPlan ? "tool" : "pdf");
-  const openTool = useCallback((t: ToolTab) => {
-    setTool(t);
-    setMobileView("tool");
-  }, []);
+  const openTool = useCallback(
+    (t: ToolTab) => {
+      showTutorFull(false);
+      setTool(t);
+      setMobileView("tool");
+    },
+    [showTutorFull],
+  );
   const revealTutor = useCallback(() => {
     setLayout((l) => {
       if (l.tutorOpen) return l;
@@ -329,6 +349,7 @@ export function Workspace({
   const jumpTo = useCallback(
     (p: number, docId?: string | null) => {
       setMobileView("pdf");
+      showTutorFull(false);
       if (docId && docId !== activeDoc?.id && docs.some((d) => d.id === docId)) {
         setDocs((list) => list.map((d) => (d.id === docId ? { ...d, lastPage: p } : d)));
         selectDoc(docId);
@@ -336,7 +357,7 @@ export function Workspace({
       }
       setGoTo((g) => ({ page: p, n: (g?.n ?? 0) + 1 }));
     },
-    [activeDoc?.id, docs, selectDoc],
+    [activeDoc?.id, docs, selectDoc, showTutorFull],
   );
 
   // Deep links: /session/:id?doc=…&page=…&tutor=closed
@@ -401,6 +422,12 @@ export function Workspace({
   const canPin = roomBeside >= SHEET_MIN;
   const docked = layout.pinned && canPin;
   const sheetWidth = docked ? Math.min(floatWidth, roomBeside) : floatWidth;
+  const tutorFullShown = tutorFull && focusMode && wide && layout.tutorOpen;
+  // Folding it away also ends the whole-screen tutor.
+  const foldTutorAway = useCallback(() => {
+    showTutorFull(false, false);
+    updateLayout({ tutorOpen: false });
+  }, [showTutorFull, updateLayout]);
 
   // Remember the reading position per PDF.
   const activeId = activeDoc?.id;
@@ -420,23 +447,26 @@ export function Workspace({
   // Full screen: native where available, with a CSS fallback (e.g. iOS Safari).
   useEffect(() => {
     const onChange = () => {
-      if (!document.fullscreenElement) setFocusMode(false);
+      if (document.fullscreenElement) return;
+      setFocusMode(false);
+      showTutorFull(false, false);
     };
     document.addEventListener("fullscreenchange", onChange);
     return () => document.removeEventListener("fullscreenchange", onChange);
-  }, []);
+  }, [showTutorFull]);
 
   // The whole page goes full screen, not just the workspace: dialogs and
   // notices are drawn over the page, and would be hidden behind the workspace.
   const toggleFocus = useCallback(() => {
     if (focusMode) {
       setFocusMode(false);
+      showTutorFull(false, false);
       if (document.fullscreenElement) void document.exitFullscreen();
     } else {
       setFocusMode(true);
       document.documentElement.requestFullscreen?.().catch(() => {});
     }
-  }, [focusMode]);
+  }, [focusMode, showTutorFull]);
 
   const refreshProgress = useCallback(async () => {
     const [t, m] = await Promise.all([
@@ -1363,13 +1393,21 @@ export function Workspace({
       const i = openDocs.findIndex((d) => d.id === activeDoc?.id);
       const go: Record<string, (() => void) | undefined> = {
         "?": () => setShortcutsOpen(true),
-        t: () => (wideRef.current && layout.tutorOpen ? updateLayout({ tutorOpen: false }) : writeToTutor()),
+        t: () => (wideRef.current && layout.tutorOpen ? foldTutorAway() : writeToTutor()),
+        // In full screen: the tutor across the whole screen, or back beside the page.
+        e:
+          wideRef.current && focusMode
+            ? () => {
+                if (!layout.tutorOpen) revealTutor();
+                showTutorFull(!tutorFullShown);
+              }
+            : undefined,
         "/": writeToTutor,
         p: () => toggleTool(isExam ? "practice" : isPaper ? "passes" : "plan"),
         f: () => toggleTool("files"),
         h: isExam ? undefined : () => toggleTool("highlights"),
         // A floating tool; a pinned one stays until it's closed.
-        Escape: wideRef.current && tool && !docked ? () => setTool(null) : undefined,
+        Escape: tutorFullShown ? () => showTutorFull(false) : wideRef.current && tool && !docked ? () => setTool(null) : undefined,
         "[": () => openDocs.length > 1 && selectDoc(openDocs[(i - 1 + openDocs.length) % openDocs.length].id),
         "]": () => openDocs.length > 1 && selectDoc(openDocs[(i + 1) % openDocs.length].id),
         w: () => activeDoc && closeDocTab(activeDoc),
@@ -1542,12 +1580,14 @@ export function Workspace({
   // The tutor: its header (what page it's reading along with, usage), then
   // the chat, or the key form while there's no key.
   const where = activeDoc?.hasPdf ? `Reading ${multi ? `${activeDoc.label} · ` : ""}p. ${page}` : null;
-  const tutor = (onFold?: () => void) => (
+  const tutor = (onFold?: () => void, onExpand?: () => void, expanded = false) => (
     <>
       <TutorHeader
         where={where}
         busy={Boolean(busy)}
         onFold={onFold}
+        onExpand={onExpand}
+        expanded={expanded}
         usage={<UsageMeter sessionId={session.id} keyId={needsKey ? keyInfo?.id : undefined} keyLast4={needsKey ? keyInfo?.last4 : undefined} />}
       />
       <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
@@ -1595,17 +1635,29 @@ export function Workspace({
         {wide ? (
           layout.tutorOpen ? (
             <>
-              <aside aria-label="Tutor" className="@container flex min-w-0 shrink-0 flex-col bg-panel" style={{ width: tutorWidth }}>
-                {tutor(() => updateLayout({ tutorOpen: false }))}
-              </aside>
-              <ResizeHandle
-                label="Resize the tutor"
-                className="relative -mx-1"
-                onDrag={dragTutor}
-                onDone={() => updateLayout({})}
-                onNudge={(by) => updateLayout({ tutor: clamp(tutorWidth + by, 300, 720) })}
-                onReset={() => updateLayout({ tutor: DEFAULT_LAYOUT.tutor })}
-              />
+              {/* The tutor's place in the row. Across the whole screen, it
+                  widens from here over the reader and the tools. */}
+              <div className="relative shrink-0" style={{ width: tutorWidth }}>
+                <aside
+                  aria-label="Tutor"
+                  style={{ width: tutorFullShown ? rootWidth : tutorWidth }}
+                  className={`@container absolute inset-y-0 left-0 flex min-w-0 flex-col bg-panel ${tutorFullShown || tutorMotion ? "z-30" : ""} ${
+                    tutorMotion ? "shadow-[14px_0_40px_-20px_rgba(13,13,12,0.5)] transition-[width] duration-300 ease-fluid motion-reduce:transition-none" : ""
+                  }`}
+                >
+                  {tutor(foldTutorAway, focusMode ? () => showTutorFull(!tutorFullShown) : undefined, tutorFullShown)}
+                </aside>
+              </div>
+              {!tutorFullShown && (
+                <ResizeHandle
+                  label="Resize the tutor"
+                  className="relative -mx-1"
+                  onDrag={dragTutor}
+                  onDone={() => updateLayout({})}
+                  onNudge={(by) => updateLayout({ tutor: clamp(tutorWidth + by, 300, 720) })}
+                  onReset={() => updateLayout({ tutor: DEFAULT_LAYOUT.tutor })}
+                />
+              )}
             </>
           ) : (
             <TutorRail busy={Boolean(busy)} onOpen={revealTutor} />
@@ -1626,6 +1678,7 @@ export function Workspace({
         {/* Middle: what you're reading. Clicking back into it puts a floating tool away. */}
         <section
           aria-label="Reader"
+          inert={tutorFullShown}
           onPointerDownCapture={() => {
             if (wide && tool && !docked) setTool(null);
           }}
@@ -1736,7 +1789,7 @@ export function Workspace({
           <aside
             aria-label={sectionOf(lastTool).label}
             aria-hidden={!sheetOpen}
-            inert={!sheetOpen}
+            inert={!sheetOpen || tutorFullShown}
             style={{ width: sheetWidth, right: sheetDocked ? undefined : RAIL }}
             className={`@container flex min-w-0 flex-col border-l border-ink bg-panel transition-[translate,opacity,visibility] duration-200 ease-fluid ${
               sheetDocked ? "relative shrink-0" : "absolute inset-y-0 z-20 shadow-[-12px_0_32px_-16px_rgba(13,13,12,0.45)]"
@@ -1762,7 +1815,11 @@ export function Workspace({
             </div>
           </aside>
         )}
-        {wide && <ToolRail sections={sections} active={tool} onPick={(id) => (tool === id ? setTool(null) : openTool(id))} onShortcuts={() => setShortcutsOpen(true)} />}
+        {wide && (
+          <div inert={tutorFullShown} className="flex shrink-0">
+            <ToolRail sections={sections} active={tool} onPick={(id) => (tool === id ? setTool(null) : openTool(id))} onShortcuts={() => setShortcutsOpen(true)} />
+          </div>
+        )}
       </div>
 
       {!wide && (

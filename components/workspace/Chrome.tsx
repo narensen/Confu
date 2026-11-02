@@ -9,7 +9,7 @@ import type { Section, Tab } from "./TutorPanel";
 
 /* ------------------------------------------------------------------ icons */
 
-type IconName = Tab | "reader" | "keys" | "pin" | "close" | "fold";
+type IconName = Tab | "reader" | "keys" | "pin" | "close" | "fold" | "expand" | "shrink";
 
 const PATHS: Record<IconName, ReactNode> = {
   chat: <path d="M21 11.5a8.4 8.4 0 0 1-12.2 7.5L3 20.5l1.6-5.2A8.5 8.5 0 1 1 21 11.5Z" />,
@@ -70,6 +70,8 @@ const PATHS: Record<IconName, ReactNode> = {
       <path d="M9 3v18M16 15l-3-3 3-3" />
     </>
   ),
+  expand: <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />,
+  shrink: <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" />,
 };
 
 export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
@@ -159,7 +161,22 @@ export function TutorRail({ busy, onOpen }: { busy: boolean; onOpen: () => void 
 /* ---------------------------------------------------------- panel headers */
 
 // The tutor's header: who it is, what page it's reading along with, usage.
-export function TutorHeader({ where, busy, usage, onFold }: { where: string | null; busy: boolean; usage: ReactNode; onFold?: () => void }) {
+// In full screen it can also take the whole screen (onExpand), and come back.
+export function TutorHeader({
+  where,
+  busy,
+  usage,
+  onFold,
+  onExpand,
+  expanded = false,
+}: {
+  where: string | null;
+  busy: boolean;
+  usage: ReactNode;
+  onFold?: () => void;
+  onExpand?: () => void;
+  expanded?: boolean;
+}) {
   return (
     <div className="flex h-12 shrink-0 items-center gap-2 border-b border-ink pr-2 pl-4">
       <span className="relative flex">
@@ -177,7 +194,23 @@ export function TutorHeader({ where, busy, usage, onFold }: { where: string | nu
       )}
       <div className="flex-1" />
       {usage}
-      {onFold && (
+      {onExpand &&
+        (expanded ? (
+          <button
+            type="button"
+            onClick={onExpand}
+            title="Back to the page (E)"
+            className="flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-ink/25 px-2.5 text-xs font-medium text-ink transition duration-150 ease-fluid hover:border-ink hover:bg-paper"
+          >
+            <Icon name="shrink" size={14} />
+            Back to the page
+          </button>
+        ) : (
+          <button type="button" onClick={onExpand} aria-label="Tutor across the whole screen" title="Tutor across the whole screen (E)" className={iconButton}>
+            <Icon name="expand" size={16} />
+          </button>
+        ))}
+      {onFold && !expanded && (
         <button type="button" onClick={onFold} aria-label="Fold the tutor away" title="Fold the tutor away (T)" className={iconButton}>
           <Icon name="fold" size={16} />
         </button>

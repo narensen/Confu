@@ -1,3 +1,5 @@
+import { DIAGRAM_FENCE } from "@/lib/tutor/diagram";
+
 // Citations the tutor was allowed to make: a page the prompt actually sent.
 // Same shapes cite() emits and linkPages already links.
 // One PDF: "p. 12", "pp. 4–6". Several: "D2 p. 12", "D2, p. 12".
@@ -15,13 +17,12 @@ export function retrievedKeys(multi: boolean, pages: { label: string; page: numb
   return keys;
 }
 
-const SVG_FENCE = /```svg\b[\s\S]*?```/gi;
 
 // A diagram is a picture. Pull the fence out so a blank line inside it is not
 // treated as a new paragraph, then put it back.
 export function keepCited(text: string, retrieved: Set<string>, multi: boolean): string {
   const diagrams: string[] = [];
-  const body = text.replace(SVG_FENCE, (block) => {
+  const body = text.replace(DIAGRAM_FENCE, (block) => {
     diagrams.push(block.trim());
     return "";
   });

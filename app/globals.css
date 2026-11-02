@@ -523,7 +523,33 @@ html { scroll-behavior: smooth; }
   padding: 0.75rem;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
-.tutor-diagram img { display: block; width: 100%; height: auto; }
+/* Shown at its own size (the width is set on the img), centred, and never
+   stretched: stretching a small drawing is what blew its labels up. */
+.tutor-diagram { white-space: normal; font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif); color: #1a1a1a; }
+.tutor-diagram img { display: block; height: auto; margin-inline: auto; }
+.tutor-diagram-open { display: block; width: 100%; cursor: zoom-in; border-radius: 8px; }
+.tutor-diagram-open:focus-visible { outline: 2px solid #1a1a1a; outline-offset: 2px; }
+.tutor-diagram-pending { display: grid; min-height: 7rem; place-items: center; }
+.tutor-diagram-pending span {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  color: #6b6a63;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+.tutor-diagram-failed p { margin: 0; font-size: 0.85rem; color: #45443f; }
+.tutor-diagram-failed details { margin-top: 0.5rem; font-size: 0.75rem; color: #6b6a63; }
+.tutor-diagram-failed summary { cursor: pointer; }
+.tutor-diagram-failed pre {
+  margin-top: 0.4rem;
+  max-height: 14rem;
+  overflow: auto;
+  white-space: pre;
+  border: 1px solid #dcdad2;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 0.6rem;
+  color: #1a1a1a;
+}
 .prose-compact { font-size: 0.875rem; line-height: 1.6; }
 
 /* ---------------------------------------------------------------- viewer */

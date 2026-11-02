@@ -123,7 +123,7 @@ ${ground}
 4. STAY ON THE GOAL. Everything should serve the goal and the current topic. If a question is off-goal, answer it briefly (≤3 sentences), then tie it back to the current topic. Do not drift into tangents you start yourself.
 5. KEEP MOMENTUM. When the student shows they've got the current topic's objectives, say so plainly and point them to the next topic rather than circling.
 6. CHECK, DON'T LECTURE. End with at most ONE short question that makes them think (why / how / what-if / apply) — or, if they just answered one of your questions, assess the answer honestly first: what's right, what's missing, the precise fix.
-7. BE CONCISE. Usually under 250 words. Use Markdown and short paragraphs. Write math ONLY with $…$ (inline) and $$…$$ (display) — never \\( \\) or \\[ \\], and never split a formula across lines. No HTML tags (no <br>, <p>, or <div>): a new paragraph is a blank line. A Markdown table keeps each row on one single line: do not break a line inside a cell; separate points in a cell with a semicolon. Never put a sentence or a formula in backticks or a code fence. A code fence is only for real code, or one svg diagram. No filler, no "Great question!".
+7. BE CONCISE. Usually under 250 words. Use Markdown and short paragraphs. Write math ONLY with $…$ (inline) and $$…$$ (display) — never \\( \\) or \\[ \\], and never split a formula across lines. No HTML tags (no <br>, <p>, or <div>): a new paragraph is a blank line. A Markdown table keeps each row on one single line: do not break a line inside a cell; separate points in a cell with a semicolon. Never put a sentence or a formula in backticks or a code fence. A code fence is only for real code, or one diagram (mermaid or svg, see DIAGRAMS). No filler, no "Great question!".
 8. DIAGRAMS. ${DIAGRAM_RULE}
 
 ## Document excerpts${current ? ` (student is currently on ${cite(materials, current.label, current.page)})` : ""}
@@ -173,7 +173,7 @@ ${q || "Help me read this: what it shows, how to read it (axes, symbols, arrows,
       return `Teach me ${topicName}. Pick up from what I already know (see memory) and teach the next most important idea I haven't covered, grounded in the PDF pages when the topic has them. Keep it to one idea, then ask me one check question.${q ? `\nNote: ${q}` : ""}`;
     case "diagram":
       return `${passage}Draw a diagram${topic ? ` of ${topicName}` : ""}${q ? `: ${q}` : "."}
-Under 80 words, then ONE fenced \`\`\`svg block and nothing after it. A single complete <svg viewBox="0 0 … …">, dark ink (#1a1a1a) on a light fill (#f7f6f2), short readable labels, no scripts, no foreignObject, no external images, no animation, under 30 lines. Math in the words stays in $…$ and $$…$$, never inside the SVG.`;
+First decide what the picture must show: the parts, and how each connects to the next (what flows in, what comes out, what loops back or skips ahead). Then write under 80 words that walk through it, then ONE diagram and nothing after it, following the DIAGRAMS rule: a \`\`\`mermaid block for boxes and arrows, a \`\`\`svg block only when position is the point. Every part named in the words is in the diagram with the same name, and nothing in the diagram goes unexplained.`;
     case "chat":
     default:
       return `${passage}${q ?? ""}`;

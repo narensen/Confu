@@ -12,6 +12,7 @@ export const SHORTCUTS: { group: string; keys: [string, string][] }[] = [
     keys: [
       ["t", "Show or fold away the tutor"],
       ["/", "Write to the tutor"],
+      ["e", "In full screen: the tutor across the whole screen, or back beside the page"],
     ],
   },
   {
