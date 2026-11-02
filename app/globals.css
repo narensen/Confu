@@ -221,6 +221,17 @@ body {
   }
   :root:not([data-theme="light"]) [data-parallax="grid"] { opacity: 0.12; }
   :root:not([data-theme="light"]) .tutor-diagram { background: #f4f3ef; }
+  :root:not([data-theme="light"]) .tutor-composer {
+    background: linear-gradient(180deg, #262522 0%, #1f1e1b 45%, #191917 100%);
+    border-color: rgba(255, 248, 230, 0.12);
+    box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.09), inset 0 -1px 0 rgba(0, 0, 0, 0.3), 0 14px 32px -16px rgba(0, 0, 0, 0.85);
+  }
+  :root:not([data-theme="light"]) .tutor-composer:focus-within {
+    border-color: rgba(250, 204, 21, 0.4);
+    box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.09), inset 0 -1px 0 rgba(0, 0, 0, 0.3), 0 0 0 4px rgba(250, 204, 21, 0.1), 0 16px 36px -16px rgba(0, 0, 0, 0.9);
+  }
+  :root:not([data-theme="light"]) .tutor-send { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 4px 12px -4px rgba(0, 0, 0, 0.8); }
+  :root:not([data-theme="light"]) .tutor-send:disabled { background-color: rgba(255, 248, 230, 0.07); box-shadow: inset 0 0 0 1px rgba(255, 248, 230, 0.08); }
   :root:not([data-theme="light"]) .prose-tutor :is(th, td, pre) { border-color: rgba(255, 248, 230, 0.14); }
   :root:not([data-theme="light"]) .prose-tutor blockquote { border-left-color: rgba(250, 204, 21, 0.55); }
   /* A selected state (a tab, a preset, "Following") is a raised tone, not a
@@ -288,6 +299,17 @@ body {
 }
 :root[data-theme="dark"] [data-parallax="grid"] { opacity: 0.12; }
 :root[data-theme="dark"] .tutor-diagram { background: #f4f3ef; }
+:root[data-theme="dark"] .tutor-composer {
+  background: linear-gradient(180deg, #262522 0%, #1f1e1b 45%, #191917 100%);
+  border-color: rgba(255, 248, 230, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.09), inset 0 -1px 0 rgba(0, 0, 0, 0.3), 0 14px 32px -16px rgba(0, 0, 0, 0.85);
+}
+:root[data-theme="dark"] .tutor-composer:focus-within {
+  border-color: rgba(250, 204, 21, 0.4);
+  box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.09), inset 0 -1px 0 rgba(0, 0, 0, 0.3), 0 0 0 4px rgba(250, 204, 21, 0.1), 0 16px 36px -16px rgba(0, 0, 0, 0.9);
+}
+:root[data-theme="dark"] .tutor-send { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 4px 12px -4px rgba(0, 0, 0, 0.8); }
+:root[data-theme="dark"] .tutor-send:disabled { background-color: rgba(255, 248, 230, 0.07); box-shadow: inset 0 0 0 1px rgba(255, 248, 230, 0.08); }
 :root[data-theme="dark"] .prose-tutor :is(th, td, pre) { border-color: rgba(255, 248, 230, 0.14); }
 :root[data-theme="dark"] .prose-tutor blockquote { border-left-color: rgba(250, 204, 21, 0.55); }
 :root[data-theme="dark"] .bg-ink:is([aria-pressed="true"], [aria-selected="true"], [aria-checked="true"], [aria-current="page"], [aria-current="true"]) {
@@ -506,6 +528,26 @@ html { scroll-behavior: smooth; }
 }
 .prose-tutor th { background: var(--paper); font-weight: 600; }
 .prose-tutor .katex-display { overflow-x: auto; overflow-y: hidden; padding: 0.35em 0; }
+/* The tutor across the whole screen (only it is this wide: beside the page
+   it tops out at 720px). The words keep their reading column, but a table,
+   a diagram or a long formula steps out of it and uses the screen: centred
+   on the column, at least as wide as it, and a table wraps its cells to fit
+   instead of sliding. */
+@container (min-width: 64rem) {
+  .prose-tutor .tutor-table-scroll,
+  .prose-tutor .tutor-diagram,
+  .prose-tutor .katex-display {
+    position: relative;
+    left: 50%;
+    translate: -50% 0;
+    min-width: 100%;
+    max-width: calc(100cqw - 4rem);
+  }
+  .prose-tutor .tutor-table-scroll { width: calc(100cqw - 4rem); }
+  .prose-tutor .tutor-table-scroll table { width: auto; min-width: min(100%, 48rem); margin-inline: auto; }
+  .prose-tutor .tutor-diagram,
+  .prose-tutor .katex-display { width: max-content; }
+}
 /* Tailwind draws every svg as a block, so each symbol lands on its own line,
    and the formula's TeX source (the MathML annotation) shows beside it. */
 .katex { white-space: nowrap; }
@@ -549,6 +591,43 @@ html { scroll-behavior: smooth; }
   background: #ffffff;
   padding: 0.6rem;
   color: #1a1a1a;
+}
+
+/* The tutor's input: a glossy pill. A lit top edge and a soft shadow lift it
+   off the panel; on focus it gets a faint yellow halo. The send button is a
+   small glossy ink bead, quiet until there's something to send. */
+.tutor-composer {
+  background: linear-gradient(180deg, #ffffff 0%, #ffffff 40%, #f4f3ee 100%);
+  border-color: rgba(13, 13, 12, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    inset 0 -1px 0 rgba(13, 13, 12, 0.04),
+    0 1px 2px rgba(13, 13, 12, 0.05),
+    0 12px 28px -16px rgba(13, 13, 12, 0.3);
+}
+.tutor-composer:focus-within {
+  border-color: rgba(13, 13, 12, 0.38);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    inset 0 -1px 0 rgba(13, 13, 12, 0.04),
+    0 0 0 4px rgba(250, 204, 21, 0.2),
+    0 14px 32px -16px rgba(13, 13, 12, 0.34);
+}
+.tutor-send {
+  color: var(--paper);
+  background-color: var(--ink);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.06) 48%, rgba(255, 255, 255, 0) 52%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 3px 8px -3px rgba(13, 13, 12, 0.5);
+  transition: transform 160ms var(--ease, ease), box-shadow 160ms ease, background-color 160ms ease, color 160ms ease;
+}
+.tutor-send:hover:not(:disabled) { transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 6px 14px -4px rgba(13, 13, 12, 0.5); }
+.tutor-send:active:not(:disabled) { transform: scale(0.94); }
+.tutor-send:disabled {
+  color: var(--muted);
+  background-color: rgba(13, 13, 12, 0.06);
+  background-image: none;
+  box-shadow: inset 0 0 0 1px rgba(13, 13, 12, 0.06);
+  cursor: default;
 }
 .prose-compact { font-size: 0.875rem; line-height: 1.6; }
 

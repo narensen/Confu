@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { toast } from "@/components/dialogs";
 import { eyebrowClass } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
@@ -65,7 +65,15 @@ export function ChatPanel({
   const topicDoc = docs.find((d) => d.id === activeTopic?.document_id);
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const stick = useRef(true);
+  // The box grows with what's typed (up to 10rem), then scrolls.
+  useLayoutEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
+  }, [draft]);
   // Messages loaded with the page appear instantly; only new ones animate in.
   const [initialCount] = useState(messages.length);
 
@@ -190,15 +198,17 @@ export function ChatPanel({
         </div>
       </div>
 
-      <div className="mx-auto w-full max-w-[calc(48rem+1rem)] shrink-0 bg-transparent px-3 pt-1 pb-2">
+      <div className="mx-auto w-full max-w-[calc(48rem+1rem)] shrink-0 px-3 pt-2 pb-2.5">
+        {/* A glossy pill: the box, and the send button inside it. */}
         <form
           onSubmit={(e) => {
             e.preventDefault();
             submit();
           }}
-          className="flex items-end gap-1 bg-transparent"
+          className="tutor-composer flex items-end gap-1.5 rounded-[24px] border py-1.5 pr-1.5 pl-4 transition-[border-color,box-shadow] duration-200 ease-fluid"
         >
           <textarea
+            ref={inputRef}
             id="tutor-input"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
@@ -208,21 +218,17 @@ export function ChatPanel({
                 submit();
               }
             }}
-            rows={Math.min(6, Math.max(1, draft.split("\n").length))}
+            rows={1}
             placeholder={citeFiles ? "Ask about the files you've turned on…" : "Ask anything, about your files or beyond them…"}
-            className="max-h-40 min-h-9 flex-1 resize-none bg-transparent px-1 py-1.5 text-sm outline-none placeholder:text-muted"
+            className="max-h-40 min-h-9 flex-1 resize-none self-center bg-transparent py-2 text-sm leading-5 outline-none placeholder:text-muted"
           />
-          <button
-            disabled={!draft.trim() || Boolean(busy)}
-            aria-label="Send"
-            className="flex size-9 shrink-0 items-center justify-center bg-transparent text-ink transition duration-200 hover:opacity-70 active:scale-95 disabled:opacity-30"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
-              <path d="M5 12h14M13 6l6 6-6 6" />
+          <button disabled={!draft.trim() || Boolean(busy)} aria-label="Send" title="Send (Enter)" className="tutor-send flex size-9 shrink-0 items-center justify-center rounded-full">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M12 19V5M6 11l6-6 6 6" />
             </svg>
           </button>
         </form>
-        <div className="mt-0.5 flex items-center gap-3 px-1">
+        <div className="mt-1.5 flex items-center gap-3 px-3">
           {citeFiles && <CitePicker docs={docs} activeDocId={activeDocId} citeFiles={citeFiles} />}
           <label title="Answers have to cite a page in this session." className="ml-auto flex shrink-0 cursor-pointer items-center gap-1.5 text-[11px] leading-none text-muted">
             <input type="checkbox" checked={citeMode} onChange={(e) => onCiteMode(e.target.checked)} className="size-3.5" />

@@ -28,7 +28,11 @@ export function repairMath(md: string): string {
         ? part
         : part
             .replace(/\$\$([\s\S]+?)\$\$/g, (_, m: string) => `$$${repairSpan(m)}$$`)
-            .replace(/(?<![\\$])\$(?!\$)([^$\n]+?)\$(?!\$)/g, (_, m: string) => `$${repairSpan(m)}$`),
+            .replace(/(?<![\\$])\$(?!\$)([^$\n]+?)\$(?!\$)/g, (_, m: string) => `$${repairSpan(m)}$`)
+            // A formula alone on its line is a display equation. remark-math
+            // only draws one when the $$ sit on their own lines; on one line
+            // it came out inline, small and cramped. (In a table it stays inline.)
+            .replace(/^([ \t]*)\$\$([^\n$]+?)\$\$[ \t]*$/gm, (_, indent: string, m: string) => `${indent}$$\n${indent}${m.trim()}\n${indent}$$`),
     )
     .join("");
 }
