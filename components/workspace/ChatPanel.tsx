@@ -158,35 +158,7 @@ export function ChatPanel({ sessionId, messages, busy, plan, docs, activeTopic, 
         {busy && last?.role !== "assistant" && <Thinking label={busy} />}
       </div>
 
-      <div className="shrink-0 border-t border-ink bg-panel p-3">
-        <div className="mb-2.5 flex flex-wrap gap-1.5">
-          {kind === "exam" &&
-            EXAM_PROMPTS.map((p) => (
-              <QuickAction key={p.label} disabled={Boolean(busy)} onClick={() => onSend({ action: "chat", message: p.message })}>
-                {p.label}
-              </QuickAction>
-            ))}
-          {plan && activeTopic && (
-            <>
-              <QuickAction disabled={Boolean(busy)} onClick={() => onSend({ action: "teach" })}>
-                Teach me this topic
-              </QuickAction>
-              <QuickAction disabled={Boolean(busy)} onClick={() => onSend({ action: "quiz" })}>
-                Check my understanding
-              </QuickAction>
-            </>
-          )}
-          <QuickAction disabled={Boolean(busy)} onClick={draw}>
-            Draw a diagram
-          </QuickAction>
-        </div>
-        <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-          {citeFiles && <CitePicker docs={docs} activeDocId={activeDocId} citeFiles={citeFiles} />}
-          <label className="flex cursor-pointer items-center gap-2 text-xs leading-snug text-muted">
-            <input type="checkbox" checked={citeMode} onChange={(e) => onCiteMode(e.target.checked)} />
-            <span>Answers have to cite a page in this session.</span>
-          </label>
-        </div>
+      <div className="shrink-0 border-t border-ink bg-transparent px-3 pt-2.5 pb-2">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -218,6 +190,34 @@ export function ChatPanel({ sessionId, messages, busy, plan, docs, activeTopic, 
             </svg>
           </button>
         </form>
+        <div className="mt-1.5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-0.5">
+            {citeFiles && <CitePicker docs={docs} activeDocId={activeDocId} citeFiles={citeFiles} />}
+            {kind === "exam" &&
+              EXAM_PROMPTS.map((p) => (
+                <QuickAction key={p.label} disabled={Boolean(busy)} onClick={() => onSend({ action: "chat", message: p.message })}>
+                  {p.label}
+                </QuickAction>
+              ))}
+            {plan && activeTopic && (
+              <>
+                <QuickAction disabled={Boolean(busy)} onClick={() => onSend({ action: "teach" })}>
+                  Teach me this topic
+                </QuickAction>
+                <QuickAction disabled={Boolean(busy)} onClick={() => onSend({ action: "quiz" })}>
+                  Check my understanding
+                </QuickAction>
+              </>
+            )}
+            <QuickAction disabled={Boolean(busy)} onClick={draw}>
+              Draw a diagram
+            </QuickAction>
+          </div>
+          <label className="flex max-w-[18rem] cursor-pointer items-center gap-1.5 justify-self-end text-[11px] leading-snug text-muted">
+            <input type="checkbox" checked={citeMode} onChange={(e) => onCiteMode(e.target.checked)} className="size-3.5" />
+            <span>Answers have to cite a page in this session.</span>
+          </label>
+        </div>
       </div>
     </div>
   );
@@ -413,11 +413,11 @@ function CitePicker({ docs, activeDocId, citeFiles }: { docs: SessionDoc[]; acti
         aria-expanded={open}
         aria-haspopup="listbox"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-ink/30 bg-panel py-1 pr-2 pl-2.5 text-xs transition duration-200 ease-fluid hover:border-ink"
+        className="inline-flex max-w-full items-center gap-1 bg-transparent px-0.5 py-0.5 text-[11px] text-muted transition duration-200 ease-fluid hover:text-ink"
       >
-        <span className={eyebrowClass}>Cite</span>
-        <span className="font-medium">{summary}</span>
-        {one && one.title && <span className="max-w-[8rem] truncate text-muted">{one.title}</span>}
+        <span className="font-mono text-[10px] font-medium uppercase tracking-[0.12em]">Cite</span>
+        <span className="font-medium text-ink">{summary}</span>
+        {one && one.title && <span className="max-w-[6rem] truncate">{one.title}</span>}
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden className={`shrink-0 transition-transform duration-200 ease-fluid ${open ? "rotate-180" : ""}`}>
           <path d="M6 9l6 6 6-6" />
         </svg>
@@ -489,7 +489,7 @@ function QuickAction({ children, ...rest }: React.ButtonHTMLAttributes<HTMLButto
   return (
     <button
       type="button"
-      className="rounded-full border border-ink px-3 py-1 text-xs font-medium transition duration-200 ease-fluid hover:bg-ink hover:text-white active:scale-95 disabled:pointer-events-none disabled:opacity-40"
+      className="bg-transparent px-0.5 py-0.5 text-[11px] font-medium text-muted transition duration-200 ease-fluid hover:text-ink disabled:pointer-events-none disabled:opacity-40"
       {...rest}
     >
       {children}
