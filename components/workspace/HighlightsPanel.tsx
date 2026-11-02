@@ -5,18 +5,22 @@ import { toast } from "@/components/dialogs";
 import { COLOR_ORDER, colorOf, HIGHLIGHT_COLORS, type HighlightColor } from "@/lib/highlights";
 import { createClient } from "@/lib/supabase/client";
 import { track } from "@/lib/telemetry";
-import type { Highlight, SessionDoc } from "@/lib/types";
+import type { Highlight, SavedAnswer, SessionDoc } from "@/lib/types";
+import { LocalTime } from "@/components/LocalTime";
 import { Markdown } from "./Markdown";
 import type { SendRequest } from "./Workspace";
 
 // Your marks, by meaning: important, definitions, confusing, examples, notes,
-// and a gallery of captured figures.
+// a gallery of captured figures, and the tutor answers you saved.
 
-type Filter = "all" | HighlightColor | "notes" | "figures";
+type Filter = "all" | "saved" | HighlightColor | "notes" | "figures";
 
 type Props = {
   sessionId: string;
   highlights: Highlight[];
+  saved: SavedAnswer[];
+  onUnsaveAnswer: (id: string) => void;
+  onCite: (page: number, docLabel?: string) => void;
   docs: SessionDoc[];
   busy: boolean;
   onJump: (page: number, docId?: string | null) => void;
@@ -42,7 +46,7 @@ function ExportLinks({ sessionId }: { sessionId: string }) {
   );
 }
 
-export function HighlightsPanel({ sessionId, highlights, docs, busy, onJump, onDelete, onUpdate, onSend }: Props) {
+export function HighlightsPanel({ sessionId, highlights, saved, onUnsaveAnswer, onCite, docs, busy, onJump, onDelete, onUpdate, onSend }: Props) {
   const [filter, setFilter] = useState<Filter>("all");
   const order = useMemo(() => new Map(docs.map((d, i) => [d.id, i])), [docs]);
   const labelOf = (id: string) => docs.find((d) => d.id === id)?.label;
@@ -57,7 +61,8 @@ export function HighlightsPanel({ sessionId, highlights, docs, busy, onJump, onD
   const texts = sorted.filter((h) => h.kind === "text");
   const figures = sorted.filter((h) => h.kind === "region");
   const counts: Record<Filter, number> = {
-    all: sorted.length,
+    all: sorted.length + saved.length,
+    saved: saved.length,
     yellow: texts.filter((h) => colorOf(h.color) === "yellow").length,
     blue: texts.filter((h) => colorOf(h.color) === "blue").length,
     red: texts.filter((h) => colorOf(h.color) === "red").length,
@@ -66,9 +71,19 @@ export function HighlightsPanel({ sessionId, highlights, docs, busy, onJump, onD
     figures: figures.length,
   };
   const shown =
-    filter === "all" ? sorted : filter === "figures" ? figures : filter === "notes" ? texts.filter((h) => h.note) : texts.filter((h) => colorOf(h.color) === filter);
+    filter === "all"
+      ? sorted
+      : filter === "saved"
+        ? []
+        : filter === "figures"
+          ? figures
+          : filter === "notes"
+            ? texts.filter((h) => h.note)
+            : texts.filter((h) => colorOf(h.color) === filter);
+  // Saved answers come first under All: they're the tutor's words you chose to keep.
+  const savedShown = filter === "all" || filter === "saved" ? saved : [];
 
-  if (!highlights.length) {
+  if (!highlights.length && !saved.length) {
     return (
       <div className="animate-enter p-6">
         <h3 className="font-serif text-2xl">Nothing marked yet</h3>
@@ -84,6 +99,9 @@ export function HighlightsPanel({ sessionId, highlights, docs, busy, onJump, onD
         </ul>
         <p className="mt-3 text-sm leading-relaxed text-muted">
           Add a <b className="font-medium text-ink">Note</b> to any passage, or use <b className="font-medium text-ink">Capture</b> on a figure, table or equation.
+        </p>
+        <p className="mt-3 text-sm leading-relaxed text-muted">
+          Under a tutor answer, press <b className="font-medium text-ink">Save</b> to keep it here. The tutor keeps saved answers in mind for the rest of the session, even after you clear the chat.
         </p>
         <div className="mt-5 border-t border-line pt-3">
           <ExportLinks sessionId={sessionId} />
@@ -109,6 +127,14 @@ export function HighlightsPanel({ sessionId, highlights, docs, busy, onJump, onD
     if (figures.length) {
       lines.push("## Figures", "");
       for (const f of figures) lines.push(`- ${ref(f)}: ${(f.vlm_description ?? "").split("\n")[0].slice(0, 200)}`);
+      lines.push("");
+    }
+    if (saved.length) {
+      lines.push("## Saved from the tutor", "");
+      for (const a of [...saved].reverse()) {
+        if (a.question) lines.push(`**${asked(a.question)}**`, "");
+        lines.push(a.answer.trim(), "");
+      }
     }
     void navigator.clipboard.writeText(lines.join("\n").trim()).then(
       () => toast("Copied your highlights and notes as Markdown."),
@@ -119,6 +145,7 @@ export function HighlightsPanel({ sessionId, highlights, docs, busy, onJump, onD
 
   const chips: { id: Filter; label: string; swatch?: string }[] = [
     { id: "all", label: "All" },
+    { id: "saved", label: "Saved answers" },
     ...COLOR_ORDER.map((c) => ({ id: c as Filter, label: c === "blue" ? "Definitions" : c === "green" ? "Examples" : HIGHLIGHT_COLORS[c].label, swatch: HIGHLIGHT_COLORS[c].swatch })),
     { id: "notes", label: "Notes" },
     { id: "figures", label: "Figures" },
@@ -156,6 +183,15 @@ export function HighlightsPanel({ sessionId, highlights, docs, busy, onJump, onD
         <FigureGallery figures={figures} docs={docs} busy={busy} onJump={onJump} onSend={onSend} />
       ) : (
         <ul className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
+          {savedShown.map((a, i) => (
+            <SavedCard key={a.id} a={a} i={i} onRemove={onUnsaveAnswer} onCite={onCite} />
+          ))}
+          {filter === "all" && saved.length > 0 && sorted.length > 0 && (
+            <li aria-hidden className="flex items-center gap-3 pt-2 font-mono text-[10px] tracking-[0.14em] text-muted uppercase">
+              From your files
+              <span className="h-px flex-1 bg-line" />
+            </li>
+          )}
           {shown.map((h, i) =>
             h.kind === "text" ? (
               <TextCard key={h.id} h={h} i={i} label={docs.length > 1 ? labelOf(h.document_id) : undefined} busy={busy} onJump={onJump} onDelete={onDelete} onUpdate={onUpdate} onSend={onSend} />
@@ -182,6 +218,49 @@ export function HighlightsPanel({ sessionId, highlights, docs, busy, onJump, onD
         </ul>
       )}
     </div>
+  );
+}
+
+// A question as one plain line: the stored turn can carry Markdown.
+function asked(question: string): string {
+  return question.replace(/[*_`#>]/g, "").replace(/\s+/g, " ").trim();
+}
+
+// A tutor answer you kept. Long ones open to their full length on request.
+function SavedCard({ a, i, onRemove, onCite }: { a: SavedAnswer; i: number; onRemove: (id: string) => void; onCite: Props["onCite"] }) {
+  const [open, setOpen] = useState(false);
+  const long = a.answer.length > 700 || /```(?:mermaid|svg)/i.test(a.answer);
+  return (
+    <li className="group animate-enter rounded-xl border border-ink bg-panel p-4 transition duration-200 ease-fluid hover:shadow-hard-sm" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
+      <div className="mb-2 flex items-center gap-2 text-xs">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="#facc15" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden>
+          <path d="M18 21l-6-4.5L6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z" />
+        </svg>
+        <span className="font-medium">Saved answer</span>
+        <span className="text-muted">
+          <LocalTime iso={a.created_at} />
+        </span>
+        <span className="flex-1" />
+        <button
+          type="button"
+          onClick={() => onRemove(a.id)}
+          className="text-muted opacity-0 transition group-hover:opacity-100 hover:text-danger focus:opacity-100"
+          title="Remove it from Highlights. The tutor stops using it."
+        >
+          Remove
+        </button>
+      </div>
+      {a.question && <p className="mb-2 line-clamp-2 text-xs leading-relaxed text-muted">You asked: {asked(a.question)}</p>}
+      <div className={`relative ${long && !open ? "max-h-56 overflow-hidden" : ""}`}>
+        <Markdown content={a.answer} onPage={onCite} className="prose-tutor prose-compact" />
+        {long && !open && <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-linear-to-t from-panel to-transparent" />}
+      </div>
+      {long && (
+        <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="mt-2 text-xs font-medium underline underline-offset-4 transition hover:opacity-70">
+          {open ? "Show less" : "Show all"}
+        </button>
+      )}
+    </li>
   );
 }
 

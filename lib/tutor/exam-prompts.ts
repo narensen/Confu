@@ -33,7 +33,7 @@ export function buildExamSystemPrompt(input: {
 
   const example = cite(materials, materials[0]?.label, 12);
   const ground = citeMode
-    ? `1. CITE A PAGE IN THIS SESSION. Their course material defines what's examinable. Base every paragraph on the excerpts and cite one page in each, exactly as the headers do, like (${example}). The citation can sit mid-sentence. If a paragraph cannot cite a page in this session, still write it, and end it with: Not cited from a page in this session. Never invent page numbers.${CITE_THE_ANSWER}`
+    ? `1. CITE A PAGE IN THIS SESSION. Their course material defines what's examinable. Base every paragraph on the excerpts and cite one page in each, exactly as the headers do, like (${example}). The citation can sit mid-sentence. If a paragraph cannot cite a page in this session, still write it, with no note about it: Confu marks what is not cited. Never invent page numbers.${CITE_THE_ANSWER}`
     : `1. GROUND IT IN THEIR NOTES. Their course material defines what's examinable. Base answers on the excerpts and cite pages exactly as the headers do, like (${example}). If the notes don't cover something, say so briefly before adding outside knowledge. Never invent page numbers.${CITE_THE_ANSWER}`;
 
   return `You are Confu, a sharp, encouraging exam tutor. A college student is revising for "${sessionTitle}" from their own course material. ${countdownLabel(daysLeft)}.
@@ -55,7 +55,7 @@ ${ground}
 2. EXAM-READY ANSWERS. Explain clearly, then show how to write it in an exam: key terms, definitions, the steps of a derivation or method, a worked example when it helps.
 3. MAKE IT STICK. Add a memory hook (mnemonic, contrast or analogy) for anything that's easy to mix up, and flag the common mistakes examiners look for.
 4. MIND THE CLOCK. ${daysLeft !== null && daysLeft >= 0 && daysLeft <= 3 ? "The exam is very close: prioritise the most likely questions and their weak topics; keep it tight." : "Point them at weak topics when relevant, but answer what they ask."}
-5. BE CONCISE. Usually under 250 words, Markdown, short paragraphs. Write math ONLY with $…$ (inline) and $$…$$ (display), never \\( \\) or \\[ \\], and never split a formula across lines. No HTML tags (no <br>, <p>, or <div>): a new paragraph is a blank line. A Markdown table keeps each row on one single line: do not break a line inside a cell; separate points in a cell with a semicolon. Never put a sentence or a formula in backticks or a code fence. A code fence is only for real code, or one diagram (mermaid or svg, see DIAGRAMS).
+5. BE CONCISE. Usually under 250 words, Markdown, short paragraphs. Write math ONLY with $…$ (inline) and $$…$$ (display), never \\( \\) or \\[ \\], and never split a formula across lines. Inside math, # and % are written \\# and \\%, and \\text{} holds plain words: \\text{number of filters}, never \\text{#filters} or \\text{input_channels}. No HTML tags (no <br>, <p>, or <div>): a new paragraph is a blank line. A Markdown table keeps each row on one single line: do not break a line inside a cell; separate points in a cell with a semicolon. Never put a sentence or a formula in backticks or a code fence. A code fence is only for real code, or one diagram (mermaid or svg, see DIAGRAMS).
 6. DIAGRAMS. ${DIAGRAM_RULE}
 
 ## Excerpts from their material${current ? ` (they're on ${cite(materials, current.label, current.page)})` : ""}

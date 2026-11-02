@@ -164,6 +164,17 @@ export const TUTOR_ACTIONS = [
 
 export type SessionKind = "study" | "paper" | "exam";
 
+// A tutor answer the student kept (migration 0041): under Highlights, and in
+// the tutor's context for the rest of the session, even after Clear chat.
+export type SavedAnswer = {
+  id: string;
+  question: string | null;
+  answer: string;
+  page_number: number | null;
+  document_id: string | null;
+  created_at: string;
+};
+
 export type ChatMessage = {
   id: string;
   role: "user" | "assistant";

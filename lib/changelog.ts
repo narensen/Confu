@@ -6,13 +6,25 @@ export type Release = { date: string; title: string; summary: string; items: str
 export const CHANGELOG: Release[] = [
   {
     date: "2026-11-02",
+    title: "Keep the answers that matter",
+    summary: "Save a tutor answer, or clear the chat and start fresh.",
+    items: [
+      "Under a tutor answer, press Save. It goes under Highlights with the question you asked, and the tutor keeps it in mind for the rest of the session.",
+      "Clear chat, at the top of the tutor, starts the conversation over. The tutor no longer sees what you talked about, except the answers you saved.",
+      "Clearing the chat deletes its words, not your study days: they stay on your streak.",
+      "Saved answers are in the session's Markdown export and in Copy highlights.",
+      "A formula with #, %, _ or & in its words (like “#filters” or “95%”) shows properly instead of a ParseError, and a % no longer cuts off the rest of the formula.",
+    ],
+  },
+  {
+    date: "2026-11-02",
     title: "Cite the files you mean",
     summary: "The tutor can use more than the file you have open.",
     items: [
       "Under the tutor, open Cite and tick the files an answer may cite. The one you have open starts on. Add the others the question needs, or all of them.",
       "An answer can cite each of those files. A citation still opens that page.",
       "A citation opens the page where the answer is written. A page that only asks the question is not the one that gets cited.",
-      "If an answer can't cite a page, you still get the answer, with a note that it isn't cited.",
+      "If an answer can't cite a page, you still get the answer, with one note that it isn't cited. When only part of it is, those paragraphs get a † and the note explains it once. Diagrams stay where the tutor put them.",
       "Diagrams are laid out for the tutor now. It says what connects to what, and the boxes are sized to their labels, with arrows that go around them instead of through them. A long chain is drawn top to bottom so it fits beside the page. Click a diagram to see it larger.",
       "A diagram the tutor draws by hand keeps its colours. Boxes were coming out solid black, with labels too big for them.",
       "In full screen, the tutor can take the whole screen: press the expand button in its header, or e. It widens over the page and shrinks back the same way. A citation, a tool, Esc or Back to the page brings the page back.",

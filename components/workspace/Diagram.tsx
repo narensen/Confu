@@ -29,6 +29,9 @@ function loadMermaid(): Promise<Mermaid> {
   loading ??= import("mermaid").then(({ default: mermaid }) => {
     mermaid.initialize({
       startOnLoad: false,
+      // A diagram that fails is our card's job to report. Mermaid's own error
+      // graphic was left in the page ("Syntax error in text").
+      suppressErrorRendering: true,
       securityLevel: "strict",
       theme: "base",
       look: "classic",

@@ -5,7 +5,7 @@ import { ExamProgress } from "@/components/exam/ExamProgress";
 import { PracticePanel } from "@/components/exam/PracticePanel";
 import type { ExamPractice } from "@/components/exam/useExamPractice";
 import type { PaperReview } from "@/lib/paper";
-import type { ChatMessage, Highlight, LearnerMemory, PlanTopic, SessionDoc, SessionKind, StudyPlan, TopicStatus } from "@/lib/types";
+import type { ChatMessage, Highlight, LearnerMemory, PlanTopic, SavedAnswer, SessionDoc, SessionKind, StudyPlan, TopicStatus } from "@/lib/types";
 import { ChatPanel } from "./ChatPanel";
 import type { HighlightColor } from "@/lib/highlights";
 import { HighlightsPanel } from "./HighlightsPanel";
@@ -54,6 +54,10 @@ export type PanelProps = {
   memory: LearnerMemory;
   highlights: Highlight[];
   messages: ChatMessage[];
+  // Tutor answers the student kept: under Highlights, and in the tutor's context all session.
+  saved: SavedAnswer[];
+  onSaveAnswer: (message: ChatMessage) => void;
+  onUnsaveAnswer: (id: string) => void;
   busy: string | null;
   onSend: (req: SendRequest) => void;
   onJump: (page: number, docId?: string | null) => void;
@@ -82,7 +86,7 @@ export type PanelProps = {
 
 // The tools of a session, in the order they're listed. Exam sessions keep it
 // simple: practise, see progress, files.
-export function toolSections(p: Pick<PanelProps, "kind" | "docs" | "plan" | "topics" | "highlights" | "files" | "paper" | "exam">): Section[] {
+export function toolSections(p: Pick<PanelProps, "kind" | "docs" | "plan" | "topics" | "highlights" | "saved" | "files" | "paper" | "exam">): Section[] {
   const done = p.topics.filter((t) => t.status === "completed").length;
   // Papers inside a study session get the paper session's three-pass tools.
   const studyPapers = p.kind === "study" ? p.docs.filter((d) => p.paper.paperIds.has(d.id)) : [];
@@ -100,11 +104,21 @@ export function toolSections(p: Pick<PanelProps, "kind" | "docs" | "plan" | "top
     shortcut: "F",
   };
   const answered = p.exam.practice.attempts.length;
+  const marked = p.highlights.length + p.saved.length;
+  const highlightsSection: Section = {
+    id: "highlights",
+    label: "Highlights",
+    hint: p.saved.length ? "Everything you've marked, and the answers you saved" : "Everything you've marked",
+    badge: marked ? String(marked) : undefined,
+    shortcut: "H",
+  };
 
   if (p.kind === "exam")
     return [
       { id: "practice", label: "Practice", hint: "Exam-style questions from your notes", shortcut: "P" },
       { id: "memory", label: "Progress", hint: "Your accuracy and weak topics", badge: answered ? String(answered) : undefined },
+      // Exam prep keeps it simple; Highlights appears once an answer is saved.
+      ...(p.saved.length ? [highlightsSection] : []),
       files,
     ];
 
@@ -115,7 +129,7 @@ export function toolSections(p: Pick<PanelProps, "kind" | "docs" | "plan" | "top
         ? { id: "plan", label: "Plan", hint: "Your goal, broken into topics", badge: `${done}/${p.topics.length}`, shortcut: "P" }
         : { id: "plan", label: "Plan", hint: "Set your goal to get a plan", dot: true, shortcut: "P" },
     ...(studyPapers.length ? [{ id: "passes" as const, label: "Papers", hint: "The research papers here, read in three passes", badge: passesBadge }] : []),
-    { id: "highlights", label: "Highlights", hint: "Everything you've marked", badge: p.highlights.length ? String(p.highlights.length) : undefined, shortcut: "H" },
+    highlightsSection,
     { id: "memory", label: "Progress", hint: "What the tutor knows about you" },
     files,
   ];
@@ -150,6 +164,9 @@ export function TutorPanel({ view, ...props }: PanelProps & { view: Tab }) {
             const r = activePaper ? props.paper.reviews[activePaper.id] : undefined;
             return activePaper && r ? { label: activePaper.label, title: activePaper.title, done: r.passes_done, target: r.target_pass } : null;
           })()}
+          saved={props.saved}
+          onSaveAnswer={props.onSaveAnswer}
+          onUnsaveAnswer={props.onUnsaveAnswer}
         />
       )}
       {view === "practice" && (
@@ -228,6 +245,9 @@ export function TutorPanel({ view, ...props }: PanelProps & { view: Tab }) {
         <HighlightsPanel
           sessionId={props.sessionId}
           highlights={highlights}
+          saved={props.saved}
+          onUnsaveAnswer={props.onUnsaveAnswer}
+          onCite={props.onCite}
           docs={props.docs}
           busy={Boolean(props.busy)}
           onJump={props.onJump}

@@ -6,6 +6,7 @@ import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { sanitizeSvg } from "@/lib/tutor/diagram";
+import { repairMath } from "@/lib/tutor/math-repair";
 import { MermaidDiagram, SvgDiagram } from "./Diagram";
 
 // Models emit typographic characters KaTeX has no glyphs for (e.g. the
@@ -141,12 +142,15 @@ function withBreaks(nodes: ReactNode): ReactNode {
 }
 
 // Models often emit \( \) and \[ \] math delimiters; remark-math only knows $ and $$.
+// Then the characters KaTeX reserves (\text{#filters}, 95%) are escaped.
 function normaliseMath(md: string): string {
   let text = tidyMarkup(md);
   for (const [pattern, replacement] of TYPOGRAPHY) text = text.replace(pattern, replacement);
-  return text
-    .replace(/\\\[([\s\S]+?)\\\]/g, (_, m: string) => `$$${m.replace(/[ \t]*\n[ \t]*/g, " ").trim()}$$`)
-    .replace(/\\\(([\s\S]+?)\\\)/g, (_, m: string) => `$${m.replace(/[ \t]*\n[ \t]*/g, " ").trim()}$`);
+  return repairMath(
+    text
+      .replace(/\\\[([\s\S]+?)\\\]/g, (_, m: string) => `$$${m.replace(/[ \t]*\n[ \t]*/g, " ").trim()}$$`)
+      .replace(/\\\(([\s\S]+?)\\\)/g, (_, m: string) => `$${m.replace(/[ \t]*\n[ \t]*/g, " ").trim()}$`),
+  );
 }
 
 // Turn page citations like "(p. 12)", "pp. 4–6" or "D2 p. 12" into links that

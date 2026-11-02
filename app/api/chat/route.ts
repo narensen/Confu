@@ -17,7 +17,8 @@ import { keepCited, retrievedKeys } from "@/lib/tutor/keep-cited";
 import { preferAnswerCitations } from "@/lib/tutor/page-role";
 import { PAPER_TOOLS, runPaperTool, type Source } from "@/lib/tutor/tools";
 import { buildSystemPrompt, buildUserInstruction } from "@/lib/tutor/prompts";
-import { TUTOR_ACTIONS } from "@/lib/types";
+import { TUTOR_ACTIONS, type SavedAnswer } from "@/lib/types";
+import { savedBlock } from "@/lib/tutor/saved";
 import { emptyReview } from "@/lib/paper";
 import { logError } from "@/lib/log";
 
@@ -129,15 +130,20 @@ export async function POST(request: Request) {
     .filter(Boolean)
     .join(" ");
 
-  const [{ excerpts, figures }, history] = await Promise.all([
+  const [{ excerpts, figures }, history, keptAnswers] = await Promise.all([
     retrieveContext(supabase, { sessionId, materials, action, query, current, focus, topic, highlightId, extraPages, scopeIds: scope }),
+    // A cleared chat keeps its rows (study days stay on the streak) without the words.
     supabase
       .from("messages")
       .select("role, content")
       .eq("session_id", sessionId)
+      .neq("content", "")
       .order("created_at", { ascending: false })
       .limit(HISTORY_TURNS),
+    // Answers the student saved: in context all session. Missing table (before migration 0041): none.
+    supabase.from("saved_answers").select("question, answer, created_at").eq("session_id", sessionId).order("created_at", { ascending: false }).limit(12),
   ]);
+  const saved = savedBlock((keptAnswers.data ?? []) as Pick<SavedAnswer, "question" | "answer" | "created_at">[]);
 
   const chosenIds = new Set(scope ?? []);
   const citeFiles = scope ? materials.filter((m) => chosenIds.has(m.id)).map((m) => ({ label: m.label, title: m.title })) : undefined;
@@ -151,7 +157,7 @@ export async function POST(request: Request) {
       )
     : [];
 
-  const system = isExam
+  const prompt = isExam
     ? buildExamSystemPrompt({
         sessionTitle: state.session.title,
         materials,
@@ -192,6 +198,7 @@ export async function POST(request: Request) {
         citeMode,
         citeFiles,
       });
+  const system = prompt + saved;
   const instruction =
     ((isPaper || passAction) && buildPaperInstruction(action, paper, review, message)) ||
     buildUserInstruction({ action, message, materials, selection: sel, topic, figure });

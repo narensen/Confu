@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "@/components/dialogs";
 import { eyebrowClass } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { routeOf, track } from "@/lib/telemetry";
 import { ACTION_LABELS } from "@/lib/tutor/format";
-import type { ChatMessage, PlanTopic, SessionDoc, SessionKind, StudyPlan } from "@/lib/types";
+import { oneCiteNote } from "@/lib/tutor/keep-cited";
+import { answerKey } from "@/lib/tutor/saved";
+import type { ChatMessage, PlanTopic, SavedAnswer, SessionDoc, SessionKind, StudyPlan } from "@/lib/types";
 import { Markdown } from "./Markdown";
 import { StartHere } from "./StartHere";
 import type { CiteFiles, SendRequest } from "./Workspace";
@@ -30,9 +32,36 @@ type Props = {
   activeDocId: string | null;
   paperFocus: { label: string; title: string; done: number; target: number } | null;
   onOpenPaper?: () => void;
+  // Answers kept under Highlights (and in the tutor's context all session).
+  saved: SavedAnswer[];
+  onSaveAnswer: (message: ChatMessage) => void;
+  onUnsaveAnswer: (id: string) => void;
 };
 
-export function ChatPanel({ sessionId, messages, busy, plan, docs, activeTopic, topics, onSend, onJump, onCite, onOpenPlan, onOpenPaper, kind, citeMode, onCiteMode, citeFiles, activeDocId, paperFocus }: Props) {
+export function ChatPanel({
+  sessionId,
+  messages,
+  busy,
+  plan,
+  docs,
+  activeTopic,
+  topics,
+  onSend,
+  onJump,
+  onCite,
+  onOpenPlan,
+  onOpenPaper,
+  kind,
+  citeMode,
+  onCiteMode,
+  citeFiles,
+  activeDocId,
+  paperFocus,
+  saved,
+  onSaveAnswer,
+  onUnsaveAnswer,
+}: Props) {
+  const savedIds = useMemo(() => new Map(saved.map((s) => [answerKey(s.answer), s.id])), [saved]);
   const topicDoc = docs.find((d) => d.id === activeTopic?.document_id);
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -135,7 +164,15 @@ export function ChatPanel({ sessionId, messages, busy, plan, docs, activeTopic, 
               <div key={m.id} className={`pr-2 ${isNew ? "animate-enter" : ""}`}>
                 {m.content ? (
                   <div className={busy && m === last ? "is-streaming" : ""}>
-                    <AnswerBody sessionId={sessionId} content={m.content} onCite={onCite} done={!(busy && m === last)} />
+                    <AnswerBody
+                      sessionId={sessionId}
+                      content={m.content}
+                      onCite={onCite}
+                      done={!(busy && m === last)}
+                      savedId={savedIds.get(answerKey(m.content)) ?? null}
+                      onSave={m.content.startsWith("⚠️") ? undefined : () => onSaveAnswer(m)}
+                      onUnsave={onUnsaveAnswer}
+                    />
                     {busy && m === last && busy !== "Thinking…" && (
                       <p className="animate-fade mt-2 flex items-center gap-2 font-mono text-[11px] text-muted">
                         <span className="size-1.5 animate-pulse rounded-full bg-ink" />
@@ -197,7 +234,23 @@ export function ChatPanel({ sessionId, messages, busy, plan, docs, activeTopic, 
   );
 }
 
-function AnswerBody({ sessionId, content, onCite, done }: { sessionId: string; content: string; onCite: (page: number, docLabel?: string) => void; done: boolean }) {
+function AnswerBody({
+  sessionId,
+  content,
+  onCite,
+  done,
+  savedId,
+  onSave,
+  onUnsave,
+}: {
+  sessionId: string;
+  content: string;
+  onCite: (page: number, docLabel?: string) => void;
+  done: boolean;
+  savedId: string | null;
+  onSave?: () => void; // absent for an error notice
+  onUnsave: (id: string) => void;
+}) {
   const body = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
   const [rating, setRating] = useState<"up" | "down" | null>(null);
@@ -254,7 +307,7 @@ function AnswerBody({ sessionId, content, onCite, done }: { sessionId: string; c
   return (
     <div>
       <div ref={body}>
-        <Markdown content={content} onPage={onCite} live={!done} />
+        <Markdown content={oneCiteNote(content)} onPage={onCite} live={!done} />
       </div>
       {done && (
         <div className="mt-1.5">
@@ -268,6 +321,20 @@ function AnswerBody({ sessionId, content, onCite, done }: { sessionId: string; c
             <IconButton label="Not quite" pressed={rating === "down"} onClick={() => choose("down")}>
               <ThumbIcon down />
             </IconButton>
+            {onSave && (
+              <button
+                type="button"
+                aria-pressed={Boolean(savedId)}
+                onClick={() => (savedId ? onUnsave(savedId) : onSave())}
+                title={savedId ? "Saved under Highlights, and the tutor keeps it in mind. Click to remove it." : "Save it under Highlights. The tutor keeps it in mind for the rest of this session."}
+                className={`ml-1 flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] font-medium transition ${
+                  savedId ? "text-ink" : "text-muted hover:bg-paper hover:text-ink"
+                }`}
+              >
+                <BookmarkIcon filled={Boolean(savedId)} />
+                {savedId ? "Saved" : "Save"}
+              </button>
+            )}
           </div>
           {open && !sent && (
             <form
@@ -325,6 +392,14 @@ function IconButton({ label, pressed, onClick, children }: { label: string; pres
     >
       {children}
     </button>
+  );
+}
+
+function BookmarkIcon({ filled }: { filled: boolean }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill={filled ? "#facc15" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M18 21l-6-4.5L6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z" />
+    </svg>
   );
 }
 

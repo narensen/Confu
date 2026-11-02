@@ -48,10 +48,12 @@ export async function GET(request: Request) {
   const docs = (docRows ?? []) as { id: string; title: string; source_url: string | null; meta: Record<string, unknown> | null }[];
   const docIds = docs.map((d) => d.id);
   const label = new Map(docs.map((d, i) => [d.id, `D${i + 1}`]));
-  const [{ data: topicRows }, { data: highlightRows }, { data: reviewRows }] = await Promise.all([
+  const [{ data: topicRows }, { data: highlightRows }, { data: reviewRows }, { data: savedRows }] = await Promise.all([
     plan ? supabase.from("plan_topics").select("title, phase, status, source, document_id, page_start, page_end, objectives").eq("plan_id", plan.id).order("position") : Promise.resolve({ data: [] }),
     docIds.length ? supabase.from("highlights").select("document_id, kind, page_number, color, selected_text, vlm_description, note").in("document_id", docIds).order("page_number") : Promise.resolve({ data: [] }),
     docIds.length ? supabase.from("paper_reviews").select("document_id, passes_done, pass1, pass2, pass3").in("document_id", docIds) : Promise.resolve({ data: [] }),
+    // Tutor answers the student saved (migration 0041; none before it).
+    supabase.from("saved_answers").select("question, answer, created_at").eq("session_id", id).order("created_at"),
   ]);
 
   const out: string[] = [`# ${session.title}`, "", `_Exported from Confu on ${new Date().toISOString().slice(0, 10)}._`, ""];
@@ -99,6 +101,14 @@ export async function GET(request: Request) {
         if (h.note) out.push(`  - Note: ${one(h.note)}`);
       }
       out.push("");
+    }
+  }
+
+  const saved = (savedRows ?? []) as { question: string | null; answer: string; created_at: string }[];
+  if (saved.length) {
+    out.push("## Saved from the tutor", "");
+    for (const a of saved) {
+      out.push(`### ${one(a.question?.replace(/[*_`#>]/g, "")) || "Saved answer"}`, "", `_Saved ${a.created_at.slice(0, 10)}_`, "", a.answer.trim(), "");
     }
   }
 

@@ -35,6 +35,7 @@ import { assignDueDates, currentTopic, toISODate } from "@/lib/schedule";
 import { track } from "@/lib/telemetry";
 import { createClient } from "@/lib/supabase/client";
 import { citeLabelsForTurn, displayUserTurn } from "@/lib/tutor/format";
+import { answerKey } from "@/lib/tutor/saved";
 import {
   docLabel,
   EMPTY_MEMORY,
@@ -42,6 +43,7 @@ import {
   type Highlight,
   type LearnerMemory,
   type PlanTopic,
+  type SavedAnswer,
   type SessionDoc,
   type SessionKind,
   type StudyPlan,
@@ -75,6 +77,7 @@ type Props = {
   initialMemory: LearnerMemory;
   initialHighlights: Highlight[];
   initialMessages: ChatMessage[];
+  initialSaved?: SavedAnswer[]; // tutor answers kept under Highlights (migration 0041)
   // Regular users bring their own Groq key; admins use the server's.
   needsKey: boolean;
   initialKey: KeyInfo | null;
@@ -136,6 +139,7 @@ export function Workspace({
   initialMemory,
   initialHighlights,
   initialMessages,
+  initialSaved,
   needsKey,
   initialKey,
   trial,
@@ -155,6 +159,7 @@ export function Workspace({
   const [memory, setMemory] = useState(initialMemory);
   const [highlights, setHighlights] = useState(initialHighlights);
   const [messages, setMessages] = useState(initialMessages);
+  const [saved, setSaved] = useState<SavedAnswer[]>(initialSaved ?? []);
   const [busy, setBusy] = useState<string | null>(null);
   const busyRef = useRef(false);
   const [goTo, setGoTo] = useState<{ page: number; n: number } | null>(null);
@@ -567,6 +572,77 @@ export function Workspace({
     },
     [activeDoc, activeTopic, citeIds, docs, labelOf, locked, multi, page, refreshProgress, revealGate, revealTutor, session.id, topics],
   );
+
+  // Keep a tutor answer. It is copied (with the question it answered) under
+  // Highlights, and sent to the tutor with every question for the rest of the
+  // session, so clearing the chat doesn't lose it.
+  const saving = useRef(new Set<string>());
+  const saveAnswer = useCallback(
+    async (message: ChatMessage) => {
+      const answer = answerKey(message.content);
+      if (!answer || saving.current.has(answer) || saved.some((s) => answerKey(s.answer) === answer)) return;
+      saving.current.add(answer);
+      const at = messages.findIndex((m) => m.id === message.id);
+      const question = at > 0 ? (messages.slice(0, at).findLast((m) => m.role === "user")?.content ?? null) : null;
+      const { data, error } = await supabase
+        .from("saved_answers")
+        .insert({
+          session_id: session.id,
+          question: question ? question.slice(0, 2000) : null,
+          answer,
+          page_number: message.page_number,
+          document_id: message.document_id && docs.some((d) => d.id === message.document_id) ? message.document_id : null,
+        })
+        .select("id, question, answer, page_number, document_id, created_at")
+        .single();
+      saving.current.delete(answer);
+      if (error || !data) {
+        toast("Couldn't save that answer. Try again.", "error");
+        return;
+      }
+      setSaved((list) => [data as SavedAnswer, ...list]);
+      track("answer.saved");
+      toast("Saved under Highlights. The tutor keeps it in mind for the rest of this session.");
+    },
+    [docs, messages, saved, session.id, supabase],
+  );
+  const unsaveAnswer = useCallback(
+    async (id: string) => {
+      const item = saved.find((s) => s.id === id);
+      if (!item) return;
+      setSaved((list) => list.filter((s) => s.id !== id));
+      const { error } = await supabase.from("saved_answers").delete().eq("id", id);
+      if (error) {
+        setSaved((list) => [item, ...list].sort((a, b) => b.created_at.localeCompare(a.created_at)));
+        toast("Couldn't remove it. Try again.", "error");
+      }
+    },
+    [saved, supabase],
+  );
+
+  // Clear the chat: the tutor starts fresh. The words are deleted; the rows
+  // keep their dates so the streak and heatmap keep those study days.
+  // Saved answers stay, in Highlights and in the tutor's context.
+  const clearChat = useCallback(async () => {
+    if (busyRef.current || !messages.length) return;
+    const ok = await ask({
+      title: "Clear this chat?",
+      body: saved.length
+        ? "The tutor starts fresh and won't see this conversation again. Your saved answers stay under Highlights, and the tutor keeps using them."
+        : "The tutor starts fresh and won't see this conversation again. To keep an answer, press Save under it first.",
+      confirm: "Clear chat",
+      danger: true,
+    });
+    if (!ok || busyRef.current) return;
+    const { error } = await supabase.from("messages").update({ content: "" }).eq("session_id", session.id);
+    if (error) {
+      toast("Couldn't clear the chat. Try again.", "error");
+      return;
+    }
+    setMessages([]);
+    track("chat.cleared", { saved: saved.length });
+    toast(saved.length ? "Chat cleared. Your saved answers are still here." : "Chat cleared. The tutor starts fresh.");
+  }, [messages.length, saved.length, session.id, supabase]);
 
   const onTextAction = useCallback(
     (action: TutorAction, selection: TextSelection, message?: string) => {
@@ -1405,7 +1481,7 @@ export function Workspace({
         "/": writeToTutor,
         p: () => toggleTool(isExam ? "practice" : isPaper ? "passes" : "plan"),
         f: () => toggleTool("files"),
-        h: isExam ? undefined : () => toggleTool("highlights"),
+        h: isExam && !saved.length ? undefined : () => toggleTool("highlights"),
         // A floating tool; a pinned one stays until it's closed.
         Escape: tutorFullShown ? () => showTutorFull(false) : wideRef.current && tool && !docked ? () => setTool(null) : undefined,
         "[": () => openDocs.length > 1 && selectDoc(openDocs[(i - 1 + openDocs.length) % openDocs.length].id),
@@ -1480,6 +1556,9 @@ export function Workspace({
       setMobileView("pdf");
       setExplain({ documentId: docId, page: pageNo, topic: t.title });
     },
+    saved,
+    onSaveAnswer: (m) => void saveAnswer(m),
+    onUnsaveAnswer: (id) => void unsaveAnswer(id),
     onDeleteHighlight: deleteHighlight,
     onUpdateHighlight: updateHighlight,
     onPlanCreated,
@@ -1585,6 +1664,7 @@ export function Workspace({
       <TutorHeader
         where={where}
         busy={Boolean(busy)}
+        onClear={messages.length && !locked ? () => void clearChat() : undefined}
         onFold={onFold}
         onExpand={onExpand}
         expanded={expanded}

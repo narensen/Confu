@@ -19,6 +19,7 @@ import {
   type LearnerMemory,
   type PaperDocMeta,
   type PlanTopic,
+  type SavedAnswer,
   type SessionDoc,
   type StudyPlan,
 } from "@/lib/types";
@@ -62,7 +63,7 @@ async function SessionWorkspace({ params, searchParams }: { params: Promise<{ id
   const user = await requireUser();
   const supabase = await createClient();
 
-  const [role, keyInfo, trial, session, docs, plan, memory, messages] = await Promise.all([
+  const [role, keyInfo, trial, session, docs, plan, memory, messages, saved] = await Promise.all([
     getCurrentRole(),
     getKeyInfo(supabase, user.id, id),
     trialPromptsLeft(supabase, user.id),
@@ -80,8 +81,16 @@ async function SessionWorkspace({ params, searchParams }: { params: Promise<{ id
       .from("messages")
       .select("id, role, action, content, page_number, document_id, highlight_id, created_at")
       .eq("session_id", id)
+      .neq("content", "") // a cleared chat keeps its rows, not its words
       .order("created_at", { ascending: false })
       .limit(60),
+    // Answers kept from the tutor (migration 0041; none before it).
+    supabase
+      .from("saved_answers")
+      .select("id, question, answer, page_number, document_id, created_at")
+      .eq("session_id", id)
+      .order("created_at", { ascending: false })
+      .limit(100),
   ]);
   if (!session.data) notFound();
 
@@ -164,6 +173,7 @@ async function SessionWorkspace({ params, searchParams }: { params: Promise<{ id
         initialMemory={m ? { ...EMPTY_MEMORY, ...m } : EMPTY_MEMORY}
         initialHighlights={(highlights.data ?? []) as Highlight[]}
         initialMessages={((messages.data ?? []) as ChatMessage[]).reverse()}
+        initialSaved={(saved.data ?? []) as SavedAnswer[]}
         needsKey={planOf(role) !== "pro"}
         initialKey={keyInfo}
         trial={trial > 0}

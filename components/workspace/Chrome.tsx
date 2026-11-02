@@ -9,7 +9,7 @@ import type { Section, Tab } from "./TutorPanel";
 
 /* ------------------------------------------------------------------ icons */
 
-type IconName = Tab | "reader" | "keys" | "pin" | "close" | "fold" | "expand" | "shrink";
+type IconName = Tab | "reader" | "keys" | "pin" | "close" | "fold" | "expand" | "shrink" | "clear";
 
 const PATHS: Record<IconName, ReactNode> = {
   chat: <path d="M21 11.5a8.4 8.4 0 0 1-12.2 7.5L3 20.5l1.6-5.2A8.5 8.5 0 1 1 21 11.5Z" />,
@@ -72,6 +72,12 @@ const PATHS: Record<IconName, ReactNode> = {
   ),
   expand: <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />,
   shrink: <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" />,
+  clear: (
+    <>
+      <path d="m7 21-4.3-4.3a1 1 0 0 1 0-1.4l10-10a1 1 0 0 1 1.4 0l5.6 5.6a1 1 0 0 1 0 1.4L11 21z" />
+      <path d="M22 21H7M5 11l9 9" />
+    </>
+  ),
 };
 
 export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
@@ -162,6 +168,7 @@ export function TutorRail({ busy, onOpen }: { busy: boolean; onOpen: () => void 
 
 // The tutor's header: who it is, what page it's reading along with, usage.
 // In full screen it can also take the whole screen (onExpand), and come back.
+// Clear chat starts the conversation over (saved answers stay).
 export function TutorHeader({
   where,
   busy,
@@ -169,6 +176,7 @@ export function TutorHeader({
   onFold,
   onExpand,
   expanded = false,
+  onClear,
 }: {
   where: string | null;
   busy: boolean;
@@ -176,6 +184,7 @@ export function TutorHeader({
   onFold?: () => void;
   onExpand?: () => void;
   expanded?: boolean;
+  onClear?: () => void; // absent when there's nothing to clear
 }) {
   return (
     <div className="flex h-12 shrink-0 items-center gap-2 border-b border-ink pr-2 pl-4">
@@ -194,6 +203,18 @@ export function TutorHeader({
       )}
       <div className="flex-1" />
       {usage}
+      {onClear && (
+        <button
+          type="button"
+          onClick={onClear}
+          disabled={busy}
+          aria-label="Clear the chat"
+          title="Clear the chat: the tutor starts fresh. Saved answers stay."
+          className={`${iconButton} disabled:pointer-events-none disabled:opacity-40`}
+        >
+          <Icon name="clear" size={16} />
+        </button>
+      )}
       {onExpand &&
         (expanded ? (
           <button
