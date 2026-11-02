@@ -13,6 +13,18 @@ export function cite(materials: Material[], label: string | undefined, page: num
   return materials.length > 1 && label ? `${label} p. ${page}` : `p. ${page}`;
 }
 
+// Told to the model when the student has chosen which files this question may cite.
+export function citeScopeNote(materials: Material[], files: { label: string; title: string }[] | undefined): string {
+  if (!files?.length) return "";
+  const names = files.map((f) => `${f.label} "${f.title}"`).join("; ");
+  if (files.length === 1) {
+    return `The student limited this question to ${names}. Cite only that file. Other files in the session are out of scope.\n\n`;
+  }
+  const first = cite(materials, files[0]?.label, 12);
+  const second = cite(materials, files[1]?.label, 4);
+  return `The student chose these files for this question: ${names}. Cite any of them the excerpts support, including more than one file in the same answer when they both bear on the point. Do not cite a file they left out. Write each citation like (${first}) or (${second}).\n\n`;
+}
+
 function list(items: string[], empty = "none yet"): string {
   return items.length ? items.map((i) => `  - ${i}`).join("\n") : `  - ${empty}`;
 }
@@ -39,8 +51,9 @@ export function buildSystemPrompt(input: {
   figures: FigureNote[];
   current: { label: string; page: number } | null;
   citeMode?: boolean;
+  citeFiles?: { label: string; title: string }[];
 }): string {
-  const { sessionTitle, materials, plan, topics, topic, schedule, memory, excerpts, figures, current, citeMode = false } = input;
+  const { sessionTitle, materials, plan, topics, topic, schedule, memory, excerpts, figures, current, citeMode = false, citeFiles } = input;
   const sorted = [...topics].sort((a, b) => a.position - b.position);
   const done = sorted.filter((t) => t.status === "completed");
   const next = topic ? sorted.find((t) => t.position > topic.position && t.status !== "completed") : null;
@@ -110,7 +123,7 @@ ${ground}
 8. DIAGRAMS. ${DIAGRAM_RULE}
 
 ## Document excerpts${current ? ` (student is currently on ${cite(materials, current.label, current.page)})` : ""}
-${excerptBlock}${figureBlock}`;
+${citeScopeNote(materials, citeFiles)}${excerptBlock}${figureBlock}`;
 }
 
 // The instruction sent to the model for one turn. Separate from the

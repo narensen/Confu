@@ -2,7 +2,7 @@ import "server-only";
 import { notesText, passDef, passNotes, PASSES, type PaperReview } from "@/lib/paper";
 import type { LearnerMemory, TutorAction } from "@/lib/types";
 import { DIAGRAM_RULE } from "@/lib/tutor/diagram";
-import { cite, type Excerpt, type FigureNote, type Material } from "@/lib/tutor/prompts";
+import { cite, citeScopeNote, type Excerpt, type FigureNote, type Material } from "@/lib/tutor/prompts";
 
 function list(items: string[], empty = "none yet"): string {
   return items.length ? items.map((i) => `  - ${i}`).join("\n") : `  - ${empty}`;
@@ -26,8 +26,9 @@ export function buildPaperSystemPrompt(input: {
   figures: FigureNote[];
   current: { label: string; page: number } | null;
   citeMode?: boolean;
+  citeFiles?: { label: string; title: string }[];
 }): string {
-  const { sessionTitle, researchGoal, materials, reviews, focusDocId, memory, excerpts, figures, current, citeMode = false } = input;
+  const { sessionTitle, researchGoal, materials, reviews, focusDocId, memory, excerpts, figures, current, citeMode = false, citeFiles } = input;
   const focus = materials.find((m) => m.id === focusDocId);
   const focusReview = focus ? reviews.get(focus.id) : undefined;
 
@@ -87,12 +88,18 @@ ${list(memory.explained.slice(-20))}
 3. GROUND IT, NEVER INVENT. Claims about this paper must come from the excerpts below; cite the page for each, exactly as the excerpt headers do, like (${cite(materials, materials[0]?.label, 4)}). You only see these excerpts, not the whole paper. If a section, figure, table, number or result isn't in them, say "I can't see that part; which page is it on?" or ask them to capture the figure. Never guess section numbers, figure numbers, results or statistics.${citeMode ? " Put one citation in each paragraph, in that same form. It can sit mid-sentence. A paragraph with no citation is left out." : ` You may use general knowledge of the field for context, labelled "From the wider literature:".`}
 4. BE A SCEPTICAL REVIEWER. Question assumptions, baselines, statistical significance, ablations, data leakage and how far results generalise.
 5. TIE IT TO THE GOAL. Point out what matters for their research goal, and when a paper deserves a deeper pass or doesn't.
-${citeMode ? `6. STAY WITH THIS PAPER. Searching is off. Answer from the excerpts. Don't invent a paper, author, year, or link.` : `6. FIND PAPERS WHEN IT HELPS. Your tools find papers useful to this researcher: search_papers (related work, alternatives, "has this been done?"), get_paper (look one up), find_citing_papers (what came after). Use them only when they're asked to find papers or need one to answer; otherwise answer from the excerpts. One or two well-chosen searches beat many. Mention only papers the tools returned or that are in the reading list, never invent a paper, author or year, and link each one you mention as [Title](url). Describe a paper only by what its returned abstract says. If the results don't really answer the question, say so plainly ("I found nothing that directly does X; the closest is…") rather than stretching a paper to fit. Don't use tools for questions the paper itself answers.`}
+${
+    citeMode
+      ? (citeFiles?.length ?? 0) > 1
+        ? `6. STAY WITH THE FILES THEY CHOSE. Searching is off. Answer from the excerpts of those files. Don't invent a paper, author, year, or link.`
+        : `6. STAY WITH THIS PAPER. Searching is off. Answer from the excerpts. Don't invent a paper, author, year, or link.`
+      : `6. FIND PAPERS WHEN IT HELPS. Your tools find papers useful to this researcher: search_papers (related work, alternatives, "has this been done?"), get_paper (look one up), find_citing_papers (what came after). Use them only when they're asked to find papers or need one to answer; otherwise answer from the excerpts. One or two well-chosen searches beat many. Mention only papers the tools returned or that are in the reading list, never invent a paper, author or year, and link each one you mention as [Title](url). Describe a paper only by what its returned abstract says. If the results don't really answer the question, say so plainly ("I found nothing that directly does X; the closest is…") rather than stretching a paper to fit. Don't use tools for questions the paper itself answers.`
+  }
 7. BE CONCISE. Usually under 300 words. Use Markdown. Write math ONLY with $…$ (inline) and $$…$$ (display) — never \\( \\) or \\[ \\]. No filler.
 8. DIAGRAMS. ${DIAGRAM_RULE}
 
 ## Paper excerpts${current ? ` (researcher is currently on ${cite(materials, current.label, current.page)})` : ""}
-${excerptBlock}${figureBlock}`;
+${citeScopeNote(materials, citeFiles)}${excerptBlock}${figureBlock}`;
 }
 
 function notesFor(review: PaperReview | undefined, n: 1 | 2 | 3): string {

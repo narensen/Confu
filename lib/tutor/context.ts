@@ -112,6 +112,41 @@ function windowed(text: string, query: string, max: number): string {
 
 export type PageRef = { docId: string; page: number; reason: string; max: number };
 
+type PageHit = { document_id: string; page_number: number; content: string };
+
+// One page from each file, then the next, so the first file can't use up the budget.
+function interleave(buckets: PageHit[][]): PageHit[] {
+  const depth = Math.max(0, ...buckets.map((b) => b.length));
+  const hits: PageHit[] = [];
+  for (let i = 0; i < depth; i++) {
+    for (const bucket of buckets) {
+      const row = bucket[i];
+      if (row) hits.push(row);
+    }
+  }
+  return hits;
+}
+
+// Search each chosen file on its own. A session-wide search returns the
+// strongest pages overall, which are usually the file already open.
+async function searchChosen(supabase: SupabaseClient, docIds: string[], query: string): Promise<PageHit[]> {
+  const n = docIds.length;
+  const limit = n <= 1 ? 5 : n === 2 ? 4 : n <= 4 ? 3 : 2;
+  const q = query.slice(0, 500);
+  const found = await Promise.all(
+    docIds.map((docId) => supabase.rpc("search_pages", { p_document_id: docId, p_query: q, p_limit: limit })),
+  );
+  return interleave(
+    found.map((res, i) =>
+      ((res.data ?? []) as { page_number: number; content: string }[]).map((row) => ({
+        document_id: docIds[i],
+        page_number: row.page_number,
+        content: row.content,
+      })),
+    ),
+  );
+}
+
 export async function retrieveContext(
   supabase: SupabaseClient,
   input: {
@@ -125,20 +160,25 @@ export async function retrieveContext(
     highlightId: string | null;
     // Pages a paper pass always needs (e.g. abstract, introduction, conclusion).
     extraPages?: PageRef[];
+    // Files the student turned on for this question. Null keeps a session-wide search.
+    scopeIds?: string[] | null;
   },
 ): Promise<{ excerpts: Excerpt[]; figures: FigureNote[] }> {
-  const { sessionId, materials, action, query, current, focus, topic, highlightId, extraPages = [] } = input;
+  const { sessionId, materials, action, query, current, focus, topic, highlightId, extraPages = [], scopeIds = null } = input;
   const labelOf = new Map(materials.map((m) => [m.id, m.label]));
+  const allowed = scopeIds?.length ? new Set(scopeIds) : null;
+  const inScope = (id: string) => !allowed || allowed.has(id);
+  const many = (allowed?.size ?? 0) > 1;
 
   // Pages we always want, in priority order.
   const wanted: PageRef[] = [];
-  if (focus) wanted.push({ ...focus, reason: "page of the highlighted passage", max: 3500 });
-  if (current && !(focus && focus.docId === current.docId && focus.page === current.page)) {
-    wanted.push({ ...current, reason: "page the student is reading", max: 2200 });
+  if (focus && inScope(focus.docId)) wanted.push({ ...focus, reason: "page of the highlighted passage", max: many ? 2200 : 3500 });
+  if (current && inScope(current.docId) && !(focus && focus.docId === current.docId && focus.page === current.page)) {
+    wanted.push({ ...current, reason: "page the student is reading", max: many ? 1400 : 2200 });
   }
-  if (topic?.document_id && topic.page_start && topic.page_end && (action === "teach" || action === "quiz" || action === "diagram")) {
+  if (topic?.document_id && inScope(topic.document_id) && topic.page_start && topic.page_end && (action === "teach" || action === "quiz" || action === "diagram")) {
     for (let p = topic.page_start; p <= Math.min(topic.page_end, topic.page_start + 2); p++) {
-      wanted.push({ docId: topic.document_id, page: p, reason: "current topic", max: 2500 });
+      wanted.push({ docId: topic.document_id, page: p, reason: "current topic", max: many ? 1600 : 2500 });
     }
   }
 
@@ -148,15 +188,19 @@ export async function retrieveContext(
   const byDoc = new Map<string, number[]>();
   for (const w of wanted) byDoc.set(w.docId, [...(byDoc.get(w.docId) ?? []), w.page]);
 
-  const [fixedResults, searched] = await Promise.all([
+  const [fixedResults, hits] = await Promise.all([
     Promise.all(
       [...byDoc].map(([docId, pages]) =>
         supabase.from("document_pages").select("document_id, page_number, content").eq("document_id", docId).in("page_number", pages),
       ),
     ),
     query.trim()
-      ? supabase.rpc("search_session_pages", { p_session_id: sessionId, p_query: query.slice(0, 500), p_limit: 5 })
-      : Promise.resolve({ data: [] }),
+      ? allowed
+        ? searchChosen(supabase, [...allowed], query)
+        : supabase
+            .rpc("search_session_pages", { p_session_id: sessionId, p_query: query.slice(0, 500), p_limit: 5 })
+            .then((r) => (r.data ?? []) as PageHit[])
+      : Promise.resolve([] as PageHit[]),
   ]);
 
   const key = (docId: string, page: number) => `${docId}:${page}`;
@@ -182,22 +226,23 @@ export async function retrieveContext(
   };
 
   for (const w of wanted) push(w.docId, w.page, fixed.get(key(w.docId, w.page)) ?? "", w.reason, w.max);
-  for (const r of (searched.data ?? []) as { document_id: string; page_number: number; content: string }[]) {
-    push(r.document_id, r.page_number, r.content, "relevant to the question", 1800);
+  for (const r of hits) {
+    if (!inScope(r.document_id)) continue;
+    push(r.document_id, r.page_number, r.content, "relevant to the question", many ? 1400 : 1800);
   }
 
   // Figure notes from captured regions on pages in play.
-  const { data: figs } = await supabase
-    .from("highlights")
-    .select("id, document_id, page_number, vlm_description")
-    .in(
-      "document_id",
-      materials.map((m) => m.id),
-    )
-    .eq("kind", "region")
-    .not("vlm_description", "is", null)
-    .order("created_at", { ascending: false })
-    .limit(40);
+  const figDocs = allowed ? [...allowed] : materials.map((m) => m.id);
+  const { data: figs } = figDocs.length
+    ? await supabase
+        .from("highlights")
+        .select("id, document_id, page_number, vlm_description")
+        .in("document_id", figDocs)
+        .eq("kind", "region")
+        .not("vlm_description", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(40)
+    : { data: [] };
 
   const figures: FigureNote[] = ((figs ?? []) as { id: string; document_id: string; page_number: number; vlm_description: string }[])
     // The figure just captured is sent in the instruction itself.

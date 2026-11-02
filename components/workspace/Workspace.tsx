@@ -34,7 +34,7 @@ import { lecturePdf, webPagePdf } from "@/lib/import/fetch-client";
 import { assignDueDates, currentTopic, toISODate } from "@/lib/schedule";
 import { track } from "@/lib/telemetry";
 import { createClient } from "@/lib/supabase/client";
-import { displayUserTurn } from "@/lib/tutor/format";
+import { citeLabelsForTurn, displayUserTurn } from "@/lib/tutor/format";
 import {
   docLabel,
   EMPTY_MEMORY,
@@ -92,6 +92,16 @@ export type SendRequest = {
   selection?: { text: string; page: number; documentId: string } | null;
   highlightId?: string | null;
   figure?: { page: number; documentId: string } | null;
+};
+
+// Which files the tutor may cite for the next question. The open file starts
+// on; `custom` means the student has changed that.
+export type CiteFiles = {
+  ids: string[];
+  custom: boolean;
+  onToggle: (id: string) => void;
+  onAll: () => void;
+  onOpenOnly: () => void;
 };
 
 // The layout, remembered on this device: the tutor's and the tools' widths,
@@ -155,6 +165,9 @@ export function Workspace({
   const practice = useExamPractice(session.id, initialAttempts);
   const [examDate, setExamDate] = useState(session.examDate);
   const [citeMode, setCiteModeOn] = useState(session.citeMode === true);
+  // null until the student picks files. Until then the open file is the only one cited.
+  const [citeTouched, setCiteTouched] = useState(false);
+  const [citePicked, setCitePicked] = useState<string[]>([]);
   const [researchGoal, setResearchGoal] = useState(session.researchGoal);
   const [storedReviews, setStoredReviews] = useState<Record<string, PaperReview>>(() =>
     Object.fromEntries(initialReviews.map((r) => [r.document_id, r])),
@@ -289,6 +302,14 @@ export function Workspace({
   const page = activeDoc?.lastPage ?? 1;
   const multi = docs.length > 1;
   const labelOf = useCallback((id: string | null | undefined) => docs.find((d) => d.id === id)?.label, [docs]);
+  const citeIds = useMemo(() => {
+    // Nothing on screen yet: cite every file, so a question isn't stuck on a closed one.
+    if (!citeTouched) return activeDoc ? [activeDoc.id] : docs.map((d) => d.id);
+    const known = new Set(docs.map((d) => d.id));
+    const kept = citePicked.filter((id) => known.has(id));
+    if (kept.length) return kept;
+    return activeDoc ? [activeDoc.id] : docs.map((d) => d.id);
+  }, [activeDoc, citePicked, citeTouched, docs]);
   const activeTopic = topics.find((t) => t.id === activeTopicId) ?? currentTopic(topics);
   const docHighlights = useMemo(() => highlights.filter((h) => h.document_id === activeDoc?.id), [highlights, activeDoc?.id]);
 
@@ -436,6 +457,7 @@ export function Workspace({
       const userId = `local-u-${Date.now()}`;
       const replyId = `local-a-${Date.now()}`;
       const where = req.selection ?? req.figure ?? (activeDoc ? { page, documentId: activeDoc.id } : null);
+      const citing = multi && !req.action.startsWith("pass") ? citeIds : [];
       const content = displayUserTurn({
         action: req.action,
         message: req.message,
@@ -443,6 +465,10 @@ export function Workspace({
         figurePage: req.figure?.page,
         docLabel: multi ? labelOf(where?.documentId) : undefined,
         topicTitle: topic?.title,
+        citeLabels: citeLabelsForTurn(
+          docs.filter((d) => citing.includes(d.id)).map((d) => d.label),
+          activeDoc?.label,
+        ),
       });
       const meta = { page_number: where?.page ?? null, document_id: where?.documentId ?? null };
       setMessages((m) => [
@@ -467,6 +493,7 @@ export function Workspace({
             topicId: topic?.id ?? null,
             selection: req.selection ?? null,
             highlightId: req.highlightId ?? null,
+            documentIds: citing.length ? citing : undefined,
           }),
         });
         if (!res.ok || !res.body) throw new Error(await readAiError(res));
@@ -508,7 +535,7 @@ export function Workspace({
         window.setTimeout(refreshProgress, 10000);
       }
     },
-    [activeDoc, activeTopic, labelOf, locked, multi, page, refreshProgress, revealGate, revealTutor, session.id, topics],
+    [activeDoc, activeTopic, citeIds, docs, labelOf, locked, multi, page, refreshProgress, revealGate, revealTutor, session.id, topics],
   );
 
   const onTextAction = useCallback(
@@ -1488,6 +1515,24 @@ export function Workspace({
     exam: { practice, examDate, onExamDate: saveExamDate, onTrial },
     citeMode,
     onCiteMode: setCiteMode,
+    citeFiles: multi
+      ? {
+          ids: citeIds,
+          custom: citeTouched,
+          onToggle: (id: string) => {
+            setCiteTouched(true);
+            setCitePicked(citeIds.includes(id) ? (citeIds.length === 1 ? citeIds : citeIds.filter((x) => x !== id)) : [...citeIds, id]);
+          },
+          onAll: () => {
+            setCiteTouched(true);
+            setCitePicked(docs.map((d) => d.id));
+          },
+          onOpenOnly: () => {
+            setCiteTouched(false);
+            setCitePicked([]);
+          },
+        }
+      : null,
     onView: showView,
   };
 

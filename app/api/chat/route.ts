@@ -7,7 +7,7 @@ import { createReasoningFilter } from "@/lib/visible-text";
 import { currentTopic, scheduleStatus, toISODate } from "@/lib/schedule";
 import { createClient } from "@/lib/supabase/server";
 import { loadTutorState, retrieveContext } from "@/lib/tutor/context";
-import { displayUserTurn } from "@/lib/tutor/format";
+import { citeLabelsForTurn, displayUserTurn } from "@/lib/tutor/format";
 import { updateLearnerMemory } from "@/lib/tutor/memory";
 import type { PageRef } from "@/lib/tutor/context";
 import { buildPaperInstruction, buildPaperSystemPrompt } from "@/lib/tutor/paper-prompts";
@@ -34,6 +34,8 @@ const Body = z.object({
     .nullable()
     .optional(),
   highlightId: z.uuid().nullable().optional(),
+  // Files this question may cite. Absent means the whole session, as before.
+  documentIds: z.array(z.uuid()).max(60).optional(),
 });
 
 const HISTORY_TURNS = 8;
@@ -49,7 +51,7 @@ export async function POST(request: Request) {
 
   const parsed = Body.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return new Response("Invalid request", { status: 400 });
-  const { sessionId, documentId = null, action, message, page = null, topicId, selection = null, highlightId = null } = parsed.data;
+  const { sessionId, documentId = null, action, message, page = null, topicId, selection = null, highlightId = null, documentIds } = parsed.data;
   if (action === "chat" && !message?.trim() && !selection) return new Response("Empty message", { status: 400 });
 
   const access = await resolveGroq(supabase, userId, sessionId, "chat");
@@ -84,7 +86,22 @@ export async function POST(request: Request) {
   const current = documentId && page && labelOf(documentId) ? { docId: documentId, page, label: labelOf(documentId)! } : null;
   const focus = sel ? { docId: sel.documentId, page: sel.page } : figure ? { docId: figure.docId, page: figure.page } : null;
 
-  const paperId = sel?.documentId ?? figure?.docId ?? documentId;
+  // Chosen files, in session order. A highlighted passage, a captured figure,
+  // and the topic being taught stay in even if that chip was off.
+  const known = new Set(materials.map((m) => m.id));
+  let scope: string[] | null = null;
+  if (documentIds?.length) {
+    const picked = new Set(documentIds.filter((id) => known.has(id)));
+    if (sel && known.has(sel.documentId)) picked.add(sel.documentId);
+    if (figure && known.has(figure.docId)) picked.add(figure.docId);
+    if (topic?.document_id && known.has(topic.document_id) && (action === "teach" || action === "quiz" || action === "diagram")) {
+      picked.add(topic.document_id);
+    }
+    const ordered = materials.map((m) => m.id).filter((id) => picked.has(id));
+    if (ordered.length) scope = ordered;
+  }
+
+  const paperId = sel?.documentId ?? figure?.docId ?? (scope && documentId && !scope.includes(documentId) ? scope[0] : documentId);
   // In a study session, the pass coaching works on whichever paper is open.
   const passAction = action.startsWith("pass");
   const paper = isPaper || passAction ? materials.find((m) => m.id === paperId) : undefined;
@@ -112,7 +129,7 @@ export async function POST(request: Request) {
     .join(" ");
 
   const [{ excerpts, figures }, history] = await Promise.all([
-    retrieveContext(supabase, { sessionId, materials, action, query, current, focus, topic, highlightId, extraPages }),
+    retrieveContext(supabase, { sessionId, materials, action, query, current, focus, topic, highlightId, extraPages, scopeIds: scope }),
     supabase
       .from("messages")
       .select("role, content")
@@ -120,6 +137,11 @@ export async function POST(request: Request) {
       .order("created_at", { ascending: false })
       .limit(HISTORY_TURNS),
   ]);
+
+  const chosenIds = new Set(scope ?? []);
+  const citeFiles = scope ? materials.filter((m) => chosenIds.has(m.id)).map((m) => ({ label: m.label, title: m.title })) : undefined;
+  const shownCurrent = current && (!scope || scope.includes(current.docId)) ? { label: current.label, page: current.page } : null;
+  const citeLabels = citeLabelsForTurn(citeFiles?.map((f) => f.label) ?? [], current?.label);
 
   const examTopics = isExam
     ? topicStats(
@@ -137,8 +159,9 @@ export async function POST(request: Request) {
         memory: state.memory,
         excerpts,
         figures,
-        current: current ? { label: current.label, page: current.page } : null,
+        current: shownCurrent,
         citeMode,
+        citeFiles,
       })
     : isPaper
     ? buildPaperSystemPrompt({
@@ -150,8 +173,9 @@ export async function POST(request: Request) {
         memory: state.memory,
         excerpts,
         figures,
-        current: current ? { label: current.label, page: current.page } : null,
+        current: shownCurrent,
         citeMode,
+        citeFiles,
       })
     : buildSystemPrompt({
         sessionTitle: state.session.title,
@@ -163,8 +187,9 @@ export async function POST(request: Request) {
         memory: state.memory,
         excerpts,
         figures,
-        current: current ? { label: current.label, page: current.page } : null,
+        current: shownCurrent,
         citeMode,
+        citeFiles,
       });
   const instruction =
     ((isPaper || passAction) && buildPaperInstruction(action, paper, review, message)) ||
@@ -177,6 +202,7 @@ export async function POST(request: Request) {
     figurePage: figure?.page,
     docLabel: multi ? (sel?.label ?? figure?.label) : undefined,
     topicTitle: isPaper || (passAction && paper) ? paper?.title : topic?.title,
+    citeLabels,
   });
 
   // Strip first, then cut. A stored scratchpad is usually the start of the

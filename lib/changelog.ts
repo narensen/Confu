@@ -6,6 +6,15 @@ export type Release = { date: string; title: string; summary: string; items: str
 export const CHANGELOG: Release[] = [
   {
     date: "2026-11-02",
+    title: "Cite the files you mean",
+    summary: "The tutor can use more than the file you have open.",
+    items: [
+      "Under the tutor, turn on the files an answer may cite. The one you have open starts on. Add the others the question needs, or all of them.",
+      "An answer can cite each of those files. A citation still opens that page.",
+    ],
+  },
+  {
+    date: "2026-11-02",
     title: "A better dark mode, and everything where you'd look for it",
     summary: "Glossy and solid in the dark, and a cleaner layout everywhere.",
     items: [

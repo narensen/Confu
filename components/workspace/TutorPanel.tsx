@@ -12,7 +12,7 @@ import { HighlightsPanel } from "./HighlightsPanel";
 import { MemoryPanel } from "./MemoryPanel";
 import { PlanPanel, type PlanSetup } from "./PlanPanel";
 import { FilesPanel, type FilesProps } from "./FilesPanel";
-import type { SendRequest } from "./Workspace";
+import type { CiteFiles, SendRequest } from "./Workspace";
 
 // What can be on screen beside the PDF: the tutor's chat, or one of the
 // session's tools (the plan, a paper's passes, practice, highlights, progress,
@@ -75,6 +75,7 @@ export type PanelProps = {
   exam: ExamProps;
   citeMode: boolean;
   onCiteMode: (on: boolean) => void;
+  citeFiles: CiteFiles | null;
   // Moving to another view from inside one ("Open the plan", "Practise these").
   onView: (view: Tab) => void;
 };
@@ -142,6 +143,8 @@ export function TutorPanel({ view, ...props }: PanelProps & { view: Tab }) {
           kind={props.kind}
           citeMode={props.citeMode}
           onCiteMode={props.onCiteMode}
+          citeFiles={props.citeFiles}
+          activeDocId={props.paper.activeDocId}
           paperFocus={(() => {
             const r = activePaper ? props.paper.reviews[activePaper.id] : undefined;
             return activePaper && r ? { label: activePaper.label, title: activePaper.title, done: r.passes_done, target: r.target_pass } : null;

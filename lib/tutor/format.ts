@@ -32,8 +32,9 @@ export function displayUserTurn(input: {
   figurePage?: number | null;
   docLabel?: string | null; // "D2" when the session has several PDFs
   topicTitle?: string | null;
+  citeLabels?: string[] | null; // files this question was allowed to cite, when that isn't just the open one
 }): string {
-  const { action, message, selection, figurePage, docLabel, topicTitle } = input;
+  const { action, message, selection, figurePage, docLabel, topicTitle, citeLabels } = input;
   const where = (page: number) => `${docLabel ? `${docLabel} ` : ""}p. ${page}`;
   const parts: string[] = [];
   if (selection?.text) parts.push(`${quote(selection.text)}\n> — ${where(selection.page)}`);
@@ -47,5 +48,14 @@ export function displayUserTurn(input: {
   } else if (action !== "chat") {
     parts.push(`**${label}**`);
   }
+  if (citeLabels?.length) parts.push(`Citing ${citeLabels.join(", ")}`);
   return parts.join("\n\n");
+}
+
+// The open file alone is the default, so the turn stays quiet. Anything else
+// (another file, or several) is worth showing.
+export function citeLabelsForTurn(chosen: string[], openLabel?: string | null): string[] | undefined {
+  if (chosen.length === 0) return undefined;
+  if (chosen.length === 1 && (!openLabel || chosen[0] === openLabel)) return undefined;
+  return chosen;
 }

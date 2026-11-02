@@ -6,7 +6,7 @@ import { ACTION_LABELS } from "@/lib/tutor/format";
 import type { ChatMessage, PlanTopic, SessionDoc, SessionKind, StudyPlan } from "@/lib/types";
 import { Markdown } from "./Markdown";
 import { StartHere } from "./StartHere";
-import type { SendRequest } from "./Workspace";
+import type { CiteFiles, SendRequest } from "./Workspace";
 
 type Props = {
   messages: ChatMessage[];
@@ -22,11 +22,13 @@ type Props = {
   kind: SessionKind;
   citeMode: boolean;
   onCiteMode: (on: boolean) => void;
+  citeFiles: CiteFiles | null;
+  activeDocId: string | null;
   paperFocus: { label: string; title: string; done: number; target: number } | null;
   onOpenPaper?: () => void;
 };
 
-export function ChatPanel({ messages, busy, plan, docs, activeTopic, topics, onSend, onJump, onCite, onOpenPlan, onOpenPaper, kind, citeMode, onCiteMode, paperFocus }: Props) {
+export function ChatPanel({ messages, busy, plan, docs, activeTopic, topics, onSend, onJump, onCite, onOpenPlan, onOpenPaper, kind, citeMode, onCiteMode, citeFiles, activeDocId, paperFocus }: Props) {
   const topicDoc = docs.find((d) => d.id === activeTopic?.document_id);
   const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -174,6 +176,7 @@ export function ChatPanel({ messages, busy, plan, docs, activeTopic, topics, onS
             Draw a diagram
           </QuickAction>
         </div>
+        {citeFiles && <CitePicker docs={docs} activeDocId={activeDocId} citeFiles={citeFiles} />}
         <label className="mb-2 flex cursor-pointer items-start gap-2 px-1 text-xs leading-snug text-muted">
           <input type="checkbox" checked={citeMode} onChange={(e) => onCiteMode(e.target.checked)} className="mt-0.5" />
           <span>Answers have to cite a page in this session.</span>
@@ -196,7 +199,7 @@ export function ChatPanel({ messages, busy, plan, docs, activeTopic, topics, onS
               }
             }}
             rows={Math.min(6, Math.max(1, draft.split("\n").length))}
-            placeholder="Ask anything, about your files or beyond them…"
+            placeholder={citeFiles ? "Ask about the files you've turned on…" : "Ask anything, about your files or beyond them…"}
             className="max-h-40 min-h-9 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted"
           />
           <button
@@ -209,6 +212,54 @@ export function ChatPanel({ messages, busy, plan, docs, activeTopic, topics, onS
             </svg>
           </button>
         </form>
+      </div>
+    </div>
+  );
+}
+
+function CitePicker({ docs, activeDocId, citeFiles }: { docs: SessionDoc[]; activeDocId: string | null; citeFiles: CiteFiles }) {
+  const { ids, custom, onToggle, onAll, onOpenOnly } = citeFiles;
+  const on = new Set(ids);
+  const summary = ids.length === docs.length ? "All files" : ids.length === 1 ? "One file" : `${ids.length} files`;
+  return (
+    <div className="mb-2.5">
+      <div className="mb-1.5 flex items-center gap-2 px-1">
+        <span className={eyebrowClass}>Cite</span>
+        <span className="text-xs text-muted">{summary}</span>
+        <span className="ml-auto flex items-center gap-2">
+          {ids.length < docs.length && (
+            <button type="button" onClick={onAll} className="text-xs font-medium underline underline-offset-2 transition hover:opacity-70">
+              All
+            </button>
+          )}
+          {custom && activeDocId && (
+            <button type="button" onClick={onOpenOnly} className="text-xs text-muted underline underline-offset-2 transition hover:text-ink">
+              Just the open file
+            </button>
+          )}
+        </span>
+      </div>
+      <div role="group" aria-label="Files the tutor may cite" className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto">
+        {docs.map((d) => {
+          const selected = on.has(d.id);
+          const open = d.id === activeDocId;
+          return (
+            <button
+              key={d.id}
+              type="button"
+              aria-pressed={selected}
+              title={selected ? (ids.length === 1 ? `${d.title} is the only file this answer can cite` : `Citing ${d.title}. Click to leave it out.`) : `Also cite ${d.title}`}
+              onClick={() => onToggle(d.id)}
+              className={`inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-left text-xs transition ${
+                selected ? "border-ink bg-ink text-white" : "border-ink/30 bg-panel text-muted hover:border-ink hover:text-ink"
+              }`}
+            >
+              <span className="font-mono">{d.label}</span>
+              <span className="max-w-[10rem] truncate">{d.title}</span>
+              {open && <span className={selected ? "text-white/70" : ""}>open</span>}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -245,6 +296,7 @@ function EmptyState({ hasPlan, onOpenPlan }: { hasPlan: boolean; onOpenPlan: () 
     ["Capture", "in the toolbar, then drag over a figure, table or equation. A vision model reads it and the tutor explains it."],
     ["Teach me / Check my understanding", "work through your plan one idea at a time, including topics beyond the PDF. Your progress is remembered."],
     ["Draw a diagram", "asks for a picture of the idea. It shows up in the chat as an image you can look at."],
+    ["Cite", "turn on more than one file under the box. The answer can use each of them, and a citation still opens that page."],
   ];
   return (
     <div className="animate-enter py-4">

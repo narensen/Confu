@@ -2,7 +2,7 @@ import "server-only";
 import { countdownLabel, type TopicStat } from "@/lib/exam";
 import type { LearnerMemory } from "@/lib/types";
 import { DIAGRAM_RULE } from "@/lib/tutor/diagram";
-import { cite, type Excerpt, type FigureNote, type Material } from "@/lib/tutor/prompts";
+import { cite, citeScopeNote, type Excerpt, type FigureNote, type Material } from "@/lib/tutor/prompts";
 
 function list(items: string[], empty = "none yet"): string {
   return items.length ? items.map((i) => `  - ${i}`).join("\n") : `  - ${empty}`;
@@ -18,8 +18,9 @@ export function buildExamSystemPrompt(input: {
   figures: FigureNote[];
   current: { label: string; page: number } | null;
   citeMode?: boolean;
+  citeFiles?: { label: string; title: string }[];
 }): string {
-  const { sessionTitle, materials, daysLeft, topics, memory, excerpts, figures, current, citeMode = false } = input;
+  const { sessionTitle, materials, daysLeft, topics, memory, excerpts, figures, current, citeMode = false, citeFiles } = input;
   const weak = topics.filter((t) => t.level === "weak" || t.level === "improving");
   const strong = topics.filter((t) => t.level === "strong");
 
@@ -58,5 +59,5 @@ ${ground}
 6. DIAGRAMS. ${DIAGRAM_RULE}
 
 ## Excerpts from their material${current ? ` (they're on ${cite(materials, current.label, current.page)})` : ""}
-${excerptBlock}${figureBlock}`;
+${citeScopeNote(materials, citeFiles)}${excerptBlock}${figureBlock}`;
 }
