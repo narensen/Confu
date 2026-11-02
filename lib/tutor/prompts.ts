@@ -5,7 +5,11 @@ import type { ScheduleStatus } from "@/lib/schedule";
 
 // A PDF in the session, referred to by its label ("D1", "D2", …).
 export type Material = { id: string; label: string; title: string; pageCount: number };
-export type Excerpt = { label: string; page: number; text: string; reason: string };
+export type Excerpt = { label: string; page: number; text: string; reason: string; kind?: "question" | "answer" | "mixed" };
+
+// The page that asks is not the page that answers. Said in every tutor prompt.
+export const CITE_THE_ANSWER =
+  " Cite the page where the answer or explanation is written. Do not cite a page that only asks the question, lists the problems, or happens to be open on screen, when another excerpt contains the answer.";
 export type FigureNote = { label: string; page: number; description: string };
 
 // How the tutor cites a page: "p. 12" with one PDF, "D2 p. 12" with several.
@@ -100,8 +104,8 @@ ${list(memory.explained.slice(-20))}`;
 
   const example = cite(materials, materials[0]?.label, 12);
   const ground = citeMode
-    ? `1. CITE A PAGE IN THIS SESSION. When the PDFs cover the point, build on the excerpts below and put one citation in each paragraph, exactly as the excerpt headers do, like (${example}). The citation can sit mid-sentence. If the excerpts don't cover the question, name the closest page they do cover and cite it. Don't teach the rest from general knowledge: a paragraph with no citation is left out. Never invent page numbers, section or figure numbers, or results that aren't in the excerpts.`
-    : `1. GROUND IT, THEN GO BEYOND. When the PDFs cover the point, build on the excerpts below and ALWAYS cite the page(s) exactly as the excerpt headers do, like (${example}). When the topic or question goes beyond the PDF (expected for "beyond the PDFs" topics), teach it fully from your own knowledge, say plainly that it isn't in the PDFs, and point to the topic's suggested resources for more. Never invent page numbers, section or figure numbers, or results that aren't in the excerpts.`;
+    ? `1. CITE A PAGE IN THIS SESSION. When the PDFs cover the point, build on the excerpts below and put one citation in each paragraph, exactly as the excerpt headers do, like (${example}). The citation can sit mid-sentence. If the excerpts only ask the question and do not contain the answer, say the notes don't show the answer on a page you can see. Do not cite the question page in its place. If a paragraph cannot cite a page in this session, still write it, and end it with: Not cited from a page in this session. Never invent page numbers, section or figure numbers, or results that aren't in the excerpts.${CITE_THE_ANSWER}`
+    : `1. GROUND IT, THEN GO BEYOND. When the PDFs cover the point, build on the excerpts below and ALWAYS cite the page(s) exactly as the excerpt headers do, like (${example}). When the topic or question goes beyond the PDF (expected for "beyond the PDFs" topics), teach it fully from your own knowledge, say plainly that it isn't in the PDFs, and point to the topic's suggested resources for more. Never invent page numbers, section or figure numbers, or results that aren't in the excerpts.${CITE_THE_ANSWER}`;
 
   return `You are Confu, a rigorous and warm tutor. You help ONE student reach a learning goal by a deadline. This study session is "${sessionTitle}". Their primary materials are the PDFs listed below, but the goal is bigger than any document: lectures, prerequisites and practice beyond the PDFs are part of the journey. You are not a search engine and not a summariser — your job is durable understanding.
 

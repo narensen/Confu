@@ -2,6 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { emptyReview, type PaperReview } from "@/lib/paper";
 import { docLabel, EMPTY_MEMORY, type LearnerMemory, type PlanTopic, type SessionKind, type StudyPlan, type TutorAction } from "@/lib/types";
+import { answerRank, pageKind } from "@/lib/tutor/page-role";
 import type { Excerpt, FigureNote, Material } from "@/lib/tutor/prompts";
 
 // Rough budget for document text in a prompt (~3k tokens). Groq's on-demand
@@ -219,12 +220,74 @@ export async function retrieveContext(
     const k = key(docId, page);
     const label = labelOf.get(docId);
     if (!label || seen.has(k) || !text?.trim() || used >= TOTAL_BUDGET) return;
-    const cut = windowed(text, query, Math.min(max, TOTAL_BUDGET - used));
+    const kind = pageKind(text);
+    // A question sheet is only there so the answer pages can be told apart from it.
+    const cap = kind === "question" ? Math.min(max, 700) : max;
+    const cut = windowed(text, query, Math.min(cap, TOTAL_BUDGET - used));
+    const stated =
+      kind === "question" ? "asks the question. Do not cite this page for the answer" : kind === "answer" ? "where the answer is written" : reason;
     seen.add(k);
     used += cut.length;
-    excerpts.push({ label, page, text: cut, reason });
+    excerpts.push({ label, page, text: cut, reason: stated, kind });
   };
 
+  // The page of questions ranks first (it matches the wording, and it is often
+  // the page on screen). Pull in the later pages that actually write the answer.
+  const questionAt = new Map<string, number>();
+  const noteQuestion = (docId: string, page: number, text: string) => {
+    if (!inScope(docId) || pageKind(text) !== "question") return;
+    const prev = questionAt.get(docId);
+    if (prev == null || page < prev) questionAt.set(docId, page);
+  };
+  for (const w of wanted) {
+    const text = fixed.get(key(w.docId, w.page));
+    if (text) noteQuestion(w.docId, w.page, text);
+  }
+  for (const r of hits) noteQuestion(r.document_id, r.page_number, r.content);
+
+  const haveAnswer = (docId: string) =>
+    [...hits.filter((h) => h.document_id === docId).map((h) => h.content), ...wanted.filter((w) => w.docId === docId).map((w) => fixed.get(key(w.docId, w.page)) ?? "")].some(
+      (text) => answerRank(text, query) >= 8,
+    );
+
+  const answerHits: PageHit[] = [];
+  if (questionAt.size) {
+    const more = await Promise.all(
+      [...questionAt].filter(([docId]) => !haveAnswer(docId)).map(async ([docId, after]) => {
+        const { data } = await supabase
+          .from("document_pages")
+          .select("document_id, page_number, content")
+          .eq("document_id", docId)
+          .gt("page_number", after)
+          .order("page_number")
+          .limit(24);
+        const rows = (data ?? []) as PageHit[];
+        const picked = rows
+          .map((row) => ({ row, rank: answerRank(row.content, query) }))
+          .filter((x) => x.rank >= 0)
+          .sort((a, b) => b.rank - a.rank)
+          .slice(0, 3)
+          .map((x) => x.row);
+        if (picked.length) return picked;
+        const earlier = await supabase
+          .from("document_pages")
+          .select("document_id, page_number, content")
+          .eq("document_id", docId)
+          .lt("page_number", after)
+          .order("page_number", { ascending: false })
+          .limit(12);
+        return ((earlier.data ?? []) as PageHit[])
+          .map((row) => ({ row, rank: answerRank(row.content, query) }))
+          .filter((x) => x.rank >= 0)
+          .sort((a, b) => b.rank - a.rank)
+          .slice(0, 3)
+          .map((x) => x.row);
+      }),
+    );
+    for (const rows of more) answerHits.push(...rows);
+  }
+
+  for (const row of answerHits) push(row.document_id, row.page_number, row.content, "where the answer is written", many ? 1400 : 1800);
   for (const w of wanted) push(w.docId, w.page, fixed.get(key(w.docId, w.page)) ?? "", w.reason, w.max);
   for (const r of hits) {
     if (!inScope(r.document_id)) continue;
@@ -250,6 +313,7 @@ export async function retrieveContext(
     .slice(0, 4)
     .map((f) => ({ label: labelOf.get(f.document_id) ?? "", page: f.page_number, description: f.vlm_description.slice(0, 1500) }));
 
-  excerpts.sort((a, b) => a.label.localeCompare(b.label) || a.page - b.page);
+  const roleOrder = { answer: 0, mixed: 1, question: 2 };
+  excerpts.sort((a, b) => roleOrder[a.kind ?? "mixed"] - roleOrder[b.kind ?? "mixed"] || a.label.localeCompare(b.label) || a.page - b.page);
   return { excerpts, figures };
 }

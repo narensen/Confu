@@ -269,8 +269,8 @@ export default function PrivacyPage() {
               copied, not how many people. No ranking and no names.
             </>,
             <>
-              <b>Cite mode.</b> A switch on the session. A reply that doesn&apos;t cite a page in the session is left out. We
-              don&apos;t keep a second copy of the uncited text.
+              <b>Cite mode.</b> A switch on the session. When part of a reply can&apos;t cite a page in the session, that part is
+              still shown, with a note that it isn&apos;t cited. The saved message is the one you see.
             </>,
           ]}
         />

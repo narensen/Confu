@@ -11,6 +11,8 @@ export const CHANGELOG: Release[] = [
     items: [
       "Under the tutor, open Cite and tick the files an answer may cite. The one you have open starts on. Add the others the question needs, or all of them.",
       "An answer can cite each of those files. A citation still opens that page.",
+      "A citation opens the page where the answer is written. A page that only asks the question is not the one that gets cited.",
+      "If an answer can't cite a page, you still get the answer, with a note that it isn't cited.",
       "Drag a file's tab and the others slide aside, like browser tabs. The order stays on this device for this session. D1 and D2 stay with their files, so an older citation still opens the right one.",
       "Under a tutor answer, copy it or mark it up or down. Add a correction and a comment. Those stay with the person building Confu. They are not sold, and they are not used to train a model.",
       "An exam table stays a table, and a formula stays on one line. The markup behind them no longer shows up on the page.",

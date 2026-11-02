@@ -2,7 +2,7 @@ import "server-only";
 import { notesText, passDef, passNotes, PASSES, type PaperReview } from "@/lib/paper";
 import type { LearnerMemory, TutorAction } from "@/lib/types";
 import { DIAGRAM_RULE } from "@/lib/tutor/diagram";
-import { cite, citeScopeNote, type Excerpt, type FigureNote, type Material } from "@/lib/tutor/prompts";
+import { CITE_THE_ANSWER, cite, citeScopeNote, type Excerpt, type FigureNote, type Material } from "@/lib/tutor/prompts";
 
 function list(items: string[], empty = "none yet"): string {
   return items.length ? items.map((i) => `  - ${i}`).join("\n") : `  - ${empty}`;
@@ -85,7 +85,7 @@ ${list(memory.explained.slice(-20))}
 ## How you coach
 1. MATCH THE PASS. Respect each paper's target pass. Don't drag a first-pass paper into proofs; in pass three, go all the way down.
 2. THE RESEARCHER DOES THE THINKING. Especially in passes two and three, prefer pointed questions and critique over handing over answers. When they share notes, assess them honestly: what's right, what's missing, what's wrong.
-3. GROUND IT, NEVER INVENT. Claims about this paper must come from the excerpts below; cite the page for each, exactly as the excerpt headers do, like (${cite(materials, materials[0]?.label, 4)}). You only see these excerpts, not the whole paper. If a section, figure, table, number or result isn't in them, say "I can't see that part; which page is it on?" or ask them to capture the figure. Never guess section numbers, figure numbers, results or statistics.${citeMode ? " Put one citation in each paragraph, in that same form. It can sit mid-sentence. A paragraph with no citation is left out." : ` You may use general knowledge of the field for context, labelled "From the wider literature:".`}
+3. GROUND IT, NEVER INVENT. Claims about this paper must come from the excerpts below; cite the page for each, exactly as the excerpt headers do, like (${cite(materials, materials[0]?.label, 4)}). You only see these excerpts, not the whole paper. If a section, figure, table, number or result isn't in them, say "I can't see that part; which page is it on?" or ask them to capture the figure. Never guess section numbers, figure numbers, results or statistics.${citeMode ? " Put one citation in each paragraph, in that same form. It can sit mid-sentence. If a paragraph cannot cite a page in this session, still write it, and end it with: Not cited from a page in this session." : ` You may use general knowledge of the field for context, labelled "From the wider literature:".`}${CITE_THE_ANSWER}
 4. BE A SCEPTICAL REVIEWER. Question assumptions, baselines, statistical significance, ablations, data leakage and how far results generalise.
 5. TIE IT TO THE GOAL. Point out what matters for their research goal, and when a paper deserves a deeper pass or doesn't.
 ${

@@ -13,7 +13,8 @@ import type { PageRef } from "@/lib/tutor/context";
 import { buildPaperInstruction, buildPaperSystemPrompt } from "@/lib/tutor/paper-prompts";
 import { buildExamSystemPrompt } from "@/lib/tutor/exam-prompts";
 import { daysUntil, topicStats, type Attempt } from "@/lib/exam";
-import { CITE_FALLBACK, keepCited, retrievedKeys } from "@/lib/tutor/keep-cited";
+import { keepCited, retrievedKeys } from "@/lib/tutor/keep-cited";
+import { preferAnswerCitations } from "@/lib/tutor/page-role";
 import { PAPER_TOOLS, runPaperTool, type Source } from "@/lib/tutor/tools";
 import { buildSystemPrompt, buildUserInstruction } from "@/lib/tutor/prompts";
 import { TUTOR_ACTIONS } from "@/lib/types";
@@ -326,8 +327,9 @@ export async function POST(request: Request) {
             multi,
             [...excerpts, ...figures].map((e) => ({ label: e.label, page: e.page })),
           );
-          const filtered = keepCited(reply, retrieved, multi).trim();
-          reply = filtered || CITE_FALLBACK;
+          const aimed = preferAnswerCitations(reply, excerpts, multi);
+          const filtered = keepCited(aimed, retrieved, multi).trim();
+          reply = filtered || reply.trim() || "The tutor didn't send an answer. Try again.";
           controller.enqueue(encoder.encode(reply));
         }
         controller.close();

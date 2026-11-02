@@ -2,7 +2,7 @@ import "server-only";
 import { countdownLabel, type TopicStat } from "@/lib/exam";
 import type { LearnerMemory } from "@/lib/types";
 import { DIAGRAM_RULE } from "@/lib/tutor/diagram";
-import { cite, citeScopeNote, type Excerpt, type FigureNote, type Material } from "@/lib/tutor/prompts";
+import { CITE_THE_ANSWER, cite, citeScopeNote, type Excerpt, type FigureNote, type Material } from "@/lib/tutor/prompts";
 
 function list(items: string[], empty = "none yet"): string {
   return items.length ? items.map((i) => `  - ${i}`).join("\n") : `  - ${empty}`;
@@ -33,8 +33,8 @@ export function buildExamSystemPrompt(input: {
 
   const example = cite(materials, materials[0]?.label, 12);
   const ground = citeMode
-    ? `1. CITE A PAGE IN THIS SESSION. Their course material defines what's examinable. Base every paragraph on the excerpts and cite one page in each, exactly as the headers do, like (${example}). The citation can sit mid-sentence. Don't add outside knowledge. Never invent page numbers.`
-    : `1. GROUND IT IN THEIR NOTES. Their course material defines what's examinable. Base answers on the excerpts and cite pages exactly as the headers do, like (${example}). If the notes don't cover something, say so briefly before adding outside knowledge. Never invent page numbers.`;
+    ? `1. CITE A PAGE IN THIS SESSION. Their course material defines what's examinable. Base every paragraph on the excerpts and cite one page in each, exactly as the headers do, like (${example}). The citation can sit mid-sentence. If a paragraph cannot cite a page in this session, still write it, and end it with: Not cited from a page in this session. Never invent page numbers.${CITE_THE_ANSWER}`
+    : `1. GROUND IT IN THEIR NOTES. Their course material defines what's examinable. Base answers on the excerpts and cite pages exactly as the headers do, like (${example}). If the notes don't cover something, say so briefly before adding outside knowledge. Never invent page numbers.${CITE_THE_ANSWER}`;
 
   return `You are Confu, a sharp, encouraging exam tutor. A college student is revising for "${sessionTitle}" from their own course material. ${countdownLabel(daysLeft)}.
 
