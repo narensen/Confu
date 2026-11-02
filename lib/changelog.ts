@@ -12,6 +12,8 @@ export const CHANGELOG: Release[] = [
       "Under the tutor, turn on the files an answer may cite. The one you have open starts on. Add the others the question needs, or all of them.",
       "An answer can cite each of those files. A citation still opens that page.",
       "Drag a file's tab to move it. The order stays on this device for this session. D1 and D2 stay with their files, so an older citation still opens the right one.",
+      "Copy a tutor answer, or mark it helpful or not. A note stays with the person building Confu. It is not sold, and it is not used to train a model.",
+      "Formulas and line breaks in an answer stay as text. The markup behind them no longer shows up on the page.",
     ],
   },
   {

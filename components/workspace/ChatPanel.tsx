@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { toast } from "@/components/dialogs";
 import { eyebrowClass } from "@/components/ui";
+import { createClient } from "@/lib/supabase/client";
+import { routeOf, track } from "@/lib/telemetry";
 import { ACTION_LABELS } from "@/lib/tutor/format";
 import type { ChatMessage, PlanTopic, SessionDoc, SessionKind, StudyPlan } from "@/lib/types";
 import { Markdown } from "./Markdown";
@@ -137,7 +140,7 @@ export function ChatPanel({ messages, busy, plan, docs, activeTopic, topics, onS
             <div key={m.id} className={`pr-2 ${isNew ? "animate-enter" : ""}`}>
               {m.content ? (
                 <div className={busy && m === last ? "is-streaming" : ""}>
-                  <Markdown content={m.content} onPage={onCite} />
+                  <AnswerBody content={m.content} onCite={onCite} done={!(busy && m === last)} />
                   {busy && m === last && busy !== "Thinking…" && (
                     <p className="animate-fade mt-2 flex items-center gap-2 font-mono text-[11px] text-muted">
                       <span className="size-1.5 animate-pulse rounded-full bg-ink" />
@@ -214,6 +217,113 @@ export function ChatPanel({ messages, busy, plan, docs, activeTopic, topics, onS
         </form>
       </div>
     </div>
+  );
+}
+
+function AnswerBody({ content, onCite, done }: { content: string; onCite: (page: number, docLabel?: string) => void; done: boolean }) {
+  const body = useRef<HTMLDivElement>(null);
+  const [copied, setCopied] = useState(false);
+  const [rating, setRating] = useState<"up" | "down" | null>(null);
+  const [open, setOpen] = useState(false);
+  const [note, setNote] = useState("");
+  const [sent, setSent] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  async function copy() {
+    const text = body.current?.innerText.replace(/\n{3,}/g, "\n\n").trim();
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      toast("Couldn't copy that.", "error");
+    }
+  }
+
+  function choose(next: "up" | "down") {
+    setRating(next);
+    setOpen(true);
+    setSent(false);
+  }
+
+  async function send() {
+    if (!rating || sending) return;
+    setSending(true);
+    const verdict = rating === "up" ? "Tutor answer · helpful" : "Tutor answer · not helpful";
+    const message = [verdict, note.trim(), "Answer:", content.replace(/\s+/g, " ").trim().slice(0, 1200)].filter(Boolean).join("\n\n").slice(0, 4000);
+    const { error } = await createClient()
+      .from("feedback")
+      .insert({ kind: rating === "up" ? "love" : "confusing", message, path: routeOf(location.pathname), user_agent: navigator.userAgent.slice(0, 300) });
+    setSending(false);
+    if (error) {
+      toast("Couldn't send that. Try again once you're signed in.", "error");
+      return;
+    }
+    setSent(true);
+    setOpen(false);
+    track("feedback.sent", { kind: rating === "up" ? "love" : "confusing" });
+    toast(rating === "up" ? "Glad that one helped." : "Thanks. That note goes to the person building Confu.");
+  }
+
+  return (
+    <div>
+      <div ref={body}>
+        <Markdown content={content} onPage={onCite} />
+      </div>
+      {done && (
+        <div className="mt-2">
+          <div className="flex flex-wrap items-center gap-1">
+            <AnswerButton onClick={() => void copy()}>{copied ? "Copied" : "Copy"}</AnswerButton>
+            <AnswerButton pressed={rating === "up"} onClick={() => choose("up")}>
+              Helpful
+            </AnswerButton>
+            <AnswerButton pressed={rating === "down"} onClick={() => choose("down")}>
+              Not quite
+            </AnswerButton>
+          </div>
+          {open && !sent && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void send();
+              }}
+              className="mt-2"
+            >
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                rows={2}
+                maxLength={1000}
+                placeholder={rating === "down" ? "What was wrong or missing?" : "What worked? Optional."}
+                className="w-full resize-none rounded-lg border border-ink/25 bg-panel px-2.5 py-1.5 text-xs leading-relaxed outline-none placeholder:text-muted/70 focus:border-ink"
+              />
+              <div className="mt-1.5 flex items-center justify-between gap-3">
+                <p className="text-[11px] leading-snug text-muted">Stays with Confu. Not sold, and not used to train a model.</p>
+                <button type="submit" disabled={sending} className="shrink-0 rounded-md border border-ink bg-ink px-2.5 py-1 text-xs font-medium text-white disabled:opacity-40">
+                  {sending ? "Sending…" : "Send"}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AnswerButton({ children, pressed, onClick }: { children: React.ReactNode; pressed?: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={pressed}
+      onClick={onClick}
+      className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition ${
+        pressed ? "border-ink bg-ink text-white" : "border-ink/25 text-muted hover:border-ink hover:text-ink"
+      }`}
+    >
+      {children}
+    </button>
   );
 }
 

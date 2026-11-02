@@ -21,6 +21,12 @@ const KIND: Record<FeedbackItem["kind"], { text: string; cls: string }> = {
   love: { text: "Love it", cls: "border-transparent bg-yellow-400 text-ink" },
 };
 
+function kindLabel(f: FeedbackItem) {
+  if (f.message.startsWith("Tutor answer · helpful")) return "Helpful answer";
+  if (f.message.startsWith("Tutor answer · not helpful")) return "Not quite";
+  return KIND[f.kind].text;
+}
+
 function ago(iso: string) {
   const s = (Date.now() - new Date(iso).getTime()) / 1000;
   if (s < 3600) return `${Math.max(1, Math.round(s / 60))}m ago`;
@@ -84,7 +90,7 @@ export function FeedbackInbox({ initial }: { initial: FeedbackItem[] }) {
           {shown.map((f) => (
             <li key={f.id} className={`py-3 ${f.status === "done" ? "opacity-60" : ""}`}>
               <div className="flex flex-wrap items-center gap-2">
-                <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${KIND[f.kind].cls}`}>{KIND[f.kind].text}</span>
+                <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${KIND[f.kind].cls}`}>{kindLabel(f)}</span>
                 {f.status === "new" && <span className="font-mono text-[10px] tracking-wider text-ink uppercase">● New</span>}
                 {f.status === "done" && <span className="font-mono text-[10px] tracking-wider text-ok uppercase">✓ Done</span>}
                 <span className="ml-auto text-[11px] text-muted">{ago(f.created_at)}</span>
