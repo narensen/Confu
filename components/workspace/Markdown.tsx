@@ -1,6 +1,6 @@
 "use client";
 
-import { memo } from "react";
+import { Children, cloneElement, isValidElement, memo, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
@@ -29,6 +29,71 @@ function looksLikeProse(text: string): boolean {
 // before it is rendered. Real code fences, and svg diagrams, are left alone.
 const PROSE_LANG = /^(text|markdown|md|plaintext|plain|txt)$/i;
 
+// A newline inside a Markdown table cell ends the table, so the later rows
+// show up as raw pipes. This stands in for a line break and stays on the row.
+const CELL_BREAK = "\uE000";
+
+function isSeparator(line: string): boolean {
+  return /^\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line.trim());
+}
+
+function columns(line: string): number {
+  const parts = line.split(/(?<!\\)\|/);
+  if (line.trim().startsWith("|")) parts.shift();
+  if (line.trim().endsWith("|")) parts.pop();
+  return parts.length;
+}
+
+// |x| inside a cell is an absolute value, not a new column. Escape it so the
+// row keeps the columns the header declared.
+function escapeAbs(line: string): string {
+  return line.replace(/(?<!\\)\|(?=\S)([^|\n]*?)(?<=\S)\|/g, (_, inner: string) => `\\|${inner}\\|`);
+}
+
+// Pull a cell's wrapped lines back onto its row. A line is part of the cell
+// when the row is still short a column. A finished row, or a long paragraph
+// after the table, is left alone.
+function stitchTables(md: string): string {
+  const lines = md.split("\n");
+  const out: string[] = [];
+  let i = 0;
+  while (i < lines.length) {
+    if (!lines[i].includes("|") || !isSeparator(lines[i + 1] ?? "")) {
+      out.push(lines[i]);
+      i++;
+      continue;
+    }
+    const cols = columns(lines[i + 1]);
+    out.push(escapeAbs(lines[i]), lines[i + 1]);
+    i += 2;
+    while (i < lines.length && lines[i].trim()) {
+      if (!/^\s*\|/.test(lines[i])) break;
+      let row = escapeAbs(lines[i]);
+      let extra = 0;
+      i++;
+      while (i < lines.length && lines[i].trim() && columns(row) < cols && extra < 24) {
+        const next = escapeAbs(lines[i]);
+        if (/^\s*\|/.test(next) && columns(next) >= cols) break;
+        if (!next.includes("|") && next.trim().length > 180) break;
+        row += CELL_BREAK + next.trim();
+        extra++;
+        i++;
+      }
+      out.push(row);
+    }
+  }
+  return out.join("\n");
+}
+
+function flattenMath(src: string): string {
+  const oneLine = (m: string) => m.replace(/[ \t]*[\n\uE000][ \t]*/g, " ").trim();
+  return src
+    .replace(/\$\$([\s\S]+?)\$\$/g, (full, m: string) => (m.includes("\u0000") ? full : `$$${oneLine(m)}$$`))
+    .replace(/(^|[\s([{])\$(?!\$)([^$\n\uE000]*(?:[\n\uE000]+[^$\n\uE000]*)+)\$(?!\$)/g, (full, pre: string, m: string) =>
+      /\n\s*\n/.test(m) || m.includes("\u0000") ? full : `${pre}$${oneLine(m)}$`,
+    );
+}
+
 function tidyMarkup(md: string): string {
   const unfenced = md.replace(/```([^\n`]*)\n([\s\S]*?)```/g, (full, lang: string, body: string) => {
     const name = lang.trim();
@@ -48,14 +113,30 @@ function tidyMarkup(md: string): string {
     .replace(/<\/?\s*(strong|b)\s*>/gi, "**")
     .replace(/<\/?\s*(em|i)\s*>/gi, "*")
     .replace(/<\/?\s*(u|span|div|font)\b[^>]*>/gi, "");
-  // A formula split over lines renders one symbol per line. Keep \\ row breaks.
-  // Only a $ that opens math (after a space or a bracket) — a $ after ) closes one.
-  const flat = tidied
-    .replace(/\$\$([\s\S]+?)\$\$/g, (full, m: string) => (m.includes("\u0000") ? full : `$$${m.replace(/[ \t]*\n[ \t]*/g, " ").trim()}$$`))
-    .replace(/(^|[\s([{])\$(?!\$)([^$\n]*(?:\n+[^$\n]*)+)\$(?!\$)/g, (full, pre: string, m: string) =>
-      /\n\s*\n/.test(m) || m.includes("\u0000") ? full : `${pre}$${m.replace(/[ \t]*\n[ \t]*/g, " ").trim()}$`,
-    );
-  return flat.replace(/\u0000F(\d+)\u0000/g, (_, i) => fences[Number(i)] ?? "");
+  return flattenMath(stitchTables(tidied)).replace(/\u0000F(\d+)\u0000/g, (_, i) => fences[Number(i)] ?? "");
+}
+
+function withBreaks(nodes: ReactNode): ReactNode {
+  return Children.map(nodes, (child, index) => {
+    if (typeof child === "string") {
+      if (!child.includes(CELL_BREAK)) return child;
+      const parts = child.split(CELL_BREAK);
+      return (
+        <span key={index}>
+          {parts.map((part, i) => (
+            <span key={i}>
+              {i > 0 && <br />}
+              {part}
+            </span>
+          ))}
+        </span>
+      );
+    }
+    if (isValidElement<{ children?: ReactNode }>(child) && child.props.children != null) {
+      return cloneElement(child, { key: child.key ?? index }, withBreaks(child.props.children));
+    }
+    return child;
+  });
 }
 
 // Models often emit \( \) and \[ \] math delimiters; remark-math only knows $ and $$.
@@ -63,8 +144,8 @@ function normaliseMath(md: string): string {
   let text = tidyMarkup(md);
   for (const [pattern, replacement] of TYPOGRAPHY) text = text.replace(pattern, replacement);
   return text
-    .replace(/\\\[([\s\S]+?)\\\]/g, (_, m) => `\n$$\n${m.trim()}\n$$\n`)
-    .replace(/\\\(([\s\S]+?)\\\)/g, (_, m) => `$${m.trim()}$`);
+    .replace(/\\\[([\s\S]+?)\\\]/g, (_, m: string) => `$$${m.replace(/[ \t]*\n[ \t]*/g, " ").trim()}$$`)
+    .replace(/\\\(([\s\S]+?)\\\)/g, (_, m: string) => `$${m.replace(/[ \t]*\n[ \t]*/g, " ").trim()}$`);
 }
 
 // Turn page citations like "(p. 12)", "pp. 4–6" or "D2 p. 12" into links that
@@ -97,6 +178,12 @@ export const Markdown = memo(function Markdown({
                 <table>{children}</table>
               </div>
             );
+          },
+          td({ children }) {
+            return <td>{withBreaks(children)}</td>;
+          },
+          th({ children }) {
+            return <th>{withBreaks(children)}</th>;
           },
           code({ className: codeClass, children }) {
             const text = String(children).replace(/\n$/, "");

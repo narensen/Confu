@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { DailyChart } from "./DailyChart";
+import { AnswerFeedback, type AnswerNote } from "./AnswerFeedback";
 import { FeedbackInbox, type FeedbackItem } from "./FeedbackInbox";
 
 // The owner's dashboard: what people do in Confu, from Confu's own database
@@ -87,7 +88,7 @@ const VITALS: Record<string, { good: number; poor: number; unit: string; name: s
   TTFB: { good: 800, poor: 1800, unit: "ms", name: "Server response" },
 };
 
-export function AdminDashboard({ data, days, ranges }: { data: Insights; days: number; ranges: number[] }) {
+export function AdminDashboard({ data, days, ranges, answers = [], answersMissing = false }: { data: Insights; days: number; ranges: number[]; answers?: AnswerNote[]; answersMissing?: boolean }) {
   const u = data.users;
   const funnelTop = data.funnel[0]?.users ?? 0;
   const maxFeature = Math.max(1, ...data.features.map((f) => f.users));
@@ -184,6 +185,13 @@ export function AdminDashboard({ data, days, ranges }: { data: Insights; days: n
           )}
         </Card>
       </section>
+
+      <Card
+        title="Answer corrections"
+        sub="Thumbs on a tutor answer, with a correction and a comment. The correction is the useful part. Not sold, and not used to train a model."
+      >
+        <AnswerFeedback notes={answers} missing={answersMissing} />
+      </Card>
 
       <Card
         title={`Feedback${newFeedback ? ` · ${newFeedback} new` : ""}`}

@@ -506,20 +506,13 @@ html { scroll-behavior: smooth; }
 }
 .prose-tutor th { background: var(--paper); font-weight: 600; }
 .prose-tutor .katex-display { overflow-x: auto; overflow-y: hidden; padding: 0.35em 0; }
-/* Tailwind draws every svg as a block, so each symbol in a formula lands on
-   its own line and the formula's source shows beside it. */
-.katex svg { display: inline; vertical-align: baseline; max-width: none; }
-.katex .katex-mathml {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(1px, 1px, 1px, 1px);
-  clip-path: inset(50%);
-  white-space: nowrap;
-  border: 0;
-}
+/* Tailwind draws every svg as a block, so each symbol lands on its own line,
+   and the formula's TeX source (the MathML annotation) shows beside it. */
+.katex { white-space: nowrap; }
+.katex svg { display: inline !important; vertical-align: baseline; max-width: none; }
+.katex .katex-html { white-space: nowrap; }
+.katex .katex-newline { display: inline; }
+.katex .katex-mathml { display: none !important; }
 .katex, .katex * { overflow-wrap: normal; }
 .tutor-diagram {
   margin: 0.85em 0;

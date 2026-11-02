@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { AdminDashboard, type Insights } from "@/components/admin/AdminDashboard";
+import type { AnswerNote } from "@/components/admin/AnswerFeedback";
 import { getCurrentRole, requireUser } from "@/lib/dal";
 import { isOwner } from "@/lib/plans";
 import { createClient } from "@/lib/supabase/server";
@@ -28,7 +29,11 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin">["se
   const days = (RANGES as readonly number[]).includes(requested) ? requested : 30;
 
   const supabase = await createClient();
-  const [{ data, error }, billing] = await Promise.all([supabase.rpc("admin_insights", { p_days: days }), supabase.rpc("billing_summary")]);
+  const [{ data, error }, billing, answerNotes] = await Promise.all([
+    supabase.rpc("admin_insights", { p_days: days }),
+    supabase.rpc("billing_summary"),
+    supabase.rpc("admin_answer_feedback"),
+  ]);
   if (error || !data) {
     return (
       <div className="animate-enter rounded-xl border border-danger/50 bg-panel px-6 py-8">
@@ -61,7 +66,13 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin">["se
           ))}
         </section>
       )}
-      <AdminDashboard data={data as Insights} days={days} ranges={[...RANGES]} />
+      <AdminDashboard
+        data={data as Insights}
+        days={days}
+        ranges={[...RANGES]}
+        answers={Array.isArray(answerNotes.data) ? (answerNotes.data as AnswerNote[]) : []}
+        answersMissing={Boolean(answerNotes.error)}
+      />
     </>
   );
 }

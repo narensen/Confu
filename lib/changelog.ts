@@ -9,11 +9,11 @@ export const CHANGELOG: Release[] = [
     title: "Cite the files you mean",
     summary: "The tutor can use more than the file you have open.",
     items: [
-      "Under the tutor, turn on the files an answer may cite. The one you have open starts on. Add the others the question needs, or all of them.",
+      "Under the tutor, open Cite and tick the files an answer may cite. The one you have open starts on. Add the others the question needs, or all of them.",
       "An answer can cite each of those files. A citation still opens that page.",
       "Drag a file's tab to move it. The order stays on this device for this session. D1 and D2 stay with their files, so an older citation still opens the right one.",
-      "Copy a tutor answer, or mark it helpful or not. A note stays with the person building Confu. It is not sold, and it is not used to train a model.",
-      "Formulas and line breaks in an answer stay as text. The markup behind them no longer shows up on the page.",
+      "Under a tutor answer, copy it or mark it up or down. Add a correction and a comment. Those stay with the person building Confu. They are not sold, and they are not used to train a model.",
+      "An exam table stays a table, and a formula stays on one line. The markup behind them no longer shows up on the page.",
     ],
   },
   {

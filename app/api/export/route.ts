@@ -16,7 +16,7 @@ export async function GET() {
     return error ? { unavailable: error.message } : data;
   };
 
-  const [profile, sessions, documents, plans, topics, memory, highlights, messages, paperReviews, examAttempts, keys, usage, feedback, events] = await Promise.all([
+  const [profile, sessions, documents, plans, topics, memory, highlights, messages, paperReviews, examAttempts, keys, usage, feedback, answerFeedback, events] = await Promise.all([
     table("profiles", "full_name, role, created_at"),
     table("study_sessions"),
     table("documents", "id, session_id, title, page_count, status, source_url, meta, outline, created_at"),
@@ -30,6 +30,7 @@ export async function GET() {
     table("groq_keys", "session_id, last4, created_at"),
     table("ai_usage", "session_id, model, feature, prompt_tokens, completion_tokens, total_tokens, created_at"),
     table("feedback", "kind, message, path, status, created_at"),
+    table("answer_feedback", "rating, comment, correction, answer, path, created_at"),
     table("events", "name, path, props, created_at"),
   ]);
 
@@ -48,6 +49,7 @@ export async function GET() {
     api_keys: keys,
     ai_usage: usage,
     feedback,
+    answer_feedback: answerFeedback,
     usage_events: events,
     note: "PDF files themselves aren't included; download them from your sessions. API keys are never exported.",
   };

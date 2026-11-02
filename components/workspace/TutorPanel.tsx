@@ -129,6 +129,7 @@ export function TutorPanel({ view, ...props }: PanelProps & { view: Tab }) {
     <div key={view} className="animate-fade h-full min-h-0 min-w-0">
       {view === "chat" && (
         <ChatPanel
+          sessionId={props.sessionId}
           messages={props.messages}
           busy={props.busy}
           plan={plan}
