@@ -131,10 +131,11 @@ export function ChatPanel({
           const el = e.currentTarget;
           stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
         }}
-        className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-5 py-5"
+        className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-5 py-5 @5xl:px-10"
       >
-        {/* A readable column, centred when the tutor has the whole screen. */}
-        <div className="mx-auto w-full max-w-3xl space-y-5">
+        {/* A reading column beside the page. With the tutor across the whole
+            screen (the panel is 64rem or wider only then), it uses the screen. */}
+        <div className="mx-auto w-full max-w-3xl space-y-5 @5xl:max-w-[96rem]">
           {messages.length === 0 &&
             (kind === "paper" ? (
               <PaperEmptyState onOpenPasses={onOpenPlan} />
@@ -198,7 +199,7 @@ export function ChatPanel({
         </div>
       </div>
 
-      <div className="mx-auto w-full max-w-[calc(48rem+1rem)] shrink-0 px-3 pt-2 pb-2.5">
+      <div className="mx-auto w-full max-w-[calc(48rem+1rem)] shrink-0 px-3 pt-2 pb-2.5 @5xl:max-w-[calc(96rem+5rem)] @5xl:px-10">
         {/* A glossy pill: the box, and the send button inside it. */}
         <form
           onSubmit={(e) => {
