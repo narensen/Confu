@@ -53,14 +53,6 @@ export function ChatPanel({ sessionId, messages, busy, plan, docs, activeTopic, 
     stick.current = true;
   }
 
-  function draw() {
-    if (busy) return;
-    const text = draft.trim();
-    onSend({ action: "diagram", message: text || undefined });
-    if (text) setDraft("");
-    stick.current = true;
-  }
-
   const last = messages[messages.length - 1];
 
   return (
@@ -158,13 +150,13 @@ export function ChatPanel({ sessionId, messages, busy, plan, docs, activeTopic, 
         {busy && last?.role !== "assistant" && <Thinking label={busy} />}
       </div>
 
-      <div className="shrink-0 border-t border-ink bg-transparent px-3 pt-2.5 pb-2">
+      <div className="shrink-0 bg-transparent px-3 pt-1 pb-2">
         <form
           onSubmit={(e) => {
             e.preventDefault();
             submit();
           }}
-          className="flex items-end gap-2 rounded-xl border border-ink bg-panel p-1.5 transition-shadow duration-200 focus-within:shadow-hard-sm"
+          className="flex items-end gap-1 bg-transparent"
         >
           <textarea
             id="tutor-input"
@@ -178,44 +170,23 @@ export function ChatPanel({ sessionId, messages, busy, plan, docs, activeTopic, 
             }}
             rows={Math.min(6, Math.max(1, draft.split("\n").length))}
             placeholder={citeFiles ? "Ask about the files you've turned on…" : "Ask anything, about your files or beyond them…"}
-            className="max-h-40 min-h-9 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted"
+            className="max-h-40 min-h-9 flex-1 resize-none bg-transparent px-1 py-1.5 text-sm outline-none placeholder:text-muted"
           />
           <button
             disabled={!draft.trim() || Boolean(busy)}
             aria-label="Send"
-            className="flex size-9 items-center justify-center rounded-lg bg-ink text-white transition duration-200 hover:opacity-85 active:scale-95 disabled:opacity-30"
+            className="flex size-9 shrink-0 items-center justify-center bg-transparent text-ink transition duration-200 hover:opacity-70 active:scale-95 disabled:opacity-30"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
               <path d="M5 12h14M13 6l6 6-6 6" />
             </svg>
           </button>
         </form>
-        <div className="mt-1.5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-0.5">
-            {citeFiles && <CitePicker docs={docs} activeDocId={activeDocId} citeFiles={citeFiles} />}
-            {kind === "exam" &&
-              EXAM_PROMPTS.map((p) => (
-                <QuickAction key={p.label} disabled={Boolean(busy)} onClick={() => onSend({ action: "chat", message: p.message })}>
-                  {p.label}
-                </QuickAction>
-              ))}
-            {plan && activeTopic && (
-              <>
-                <QuickAction disabled={Boolean(busy)} onClick={() => onSend({ action: "teach" })}>
-                  Teach me this topic
-                </QuickAction>
-                <QuickAction disabled={Boolean(busy)} onClick={() => onSend({ action: "quiz" })}>
-                  Check my understanding
-                </QuickAction>
-              </>
-            )}
-            <QuickAction disabled={Boolean(busy)} onClick={draw}>
-              Draw a diagram
-            </QuickAction>
-          </div>
-          <label className="flex max-w-[18rem] cursor-pointer items-center gap-1.5 justify-self-end text-[11px] leading-snug text-muted">
+        <div className="mt-0.5 flex items-center gap-3 px-1">
+          {citeFiles && <CitePicker docs={docs} activeDocId={activeDocId} citeFiles={citeFiles} />}
+          <label title="Answers have to cite a page in this session." className="ml-auto flex shrink-0 cursor-pointer items-center gap-1.5 text-[11px] leading-none text-muted">
             <input type="checkbox" checked={citeMode} onChange={(e) => onCiteMode(e.target.checked)} className="size-3.5" />
-            <span>Answers have to cite a page in this session.</span>
+            <span>Answers must cite</span>
           </label>
         </div>
       </div>
@@ -485,25 +456,12 @@ function Thinking({ label }: { label: string }) {
   );
 }
 
-function QuickAction({ children, ...rest }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  return (
-    <button
-      type="button"
-      className="bg-transparent px-0.5 py-0.5 text-[11px] font-medium text-muted transition duration-200 ease-fluid hover:text-ink disabled:pointer-events-none disabled:opacity-40"
-      {...rest}
-    >
-      {children}
-    </button>
-  );
-}
-
 function EmptyState({ hasPlan, onOpenPlan }: { hasPlan: boolean; onOpenPlan: () => void }) {
   const items = [
     ["Select text", "in the PDF to ask a doubt, summarize it, see its context, or get it explained simply."],
     ["Capture", "in the toolbar, then drag over a figure, table or equation. A vision model reads it and the tutor explains it."],
     ["Teach me / Check my understanding", "work through your plan one idea at a time, including topics beyond the PDF. Your progress is remembered."],
-    ["Draw a diagram", "asks for a picture of the idea. It shows up in the chat as an image you can look at."],
-    ["Cite", "open the menu under the box and tick the files. The answer can use each of them, and a citation still opens that page."],
+    ["Cite", "open the menu under the input and tick the files. The answer can use each of them, and a citation still opens that page."],
   ];
   return (
     <div className="animate-enter py-4">
@@ -558,20 +516,13 @@ function PaperEmptyState({ onOpenPasses }: { onOpenPasses: () => void }) {
   );
 }
 
-const EXAM_PROMPTS = [
-  { label: "What's likely to come up?", message: "Based on my notes, what topics and question types are most likely to come up in the exam? Rank them and say why." },
-  { label: "Make a cheat sheet", message: "Make me a one-page revision cheat sheet from my notes: key definitions, formulas and facts, grouped by topic, with page references." },
-  { label: "Explain my weakest topic", message: "Explain my weakest topic from practice so I can answer exam questions on it. Keep it exam-focused." },
-];
-
 function ExamEmptyState({ onOpenPractice }: { onOpenPractice: () => void }) {
   return (
     <div className="animate-enter py-4">
       <p className={eyebrowClass}>Exam prep</p>
       <h3 className="mt-1 font-serif text-2xl">Ask anything from your notes</h3>
       <p className="mt-2 text-sm leading-relaxed text-muted">
-        Select text in your PDF to ask about it, or use the buttons below. Answers come from your own course material, with page
-        references, and show how to write it in the exam.
+        Select text in your PDF to ask about it. Answers come from your own course material, with page references, and show how to write it in the exam.
       </p>
       <button onClick={onOpenPractice} className="mt-5 text-sm font-medium underline underline-offset-4 transition hover:opacity-70">
         Or test yourself with practice questions →
