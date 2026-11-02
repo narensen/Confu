@@ -13,7 +13,7 @@ import { useExamPractice } from "@/components/exam/useExamPractice";
 import { addPaperFromMeta, type PaperMeta } from "@/lib/pdf/add-paper";
 import { docForResource, FIND_PAPER_EVENT, isPaperResource } from "@/lib/find-paper";
 import { speechLoading, speechPlay, speechStop, speechSupported } from "@/lib/speech";
-import { closeTab, isOpenIn, keepTabs, openTab, useOpenTabs } from "@/lib/open-tabs";
+import { closeTab, keepTabs, openTab, orderOpenDocs, reorderTabs, useOpenTabs } from "@/lib/open-tabs";
 import { fire } from "@/lib/supabase/fire";
 import { peekHandoff, takeHandoff } from "@/lib/pdf/handoff";
 import { attachPdfToDocument, titleFromFile, uploadPdfToSession } from "@/lib/pdf/upload";
@@ -262,7 +262,7 @@ export function Workspace({
   // The tabs above the viewer: every PDF the student hasn't closed.
   // PDFs are added to Files without opening a tab; opening one does.
   const tabs = useOpenTabs(session.id);
-  const openDocs = useMemo(() => docs.filter((d) => isOpenIn(tabs, d.id)), [docs, tabs]);
+  const openDocs = useMemo(() => orderOpenDocs(docs, tabs), [docs, tabs]);
   const openIds = useMemo(() => new Set(openDocs.map((d) => d.id)), [openDocs]);
   const docIds = useRef<string[]>([]);
   useEffect(() => {
@@ -1639,6 +1639,7 @@ export function Workspace({
             onSelect={openDocTab}
             onAdd={addPdfs}
             onClose={closeDocTab}
+            onReorder={(ids) => reorderTabs(session.id, ids, docIds.current)}
             onAddClick={isPaper ? () => setAddPaperOpen(true) : () => setAddMaterialOpen(true)}
             addLabel={isPaper ? "+ Add paper" : "+ Add material"}
             paperIds={isPaper || isExam ? undefined : paperIds}

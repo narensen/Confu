@@ -52,6 +52,23 @@ export function closeTab(sessionId: string, docId: string, all: string[]) {
   save(sessionId, current(sessionId, all).filter((id) => id !== docId));
 }
 
+// The tab strip's order. Labels (D1, D2) stay with the file; only the strip moves.
+export function reorderTabs(sessionId: string, orderedIds: string[], all: string[]) {
+  const open = current(sessionId, all);
+  const keep = new Set(open);
+  const next = orderedIds.filter((id) => keep.has(id));
+  for (const id of open) if (!next.includes(id)) next.push(id);
+  save(sessionId, next);
+}
+
+// Open files in the saved tab order. Without a saved list, document order.
+export function orderOpenDocs<T extends { id: string }>(docs: T[], tabs: TabState): T[] {
+  const open = docs.filter((d) => isOpenIn(tabs, d.id));
+  if (!tabs.open) return open;
+  const rank = new Map([...tabs.open].map((id, i) => [id, i]));
+  return [...open].sort((a, b) => (rank.get(a.id) ?? 1e9) - (rank.get(b.id) ?? 1e9));
+}
+
 const subscribe = (fn: () => void) => {
   window.addEventListener(EVENT, fn);
   window.addEventListener("storage", fn);
