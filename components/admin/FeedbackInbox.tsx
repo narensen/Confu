@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { setFeedbackStatus } from "@/app/admin/actions";
+import { setFeedbackStatus } from "@/app/(app)/admin/actions";
 import { toast } from "@/components/dialogs";
 
 export type FeedbackItem = {

@@ -2,12 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useFriendNotices } from "@/components/friends/FriendsLink";
 
-// The app's main places, beside the logo, with the one you're in marked.
-// In a session the header needs its room for the title, so the places
-// become icons on the right (labels in their tooltips).
+// The app's main places, beside the logo, with the one you're in marked by a
+// pill that slides from place to place (the header stays mounted between
+// pages: see app/(app)/layout.tsx). In a session the header needs its room
+// for the title, so the places become icons on the right (labels in their
+// tooltips).
 
 type Place = { href: string; label: string; icon: ReactNode; here: (path: string) => boolean };
 
@@ -83,17 +85,47 @@ export function PrimaryNav({ variant = "text" }: { variant?: "text" | "icons" })
     );
   }
 
+  return <TextNav path={path} waiting={waiting} />;
+}
+
+function TextNav({ path, waiting }: { path: string; waiting: number }) {
+  const nav = useRef<HTMLElement>(null);
+  const current = PLACES.find((p) => p.here(path))?.href ?? null;
+  const [pill, setPill] = useState<{ left: number; width: number } | null>(null);
+  // Off a main place (an admin page, say), the pill fades out where it was.
+  const [shown, setShown] = useState(false);
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = current ? nav.current?.querySelector<HTMLElement>(`[data-place="${current}"]`) : null;
+      if (el) setPill({ left: el.offsetLeft, width: el.offsetWidth });
+      setShown(Boolean(el));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    if (nav.current) ro.observe(nav.current);
+    return () => ro.disconnect();
+  }, [current, waiting]);
+
   return (
-    <nav aria-label="App" className="hidden items-center gap-0.5 md:flex">
+    <nav ref={nav} aria-label="App" className="relative hidden items-center gap-0.5 md:flex">
+      {pill && (
+        <span
+          aria-hidden
+          className="absolute inset-y-0 rounded-full bg-accent-soft transition-[left,width,opacity] duration-300 ease-fluid"
+          style={{ left: pill.left, width: pill.width, opacity: shown ? 1 : 0 }}
+        />
+      )}
       {PLACES.map((p) => {
-        const here = p.here(path);
+        const here = p.href === current;
         return (
           <Link
             key={p.href}
             href={p.href}
+            data-place={p.href}
             aria-current={here ? "page" : undefined}
-            className={`relative inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition ${
-              here ? "bg-accent-soft text-ink" : "text-muted hover:bg-paper hover:text-ink"
+            className={`relative z-10 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors duration-200 ${
+              here ? "text-ink" : "text-muted hover:bg-paper/70 hover:text-ink"
             }`}
           >
             {p.label}

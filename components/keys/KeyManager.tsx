@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { deleteGroqKey } from "@/app/settings/actions";
+import { deleteGroqKey } from "@/app/(app)/settings/actions";
 import { eyebrowClass, ghostButtonClass } from "@/components/ui";
 import type { KeyInfo } from "@/lib/groq-keys";
 import { GroqKeyForm } from "./GroqKeyForm";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { saveGroqKey } from "@/app/settings/actions";
+import { saveGroqKey } from "@/app/(app)/settings/actions";
 import { buttonClass, inputClass } from "@/components/ui";
 import { looksLikeGroqKey } from "@/lib/ai-key";
 import type { KeyInfo } from "@/lib/groq-keys";

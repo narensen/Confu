@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import { AppHeader } from "@/components/AppHeader";
 import { Library, type LibrarySession } from "@/components/dashboard/Library";
 import { requireUser } from "@/lib/dal";
 import { createClient } from "@/lib/supabase/server";
@@ -8,14 +7,11 @@ import { logError } from "@/lib/log";
 
 export default function DashboardPage() {
   return (
-    <div className="flex min-h-dvh flex-col bg-paper">
-      <AppHeader />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
-        <Suspense fallback={<LibrarySkeleton />}>
-          <LibraryLoader />
-        </Suspense>
-      </main>
-    </div>
+    <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
+      <Suspense fallback={<LibrarySkeleton />}>
+        <LibraryLoader />
+      </Suspense>
+    </main>
   );
 }
 

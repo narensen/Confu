@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { AdminDashboard, type Insights } from "@/components/admin/AdminDashboard";
-import { AppHeader } from "@/components/AppHeader";
 import { getCurrentRole, requireUser } from "@/lib/dal";
 import { isOwner } from "@/lib/plans";
 import { createClient } from "@/lib/supabase/server";
@@ -13,14 +12,11 @@ const RANGES = [7, 30, 90] as const;
 
 export default function AdminPage({ searchParams }: PageProps<"/admin">) {
   return (
-    <div className="flex min-h-dvh flex-col bg-paper">
-      <AppHeader />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-8 pb-24 sm:px-6">
-        <Suspense fallback={<DashboardSkeleton />}>
-          <Content searchParams={searchParams} />
-        </Suspense>
-      </main>
-    </div>
+    <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-8 pb-24 sm:px-6">
+      <Suspense fallback={<DashboardSkeleton />}>
+        <Content searchParams={searchParams} />
+      </Suspense>
+    </main>
   );
 }
 

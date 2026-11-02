@@ -13,6 +13,8 @@ export const CHANGELOG: Release[] = [
       "Big cards like Continue, reviews due and a room's running timer are lit, raised charcoal panels in the dark instead of bright white blocks. Dialogs dim the page instead of washing it out.",
       "Your library opens on where you left off, with what's due and your streak beside it, and your files right on the card.",
       "The header's places (Library, Review, Threads, Rooms, Friends) sit next to the logo and show where you are. In a session they become icons, so the title has room.",
+      "Moving between places no longer flickers the header: it stays put, and the highlight slides to where you're going.",
+      "In the dark, PDF pages are dimmed a touch so they don't glare, and selected tabs and options are a calm raised grey instead of bright white.",
       "Notifications and confirmations slide in at the bottom right, clear of each page's own buttons. Maths in them reads as text, not code.",
     ],
   },

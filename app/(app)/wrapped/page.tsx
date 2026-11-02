@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { AppHeader } from "@/components/AppHeader";
 import { eyebrowClass } from "@/components/ui";
 import { WrappedCards } from "@/components/wrapped/WrappedCards";
 import { WrappedShare } from "@/components/wrapped/WrappedShare";
@@ -13,14 +12,11 @@ export const metadata: Metadata = { title: "Your month — Confu", robots: { ind
 
 export default function WrappedPage({ searchParams }: PageProps<"/wrapped">) {
   return (
-    <div className="flex min-h-dvh flex-col bg-paper">
-      <AppHeader />
-      <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-10 sm:px-6">
-        <Suspense fallback={<div className="skeleton h-96 rounded-3xl" />}>
-          <Body searchParams={searchParams} />
-        </Suspense>
-      </main>
-    </div>
+    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-10 sm:px-6">
+      <Suspense fallback={<div className="skeleton h-96 rounded-3xl" />}>
+        <Body searchParams={searchParams} />
+      </Suspense>
+    </main>
   );
 }
 

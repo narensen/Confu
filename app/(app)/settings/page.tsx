@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { AppHeader } from "@/components/AppHeader";
 import type { ProMember } from "@/components/settings/ProMembers";
 import { SETTINGS_GRID, SettingsView, type BillingInfo } from "@/components/settings/SettingsView";
 import { eyebrowClass } from "@/components/ui";
@@ -18,18 +17,15 @@ export const metadata: Metadata = { title: "Settings — Confu" };
 
 export default function SettingsPage() {
   return (
-    <div className="flex min-h-dvh flex-col bg-paper">
-      <AppHeader />
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-10 pb-28 sm:pt-14">
-        <div className="animate-enter">
-          <p className={eyebrowClass}>Settings</p>
-          <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">Your account</h1>
-        </div>
-        <Suspense fallback={<SettingsSkeleton />}>
-          <SettingsContent />
-        </Suspense>
-      </main>
-    </div>
+    <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-10 pb-28 sm:pt-14">
+      <div className="animate-enter">
+        <p className={eyebrowClass}>Settings</p>
+        <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">Your account</h1>
+      </div>
+      <Suspense fallback={<SettingsSkeleton />}>
+        <SettingsContent />
+      </Suspense>
+    </main>
   );
 }
 

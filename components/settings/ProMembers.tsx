@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { setPro, type ActionResult } from "@/app/settings/account-actions";
+import { setPro, type ActionResult } from "@/app/(app)/settings/account-actions";
 import { LocalTime } from "@/components/LocalTime";
 import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
 import { ask } from "@/components/dialogs";

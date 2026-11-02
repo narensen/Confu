@@ -11,7 +11,7 @@ import {
   signOutEverywhere,
   updateName,
   type ActionResult,
-} from "@/app/settings/account-actions";
+} from "@/app/(app)/settings/account-actions";
 import { LocalTime } from "@/components/LocalTime";
 import { buttonClass, ghostButtonClass, inputClass } from "@/components/ui";
 import { ask } from "@/components/dialogs";

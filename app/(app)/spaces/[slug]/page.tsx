@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { AppHeader } from "@/components/AppHeader";
 import { SpaceView } from "@/components/community/SpaceView";
 
 // A private space's link, or a subject's name (as SPACE_SLUG in lib/community).
@@ -11,14 +10,11 @@ export const metadata: Metadata = { title: "Space — Confu", robots: { index: f
 
 export default function SpacePage({ params }: { params: Promise<{ slug: string }> }) {
   return (
-    <div className="flex min-h-dvh flex-col bg-paper">
-      <AppHeader />
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6">
-        <Suspense fallback={<div className="skeleton h-80 rounded-2xl" />}>
-          <Space params={params} />
-        </Suspense>
-      </main>
-    </div>
+    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6">
+      <Suspense fallback={<div className="skeleton h-80 rounded-2xl" />}>
+        <Space params={params} />
+      </Suspense>
+    </main>
   );
 }
 
