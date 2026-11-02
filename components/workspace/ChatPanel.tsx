@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { toast } from "@/components/dialogs";
 import { eyebrowClass } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
@@ -67,6 +67,19 @@ export function ChatPanel({
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const stick = useRef(true);
+  // The input floats over the bottom of the conversation, with nothing
+  // painted behind it: messages fade out above it as they scroll under.
+  // How tall it is (it grows as you type) sets the room left below the last
+  // message and where the fade sits.
+  const dockRef = useRef<HTMLDivElement>(null);
+  const [dock, setDock] = useState(96);
+  useEffect(() => {
+    const el = dockRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setDock(Math.round(el.getBoundingClientRect().height)));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   // The box grows with what's typed (up to 10rem), then scrolls.
   useLayoutEffect(() => {
     const el = inputRef.current;
@@ -80,7 +93,7 @@ export function ChatPanel({
   useEffect(() => {
     const el = scrollRef.current;
     if (el && stick.current) el.scrollTo({ top: el.scrollHeight, behavior: initialCount === messages.length ? "auto" : "smooth" });
-  }, [messages, busy, initialCount]);
+  }, [messages, busy, initialCount, dock]);
 
   function submit() {
     const text = draft.trim();
@@ -125,116 +138,120 @@ export function ChatPanel({
         </div>
       )}
 
-      <div
-        ref={scrollRef}
-        onScroll={(e) => {
-          const el = e.currentTarget;
-          stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-        }}
-        className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-5 py-5 @5xl:px-10"
-      >
-        {/* A reading column beside the page. With the tutor across the whole
-            screen (the panel is 64rem or wider only then), it uses the screen. */}
-        <div className="mx-auto w-full max-w-3xl space-y-5 @5xl:max-w-[96rem]">
-          {messages.length === 0 &&
-            (kind === "paper" ? (
-              <PaperEmptyState onOpenPasses={onOpenPlan} />
-            ) : kind === "exam" ? (
-              <ExamEmptyState onOpenPractice={onOpenPlan} />
-            ) : (
-              <>
-                {plan && activeTopic && activeTopic.status !== "completed" && (
-                  <StartHere
-                    topic={activeTopic}
-                    topics={topics}
-                    docs={docs}
-                    busy={Boolean(busy)}
-                    onOpen={(t) => {
-                      const d = docs.find((x) => x.id === t.document_id);
-                      if (t.source === "pdf" && t.page_start !== null && d) onJump(t.page_start, d.id);
-                    }}
-                    onOpenDoc={(id) => onJump(docs.find((d) => d.id === id)?.lastPage || 1, id)}
-                    onTeach={() => onSend({ action: "teach" })}
-                  />
-                )}
-                <EmptyState hasPlan={Boolean(plan)} onOpenPlan={onOpenPlan} />
-              </>
-            ))}
-          {messages.map((m, i) => {
-            const isNew = i >= initialCount;
-            return m.role === "user" ? (
-              <div key={m.id} className={`ml-10 ${isNew ? "animate-enter" : ""}`}>
-                <div className="rounded-xl rounded-br-sm border border-ink bg-panel px-4 py-3 text-sm shadow-hard-sm">
-                  {m.action !== "chat" && <p className={`${eyebrowClass} mb-1.5`}>{ACTION_LABELS[m.action]}</p>}
-                  <Markdown content={m.content} onPage={onCite} />
-                </div>
-              </div>
-            ) : (
-              <div key={m.id} className={`pr-2 ${isNew ? "animate-enter" : ""}`}>
-                {m.content ? (
-                  <div className={busy && m === last ? "is-streaming" : ""}>
-                    <AnswerBody
-                      sessionId={sessionId}
-                      content={m.content}
-                      onCite={onCite}
-                      done={!(busy && m === last)}
-                      savedId={savedIds.get(answerKey(m.content)) ?? null}
-                      onSave={m.content.startsWith("⚠️") ? undefined : () => onSaveAnswer(m)}
-                      onUnsave={onUnsaveAnswer}
-                    />
-                    {busy && m === last && busy !== "Thinking…" && (
-                      <p className="animate-fade mt-2 flex items-center gap-2 font-mono text-[11px] text-muted">
-                        <span className="size-1.5 animate-pulse rounded-full bg-ink" />
-                        {busy}
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <Thinking label={busy ?? "Thinking…"} />
-                )}
-              </div>
-            );
-          })}
-          {busy && last?.role !== "assistant" && <Thinking label={busy} />}
-        </div>
-      </div>
-
-      <div className="mx-auto w-full max-w-[calc(48rem+1rem)] shrink-0 px-3 pt-2 pb-2.5 @5xl:max-w-[calc(96rem+5rem)] @5xl:px-10">
-        {/* A glossy pill: the box, and the send button inside it. */}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            submit();
+      <div className="relative min-h-0 min-w-0 flex-1">
+        <div
+          ref={scrollRef}
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
           }}
-          className="tutor-composer flex items-end gap-1.5 rounded-[24px] border py-1.5 pr-1.5 pl-4 transition-[border-color,box-shadow] duration-200 ease-fluid"
+          style={{ paddingBottom: dock + 28, "--dock": `${dock}px` } as CSSProperties}
+          className="tutor-scroll h-full min-w-0 overflow-x-hidden overflow-y-auto px-5 pt-5 @5xl:px-10"
         >
-          <textarea
-            ref={inputRef}
-            id="tutor-input"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-                e.preventDefault();
-                submit();
-              }
+          {/* A reading column: 48rem beside the page, 64rem with the tutor
+              across the whole screen (the panel is that wide only then).
+              Wider still and lines get too long to read. */}
+          <div className="mx-auto w-full max-w-3xl space-y-5 @5xl:max-w-5xl">
+            {messages.length === 0 &&
+              (kind === "paper" ? (
+                <PaperEmptyState onOpenPasses={onOpenPlan} />
+              ) : kind === "exam" ? (
+                <ExamEmptyState onOpenPractice={onOpenPlan} />
+              ) : (
+                <>
+                  {plan && activeTopic && activeTopic.status !== "completed" && (
+                    <StartHere
+                      topic={activeTopic}
+                      topics={topics}
+                      docs={docs}
+                      busy={Boolean(busy)}
+                      onOpen={(t) => {
+                        const d = docs.find((x) => x.id === t.document_id);
+                        if (t.source === "pdf" && t.page_start !== null && d) onJump(t.page_start, d.id);
+                      }}
+                      onOpenDoc={(id) => onJump(docs.find((d) => d.id === id)?.lastPage || 1, id)}
+                      onTeach={() => onSend({ action: "teach" })}
+                    />
+                  )}
+                  <EmptyState hasPlan={Boolean(plan)} onOpenPlan={onOpenPlan} />
+                </>
+              ))}
+            {messages.map((m, i) => {
+              const isNew = i >= initialCount;
+              return m.role === "user" ? (
+                <div key={m.id} className={`ml-10 ${isNew ? "animate-enter" : ""}`}>
+                  <div className="rounded-xl rounded-br-sm border border-ink bg-panel px-4 py-3 text-sm shadow-hard-sm">
+                    {m.action !== "chat" && <p className={`${eyebrowClass} mb-1.5`}>{ACTION_LABELS[m.action]}</p>}
+                    <Markdown content={m.content} onPage={onCite} />
+                  </div>
+                </div>
+              ) : (
+                <div key={m.id} className={`pr-2 ${isNew ? "animate-enter" : ""}`}>
+                  {m.content ? (
+                    <div className={busy && m === last ? "is-streaming" : ""}>
+                      <AnswerBody
+                        sessionId={sessionId}
+                        content={m.content}
+                        onCite={onCite}
+                        done={!(busy && m === last)}
+                        savedId={savedIds.get(answerKey(m.content)) ?? null}
+                        onSave={m.content.startsWith("⚠️") ? undefined : () => onSaveAnswer(m)}
+                        onUnsave={onUnsaveAnswer}
+                      />
+                      {busy && m === last && busy !== "Thinking…" && (
+                        <p className="animate-fade mt-2 flex items-center gap-2 font-mono text-[11px] text-muted">
+                          <span className="size-1.5 animate-pulse rounded-full bg-ink" />
+                          {busy}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <Thinking label={busy ?? "Thinking…"} />
+                  )}
+                </div>
+              );
+            })}
+            {busy && last?.role !== "assistant" && <Thinking label={busy} />}
+          </div>
+        </div>
+
+        <div ref={dockRef} className="absolute inset-x-0 bottom-0 mx-auto w-full max-w-[calc(48rem+1rem)] px-3 pt-2 pb-2.5 @5xl:max-w-[calc(64rem+5rem)] @5xl:px-10">
+          {/* A clear pill: the box, and the send button inside it. */}
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              submit();
             }}
-            rows={1}
-            placeholder={citeFiles ? "Ask about the files you've turned on…" : "Ask anything, about your files or beyond them…"}
-            className="max-h-40 min-h-9 flex-1 resize-none self-center bg-transparent py-2 text-sm leading-5 outline-none placeholder:text-muted"
-          />
-          <button disabled={!draft.trim() || Boolean(busy)} aria-label="Send" title="Send (Enter)" className="tutor-send flex size-9 shrink-0 items-center justify-center rounded-full">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M12 19V5M6 11l6-6 6 6" />
-            </svg>
-          </button>
-        </form>
-        <div className="mt-1.5 flex items-center gap-3 px-3">
-          {citeFiles && <CitePicker docs={docs} activeDocId={activeDocId} citeFiles={citeFiles} />}
-          <label title="Answers have to cite a page in this session." className="ml-auto flex shrink-0 cursor-pointer items-center gap-1.5 text-[11px] leading-none text-muted">
-            <input type="checkbox" checked={citeMode} onChange={(e) => onCiteMode(e.target.checked)} className="size-3.5" />
-            <span>Answers must cite</span>
-          </label>
+            className="tutor-composer flex items-end gap-1.5 rounded-[24px] border py-1.5 pr-1.5 pl-4 transition-[border-color] duration-200 ease-fluid"
+          >
+            <textarea
+              ref={inputRef}
+              id="tutor-input"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                  e.preventDefault();
+                  submit();
+                }
+              }}
+              rows={1}
+              placeholder={citeFiles ? "Ask about the files you've turned on…" : "Ask anything, about your files or beyond them…"}
+              className="max-h-40 min-h-9 flex-1 resize-none self-center bg-transparent py-2 text-sm leading-5 outline-none placeholder:text-muted"
+            />
+            <button disabled={!draft.trim() || Boolean(busy)} aria-label="Send" title="Send (Enter)" className="tutor-send flex size-9 shrink-0 items-center justify-center rounded-full">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M12 19V5M6 11l6-6 6 6" />
+              </svg>
+            </button>
+          </form>
+          <div className="mt-1.5 flex items-center gap-3 px-3">
+            {citeFiles && <CitePicker docs={docs} activeDocId={activeDocId} citeFiles={citeFiles} />}
+            <label title="Answers have to cite a page in this session." className="ml-auto flex shrink-0 cursor-pointer items-center gap-1.5 text-[11px] leading-none text-muted">
+              <input type="checkbox" checked={citeMode} onChange={(e) => onCiteMode(e.target.checked)} className="size-3.5" />
+              <span>Answers must cite</span>
+            </label>
+          </div>
         </div>
       </div>
     </div>

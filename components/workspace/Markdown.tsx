@@ -194,11 +194,21 @@ export const Markdown = memo(function Markdown({
               </div>
             );
           },
+          // The cell's words sit in a box with a width cap, so a long cell
+          // wraps instead of stretching the whole table.
           td({ children }) {
-            return <td>{withBreaks(children)}</td>;
+            return (
+              <td>
+                <div className="tutor-cell">{withBreaks(children)}</div>
+              </td>
+            );
           },
           th({ children }) {
-            return <th>{withBreaks(children)}</th>;
+            return (
+              <th>
+                <div className="tutor-cell">{withBreaks(children)}</div>
+              </th>
+            );
           },
           code({ className: codeClass, children }) {
             const text = String(children).replace(/\n$/, "");
