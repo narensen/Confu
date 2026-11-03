@@ -1,8 +1,11 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition, type CSSProperties } from "react";
+import { keyModels, saveKeyModels } from "@/app/(app)/settings/actions";
 import { toast } from "@/components/dialogs";
 import { eyebrowClass } from "@/components/ui";
+import type { KeyInfo } from "@/lib/ai-keys";
+import type { ModelRoles } from "@/lib/ai/providers";
 import { createClient } from "@/lib/supabase/client";
 import { routeOf, track } from "@/lib/telemetry";
 import { ACTION_LABELS } from "@/lib/tutor/format";
@@ -29,6 +32,7 @@ type Props = {
   citeMode: boolean;
   onCiteMode: (on: boolean) => void;
   citeFiles: CiteFiles | null;
+  freeModel: { keyId: string; scope: string | null; models: ModelRoles; onSaved: (info: KeyInfo) => void } | null;
   activeDocId: string | null;
   paperFocus: { label: string; title: string; done: number; target: number } | null;
   onOpenPaper?: () => void;
@@ -55,6 +59,7 @@ export function ChatPanel({
   citeMode,
   onCiteMode,
   citeFiles,
+  freeModel,
   activeDocId,
   paperFocus,
   saved,
@@ -246,6 +251,7 @@ export function ChatPanel({
             </button>
           </form>
           <div className="mt-1.5 flex items-center gap-3 px-3">
+            {freeModel && <FreeModelMenu {...freeModel} busy={Boolean(busy)} />}
             {citeFiles && <CitePicker docs={docs} activeDocId={activeDocId} citeFiles={citeFiles} />}
             <label title="Answers have to cite a page in this session." className="ml-auto flex shrink-0 cursor-pointer items-center gap-1.5 text-[11px] leading-none text-muted">
               <input type="checkbox" checked={citeMode} onChange={(e) => onCiteMode(e.target.checked)} className="size-3.5" />
@@ -450,6 +456,73 @@ function ThumbIcon({ down = false }: { down?: boolean }) {
       <path d="M7 11v9H4a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h3z" />
       <path d="M7 11l3.2-6.1A1.7 1.7 0 0 1 13.6 4c.7.1 1.4.8 1.4 1.6V10h4.2a2 2 0 0 1 2 2.3l-.8 5.2A2 2 0 0 1 18.4 20H7" />
     </svg>
+  );
+}
+
+// Every OpenRouter `:free` model, as a menu under the tutor box. Picking one
+// saves it as the tutor model on the key this session is using.
+function FreeModelMenu({
+  keyId,
+  scope,
+  models,
+  busy,
+  onSaved,
+}: {
+  keyId: string;
+  scope: string | null;
+  models: ModelRoles;
+  busy: boolean;
+  onSaved: (info: KeyInfo) => void;
+}) {
+  const [free, setFree] = useState<string[] | null>(null);
+  const [pending, start] = useTransition();
+
+  useEffect(() => {
+    let cancel = false;
+    keyModels(scope).then((res) => {
+      if (cancel) return;
+      setFree(res.ok ? res.catalog.filter((m) => m.free).map((m) => m.id) : []);
+    });
+    return () => {
+      cancel = true;
+    };
+  }, [scope, keyId]);
+
+  if (!free?.length) return null;
+  const current = models.chat;
+  const using = free.includes(current);
+
+  function pick(id: string) {
+    if (!id || id === current) return;
+    start(async () => {
+      const res = await saveKeyModels(scope, { ...models, chat: id });
+      if (!res.ok) {
+        toast(res.error, "error");
+        return;
+      }
+      onSaved(res.info);
+    });
+  }
+
+  return (
+    <label className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted">
+      <span className="shrink-0 font-mono text-[10px] font-medium tracking-[0.12em] uppercase">Free</span>
+      <select
+        aria-label="Free model for the tutor"
+        title="Free on OpenRouter. The tutor, plans and practice use the one you pick."
+        value={using ? current : ""}
+        disabled={pending || busy}
+        onChange={(e) => pick(e.target.value)}
+        className="min-w-0 max-w-[14rem] cursor-pointer truncate bg-transparent font-mono text-[11px] text-ink outline-none disabled:opacity-40"
+      >
+        {!using && <option value="">{current}</option>}
+        {free.map((id) => (
+          <option key={id} value={id}>
+            {id.replace(/:free$/, "")}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 

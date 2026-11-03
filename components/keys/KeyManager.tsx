@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { deleteAiKey } from "@/app/(app)/settings/actions";
 import { eyebrowClass, ghostButtonClass } from "@/components/ui";
-import { keyLabel, PROVIDERS } from "@/lib/ai/providers";
+import { keyLabel, PROVIDERS, type ListedModel } from "@/lib/ai/providers";
 import type { KeyInfo } from "@/lib/ai-keys";
 import { KeyForm } from "./KeyForm";
 import { ModelPicker } from "./ModelPicker";
@@ -16,7 +16,7 @@ type Override = KeyInfo & { sessionId: string; title: string };
 // Settings → Your AI: the account's AI, its models, and any per-session keys.
 export function KeyManager({ initialAccount, initialOverrides, serverKeys }: { initialAccount: KeyInfo | null; initialOverrides: Override[]; serverKeys: boolean }) {
   const [account, setAccount] = useState(initialAccount);
-  const [known, setKnown] = useState<string[]>([]);
+  const [known, setKnown] = useState<ListedModel[]>([]);
   const [overrides, setOverrides] = useState(initialOverrides);
   const [replacing, setReplacing] = useState(false);
   const [pending, start] = useTransition();
@@ -51,17 +51,12 @@ export function KeyManager({ initialAccount, initialOverrides, serverKeys }: { i
         OpenAI-compatible server. Usage is billed to your account with them, at their prices. A key is checked with its provider, then
         encrypted before it&apos;s stored; only its last four characters are ever shown.
       </p>
-      <p className="mt-3 rounded-lg border border-dashed border-ink/40 bg-paper px-3 py-2 text-xs leading-relaxed text-muted">
-        <span className="font-medium text-ink">Our promise:</span> your key is used only to run the requests you make in Confu. We never use it for anything
-        else, and never share, sell or log it.{" "}
-        <Link href="/privacy" className="underline underline-offset-2">
-          Privacy Policy
-        </Link>
-      </p>
-      {serverKeys && !account && (
+      {serverKeys && (
         <p className="mt-3 text-xs leading-relaxed text-muted">
-          <span className="font-medium text-ink">Owner account:</span> until you connect an AI of your own, your requests run on the server&apos;s keys
-          (GROQ_API_KEYS).
+          <span className="font-medium text-ink">Owner account:</span>{" "}
+          {account
+            ? "Your connected AI runs first. If it can't answer, the same request runs on the server's Groq keys (GROQ_API_KEYS)."
+            : "Your requests run on the server's Groq keys (GROQ_API_KEYS). A key you connect is used first, and these keys still answer when it can't."}
         </p>
       )}
 
@@ -108,9 +103,9 @@ export function KeyManager({ initialAccount, initialOverrides, serverKeys }: { i
               sessionId={null}
               next="/settings#api-key"
               submitLabel={account ? "Verify & replace" : "Verify & save"}
-              onSaved={(info, models) => {
+              onSaved={(info, catalog) => {
                 setAccount(info);
-                setKnown(models);
+                setKnown(catalog);
                 setReplacing(false);
                 router.refresh();
               }}

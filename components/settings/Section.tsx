@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 // a serif heading, then "label · explanation · action" rows.
 export function Section({ id, title, description, danger, children }: { id: string; title: string; description?: ReactNode; danger?: boolean; children: ReactNode }) {
   return (
-    <section id={id} data-settings-section className="scroll-mt-20 lg:scroll-mt-10">
+    <section id={id} data-settings-section className="scroll-mt-28 lg:scroll-mt-16">
       <h2 className={`font-serif text-3xl tracking-tight ${danger ? "text-danger" : ""}`}>{title}</h2>
       {description && <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-muted">{description}</p>}
       <div className={`mt-5 rounded-2xl border bg-panel ${danger ? "border-danger/50" : "border-ink"}`}>{children}</div>

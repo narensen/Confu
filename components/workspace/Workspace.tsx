@@ -1633,6 +1633,10 @@ export function Workspace({
     exam: { practice, examDate, onExamDate: saveExamDate, onTrial },
     citeMode,
     onCiteMode: setCiteMode,
+    freeModel:
+      keyInfo?.provider === "openrouter"
+        ? { keyId: keyInfo.id, scope: keyInfo.source === "session" ? session.id : null, models: keyInfo.models, onSaved: setKeyInfo }
+        : null,
     citeFiles: multi
       ? {
           ids: citeIds,

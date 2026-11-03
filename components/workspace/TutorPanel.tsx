@@ -5,6 +5,8 @@ import { ExamProgress } from "@/components/exam/ExamProgress";
 import { PracticePanel } from "@/components/exam/PracticePanel";
 import type { ExamPractice } from "@/components/exam/useExamPractice";
 import type { PaperReview } from "@/lib/paper";
+import type { KeyInfo } from "@/lib/ai-keys";
+import type { ModelRoles } from "@/lib/ai/providers";
 import type { ChatMessage, Highlight, LearnerMemory, PlanTopic, SavedAnswer, SessionDoc, SessionKind, StudyPlan, TopicStatus } from "@/lib/types";
 import { ChatPanel } from "./ChatPanel";
 import type { HighlightColor } from "@/lib/highlights";
@@ -80,6 +82,8 @@ export type PanelProps = {
   citeMode: boolean;
   onCiteMode: (on: boolean) => void;
   citeFiles: CiteFiles | null;
+  // OpenRouter only: the tutor's Free menu. null for every other provider.
+  freeModel: { keyId: string; scope: string | null; models: ModelRoles; onSaved: (info: KeyInfo) => void } | null;
   // Moving to another view from inside one ("Open the plan", "Practise these").
   onView: (view: Tab) => void;
 };
@@ -159,6 +163,7 @@ export function TutorPanel({ view, ...props }: PanelProps & { view: Tab }) {
           citeMode={props.citeMode}
           onCiteMode={props.onCiteMode}
           citeFiles={props.citeFiles}
+          freeModel={props.freeModel}
           activeDocId={props.paper.activeDocId}
           paperFocus={(() => {
             const r = activePaper ? props.paper.reviews[activePaper.id] : undefined;

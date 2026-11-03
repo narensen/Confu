@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { saveAiKey } from "@/app/(app)/settings/actions";
 import { buttonClass, inputClass } from "@/components/ui";
 import { connectHref } from "@/lib/ai/openrouter";
-import { keyProblem, PROVIDER_ORDER, PROVIDERS, type ProviderId } from "@/lib/ai/providers";
+import { keyProblem, PROVIDER_ORDER, PROVIDERS, type ListedModel, type ProviderId } from "@/lib/ai/providers";
 import type { KeyInfo } from "@/lib/ai-keys";
 
 // Bring your own AI: sign in with OpenRouter (one click, their credits), or
@@ -22,7 +22,7 @@ export function KeyForm({
   allowScopeChoice?: boolean;
   submitLabel?: string;
   next: string; // where "Connect OpenRouter" comes back to
-  onSaved: (info: KeyInfo, models: string[]) => void;
+  onSaved: (info: KeyInfo, catalog: ListedModel[]) => void;
 }) {
   const [provider, setProvider] = useState<ProviderId>("groq");
   const [key, setKey] = useState("");
@@ -44,7 +44,7 @@ export function KeyForm({
       const res = await saveAiKey({ provider, key: value, baseUrl: baseUrl.trim(), sessionId: target });
       if (res.ok) {
         setKey("");
-        onSaved(res.info, res.models);
+        onSaved(res.info, res.catalog);
       } else {
         setError(res.error);
       }

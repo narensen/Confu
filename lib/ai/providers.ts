@@ -13,6 +13,11 @@ export type ProviderId = "groq" | "openai" | "anthropic" | "gemini" | "openroute
 //   vision: reading figures and scanned pages
 export type ModelRoles = { chat: string; fast: string; vision: string };
 
+// A model the picker can offer. `null` means this provider's list doesn't say,
+// so the picker must not hide the model for that reason.
+// `free` is OpenRouter's `:free` variant (no charge, their rate limits).
+export type ListedModel = { id: string; open: boolean | null; vision: boolean | null; free: boolean | null };
+
 export type Provider = {
   id: ProviderId;
   name: string;
@@ -98,11 +103,15 @@ export const PROVIDERS: Record<ProviderId, Provider> = {
     keyUrl: "https://openrouter.ai/settings/keys",
     keyPlaceholder: "sk-or-…",
     keyPrefix: "sk-or-",
-    defaults: { chat: "google/gemini-2.5-flash", fast: "google/gemini-2.5-flash-lite", vision: "google/gemini-2.5-flash" },
+    // Chat and fast stay on the small general models. Region capture needs a
+    // vision-language model: Qwen3-VL Instruct reads figures, tables and
+    // equations, and its weights are published. The 30B instruct is the one
+    // connected for that job; a newer id of the same kind wins when present.
+    defaults: { chat: "google/gemini-2.5-flash", fast: "google/gemini-2.5-flash-lite", vision: "qwen/qwen3-vl-30b-a3b-instruct" },
     prefer: {
       chat: [/^google\/gemini-[\d.]+-flash$/, /^openai\/gpt-[\d.]+-mini$/],
       fast: [/^google\/gemini-[\d.]+-flash-lite$/, /^openai\/gpt-[\d.]+-nano$/],
-      vision: [/^google\/gemini-[\d.]+-flash$/, /^openai\/gpt-[\d.]+-mini$/],
+      vision: [/^qwen\/qwen3-vl-30b-a\d+b-instruct$/, /^qwen\/qwen3-vl-\d+b-a\d+b-instruct$/, /^qwen\/qwen3-vl-.+-instruct$/, /^qwen\/qwen[\d.]+-vl-.+-instruct$/],
     },
   },
   custom: {

@@ -2,6 +2,8 @@
 
 A free, open-source AI tutor that works from your own material. Study toward a goal with a phased plan, prepare for an exam with practice questions written from your notes, or read research papers in three passes. It's grounded in your PDFs and remembers your progress.
 
+Confu is released under the [MIT License](LICENSE). Anyone may use it, change it, and share it, including to run it for a class or a campus. `private` in `package.json` only keeps this app off the npm registry. The fonts in `public/fonts` stay under the SIL Open Font License (`public/fonts/OFL.txt`).
+
 ## Setup
 
 1. `bun install`
@@ -28,7 +30,7 @@ Anthropic goes through the official Anthropic SDK (Messages API); every other pr
 
 | Who | What runs on the server's keys |
 | --- | --- |
-| The owner (`profiles.role = 'admin'`) | Everything, until they connect an AI of their own. Also the admin dashboard. |
+| The owner (`profiles.role = 'admin'`) | Their own AI, if they connected one, runs first. These keys answer when that provider can't (rate limit, no credit, a missing model, or it is down). With no key of their own, everything runs here. The admin dashboard is theirs either way. |
 | Everyone else | 10 free prompts (and 20 scanned pages), once, so they can try Confu before connecting anything (migration 0014). |
 
 Leave `GROQ_API_KEYS` empty to turn both off: then everyone, the owner included, connects their own AI. Make yourself the owner once, in the SQL editor:

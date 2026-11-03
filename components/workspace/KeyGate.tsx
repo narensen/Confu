@@ -43,15 +43,10 @@ export function KeyGate({
           <KeyForm sessionId={sessionId} allowScopeChoice next={`/session/${sessionId}`} onSaved={(info) => onSaved(info)} />
 
           <p className="text-[11px] leading-relaxed text-muted">
-            <span className="font-medium text-ink">We only use your key to run the requests you make here.</span> We never share, sell or log it.
-            It&apos;s checked with its provider, then encrypted before it&apos;s stored, and only its last four characters are ever shown. Usage is
-            billed to your account with that provider. Change models or remove it any time in{" "}
+            The key is checked with its provider, then encrypted before it&apos;s stored. Only the last four characters are shown. Usage is billed
+            to your account with that provider. Change models or remove it in{" "}
             <Link href="/settings#api-key" className="underline underline-offset-2">
               Settings
-            </Link>
-            . See our{" "}
-            <Link href="/privacy" className="underline underline-offset-2">
-              Privacy Policy
             </Link>
             .
           </p>

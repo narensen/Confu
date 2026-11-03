@@ -19,7 +19,7 @@ export default function TermsPage() {
             <>Confu is a study aid. Its answers, plans and suggested resources are AI-generated and can be wrong.</>,
             <>Double-check anything important against your course material, instructors or other trusted sources.</>,
             <>Only upload material you have the right to use, and use Confu to learn, not to cheat.</>,
-            <>Confu is free and open source. Its AI runs on an account you bring, and that provider&apos;s terms and prices apply.</>,
+            <>Confu is free and open source under the MIT License. Its AI runs on an account you bring, and that provider&apos;s terms and prices apply.</>,
             <>
               We only use your API key to run your requests. See the{" "}
               <Link href="/privacy" className="underline underline-offset-4">

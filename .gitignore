@@ -47,4 +47,7 @@ audio/
 
 # noise recordings (large); public/noise has the loops made from them
 /assets/noise/
-/supabase
+
+# Local Supabase CLI state. The schema in supabase/migrations is part of the source.
+/supabase/.temp
+/supabase/.branches

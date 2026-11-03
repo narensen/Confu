@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { listModels } from "@/lib/ai/models";
-import { isProviderId, keyProblem, MODEL_ID, PROVIDERS, pickModels, type ModelRoles } from "@/lib/ai/providers";
+import { isProviderId, keyProblem, MODEL_ID, PROVIDERS, pickModels, type ListedModel, type ModelRoles } from "@/lib/ai/providers";
 import { getKeyInfo, loadConnection, removeKey, storeKey, updateModels, type KeyInfo } from "@/lib/ai-keys";
 import { isEncryptionConfigured } from "@/lib/crypto";
 import { requireUser } from "@/lib/dal";
@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 
 const SessionId = z.uuid().nullable();
 
-export type SaveKeyResult = { ok: true; info: KeyInfo; models: string[] } | { ok: false; error: string };
+export type SaveKeyResult = { ok: true; info: KeyInfo; models: string[]; catalog: ListedModel[] } | { ok: false; error: string };
 
 // Check a key with its provider (by listing the models it can use), pick a
 // model for each job, then store it encrypted: either as the account default
@@ -42,7 +42,7 @@ export async function saveAiKey(input: { provider: string; key: string; baseUrl?
     return { ok: false, error: "Couldn't save the key. Try again." };
   }
   const info = await getKeyInfo(supabase, user.id, input.sessionId);
-  return info ? { ok: true, info, models: list.models } : { ok: false, error: "Couldn't save the key. Try again." };
+  return info ? { ok: true, info, models: list.models, catalog: list.catalog } : { ok: false, error: "Couldn't save the key. Try again." };
 }
 
 // Remove a stored key. Returns what the session falls back to (if anything).
@@ -55,14 +55,14 @@ export async function deleteAiKey(sessionId: string | null): Promise<KeyInfo | n
 }
 
 // The models a saved key can use, for the model picker.
-export async function keyModels(sessionId: string | null): Promise<{ ok: true; models: string[] } | { ok: false; error: string }> {
+export async function keyModels(sessionId: string | null): Promise<{ ok: true; models: string[]; catalog: ListedModel[] } | { ok: false; error: string }> {
   const user = await requireUser();
   if (!SessionId.safeParse(sessionId).success) return { ok: false, error: "Invalid session." };
   const supabase = await createClient();
   const conn = await loadConnection(supabase, user.id, sessionId);
   if (!conn) return { ok: false, error: "There's no key saved here." };
   const list = await listModels(conn.provider, conn.key, conn.baseUrl);
-  return list.ok ? { ok: true, models: list.models } : { ok: false, error: list.error };
+  return list.ok ? { ok: true, models: list.models, catalog: list.catalog } : { ok: false, error: list.error };
 }
 
 const Models = z.object({ chat: z.string().regex(MODEL_ID), fast: z.string().regex(MODEL_ID), vision: z.string().regex(MODEL_ID) });

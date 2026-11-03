@@ -12,7 +12,8 @@ import { logError } from "@/lib/log";
 
 // Who pays for a request:
 //   the student's own AI (a key or a connected OpenRouter account), always first;
-//   the owner without one: the server's keys (GROQ_API_KEYS);
+//   the owner: those server keys (GROQ_API_KEYS) still answer when their own
+//   AI can't (rate limit, no credit, a missing model, or the provider is down);
 //   anyone else without one: a few free prompts on the server's keys, once.
 
 // Usage is tracked per actual key: 'server' for the owner on the server's
@@ -64,6 +65,16 @@ export async function hasOwnAccess(supabase: SupabaseClient, userId: string, ses
 
 export type AiAccess = { groq: Groq; meter: Meter; provider: ProviderId };
 
+// The owner's own AI failed in a way the server's Groq keys can still cover.
+// A rejected key (401/403) is not one of these: that has to be fixed in Settings.
+async function providerCannotServe(res: Response): Promise<boolean> {
+  if (res.ok) return false;
+  if ([402, 404, 408, 409, 429, 500, 502, 503, 504, 529].includes(res.status)) return true;
+  if (res.status !== 400) return false;
+  const text = await res.clone().text().catch(() => "");
+  return /model/i.test(text) && /not found|does not exist|no endpoints|invalid|unknown|not supported|decommissioned|deprecated/i.test(text);
+}
+
 // Decide what a request runs on. The returned client speaks the OpenAI chat
 // format whatever the provider (lib/ai/connection.ts); the meter records
 // usage (and, where the provider reports them, its limits). Call
@@ -76,7 +87,7 @@ export async function resolveAi(
 ): Promise<AiAccess | { error: Response }> {
   const own = await loadConnection(supabase, userId, sessionId);
   if (own) {
-    const meter = createMeter(supabase, {
+    const personal = createMeter(supabase, {
       userId,
       sessionId,
       keyRef: userKeyRef(own.id),
@@ -85,7 +96,36 @@ export async function resolveAi(
       trackQuota: reportsLimits(own.provider),
     });
     // The transport sets the real key per request; the SDK just needs a placeholder.
-    return { groq: groqClient("connection", withModels(own.models, meter.fetch)), meter, provider: own.provider };
+    // withModels swaps the job's model, but leaves the caller's body alone, so a
+    // retry can still send the server's own Groq model.
+    const personalFetch = withModels(own.models, personal.fetch);
+    const serverToo = serverKeysReady() && (await getRole(supabase, userId)) === "admin";
+    if (!serverToo) return { groq: groqClient("connection", personalFetch), meter: personal, provider: own.provider };
+
+    const server = createMeter(supabase, { userId, sessionId, keyRef: SERVER_KEY_REF, feature, baseFetch: poolFetch, trackQuota: false });
+    const fetch: typeof globalThis.fetch = async (input, init) => {
+      try {
+        const res = await personalFetch(input, init);
+        if (!(await providerCannotServe(res))) return res;
+        try {
+          const retry = await server.fetch(input, init);
+          return retry.ok ? retry : res;
+        } catch {
+          return res;
+        }
+      } catch (err) {
+        try {
+          return await server.fetch(input, init);
+        } catch {
+          throw err;
+        }
+      }
+    };
+    return {
+      groq: groqClient("connection", fetch),
+      meter: { fetch, flush: async () => { await personal.flush(); await server.flush(); } },
+      provider: own.provider,
+    };
   }
 
   if (serverKeysReady() && (await getRole(supabase, userId)) === "admin") {

@@ -99,7 +99,7 @@ const STEPS = [
 const FAQ: { q: string; a: ReactNode }[] = [
   {
     q: "Is Confu free?",
-    a: "Yes. Confu is free and open source, with every feature for everyone. The AI runs on an account you bring, so you pay your AI provider directly at their prices, or nothing at all on a free tier like Groq's. New accounts can try a few prompts first, without setting anything up.",
+    a: "Yes. Confu is free, and the code is open source under the MIT License, with every feature for everyone. The AI runs on an account you bring, so you pay your AI provider directly at their prices, or nothing at all on a free tier like Groq's. New accounts can try a few prompts first, without setting anything up.",
   },
   {
     q: "Which AI can I use?",
@@ -117,8 +117,8 @@ const FAQ: { q: string; a: ReactNode }[] = [
     q: "What happens to my API key?",
     a: (
       <>
-        It&apos;s checked with your provider, encrypted before it&apos;s stored, and used only to run the requests you make in Confu. It&apos;s
-        never shared, sold or logged, and you can remove it any time. Details are in the{" "}
+        It&apos;s checked with your provider, then encrypted before it&apos;s stored. Only the last four characters are shown, and you can remove
+        it any time. Details are in the{" "}
         <Link href="/privacy" className="underline underline-offset-4">
           privacy policy
         </Link>
@@ -388,7 +388,7 @@ export default function Home() {
           <ul data-slide-group className="space-y-px overflow-hidden rounded-2xl border border-ink bg-ink">
             {[
               ["Grounded, and honest about limits", "Answers cite the page they came from. When something isn't in your material, it says so. AI can still be wrong, so check what matters."],
-              ["Your key is yours", "Your API key or OpenRouter connection is encrypted, used only for your requests, and never shared, sold or logged."],
+              ["Your key", "A key is checked with its provider, encrypted before it's stored, and shown only as its last four characters. Remove it any time in Settings."],
               ["No ads, no tracking", "No advertising, no analytics cookies, and we don't train AI models on your notes."],
               ["Your data, your call", "Delete a session and its files, notes and conversations go with it. Export everything, or delete your account, from Settings."],
             ].map(([title, body]) => (
