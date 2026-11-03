@@ -474,6 +474,8 @@ function FreeModelMenu({
   busy: boolean;
   onSaved: (info: KeyInfo) => void;
 }) {
+  const root = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
   const [free, setFree] = useState<string[] | null>(null);
   const [pending, start] = useTransition();
 
@@ -488,11 +490,29 @@ function FreeModelMenu({
     };
   }, [scope, keyId]);
 
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (!root.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
   if (!free?.length) return null;
   const current = models.chat;
   const using = free.includes(current);
+  const locked = pending || busy;
 
   function pick(id: string) {
+    setOpen(false);
     if (!id || id === current) return;
     start(async () => {
       const res = await saveKeyModels(scope, { ...models, chat: id });
@@ -505,24 +525,52 @@ function FreeModelMenu({
   }
 
   return (
-    <label className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted">
-      <span className="shrink-0 font-mono text-[10px] font-medium tracking-[0.12em] uppercase">Free</span>
-      <select
+    <div ref={root} className="relative min-w-0">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-haspopup="listbox"
         aria-label="Free model for the tutor"
         title="Free on OpenRouter. The tutor, plans and practice use the one you pick."
-        value={using ? current : ""}
-        disabled={pending || busy}
-        onChange={(e) => pick(e.target.value)}
-        className="min-w-0 max-w-[14rem] cursor-pointer truncate bg-transparent font-mono text-[11px] text-ink outline-none disabled:opacity-40"
+        disabled={locked}
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex max-w-full min-w-0 items-center gap-1 bg-transparent px-0.5 py-0.5 text-[11px] text-muted transition duration-200 ease-fluid hover:text-ink disabled:opacity-40"
       >
-        {!using && <option value="">{current}</option>}
-        {free.map((id) => (
-          <option key={id} value={id}>
-            {id.replace(/:free$/, "")}
-          </option>
-        ))}
-      </select>
-    </label>
+        <span className="shrink-0 font-mono text-[10px] font-medium tracking-[0.12em] uppercase">Free</span>
+        <span className="min-w-0 max-w-[12rem] truncate font-medium text-ink">{current.replace(/:free$/, "")}</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden className={`shrink-0 transition-transform duration-200 ease-fluid ${open ? "rotate-180" : ""}`}>
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+      {open && (
+        <div className="animate-pop absolute bottom-full left-0 z-30 mb-1.5 w-72 max-w-[min(20rem,calc(100vw-2.5rem))] origin-bottom overflow-hidden rounded-xl border border-ink bg-panel shadow-hard">
+          <div role="listbox" aria-label="Free model for the tutor" className="max-h-56 overflow-y-auto p-1">
+            {free.map((id) => {
+              const selected = using && id === current;
+              const name = id.replace(/:free$/, "");
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  title={id}
+                  onClick={() => pick(id)}
+                  className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left font-mono text-[11px] transition duration-150 ease-fluid hover:bg-paper ${selected ? "text-ink" : "text-muted"}`}
+                >
+                  <span className="min-w-0 flex-1 truncate">{name}</span>
+                  {selected && (
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden className="shrink-0">
+                      <path d="M5 12.5 9.5 17 19 7" />
+                    </svg>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

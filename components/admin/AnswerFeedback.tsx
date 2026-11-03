@@ -20,7 +20,7 @@ export function AnswerFeedback({ notes, missing }: { notes: AnswerNote[]; missin
   if (missing) {
     return (
       <p className="rounded-lg border border-dashed border-ink/30 px-4 py-6 text-center text-sm text-muted">
-        Run <code className="font-mono">supabase/migrations/0040_answer_feedback.sql</code> to start collecting these.
+        A new project runs <code className="font-mono">supabase/schema.sql</code> once to start collecting these.
       </p>
     );
   }

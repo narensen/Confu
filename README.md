@@ -8,7 +8,7 @@ Confu is released under the [MIT License](LICENSE). Anyone may use it, change it
 
 1. `bun install`
 2. Copy `.env.example` to `.env.local` and fill it in.
-3. In the Supabase SQL editor, run every file in [`supabase/migrations/`](supabase/migrations/) in order (`0001`, `0002`, `0003`, …). Together they create the tables, RLS policies, search functions and the private `documents` storage bucket.
+3. In the Supabase SQL editor, run [`supabase/schema.sql`](supabase/schema.sql) once, on an empty project. That file is the whole database: tables, row level security, functions, the private `documents` bucket, and the subject spaces. [`supabase/README.md`](supabase/README.md) explains it. Do not run it on a database that already has Confu tables.
 4. In Supabase, go to **Authentication → URL Configuration**. Set the Site URL to `http://localhost:3000` and add `http://localhost:3000/auth/confirm` to Redirect URLs (and the same for your production domain).
 5. For real users, set up custom SMTP in **Authentication → Emails**. Supabase's built-in sender is heavily rate-limited, and sign-up confirmation, password reset and email change all send mail.
 6. `bun dev`
@@ -31,7 +31,7 @@ Anthropic goes through the official Anthropic SDK (Messages API); every other pr
 | Who | What runs on the server's keys |
 | --- | --- |
 | The owner (`profiles.role = 'admin'`) | Their own AI, if they connected one, runs first. These keys answer when that provider can't (rate limit, no credit, a missing model, or it is down). With no key of their own, everything runs here. The admin dashboard is theirs either way. |
-| Everyone else | 10 free prompts (and 20 scanned pages), once, so they can try Confu before connecting anything (migration 0014). |
+| Everyone else | 10 free prompts (and 20 scanned pages), once, so they can try Confu before connecting anything. The counts live on the profile. |
 
 Leave `GROQ_API_KEYS` empty to turn both off: then everyone, the owner included, connects their own AI. Make yourself the owner once, in the SQL editor:
 

@@ -69,8 +69,8 @@ async function LibraryLoader() {
         <p className="mt-2 font-mono text-xs text-danger">{error.message}</p>
         {schemaOutdated && (
           <p className="mt-3 text-sm text-muted">
-            The database schema is out of date. Run the newest files in <code className="font-mono">supabase/migrations/</code> in
-            the Supabase SQL editor, then refresh.
+            The database schema is out of date. A new project runs <code className="font-mono">supabase/schema.sql</code> once.
+            An existing database should not run that file again.
           </p>
         )}
       </div>

@@ -1,5 +1,5 @@
 // Spaced review: items come back after 1, 3, 7, 16, 35, 80 days (see
-// supabase/migrations/0017_spaced_review.sql). The student answers first,
+// review_answer in supabase/schema.sql). The student answers first,
 // then reveals and rates themselves; a tutor check is optional.
 
 export type ReviewSource = "topic" | "highlight" | "asked" | "misconception" | "mistake" | "gap";

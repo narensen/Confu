@@ -25,11 +25,9 @@ SET row_security = off;
 
 create extension if not exists pgcrypto with schema public;
 
-
-
-
-
+--
 -- Name: _accept_notify(); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public._accept_notify() RETURNS trigger
     LANGUAGE plpgsql SECURITY DEFINER
@@ -50,7 +48,9 @@ end;
 $$;
 
 
+--
 -- Name: _are_friends(uuid, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public._are_friends(a uuid, b uuid) RETURNS boolean
     LANGUAGE sql STABLE SECURITY DEFINER
@@ -64,7 +64,9 @@ CREATE FUNCTION public._are_friends(a uuid, b uuid) RETURNS boolean
 $$;
 
 
+--
 -- Name: _can_see_room(text, boolean, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public._can_see_room(p_slug text, p_private boolean, p_friend uuid) RETURNS boolean
     LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -94,7 +96,9 @@ $$;
 
 SET default_table_access_method = heap;
 
+--
 -- Name: posts; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.posts (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -122,7 +126,9 @@ CREATE TABLE public.posts (
 );
 
 
+--
 -- Name: _check_json(public.posts); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public._check_json(p public.posts) RETURNS jsonb
     LANGUAGE sql STABLE SECURITY DEFINER
@@ -142,7 +148,9 @@ CREATE FUNCTION public._check_json(p public.posts) RETURNS jsonb
 $$;
 
 
+--
 -- Name: _claim_post_check(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public._claim_post_check(p_id uuid) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
@@ -181,7 +189,9 @@ end;
 $$;
 
 
+--
 -- Name: _community_hit(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public._community_hit(p_user uuid) RETURNS void
     LANGUAGE plpgsql SECURITY DEFINER
@@ -201,7 +211,9 @@ end;
 $$;
 
 
+--
 -- Name: _ensure_friend_code(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public._ensure_friend_code(p_user uuid) RETURNS text
     LANGUAGE plpgsql SECURITY DEFINER
@@ -242,7 +254,9 @@ end;
 $$;
 
 
+--
 -- Name: _ensure_pack_columns(); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public._ensure_pack_columns() RETURNS void
     LANGUAGE plpgsql SECURITY DEFINER
@@ -262,7 +276,9 @@ end;
 $$;
 
 
+--
 -- Name: _friendship_notify(); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public._friendship_notify() RETURNS trigger
     LANGUAGE plpgsql SECURITY DEFINER
@@ -295,7 +311,9 @@ end;
 $$;
 
 
+--
 -- Name: _in_room(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public._in_room(state jsonb) RETURNS boolean
     LANGUAGE sql IMMUTABLE
@@ -313,7 +331,9 @@ CREATE FUNCTION public._in_room(state jsonb) RETURNS boolean
 $$;
 
 
+--
 -- Name: _in_space(uuid, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public._in_space(p_space uuid, p_user uuid) RETURNS boolean
     LANGUAGE sql STABLE SECURITY DEFINER
@@ -325,7 +345,9 @@ CREATE FUNCTION public._in_space(p_space uuid, p_user uuid) RETURNS boolean
 $$;
 
 
+--
 -- Name: _notify(uuid, text, uuid, text, text, text, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public._notify(p_user uuid, p_kind text, p_actor uuid, p_title text, p_body text, p_url text, p_data jsonb DEFAULT '{}'::jsonb) RETURNS void
     LANGUAGE plpgsql SECURITY DEFINER
@@ -344,7 +366,9 @@ end;
 $$;
 
 
+--
 -- Name: _packs_ready(); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public._packs_ready() RETURNS boolean
     LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -375,7 +399,9 @@ end;
 $$;
 
 
+--
 -- Name: _pin_shares(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public._pin_shares(p_session uuid) RETURNS boolean
     LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -406,7 +432,9 @@ end;
 $_$;
 
 
+--
 -- Name: _post_visible(text, uuid, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public._post_visible(p_status text, p_author uuid, p_user uuid) RETURNS boolean
     LANGUAGE sql STABLE SECURITY DEFINER
@@ -416,7 +444,9 @@ CREATE FUNCTION public._post_visible(p_status text, p_author uuid, p_user uuid) 
 $$;
 
 
+--
 -- Name: _private_room_for_member(text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public._private_room_for_member(p_slug text) RETURNS jsonb
     LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -446,7 +476,9 @@ end;
 $_$;
 
 
+--
 -- Name: _reply_notify(); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public._reply_notify() RETURNS trigger
     LANGUAGE plpgsql SECURITY DEFINER
@@ -488,7 +520,9 @@ end;
 $$;
 
 
+--
 -- Name: _room_invite_notify(); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public._room_invite_notify() RETURNS trigger
     LANGUAGE plpgsql SECURITY DEFINER
@@ -513,7 +547,9 @@ end;
 $$;
 
 
+--
 -- Name: _room_snapshot(text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public._room_snapshot(p_slug text) RETURNS jsonb
     LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -536,7 +572,9 @@ end;
 $_$;
 
 
+--
 -- Name: _save_post_check(uuid, text, real, real, real, text, text, text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public._save_post_check(p_id uuid, p_status text, p_incorrect real, p_rational real, p_harmful real, p_note text, p_fix text, p_model text) RETURNS void
     LANGUAGE plpgsql SECURITY DEFINER
@@ -589,7 +627,9 @@ end;
 $$;
 
 
+--
 -- Name: _section_public(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public._section_public(p_questions jsonb) RETURNS jsonb
     LANGUAGE sql IMMUTABLE
@@ -607,7 +647,9 @@ CREATE FUNCTION public._section_public(p_questions jsonb) RETURNS jsonb
 $$;
 
 
+--
 -- Name: _section_slug(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public._section_slug(p_session uuid) RETURNS text
     LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -650,7 +692,9 @@ end;
 $_$;
 
 
+--
 -- Name: _session_pack_slug(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public._session_pack_slug(p_session uuid) RETURNS text
     LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -671,7 +715,9 @@ end;
 $$;
 
 
+--
 -- Name: _signed_in(); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public._signed_in() RETURNS uuid
     LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -688,7 +734,9 @@ end;
 $$;
 
 
+--
 -- Name: _snippet(text, integer); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public._snippet(p_text text, p_max integer DEFAULT 140) RETURNS text
     LANGUAGE sql IMMUTABLE
@@ -702,7 +750,9 @@ CREATE FUNCTION public._snippet(p_text text, p_max integer DEFAULT 140) RETURNS 
 $$;
 
 
+--
 -- Name: _space_json(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public._space_json(p_space uuid) RETURNS jsonb
     LANGUAGE sql STABLE SECURITY DEFINER
@@ -714,7 +764,9 @@ CREATE FUNCTION public._space_json(p_space uuid) RETURNS jsonb
 $$;
 
 
+--
 -- Name: _space_open(uuid, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public._space_open(p_space uuid, p_user uuid) RETURNS boolean
     LANGUAGE sql STABLE SECURITY DEFINER
@@ -726,7 +778,9 @@ CREATE FUNCTION public._space_open(p_space uuid, p_user uuid) RETURNS boolean
 $$;
 
 
+--
 -- Name: _space_slug_ok(text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public._space_slug_ok(p_slug text) RETURNS boolean
     LANGUAGE sql IMMUTABLE
@@ -736,7 +790,9 @@ CREATE FUNCTION public._space_slug_ok(p_slug text) RETURNS boolean
 $_$;
 
 
+--
 -- Name: accept_reply(uuid, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.accept_reply(p_thread uuid, p_reply uuid) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
@@ -767,7 +823,9 @@ end;
 $$;
 
 
+--
 -- Name: add_page_time(uuid, jsonb, text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.add_page_time(p_document uuid, p_pages jsonb, p_tz text DEFAULT 'UTC'::text) RETURNS void
     LANGUAGE plpgsql SECURITY DEFINER
@@ -806,7 +864,9 @@ end;
 $_$;
 
 
+--
 -- Name: admin_answer_feedback(); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.admin_answer_feedback() RETURNS jsonb
     LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -836,7 +896,9 @@ end;
 $$;
 
 
+--
 -- Name: admin_insights(integer); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.admin_insights(p_days integer DEFAULT 30) RETURNS jsonb
     LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -1089,7 +1151,9 @@ end;
 $_$;
 
 
+--
 -- Name: browse_spaces(); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.browse_spaces() RETURNS jsonb
     LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -1125,7 +1189,9 @@ end;
 $$;
 
 
+--
 -- Name: browse_threads(text, text, text, integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.browse_threads(p_space text DEFAULT NULL::text, p_sort text DEFAULT 'active'::text, p_query text DEFAULT NULL::text, p_limit integer DEFAULT 30, p_offset integer DEFAULT 0) RETURNS jsonb
     LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -1221,7 +1287,9 @@ end;
 $$;
 
 
+--
 -- Name: bump_course_request(text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.bump_course_request(p_code text) RETURNS void
     LANGUAGE plpgsql SECURITY DEFINER
@@ -1255,7 +1323,9 @@ end;
 $_$;
 
 
+--
 -- Name: calendar_feed(text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.calendar_feed(p_token text) RETURNS TABLE(topic_id uuid, title text, due_date date, est_minutes integer, page_start integer, page_end integer, session_id uuid, session_title text, status text)
     LANGUAGE sql STABLE SECURITY DEFINER
@@ -1272,7 +1342,9 @@ CREATE FUNCTION public.calendar_feed(p_token text) RETURNS TABLE(topic_id uuid, 
 $_$;
 
 
+--
 -- Name: cancel_friend_request(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.cancel_friend_request(p_id uuid) RETURNS void
     LANGUAGE plpgsql SECURITY DEFINER
@@ -1292,14 +1364,18 @@ end;
 $$;
 
 
+--
 -- Name: confu_schema_version(); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.confu_schema_version() RETURNS integer
     LANGUAGE sql IMMUTABLE
     AS $$ select 12 $$;
 
 
+--
 -- Name: course_of(text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.course_of(p_slug text) RETURNS text
     LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -1326,7 +1402,9 @@ end;
 $_$;
 
 
+--
 -- Name: course_of_session(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.course_of_session(p_session uuid) RETURNS text
     LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -1358,7 +1436,9 @@ end;
 $_$;
 
 
+--
 -- Name: course_requests_recent(text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.course_requests_recent(p_slug text) RETURNS integer
     LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -1394,7 +1474,9 @@ end;
 $_$;
 
 
+--
 -- Name: create_library_hour(uuid, timestamp with time zone, timestamp with time zone, text, text, text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.create_library_hour(p_session uuid, p_starts timestamp with time zone, p_ends timestamp with time zone, p_place text, p_topic text, p_room text) RETURNS text
     LANGUAGE plpgsql SECURITY DEFINER
@@ -1451,7 +1533,9 @@ end;
 $_$;
 
 
+--
 -- Name: create_noticeboard(text, text, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.create_noticeboard(p_title text, p_kind text, p_items jsonb) RETURNS text
     LANGUAGE plpgsql SECURITY DEFINER
@@ -1527,7 +1611,9 @@ end;
 $$;
 
 
+--
 -- Name: create_space(text, text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.create_space(p_name text, p_about text) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
@@ -1573,7 +1659,9 @@ end;
 $$;
 
 
+--
 -- Name: create_thread(text, text, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.create_thread(p_title text, p_body text, p_space uuid DEFAULT NULL::uuid) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
@@ -1615,7 +1703,9 @@ end;
 $$;
 
 
+--
 -- Name: delete_my_account(); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.delete_my_account() RETURNS void
     LANGUAGE plpgsql SECURITY DEFINER
@@ -1630,7 +1720,9 @@ end;
 $$;
 
 
+--
 -- Name: delete_post(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.delete_post(p_id uuid) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
@@ -1653,7 +1745,9 @@ end;
 $$;
 
 
+--
 -- Name: delete_space(text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.delete_space(p_slug text) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
@@ -1681,7 +1775,9 @@ end;
 $$;
 
 
+--
 -- Name: digest_batch(); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.digest_batch() RETURNS TABLE(user_id uuid, email text, name text, minutes integer, active_days integer, topics_done integer, reviews integer, due integer, sessions jsonb)
     LANGUAGE sql STABLE SECURITY DEFINER
@@ -1708,7 +1804,9 @@ CREATE FUNCTION public.digest_batch() RETURNS TABLE(user_id uuid, email text, na
 $$;
 
 
+--
 -- Name: dismiss_room_invite(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.dismiss_room_invite(p_id uuid) RETURNS void
     LANGUAGE plpgsql SECURITY DEFINER
@@ -1722,7 +1820,9 @@ end;
 $$;
 
 
+--
 -- Name: edit_post(uuid, text, text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.edit_post(p_id uuid, p_title text, p_body text) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
@@ -1764,7 +1864,9 @@ end;
 $$;
 
 
+--
 -- Name: first_name_of(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.first_name_of(p_id uuid) RETURNS text
     LANGUAGE sql STABLE SECURITY DEFINER
@@ -1776,7 +1878,9 @@ CREATE FUNCTION public.first_name_of(p_id uuid) RETURNS text
 $$;
 
 
+--
 -- Name: friend_notices(); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.friend_notices() RETURNS jsonb
     LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -1796,7 +1900,9 @@ end;
 $$;
 
 
+--
 -- Name: get_crib(text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.get_crib(p_token text) RETURNS TABLE(token text, course_code text, objectives jsonb, concepts jsonb, pages jsonb, openstax boolean)
     LANGUAGE sql STABLE SECURITY DEFINER
@@ -1808,7 +1914,9 @@ CREATE FUNCTION public.get_crib(p_token text) RETURNS TABLE(token text, course_c
 $_$;
 
 
+--
 -- Name: get_library_hour(text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.get_library_hour(p_token text) RETURNS TABLE(token text, topic text, place text, starts_at timestamp with time zone, ends_at timestamp with time zone, course_code text, pack_slug text, room_slug text)
     LANGUAGE sql STABLE SECURITY DEFINER
@@ -1820,7 +1928,9 @@ CREATE FUNCTION public.get_library_hour(p_token text) RETURNS TABLE(token text, 
 $_$;
 
 
+--
 -- Name: get_miss_map(text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.get_miss_map(p_token text) RETURNS TABLE(token text, users integer, topics jsonb, band text, revise jsonb, exam_date date)
     LANGUAGE sql STABLE SECURITY DEFINER
@@ -1832,7 +1942,9 @@ CREATE FUNCTION public.get_miss_map(p_token text) RETURNS TABLE(token text, user
 $_$;
 
 
+--
 -- Name: get_noticeboard(text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.get_noticeboard(p_code text) RETURNS jsonb
     LANGUAGE sql STABLE SECURITY DEFINER
@@ -1851,7 +1963,9 @@ CREATE FUNCTION public.get_noticeboard(p_code text) RETURNS jsonb
 $_$;
 
 
+--
 -- Name: get_section_paper(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.get_section_paper(p_session uuid) RETURNS jsonb
     LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -1904,7 +2018,9 @@ end;
 $$;
 
 
+--
 -- Name: get_section_wrapped(text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.get_section_wrapped(p_token text) RETURNS TABLE(token text, handins integer, copies integer, hours integer, topics jsonb, closed jsonb, course_code text, exam_date date)
     LANGUAGE sql STABLE SECURITY DEFINER
@@ -1916,7 +2032,9 @@ CREATE FUNCTION public.get_section_wrapped(p_token text) RETURNS TABLE(token tex
 $_$;
 
 
+--
 -- Name: get_sitting(text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.get_sitting(p_token text) RETURNS TABLE(title text, score numeric, out_of integer, minutes integer, topics text[], band text, display_name text)
     LANGUAGE sql STABLE SECURITY DEFINER
@@ -1928,7 +2046,9 @@ CREATE FUNCTION public.get_sitting(p_token text) RETURNS TABLE(title text, score
 $_$;
 
 
+--
 -- Name: get_thread(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.get_thread(p_id uuid) RETURNS jsonb
     LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -2001,7 +2121,9 @@ end;
 $$;
 
 
+--
 -- Name: hand_in_section_paper(uuid, integer[], integer); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.hand_in_section_paper(p_session uuid, p_choices integer[], p_minutes integer) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
@@ -2153,7 +2275,9 @@ end;
 $$;
 
 
+--
 -- Name: handle_new_user(); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.handle_new_user() RETURNS trigger
     LANGUAGE plpgsql SECURITY DEFINER
@@ -2174,7 +2298,9 @@ end;
 $$;
 
 
+--
 -- Name: invite_friend_to_room(text, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.invite_friend_to_room(p_slug text, p_user_id uuid) RETURNS void
     LANGUAGE plpgsql SECURITY DEFINER
@@ -2212,7 +2338,9 @@ end;
 $$;
 
 
+--
 -- Name: is_owner(); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.is_owner() RETURNS boolean
     LANGUAGE sql STABLE SECURITY DEFINER
@@ -2222,7 +2350,9 @@ CREATE FUNCTION public.is_owner() RETURNS boolean
 $$;
 
 
+--
 -- Name: join_space(text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.join_space(p_slug text) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
@@ -2246,7 +2376,9 @@ end;
 $$;
 
 
+--
 -- Name: leave_space(text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.leave_space(p_slug text) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
@@ -2273,7 +2405,9 @@ end;
 $$;
 
 
+--
 -- Name: list_page_pins(uuid, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.list_page_pins(p_session uuid, p_document uuid) RETURNS TABLE(id uuid, page_number integer, quote text, question text, answer text, mine boolean, author_name text)
     LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -2321,7 +2455,9 @@ end;
 $$;
 
 
+--
 -- Name: list_threads(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.list_threads(p_space uuid DEFAULT NULL::uuid) RETURNS jsonb
     LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -2357,7 +2493,9 @@ end;
 $$;
 
 
+--
 -- Name: lookup_course(text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.lookup_course(p_code text) RETURNS text
     LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -2385,7 +2523,9 @@ end;
 $_$;
 
 
+--
 -- Name: moderate_post(uuid, text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.moderate_post(p_id uuid, p_action text) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
@@ -2412,7 +2552,9 @@ end;
 $$;
 
 
+--
 -- Name: moderation_queue(); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.moderation_queue() RETURNS jsonb
     LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -2457,7 +2599,9 @@ end;
 $$;
 
 
+--
 -- Name: my_friends(); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.my_friends() RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
@@ -2549,7 +2693,9 @@ end;
 $$;
 
 
+--
 -- Name: my_notifications(integer); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.my_notifications(p_limit integer DEFAULT 30) RETURNS jsonb
     LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -2581,7 +2727,9 @@ end;
 $$;
 
 
+--
 -- Name: my_spaces(); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.my_spaces() RETURNS jsonb
     LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -2618,7 +2766,9 @@ end;
 $$;
 
 
+--
 -- Name: my_study_days(integer, text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.my_study_days(p_days integer DEFAULT 140, p_tz text DEFAULT 'UTC'::text) RETURNS TABLE(day date, seconds integer, actions integer)
     LANGUAGE sql STABLE
@@ -2643,7 +2793,9 @@ CREATE FUNCTION public.my_study_days(p_days integer DEFAULT 140, p_tz text DEFAU
 $$;
 
 
+--
 -- Name: note_pack_lineage(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.note_pack_lineage(p_session uuid) RETURNS void
     LANGUAGE plpgsql SECURITY DEFINER
@@ -2679,7 +2831,9 @@ end;
 $_$;
 
 
+--
 -- Name: owns_session(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.owns_session(p_session uuid) RETURNS boolean
     LANGUAGE sql STABLE
@@ -2692,7 +2846,9 @@ CREATE FUNCTION public.owns_session(p_session uuid) RETURNS boolean
 $$;
 
 
+--
 -- Name: page_snippets(uuid, integer); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.page_snippets(p_document_id uuid, p_chars integer DEFAULT 160) RETURNS TABLE(page_number integer, snippet text)
     LANGUAGE sql STABLE
@@ -2705,7 +2861,9 @@ CREATE FUNCTION public.page_snippets(p_document_id uuid, p_chars integer DEFAULT
 $$;
 
 
+--
 -- Name: pin_to_answer(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.pin_to_answer(p_id uuid) RETURNS jsonb
     LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -2737,7 +2895,9 @@ end;
 $$;
 
 
+--
 -- Name: public_roadmaps(integer); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.public_roadmaps(p_limit integer) RETURNS jsonb
     LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -2783,7 +2943,9 @@ end;
 $_$;
 
 
+--
 -- Name: read_notifications(uuid[]); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.read_notifications(p_ids uuid[] DEFAULT NULL::uuid[]) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
@@ -2799,7 +2961,9 @@ end;
 $$;
 
 
+--
 -- Name: reminder_batch(); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.reminder_batch() RETURNS TABLE(user_id uuid, email text, name text, due integer, email_ok boolean, push_ok boolean)
     LANGUAGE sql STABLE SECURITY DEFINER
@@ -2821,7 +2985,9 @@ CREATE FUNCTION public.reminder_batch() RETURNS TABLE(user_id uuid, email text, 
 $$;
 
 
+--
 -- Name: remove_friend(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.remove_friend(p_user_id uuid) RETURNS void
     LANGUAGE plpgsql SECURITY DEFINER
@@ -2847,7 +3013,9 @@ end;
 $$;
 
 
+--
 -- Name: reply_thread(uuid, text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.reply_thread(p_id uuid, p_body text) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
@@ -2888,7 +3056,9 @@ end;
 $$;
 
 
+--
 -- Name: report_error(text, text, text, text, text, text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.report_error(p_source text, p_message text, p_stack text DEFAULT NULL::text, p_path text DEFAULT NULL::text, p_digest text DEFAULT NULL::text, p_user_agent text DEFAULT NULL::text) RETURNS void
     LANGUAGE plpgsql SECURITY DEFINER
@@ -2914,7 +3084,9 @@ end;
 $$;
 
 
+--
 -- Name: report_post(uuid, text, text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.report_post(p_id uuid, p_reason text, p_note text DEFAULT ''::text) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
@@ -2958,7 +3130,9 @@ end;
 $$;
 
 
+--
 -- Name: request_friend(text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.request_friend(p_query text) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
@@ -3030,7 +3204,9 @@ end;
 $$;
 
 
+--
 -- Name: respond_friend(uuid, boolean); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.respond_friend(p_id uuid, p_accept boolean) RETURNS void
     LANGUAGE plpgsql SECURITY DEFINER
@@ -3054,7 +3230,9 @@ end;
 $$;
 
 
+--
 -- Name: review_answer(uuid, text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.review_answer(p_item uuid, p_rating text) RETURNS timestamp with time zone
     LANGUAGE plpgsql
@@ -3092,7 +3270,9 @@ end;
 $$;
 
 
+--
 -- Name: review_from_highlight(); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.review_from_highlight() RETURNS trigger
     LANGUAGE plpgsql SECURITY DEFINER
@@ -3117,7 +3297,9 @@ end;
 $$;
 
 
+--
 -- Name: review_from_memory(); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.review_from_memory() RETURNS trigger
     LANGUAGE plpgsql SECURITY DEFINER
@@ -3138,7 +3320,9 @@ end;
 $$;
 
 
+--
 -- Name: review_from_topic(); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.review_from_topic() RETURNS trigger
     LANGUAGE plpgsql SECURITY DEFINER
@@ -3167,7 +3351,9 @@ end;
 $$;
 
 
+--
 -- Name: review_interval_days(integer); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.review_interval_days(step integer) RETURNS integer
     LANGUAGE sql IMMUTABLE
@@ -3185,7 +3371,9 @@ CREATE FUNCTION public.review_interval_days(step integer) RETURNS integer
 $$;
 
 
+--
 -- Name: revoke_room_invite(text, uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.revoke_room_invite(p_slug text, p_user_id uuid) RETURNS void
     LANGUAGE plpgsql SECURITY DEFINER
@@ -3200,7 +3388,9 @@ end;
 $$;
 
 
+--
 -- Name: roll_miss_map(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.roll_miss_map(p_session uuid) RETURNS text
     LANGUAGE plpgsql SECURITY DEFINER
@@ -3346,7 +3536,9 @@ end;
 $_$;
 
 
+--
 -- Name: roll_section_crib(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.roll_section_crib(p_session uuid) RETURNS text
     LANGUAGE plpgsql SECURITY DEFINER
@@ -3458,7 +3650,9 @@ end;
 $_$;
 
 
+--
 -- Name: roll_section_wrapped(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.roll_section_wrapped(p_session uuid) RETURNS text
     LANGUAGE plpgsql SECURITY DEFINER
@@ -3576,7 +3770,9 @@ end;
 $_$;
 
 
+--
 -- Name: room_friends(text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.room_friends(p_slug text) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
@@ -3617,7 +3813,9 @@ end;
 $$;
 
 
+--
 -- Name: rotate_calendar_token(); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.rotate_calendar_token() RETURNS text
     LANGUAGE plpgsql SECURITY DEFINER
@@ -3632,7 +3830,9 @@ end;
 $$;
 
 
+--
 -- Name: save_page_pin(uuid, uuid, integer, text, text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.save_page_pin(p_session uuid, p_document uuid, p_page integer, p_quote text, p_question text) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
@@ -3698,7 +3898,9 @@ end;
 $$;
 
 
+--
 -- Name: save_section_lines(uuid, text[]); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.save_section_lines(p_session uuid, p_lines text[]) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
@@ -3751,7 +3953,9 @@ end;
 $$;
 
 
+--
 -- Name: save_sitting(uuid, numeric, integer, integer, text[], boolean); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.save_sitting(p_session uuid, p_score numeric, p_out_of integer, p_minutes integer, p_topics text[], p_show_name boolean) RETURNS text
     LANGUAGE plpgsql SECURITY DEFINER
@@ -3811,7 +4015,9 @@ end;
 $$;
 
 
+--
 -- Name: search_pages(uuid, text, integer); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.search_pages(p_document_id uuid, p_query text, p_limit integer DEFAULT 4) RETURNS TABLE(page_number integer, content text, rank real)
     LANGUAGE sql STABLE
@@ -3830,7 +4036,9 @@ CREATE FUNCTION public.search_pages(p_document_id uuid, p_query text, p_limit in
 $$;
 
 
+--
 -- Name: search_session_pages(uuid, text, integer); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.search_session_pages(p_session_id uuid, p_query text, p_limit integer DEFAULT 5) RETURNS TABLE(document_id uuid, page_number integer, content text, rank real)
     LANGUAGE sql STABLE
@@ -3851,7 +4059,9 @@ CREATE FUNCTION public.search_session_pages(p_session_id uuid, p_query text, p_l
 $$;
 
 
+--
 -- Name: section_scope(text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.section_scope(p_slug text) RETURNS text[]
     LANGUAGE sql STABLE SECURITY DEFINER
@@ -3876,7 +4086,9 @@ CREATE FUNCTION public.section_scope(p_slug text) RETURNS text[]
 $$;
 
 
+--
 -- Name: set_course_code(uuid, text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.set_course_code(p_session uuid, p_code text) RETURNS text
     LANGUAGE plpgsql SECURITY DEFINER
@@ -3923,7 +4135,9 @@ end;
 $_$;
 
 
+--
 -- Name: set_feedback_status(bigint, text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.set_feedback_status(p_id bigint, p_status text) RETURNS void
     LANGUAGE plpgsql SECURITY DEFINER
@@ -3941,7 +4155,9 @@ end;
 $$;
 
 
+--
 -- Name: set_friend_presence(text, boolean); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.set_friend_presence(p_slug text, p_voice boolean) RETURNS void
     LANGUAGE plpgsql SECURITY DEFINER
@@ -3980,7 +4196,9 @@ end;
 $_$;
 
 
+--
 -- Name: set_noticeboard_plan(text, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.set_noticeboard_plan(p_code text, p_plan jsonb) RETURNS void
     LANGUAGE plpgsql SECURITY DEFINER
@@ -4005,7 +4223,9 @@ end;
 $$;
 
 
+--
 -- Name: set_pin_answer(uuid, text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.set_pin_answer(p_id uuid, p_answer text) RETURNS text
     LANGUAGE plpgsql SECURITY DEFINER
@@ -4037,7 +4257,9 @@ end;
 $$;
 
 
+--
 -- Name: set_updated_at(); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.set_updated_at() RETURNS trigger
     LANGUAGE plpgsql
@@ -4049,7 +4271,9 @@ end;
 $$;
 
 
+--
 -- Name: space_state(text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.space_state(p_slug text) RETURNS jsonb
     LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -4091,7 +4315,9 @@ end;
 $$;
 
 
+--
 -- Name: store_section_paper(uuid, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.store_section_paper(p_session uuid, p_questions jsonb) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
@@ -4157,7 +4383,9 @@ end;
 $$;
 
 
+--
 -- Name: take_s2_slot(); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.take_s2_slot() RETURNS integer
     LANGUAGE plpgsql SECURITY DEFINER
@@ -4183,7 +4411,9 @@ end;
 $$;
 
 
+--
 -- Name: toggle_vote(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.toggle_vote(p_id uuid) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
@@ -4220,7 +4450,9 @@ end;
 $$;
 
 
+--
 -- Name: touch_session(); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.touch_session() RETURNS trigger
     LANGUAGE plpgsql
@@ -4233,7 +4465,9 @@ end;
 $$;
 
 
+--
 -- Name: track_events(jsonb, text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.track_events(p_events jsonb, p_anon text DEFAULT NULL::text) RETURNS integer
     LANGUAGE plpgsql SECURITY DEFINER
@@ -4271,7 +4505,9 @@ end;
 $_$;
 
 
+--
 -- Name: use_trial(text); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.use_trial(kind text) RETURNS boolean
     LANGUAGE plpgsql SECURITY DEFINER
@@ -4297,7 +4533,9 @@ end;
 $$;
 
 
+--
 -- Name: withdraw_section_paper(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
 
 CREATE FUNCTION public.withdraw_section_paper(p_session uuid) RETURNS void
     LANGUAGE plpgsql SECURITY DEFINER
@@ -4322,7 +4560,9 @@ end;
 $$;
 
 
+--
 -- Name: ai_keys; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.ai_keys (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -4347,12 +4587,16 @@ CREATE TABLE public.ai_keys (
 );
 
 
+--
 -- Name: TABLE ai_keys; Type: COMMENT; Schema: public; Owner: -
+--
 
 COMMENT ON TABLE public.ai_keys IS 'Each account''s own AI: an API key for a provider, or an OpenRouter connection, encrypted by the server (AES-256-GCM). session_id NULL is the account key; otherwise an override for one session.';
 
 
+--
 -- Name: ai_quota; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.ai_quota (
     user_id uuid DEFAULT auth.uid() NOT NULL,
@@ -4371,7 +4615,9 @@ CREATE TABLE public.ai_quota (
 );
 
 
+--
 -- Name: ai_usage; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.ai_usage (
     id bigint NOT NULL,
@@ -4387,7 +4633,9 @@ CREATE TABLE public.ai_usage (
 );
 
 
+--
 -- Name: ai_usage_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
 
 ALTER TABLE public.ai_usage ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     SEQUENCE NAME public.ai_usage_id_seq
@@ -4399,7 +4647,9 @@ ALTER TABLE public.ai_usage ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
 );
 
 
+--
 -- Name: answer_feedback; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.answer_feedback (
     id bigint NOT NULL,
@@ -4420,7 +4670,9 @@ CREATE TABLE public.answer_feedback (
 );
 
 
+--
 -- Name: answer_feedback_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
 
 ALTER TABLE public.answer_feedback ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     SEQUENCE NAME public.answer_feedback_id_seq
@@ -4432,7 +4684,9 @@ ALTER TABLE public.answer_feedback ALTER COLUMN id ADD GENERATED ALWAYS AS IDENT
 );
 
 
+--
 -- Name: app_errors; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.app_errors (
     id bigint NOT NULL,
@@ -4449,7 +4703,9 @@ CREATE TABLE public.app_errors (
 );
 
 
+--
 -- Name: app_errors_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
 
 ALTER TABLE public.app_errors ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     SEQUENCE NAME public.app_errors_id_seq
@@ -4461,7 +4717,9 @@ ALTER TABLE public.app_errors ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
 );
 
 
+--
 -- Name: community_hits; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.community_hits (
     id bigint NOT NULL,
@@ -4470,7 +4728,9 @@ CREATE TABLE public.community_hits (
 );
 
 
+--
 -- Name: community_hits_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
 
 ALTER TABLE public.community_hits ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     SEQUENCE NAME public.community_hits_id_seq
@@ -4482,7 +4742,9 @@ ALTER TABLE public.community_hits ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTI
 );
 
 
+--
 -- Name: course_requests; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.course_requests (
     code text NOT NULL,
@@ -4493,7 +4755,9 @@ CREATE TABLE public.course_requests (
 );
 
 
+--
 -- Name: cribs; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.cribs (
     token text NOT NULL,
@@ -4510,7 +4774,9 @@ CREATE TABLE public.cribs (
 );
 
 
+--
 -- Name: document_pages; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.document_pages (
     document_id uuid NOT NULL,
@@ -4522,7 +4788,9 @@ CREATE TABLE public.document_pages (
 );
 
 
+--
 -- Name: documents; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.documents (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -4543,7 +4811,9 @@ CREATE TABLE public.documents (
 );
 
 
+--
 -- Name: events; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.events (
     id bigint NOT NULL,
@@ -4557,7 +4827,9 @@ CREATE TABLE public.events (
 );
 
 
+--
 -- Name: events_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
 
 ALTER TABLE public.events ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     SEQUENCE NAME public.events_id_seq
@@ -4569,7 +4841,9 @@ ALTER TABLE public.events ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
 );
 
 
+--
 -- Name: exam_attempts; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.exam_attempts (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -4587,7 +4861,9 @@ CREATE TABLE public.exam_attempts (
 );
 
 
+--
 -- Name: explain_backs; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.explain_backs (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -4605,7 +4881,9 @@ CREATE TABLE public.explain_backs (
 );
 
 
+--
 -- Name: feedback; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.feedback (
     id bigint NOT NULL,
@@ -4624,7 +4902,9 @@ CREATE TABLE public.feedback (
 );
 
 
+--
 -- Name: feedback_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
 
 ALTER TABLE public.feedback ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     SEQUENCE NAME public.feedback_id_seq
@@ -4636,7 +4916,9 @@ ALTER TABLE public.feedback ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
 );
 
 
+--
 -- Name: friend_presence; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.friend_presence (
     user_id uuid NOT NULL,
@@ -4648,7 +4930,9 @@ CREATE TABLE public.friend_presence (
 );
 
 
+--
 -- Name: friend_request_hits; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.friend_request_hits (
     id bigint NOT NULL,
@@ -4657,7 +4941,9 @@ CREATE TABLE public.friend_request_hits (
 );
 
 
+--
 -- Name: friend_request_hits_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
 
 ALTER TABLE public.friend_request_hits ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     SEQUENCE NAME public.friend_request_hits_id_seq
@@ -4669,7 +4955,9 @@ ALTER TABLE public.friend_request_hits ALTER COLUMN id ADD GENERATED ALWAYS AS I
 );
 
 
+--
 -- Name: friendships; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.friendships (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -4683,7 +4971,9 @@ CREATE TABLE public.friendships (
 );
 
 
+--
 -- Name: highlights; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.highlights (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -4702,7 +4992,9 @@ CREATE TABLE public.highlights (
 );
 
 
+--
 -- Name: learner_memory; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.learner_memory (
     user_id uuid DEFAULT auth.uid() NOT NULL,
@@ -4717,7 +5009,9 @@ CREATE TABLE public.learner_memory (
 );
 
 
+--
 -- Name: library_hours; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.library_hours (
     token text NOT NULL,
@@ -4732,12 +5026,14 @@ CREATE TABLE public.library_hours (
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     CONSTRAINT library_hours_room CHECK (((room_slug IS NULL) OR ((char_length(room_slug) >= 1) AND (char_length(room_slug) <= 80)))),
     CONSTRAINT library_hours_span CHECK (((ends_at > starts_at) AND (ends_at < (starts_at + '04:00:00'::interval)))),
-    CONSTRAINT library_hours_text CHECK ((((char_length(btrim(place)) >= 1) AND (char_length(btrim(place)) <= 80)) AND ((char_length(btrim(topic)) >= 1) AND (char_length(btrim(topic)) <= 80)))),
+    CONSTRAINT library_hours_text CHECK (((char_length(btrim(place)) >= 1) AND (char_length(btrim(place)) <= 80) AND ((char_length(btrim(topic)) >= 1) AND (char_length(btrim(topic)) <= 80)))),
     CONSTRAINT library_hours_token CHECK ((token ~ '^[0-9a-f]{32}$'::text))
 );
 
 
+--
 -- Name: messages; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.messages (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -4755,7 +5051,9 @@ CREATE TABLE public.messages (
 );
 
 
+--
 -- Name: miss_maps; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.miss_maps (
     token text NOT NULL,
@@ -4772,7 +5070,9 @@ CREATE TABLE public.miss_maps (
 );
 
 
+--
 -- Name: noticeboards; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.noticeboards (
     code text NOT NULL,
@@ -4789,7 +5089,9 @@ CREATE TABLE public.noticeboards (
 );
 
 
+--
 -- Name: notification_log; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.notification_log (
     id bigint NOT NULL,
@@ -4799,7 +5101,9 @@ CREATE TABLE public.notification_log (
 );
 
 
+--
 -- Name: notification_log_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
 
 ALTER TABLE public.notification_log ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     SEQUENCE NAME public.notification_log_id_seq
@@ -4811,7 +5115,9 @@ ALTER TABLE public.notification_log ALTER COLUMN id ADD GENERATED ALWAYS AS IDEN
 );
 
 
+--
 -- Name: notifications; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.notifications (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -4828,17 +5134,21 @@ CREATE TABLE public.notifications (
 );
 
 
+--
 -- Name: pack_lineage; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.pack_lineage (
     child_slug text NOT NULL,
     parent_slug text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT pack_lineage_slugs CHECK ((((char_length(child_slug) >= 1) AND (char_length(child_slug) <= 120)) AND ((char_length(parent_slug) >= 1) AND (char_length(parent_slug) <= 120)) AND (child_slug <> parent_slug)))
+    CONSTRAINT pack_lineage_slugs CHECK (((char_length(child_slug) >= 1) AND (char_length(child_slug) <= 120) AND ((char_length(parent_slug) >= 1) AND (char_length(parent_slug) <= 120)) AND (child_slug <> parent_slug)))
 );
 
 
+--
 -- Name: page_pins; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.page_pins (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -4858,7 +5168,9 @@ CREATE TABLE public.page_pins (
 );
 
 
+--
 -- Name: page_time; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.page_time (
     user_id uuid DEFAULT auth.uid() NOT NULL,
@@ -4871,7 +5183,9 @@ CREATE TABLE public.page_time (
 );
 
 
+--
 -- Name: paper_reviews; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.paper_reviews (
     document_id uuid NOT NULL,
@@ -4889,7 +5203,9 @@ CREATE TABLE public.paper_reviews (
 );
 
 
+--
 -- Name: plan_topics; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.plan_topics (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -4919,7 +5235,9 @@ CREATE TABLE public.plan_topics (
 );
 
 
+--
 -- Name: post_reports; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.post_reports (
     post_id uuid NOT NULL,
@@ -4932,7 +5250,9 @@ CREATE TABLE public.post_reports (
 );
 
 
+--
 -- Name: post_votes; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.post_votes (
     post_id uuid NOT NULL,
@@ -4941,7 +5261,9 @@ CREATE TABLE public.post_votes (
 );
 
 
+--
 -- Name: profiles; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.profiles (
     id uuid NOT NULL,
@@ -4967,12 +5289,16 @@ CREATE TABLE public.profiles (
 );
 
 
+--
 -- Name: COLUMN profiles.role; Type: COMMENT; Schema: public; Owner: -
+--
 
 COMMENT ON COLUMN public.profiles.role IS 'NULL = everyone (their own AI); ''admin'' = the owner (admin dashboard, and the server''s keys when they have none of their own). Set manually.';
 
 
+--
 -- Name: push_subscriptions; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.push_subscriptions (
     id bigint NOT NULL,
@@ -4985,7 +5311,9 @@ CREATE TABLE public.push_subscriptions (
 );
 
 
+--
 -- Name: push_subscriptions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
 
 ALTER TABLE public.push_subscriptions ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     SEQUENCE NAME public.push_subscriptions_id_seq
@@ -4997,7 +5325,9 @@ ALTER TABLE public.push_subscriptions ALTER COLUMN id ADD GENERATED ALWAYS AS ID
 );
 
 
+--
 -- Name: rate_slots; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.rate_slots (
     name text NOT NULL,
@@ -5005,7 +5335,9 @@ CREATE TABLE public.rate_slots (
 );
 
 
+--
 -- Name: review_items; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.review_items (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -5029,7 +5361,9 @@ CREATE TABLE public.review_items (
 );
 
 
+--
 -- Name: room_friend_invites; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.room_friend_invites (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -5042,7 +5376,9 @@ CREATE TABLE public.room_friend_invites (
 );
 
 
+--
 -- Name: saved_answers; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.saved_answers (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -5058,7 +5394,9 @@ CREATE TABLE public.saved_answers (
 );
 
 
+--
 -- Name: section_handins; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.section_handins (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -5075,7 +5413,9 @@ CREATE TABLE public.section_handins (
 );
 
 
+--
 -- Name: section_papers; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.section_papers (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -5091,7 +5431,9 @@ CREATE TABLE public.section_papers (
 );
 
 
+--
 -- Name: section_wrapped; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.section_wrapped (
     token text NOT NULL,
@@ -5110,7 +5452,9 @@ CREATE TABLE public.section_wrapped (
 );
 
 
+--
 -- Name: sitting_shares; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.sitting_shares (
     token text NOT NULL,
@@ -5124,12 +5468,14 @@ CREATE TABLE public.sitting_shares (
     band text,
     display_name text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT sitting_shares_range CHECK ((((out_of >= 1) AND (out_of <= 10)) AND (score >= (0)::numeric) AND (score <= (out_of)::numeric) AND ((minutes >= 0) AND (minutes <= 180)))),
+    CONSTRAINT sitting_shares_range CHECK (((out_of >= 1) AND (out_of <= 10) AND (score >= (0)::numeric) AND (score <= (out_of)::numeric) AND ((minutes >= 0) AND (minutes <= 180)))),
     CONSTRAINT sitting_shares_token CHECK ((token ~ '^[0-9a-f]{32}$'::text))
 );
 
 
+--
 -- Name: space_members; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.space_members (
     space_id uuid NOT NULL,
@@ -5138,7 +5484,9 @@ CREATE TABLE public.space_members (
 );
 
 
+--
 -- Name: spaces; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.spaces (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -5162,7 +5510,9 @@ CREATE TABLE public.spaces (
 );
 
 
+--
 -- Name: study_days; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.study_days (
     user_id uuid DEFAULT auth.uid() NOT NULL,
@@ -5171,7 +5521,9 @@ CREATE TABLE public.study_days (
 );
 
 
+--
 -- Name: study_plans; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.study_plans (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -5195,7 +5547,9 @@ CREATE TABLE public.study_plans (
 );
 
 
+--
 -- Name: study_sessions; Type: TABLE; Schema: public; Owner: -
+--
 
 CREATE TABLE public.study_sessions (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
@@ -5213,2273 +5567,3107 @@ CREATE TABLE public.study_sessions (
 );
 
 
+--
 -- Name: ai_keys ai_keys_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.ai_keys
     ADD CONSTRAINT ai_keys_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: ai_quota ai_quota_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.ai_quota
     ADD CONSTRAINT ai_quota_pkey PRIMARY KEY (user_id, key_ref, model);
 
 
+--
 -- Name: ai_usage ai_usage_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.ai_usage
     ADD CONSTRAINT ai_usage_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: answer_feedback answer_feedback_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.answer_feedback
     ADD CONSTRAINT answer_feedback_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: app_errors app_errors_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.app_errors
     ADD CONSTRAINT app_errors_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: community_hits community_hits_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.community_hits
     ADD CONSTRAINT community_hits_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: course_requests course_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.course_requests
     ADD CONSTRAINT course_requests_pkey PRIMARY KEY (code, day);
 
 
+--
 -- Name: cribs cribs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.cribs
     ADD CONSTRAINT cribs_pkey PRIMARY KEY (token);
 
 
+--
 -- Name: document_pages document_pages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.document_pages
     ADD CONSTRAINT document_pages_pkey PRIMARY KEY (document_id, page_number);
 
 
+--
 -- Name: documents documents_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.documents
     ADD CONSTRAINT documents_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: events events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.events
     ADD CONSTRAINT events_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: exam_attempts exam_attempts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.exam_attempts
     ADD CONSTRAINT exam_attempts_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: explain_backs explain_backs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.explain_backs
     ADD CONSTRAINT explain_backs_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: feedback feedback_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.feedback
     ADD CONSTRAINT feedback_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: friend_presence friend_presence_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.friend_presence
     ADD CONSTRAINT friend_presence_pkey PRIMARY KEY (user_id);
 
 
+--
 -- Name: friend_request_hits friend_request_hits_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.friend_request_hits
     ADD CONSTRAINT friend_request_hits_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: friendships friendships_pair; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.friendships
     ADD CONSTRAINT friendships_pair UNIQUE (requester_id, addressee_id);
 
 
+--
 -- Name: friendships friendships_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.friendships
     ADD CONSTRAINT friendships_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: highlights highlights_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.highlights
     ADD CONSTRAINT highlights_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: learner_memory learner_memory_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.learner_memory
     ADD CONSTRAINT learner_memory_pkey PRIMARY KEY (session_id);
 
 
+--
 -- Name: library_hours library_hours_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.library_hours
     ADD CONSTRAINT library_hours_pkey PRIMARY KEY (token);
 
 
+--
 -- Name: messages messages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.messages
     ADD CONSTRAINT messages_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: miss_maps miss_maps_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.miss_maps
     ADD CONSTRAINT miss_maps_pkey PRIMARY KEY (token);
 
 
+--
 -- Name: noticeboards noticeboards_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.noticeboards
     ADD CONSTRAINT noticeboards_pkey PRIMARY KEY (code);
 
 
+--
 -- Name: notification_log notification_log_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.notification_log
     ADD CONSTRAINT notification_log_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: notifications notifications_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.notifications
     ADD CONSTRAINT notifications_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: pack_lineage pack_lineage_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.pack_lineage
     ADD CONSTRAINT pack_lineage_pkey PRIMARY KEY (child_slug);
 
 
+--
 -- Name: page_pins page_pins_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.page_pins
     ADD CONSTRAINT page_pins_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: page_time page_time_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.page_time
     ADD CONSTRAINT page_time_pkey PRIMARY KEY (user_id, document_id, page_number);
 
 
+--
 -- Name: paper_reviews paper_reviews_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.paper_reviews
     ADD CONSTRAINT paper_reviews_pkey PRIMARY KEY (document_id);
 
 
+--
 -- Name: plan_topics plan_topics_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.plan_topics
     ADD CONSTRAINT plan_topics_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: plan_topics plan_topics_plan_id_position_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.plan_topics
     ADD CONSTRAINT plan_topics_plan_id_position_key UNIQUE (plan_id, "position");
 
 
+--
 -- Name: post_reports post_reports_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.post_reports
     ADD CONSTRAINT post_reports_pkey PRIMARY KEY (post_id, user_id);
 
 
+--
 -- Name: post_votes post_votes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.post_votes
     ADD CONSTRAINT post_votes_pkey PRIMARY KEY (post_id, user_id);
 
 
+--
 -- Name: posts posts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.posts
     ADD CONSTRAINT posts_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: profiles profiles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.profiles
     ADD CONSTRAINT profiles_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: push_subscriptions push_subscriptions_endpoint_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.push_subscriptions
     ADD CONSTRAINT push_subscriptions_endpoint_key UNIQUE (endpoint);
 
 
+--
 -- Name: push_subscriptions push_subscriptions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.push_subscriptions
     ADD CONSTRAINT push_subscriptions_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: rate_slots rate_slots_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.rate_slots
     ADD CONSTRAINT rate_slots_pkey PRIMARY KEY (name);
 
 
+--
 -- Name: review_items review_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.review_items
     ADD CONSTRAINT review_items_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: review_items review_items_user_id_source_source_key_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.review_items
     ADD CONSTRAINT review_items_user_id_source_source_key_key UNIQUE (user_id, source, source_key);
 
 
+--
 -- Name: room_friend_invites room_friend_invites_once; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.room_friend_invites
     ADD CONSTRAINT room_friend_invites_once UNIQUE (room_slug, to_id);
 
 
+--
 -- Name: room_friend_invites room_friend_invites_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.room_friend_invites
     ADD CONSTRAINT room_friend_invites_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: saved_answers saved_answers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.saved_answers
     ADD CONSTRAINT saved_answers_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: section_handins section_handins_paper_id_user_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.section_handins
     ADD CONSTRAINT section_handins_paper_id_user_id_key UNIQUE (paper_id, user_id);
 
 
+--
 -- Name: section_handins section_handins_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.section_handins
     ADD CONSTRAINT section_handins_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: section_papers section_papers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.section_papers
     ADD CONSTRAINT section_papers_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: section_wrapped section_wrapped_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.section_wrapped
     ADD CONSTRAINT section_wrapped_pkey PRIMARY KEY (token);
 
 
+--
 -- Name: sitting_shares sitting_shares_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.sitting_shares
     ADD CONSTRAINT sitting_shares_pkey PRIMARY KEY (token);
 
 
+--
 -- Name: space_members space_members_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.space_members
     ADD CONSTRAINT space_members_pkey PRIMARY KEY (space_id, user_id);
 
 
+--
 -- Name: spaces spaces_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.spaces
     ADD CONSTRAINT spaces_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: spaces spaces_slug_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.spaces
     ADD CONSTRAINT spaces_slug_key UNIQUE (slug);
 
 
+--
 -- Name: study_days study_days_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.study_days
     ADD CONSTRAINT study_days_pkey PRIMARY KEY (user_id, day);
 
 
+--
 -- Name: study_plans study_plans_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.study_plans
     ADD CONSTRAINT study_plans_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: study_plans study_plans_session_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.study_plans
     ADD CONSTRAINT study_plans_session_unique UNIQUE (session_id);
 
 
+--
 -- Name: study_sessions study_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.study_sessions
     ADD CONSTRAINT study_sessions_pkey PRIMARY KEY (id);
 
 
+--
 -- Name: ai_keys_account_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE UNIQUE INDEX ai_keys_account_idx ON public.ai_keys USING btree (user_id) WHERE (session_id IS NULL);
 
 
+--
 -- Name: ai_keys_session_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE UNIQUE INDEX ai_keys_session_idx ON public.ai_keys USING btree (user_id, session_id) WHERE (session_id IS NOT NULL);
 
 
+--
 -- Name: ai_usage_user_time_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX ai_usage_user_time_idx ON public.ai_usage USING btree (user_id, created_at DESC);
 
 
+--
 -- Name: answer_feedback_time_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX answer_feedback_time_idx ON public.answer_feedback USING btree (created_at DESC);
 
 
+--
 -- Name: app_errors_fp_time_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX app_errors_fp_time_idx ON public.app_errors USING btree (fingerprint, created_at DESC);
 
 
+--
 -- Name: app_errors_time_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX app_errors_time_idx ON public.app_errors USING btree (created_at DESC);
 
 
+--
 -- Name: community_hits_user_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX community_hits_user_idx ON public.community_hits USING btree (user_id, created_at DESC);
 
 
+--
 -- Name: document_pages_fts_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX document_pages_fts_idx ON public.document_pages USING gin (fts);
 
 
+--
 -- Name: documents_session_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX documents_session_idx ON public.documents USING btree (session_id, "position");
 
 
+--
 -- Name: documents_user_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX documents_user_idx ON public.documents USING btree (user_id, created_at DESC);
 
 
+--
 -- Name: events_anon_time_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX events_anon_time_idx ON public.events USING btree (anon_id, created_at DESC);
 
 
+--
 -- Name: events_name_time_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX events_name_time_idx ON public.events USING btree (name, created_at DESC);
 
 
+--
 -- Name: events_time_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX events_time_idx ON public.events USING btree (created_at DESC);
 
 
+--
 -- Name: events_user_time_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX events_user_time_idx ON public.events USING btree (user_id, created_at DESC);
 
 
+--
 -- Name: exam_attempts_session_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX exam_attempts_session_idx ON public.exam_attempts USING btree (session_id, created_at DESC);
 
 
+--
 -- Name: explain_backs_user_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX explain_backs_user_idx ON public.explain_backs USING btree (user_id, created_at DESC);
 
 
+--
 -- Name: feedback_time_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX feedback_time_idx ON public.feedback USING btree (created_at DESC);
 
 
+--
 -- Name: friend_request_hits_user_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX friend_request_hits_user_idx ON public.friend_request_hits USING btree (user_id, created_at DESC);
 
 
+--
 -- Name: friendships_addressee_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX friendships_addressee_idx ON public.friendships USING btree (addressee_id);
 
 
+--
 -- Name: friendships_one_pair; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE UNIQUE INDEX friendships_one_pair ON public.friendships USING btree (LEAST(requester_id, addressee_id), GREATEST(requester_id, addressee_id));
 
 
+--
 -- Name: friendships_requester_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX friendships_requester_idx ON public.friendships USING btree (requester_id);
 
 
+--
 -- Name: highlights_doc_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX highlights_doc_idx ON public.highlights USING btree (document_id, page_number);
 
 
+--
 -- Name: messages_doc_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX messages_doc_idx ON public.messages USING btree (document_id, created_at);
 
 
+--
 -- Name: messages_session_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX messages_session_idx ON public.messages USING btree (session_id, created_at);
 
 
+--
 -- Name: notification_log_user_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX notification_log_user_idx ON public.notification_log USING btree (user_id, kind, sent_at DESC);
 
 
+--
 -- Name: notifications_unread_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX notifications_unread_idx ON public.notifications USING btree (user_id) WHERE (read_at IS NULL);
 
 
+--
 -- Name: notifications_user_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX notifications_user_idx ON public.notifications USING btree (user_id, created_at DESC);
 
 
+--
 -- Name: page_pins_doc_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX page_pins_doc_idx ON public.page_pins USING btree (document_id, page_number);
 
 
+--
 -- Name: page_pins_pack_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX page_pins_pack_idx ON public.page_pins USING btree (pack_slug, doc_index, page_number) WHERE (pack_slug IS NOT NULL);
 
 
+--
 -- Name: paper_reviews_session_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX paper_reviews_session_idx ON public.paper_reviews USING btree (session_id);
 
 
+--
 -- Name: plan_topics_plan_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX plan_topics_plan_idx ON public.plan_topics USING btree (plan_id, "position");
 
 
+--
 -- Name: post_votes_user_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX post_votes_user_idx ON public.post_votes USING btree (user_id);
 
 
+--
 -- Name: posts_activity_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX posts_activity_idx ON public.posts USING btree (activity_at DESC) WHERE (parent_id IS NULL);
 
 
+--
 -- Name: posts_check_pending_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX posts_check_pending_idx ON public.posts USING btree (created_at) WHERE (check_status = ANY (ARRAY['pending'::text, 'error'::text]));
 
 
+--
 -- Name: posts_feed_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX posts_feed_idx ON public.posts USING btree (created_at DESC) WHERE ((parent_id IS NULL) AND (space_id IS NULL));
 
 
+--
 -- Name: posts_parent_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX posts_parent_idx ON public.posts USING btree (parent_id, created_at);
 
 
+--
 -- Name: posts_space_activity_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX posts_space_activity_idx ON public.posts USING btree (space_id, activity_at DESC) WHERE (parent_id IS NULL);
 
 
+--
 -- Name: posts_space_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX posts_space_idx ON public.posts USING btree (space_id, created_at DESC) WHERE (parent_id IS NULL);
 
 
+--
 -- Name: profiles_calendar_token_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE UNIQUE INDEX profiles_calendar_token_idx ON public.profiles USING btree (calendar_token);
 
 
+--
 -- Name: profiles_friend_code_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE UNIQUE INDEX profiles_friend_code_idx ON public.profiles USING btree (friend_code);
 
 
+--
 -- Name: review_items_due_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX review_items_due_idx ON public.review_items USING btree (user_id, due_at) WHERE (NOT suspended);
 
 
+--
 -- Name: room_friend_invites_to_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX room_friend_invites_to_idx ON public.room_friend_invites USING btree (to_id);
 
 
+--
 -- Name: saved_answers_session_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX saved_answers_session_idx ON public.saved_answers USING btree (session_id, created_at);
 
 
+--
 -- Name: section_papers_one_active; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE UNIQUE INDEX section_papers_one_active ON public.section_papers USING btree (pack_slug) WHERE ((questions IS NOT NULL) AND (withdrawn_at IS NULL));
 
 
+--
 -- Name: section_wrapped_one; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE UNIQUE INDEX section_wrapped_one ON public.section_wrapped USING btree (owner_id, pack_slug);
 
 
+--
 -- Name: space_members_user_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX space_members_user_idx ON public.space_members USING btree (user_id);
 
 
+--
 -- Name: spaces_public_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX spaces_public_idx ON public.spaces USING btree (sort, name) WHERE (visibility = 'public'::text);
 
 
+--
 -- Name: study_sessions_user_idx; Type: INDEX; Schema: public; Owner: -
+--
 
 CREATE INDEX study_sessions_user_idx ON public.study_sessions USING btree (user_id, updated_at DESC);
 
 
+--
 -- Name: documents documents_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
 
 CREATE TRIGGER documents_updated_at BEFORE UPDATE ON public.documents FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 
+--
 -- Name: friendships friendships_notify; Type: TRIGGER; Schema: public; Owner: -
+--
 
 CREATE TRIGGER friendships_notify AFTER INSERT OR DELETE OR UPDATE OF status ON public.friendships FOR EACH ROW EXECUTE FUNCTION public._friendship_notify();
 
 
+--
 -- Name: friendships friendships_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
 
 CREATE TRIGGER friendships_updated_at BEFORE UPDATE ON public.friendships FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 
+--
 -- Name: learner_memory learner_memory_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
 
 CREATE TRIGGER learner_memory_updated_at BEFORE UPDATE ON public.learner_memory FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 
+--
 -- Name: messages messages_touch_session; Type: TRIGGER; Schema: public; Owner: -
+--
 
 CREATE TRIGGER messages_touch_session AFTER INSERT ON public.messages FOR EACH ROW EXECUTE FUNCTION public.touch_session();
 
 
+--
 -- Name: paper_reviews paper_reviews_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
 
 CREATE TRIGGER paper_reviews_updated_at BEFORE UPDATE ON public.paper_reviews FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 
+--
 -- Name: plan_topics plan_topics_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
 
 CREATE TRIGGER plan_topics_updated_at BEFORE UPDATE ON public.plan_topics FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 
+--
 -- Name: posts posts_accept_notify; Type: TRIGGER; Schema: public; Owner: -
+--
 
 CREATE TRIGGER posts_accept_notify AFTER UPDATE OF accepted_id ON public.posts FOR EACH ROW WHEN (((new.accepted_id IS NOT NULL) AND (new.accepted_id IS DISTINCT FROM old.accepted_id))) EXECUTE FUNCTION public._accept_notify();
 
 
+--
 -- Name: posts posts_reply_notify; Type: TRIGGER; Schema: public; Owner: -
+--
 
 CREATE TRIGGER posts_reply_notify AFTER INSERT ON public.posts FOR EACH ROW WHEN ((new.parent_id IS NOT NULL)) EXECUTE FUNCTION public._reply_notify();
 
 
+--
 -- Name: posts posts_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
 
 CREATE TRIGGER posts_updated_at BEFORE UPDATE ON public.posts FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 
+--
 -- Name: profiles profiles_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
 
 CREATE TRIGGER profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 
+--
 -- Name: highlights review_from_highlight; Type: TRIGGER; Schema: public; Owner: -
+--
 
 CREATE TRIGGER review_from_highlight AFTER INSERT ON public.highlights FOR EACH ROW EXECUTE FUNCTION public.review_from_highlight();
 
 
+--
 -- Name: learner_memory review_from_memory; Type: TRIGGER; Schema: public; Owner: -
+--
 
 CREATE TRIGGER review_from_memory AFTER INSERT OR UPDATE OF misconceptions ON public.learner_memory FOR EACH ROW EXECUTE FUNCTION public.review_from_memory();
 
 
+--
 -- Name: plan_topics review_from_topic; Type: TRIGGER; Schema: public; Owner: -
+--
 
 CREATE TRIGGER review_from_topic AFTER INSERT OR UPDATE OF status ON public.plan_topics FOR EACH ROW EXECUTE FUNCTION public.review_from_topic();
 
 
+--
 -- Name: room_friend_invites room_invites_notify; Type: TRIGGER; Schema: public; Owner: -
+--
 
 CREATE TRIGGER room_invites_notify AFTER INSERT OR DELETE OR UPDATE ON public.room_friend_invites FOR EACH ROW EXECUTE FUNCTION public._room_invite_notify();
 
 
+--
 -- Name: spaces spaces_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
 
 CREATE TRIGGER spaces_updated_at BEFORE UPDATE ON public.spaces FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 
+--
 -- Name: study_plans study_plans_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
 
 CREATE TRIGGER study_plans_updated_at BEFORE UPDATE ON public.study_plans FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 
+--
 -- Name: study_sessions study_sessions_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
 
 CREATE TRIGGER study_sessions_updated_at BEFORE UPDATE ON public.study_sessions FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 
+--
 -- Name: ai_keys ai_keys_session_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.ai_keys
     ADD CONSTRAINT ai_keys_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.study_sessions(id) ON DELETE CASCADE;
 
 
+--
 -- Name: ai_keys ai_keys_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.ai_keys
     ADD CONSTRAINT ai_keys_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: ai_quota ai_quota_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.ai_quota
     ADD CONSTRAINT ai_quota_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: ai_usage ai_usage_session_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.ai_usage
     ADD CONSTRAINT ai_usage_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.study_sessions(id) ON DELETE SET NULL;
 
 
+--
 -- Name: ai_usage ai_usage_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.ai_usage
     ADD CONSTRAINT ai_usage_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: answer_feedback answer_feedback_session_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.answer_feedback
     ADD CONSTRAINT answer_feedback_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.study_sessions(id) ON DELETE SET NULL;
 
 
+--
 -- Name: answer_feedback answer_feedback_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.answer_feedback
     ADD CONSTRAINT answer_feedback_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: app_errors app_errors_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.app_errors
     ADD CONSTRAINT app_errors_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE SET NULL;
 
 
+--
 -- Name: community_hits community_hits_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.community_hits
     ADD CONSTRAINT community_hits_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: cribs cribs_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.cribs
     ADD CONSTRAINT cribs_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: document_pages document_pages_document_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.document_pages
     ADD CONSTRAINT document_pages_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.documents(id) ON DELETE CASCADE;
 
 
+--
 -- Name: document_pages document_pages_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.document_pages
     ADD CONSTRAINT document_pages_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: documents documents_session_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.documents
     ADD CONSTRAINT documents_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.study_sessions(id) ON DELETE CASCADE;
 
 
+--
 -- Name: documents documents_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.documents
     ADD CONSTRAINT documents_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: events events_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.events
     ADD CONSTRAINT events_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: exam_attempts exam_attempts_document_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.exam_attempts
     ADD CONSTRAINT exam_attempts_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.documents(id) ON DELETE SET NULL;
 
 
+--
 -- Name: exam_attempts exam_attempts_session_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.exam_attempts
     ADD CONSTRAINT exam_attempts_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.study_sessions(id) ON DELETE CASCADE;
 
 
+--
 -- Name: exam_attempts exam_attempts_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.exam_attempts
     ADD CONSTRAINT exam_attempts_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: explain_backs explain_backs_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.explain_backs
     ADD CONSTRAINT explain_backs_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: feedback feedback_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.feedback
     ADD CONSTRAINT feedback_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: friend_presence friend_presence_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.friend_presence
     ADD CONSTRAINT friend_presence_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: friend_request_hits friend_request_hits_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.friend_request_hits
     ADD CONSTRAINT friend_request_hits_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: friendships friendships_addressee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.friendships
     ADD CONSTRAINT friendships_addressee_id_fkey FOREIGN KEY (addressee_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: friendships friendships_requester_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.friendships
     ADD CONSTRAINT friendships_requester_id_fkey FOREIGN KEY (requester_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: highlights highlights_document_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.highlights
     ADD CONSTRAINT highlights_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.documents(id) ON DELETE CASCADE;
 
 
+--
 -- Name: highlights highlights_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.highlights
     ADD CONSTRAINT highlights_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: learner_memory learner_memory_session_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.learner_memory
     ADD CONSTRAINT learner_memory_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.study_sessions(id) ON DELETE CASCADE;
 
 
+--
 -- Name: learner_memory learner_memory_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.learner_memory
     ADD CONSTRAINT learner_memory_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: library_hours library_hours_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.library_hours
     ADD CONSTRAINT library_hours_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: messages messages_document_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.messages
     ADD CONSTRAINT messages_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.documents(id) ON DELETE SET NULL;
 
 
+--
 -- Name: messages messages_highlight_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.messages
     ADD CONSTRAINT messages_highlight_id_fkey FOREIGN KEY (highlight_id) REFERENCES public.highlights(id) ON DELETE SET NULL;
 
 
+--
 -- Name: messages messages_session_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.messages
     ADD CONSTRAINT messages_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.study_sessions(id) ON DELETE CASCADE;
 
 
+--
 -- Name: messages messages_topic_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.messages
     ADD CONSTRAINT messages_topic_id_fkey FOREIGN KEY (topic_id) REFERENCES public.plan_topics(id) ON DELETE SET NULL;
 
 
+--
 -- Name: messages messages_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.messages
     ADD CONSTRAINT messages_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: miss_maps miss_maps_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.miss_maps
     ADD CONSTRAINT miss_maps_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: noticeboards noticeboards_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.noticeboards
     ADD CONSTRAINT noticeboards_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: notification_log notification_log_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.notification_log
     ADD CONSTRAINT notification_log_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: notifications notifications_actor_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.notifications
     ADD CONSTRAINT notifications_actor_id_fkey FOREIGN KEY (actor_id) REFERENCES auth.users(id) ON DELETE SET NULL;
 
 
+--
 -- Name: notifications notifications_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.notifications
     ADD CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: page_pins page_pins_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.page_pins
     ADD CONSTRAINT page_pins_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: page_time page_time_document_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.page_time
     ADD CONSTRAINT page_time_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.documents(id) ON DELETE CASCADE;
 
 
+--
 -- Name: page_time page_time_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.page_time
     ADD CONSTRAINT page_time_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: paper_reviews paper_reviews_document_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.paper_reviews
     ADD CONSTRAINT paper_reviews_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.documents(id) ON DELETE CASCADE;
 
 
+--
 -- Name: paper_reviews paper_reviews_session_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.paper_reviews
     ADD CONSTRAINT paper_reviews_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.study_sessions(id) ON DELETE CASCADE;
 
 
+--
 -- Name: paper_reviews paper_reviews_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.paper_reviews
     ADD CONSTRAINT paper_reviews_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: plan_topics plan_topics_document_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.plan_topics
     ADD CONSTRAINT plan_topics_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.documents(id) ON DELETE SET NULL;
 
 
+--
 -- Name: plan_topics plan_topics_plan_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.plan_topics
     ADD CONSTRAINT plan_topics_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES public.study_plans(id) ON DELETE CASCADE;
 
 
+--
 -- Name: plan_topics plan_topics_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.plan_topics
     ADD CONSTRAINT plan_topics_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: post_reports post_reports_post_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.post_reports
     ADD CONSTRAINT post_reports_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.posts(id) ON DELETE CASCADE;
 
 
+--
 -- Name: post_reports post_reports_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.post_reports
     ADD CONSTRAINT post_reports_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: post_votes post_votes_post_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.post_votes
     ADD CONSTRAINT post_votes_post_id_fkey FOREIGN KEY (post_id) REFERENCES public.posts(id) ON DELETE CASCADE;
 
 
+--
 -- Name: post_votes post_votes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.post_votes
     ADD CONSTRAINT post_votes_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: posts posts_accepted_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.posts
     ADD CONSTRAINT posts_accepted_id_fkey FOREIGN KEY (accepted_id) REFERENCES public.posts(id) ON DELETE SET NULL;
 
 
+--
 -- Name: posts posts_author_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.posts
     ADD CONSTRAINT posts_author_id_fkey FOREIGN KEY (author_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: posts posts_parent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.posts
     ADD CONSTRAINT posts_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES public.posts(id) ON DELETE CASCADE;
 
 
+--
 -- Name: posts posts_space_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.posts
     ADD CONSTRAINT posts_space_id_fkey FOREIGN KEY (space_id) REFERENCES public.spaces(id) ON DELETE CASCADE;
 
 
+--
 -- Name: profiles profiles_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.profiles
     ADD CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: push_subscriptions push_subscriptions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.push_subscriptions
     ADD CONSTRAINT push_subscriptions_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: review_items review_items_document_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.review_items
     ADD CONSTRAINT review_items_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.documents(id) ON DELETE SET NULL;
 
 
+--
 -- Name: review_items review_items_session_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.review_items
     ADD CONSTRAINT review_items_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.study_sessions(id) ON DELETE CASCADE;
 
 
+--
 -- Name: review_items review_items_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.review_items
     ADD CONSTRAINT review_items_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: room_friend_invites room_friend_invites_from_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.room_friend_invites
     ADD CONSTRAINT room_friend_invites_from_id_fkey FOREIGN KEY (from_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: room_friend_invites room_friend_invites_to_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.room_friend_invites
     ADD CONSTRAINT room_friend_invites_to_id_fkey FOREIGN KEY (to_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: saved_answers saved_answers_document_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.saved_answers
     ADD CONSTRAINT saved_answers_document_id_fkey FOREIGN KEY (document_id) REFERENCES public.documents(id) ON DELETE SET NULL;
 
 
+--
 -- Name: saved_answers saved_answers_session_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.saved_answers
     ADD CONSTRAINT saved_answers_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.study_sessions(id) ON DELETE CASCADE;
 
 
+--
 -- Name: saved_answers saved_answers_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.saved_answers
     ADD CONSTRAINT saved_answers_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: section_handins section_handins_paper_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.section_handins
     ADD CONSTRAINT section_handins_paper_id_fkey FOREIGN KEY (paper_id) REFERENCES public.section_papers(id) ON DELETE CASCADE;
 
 
+--
 -- Name: section_handins section_handins_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.section_handins
     ADD CONSTRAINT section_handins_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: section_papers section_papers_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.section_papers
     ADD CONSTRAINT section_papers_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: section_wrapped section_wrapped_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.section_wrapped
     ADD CONSTRAINT section_wrapped_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: sitting_shares sitting_shares_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.sitting_shares
     ADD CONSTRAINT sitting_shares_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: space_members space_members_space_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.space_members
     ADD CONSTRAINT space_members_space_id_fkey FOREIGN KEY (space_id) REFERENCES public.spaces(id) ON DELETE CASCADE;
 
 
+--
 -- Name: space_members space_members_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.space_members
     ADD CONSTRAINT space_members_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: spaces spaces_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.spaces
     ADD CONSTRAINT spaces_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: study_days study_days_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.study_days
     ADD CONSTRAINT study_days_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: study_plans study_plans_session_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.study_plans
     ADD CONSTRAINT study_plans_session_id_fkey FOREIGN KEY (session_id) REFERENCES public.study_sessions(id) ON DELETE CASCADE;
 
 
+--
 -- Name: study_plans study_plans_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.study_plans
     ADD CONSTRAINT study_plans_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: study_sessions study_sessions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
 
 ALTER TABLE ONLY public.study_sessions
     ADD CONSTRAINT study_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
 
 
+--
 -- Name: ai_keys; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.ai_keys ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: ai_quota; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.ai_quota ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: ai_usage; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.ai_usage ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: answer_feedback; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.answer_feedback ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: app_errors; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.app_errors ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: community_hits; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.community_hits ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: course_requests; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.course_requests ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: cribs; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.cribs ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: document_pages; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.document_pages ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: documents; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.documents ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: events; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: exam_attempts; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.exam_attempts ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: explain_backs; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.explain_backs ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: feedback; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.feedback ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: friend_presence; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.friend_presence ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: friend_request_hits; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.friend_request_hits ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: friendships; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.friendships ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: highlights; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.highlights ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: learner_memory; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.learner_memory ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: library_hours; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.library_hours ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: messages; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: miss_maps; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.miss_maps ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: noticeboards; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.noticeboards ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: notification_log; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.notification_log ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: notifications; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: ai_keys own keys; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "own keys" ON public.ai_keys TO authenticated USING ((( SELECT auth.uid() AS uid) = user_id)) WITH CHECK (((( SELECT auth.uid() AS uid) = user_id) AND ((session_id IS NULL) OR (EXISTS ( SELECT 1
    FROM public.study_sessions s
   WHERE ((s.id = ai_keys.session_id) AND (s.user_id = ( SELECT auth.uid() AS uid))))))));
 
 
+--
 -- Name: notifications own notifications; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "own notifications" ON public.notifications FOR SELECT TO authenticated USING ((( SELECT auth.uid() AS uid) = user_id));
 
 
+--
 -- Name: ai_quota own rows; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "own rows" ON public.ai_quota TO authenticated USING ((( SELECT auth.uid() AS uid) = user_id)) WITH CHECK ((( SELECT auth.uid() AS uid) = user_id));
 
 
+--
 -- Name: ai_usage own rows; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "own rows" ON public.ai_usage TO authenticated USING ((( SELECT auth.uid() AS uid) = user_id)) WITH CHECK ((( SELECT auth.uid() AS uid) = user_id));
 
 
+--
 -- Name: document_pages own rows; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "own rows" ON public.document_pages TO authenticated USING ((( SELECT auth.uid() AS uid) = user_id)) WITH CHECK ((( SELECT auth.uid() AS uid) = user_id));
 
 
+--
 -- Name: documents own rows; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "own rows" ON public.documents TO authenticated USING ((( SELECT auth.uid() AS uid) = user_id)) WITH CHECK (((( SELECT auth.uid() AS uid) = user_id) AND public.owns_session(session_id)));
 
 
+--
 -- Name: exam_attempts own rows; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "own rows" ON public.exam_attempts TO authenticated USING ((( SELECT auth.uid() AS uid) = user_id)) WITH CHECK (((( SELECT auth.uid() AS uid) = user_id) AND public.owns_session(session_id)));
 
 
+--
 -- Name: explain_backs own rows; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "own rows" ON public.explain_backs TO authenticated USING ((( SELECT auth.uid() AS uid) = user_id)) WITH CHECK (((( SELECT auth.uid() AS uid) = user_id) AND public.owns_session(session_id)));
 
 
+--
 -- Name: highlights own rows; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "own rows" ON public.highlights TO authenticated USING ((( SELECT auth.uid() AS uid) = user_id)) WITH CHECK ((( SELECT auth.uid() AS uid) = user_id));
 
 
+--
 -- Name: learner_memory own rows; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "own rows" ON public.learner_memory TO authenticated USING ((( SELECT auth.uid() AS uid) = user_id)) WITH CHECK (((( SELECT auth.uid() AS uid) = user_id) AND public.owns_session(session_id)));
 
 
+--
 -- Name: messages own rows; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "own rows" ON public.messages TO authenticated USING ((( SELECT auth.uid() AS uid) = user_id)) WITH CHECK (((( SELECT auth.uid() AS uid) = user_id) AND public.owns_session(session_id)));
 
 
+--
 -- Name: page_time own rows; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "own rows" ON public.page_time FOR SELECT TO authenticated USING ((( SELECT auth.uid() AS uid) = user_id));
 
 
+--
 -- Name: paper_reviews own rows; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "own rows" ON public.paper_reviews TO authenticated USING ((( SELECT auth.uid() AS uid) = user_id)) WITH CHECK (((( SELECT auth.uid() AS uid) = user_id) AND public.owns_session(session_id)));
 
 
+--
 -- Name: plan_topics own rows; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "own rows" ON public.plan_topics TO authenticated USING ((( SELECT auth.uid() AS uid) = user_id)) WITH CHECK ((( SELECT auth.uid() AS uid) = user_id));
 
 
+--
 -- Name: push_subscriptions own rows; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "own rows" ON public.push_subscriptions TO authenticated USING ((( SELECT auth.uid() AS uid) = user_id)) WITH CHECK ((( SELECT auth.uid() AS uid) = user_id));
 
 
+--
 -- Name: review_items own rows; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "own rows" ON public.review_items TO authenticated USING ((( SELECT auth.uid() AS uid) = user_id)) WITH CHECK (((( SELECT auth.uid() AS uid) = user_id) AND public.owns_session(session_id)));
 
 
+--
 -- Name: study_days own rows; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "own rows" ON public.study_days FOR SELECT TO authenticated USING ((( SELECT auth.uid() AS uid) = user_id));
 
 
+--
 -- Name: study_plans own rows; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "own rows" ON public.study_plans TO authenticated USING ((( SELECT auth.uid() AS uid) = user_id)) WITH CHECK (((( SELECT auth.uid() AS uid) = user_id) AND public.owns_session(session_id)));
 
 
+--
 -- Name: study_sessions own rows; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "own rows" ON public.study_sessions TO authenticated USING ((( SELECT auth.uid() AS uid) = user_id)) WITH CHECK ((( SELECT auth.uid() AS uid) = user_id));
 
 
+--
 -- Name: pack_lineage; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.pack_lineage ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: page_pins; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.page_pins ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: page_time; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.page_time ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: paper_reviews; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.paper_reviews ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: plan_topics; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.plan_topics ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: post_reports; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.post_reports ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: post_votes; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.post_votes ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: posts; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.posts ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: profiles; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: push_subscriptions; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.push_subscriptions ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: rate_slots; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.rate_slots ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: answer_feedback read own answer feedback; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "read own answer feedback" ON public.answer_feedback FOR SELECT TO authenticated USING ((( SELECT auth.uid() AS uid) = user_id));
 
 
+--
 -- Name: events read own events; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "read own events" ON public.events FOR SELECT TO authenticated USING ((( SELECT auth.uid() AS uid) = user_id));
 
 
+--
 -- Name: feedback read own feedback; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "read own feedback" ON public.feedback FOR SELECT TO authenticated USING ((( SELECT auth.uid() AS uid) = user_id));
 
 
+--
 -- Name: profiles read own profile; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "read own profile" ON public.profiles FOR SELECT TO authenticated USING ((( SELECT auth.uid() AS uid) = id));
 
 
+--
 -- Name: saved_answers read own saved answers; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "read own saved answers" ON public.saved_answers FOR SELECT TO authenticated USING ((( SELECT auth.uid() AS uid) = user_id));
 
 
+--
 -- Name: saved_answers remove own saved answers; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "remove own saved answers" ON public.saved_answers FOR DELETE TO authenticated USING ((( SELECT auth.uid() AS uid) = user_id));
 
 
+--
 -- Name: review_items; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.review_items ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: room_friend_invites; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.room_friend_invites ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: saved_answers save to own session; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "save to own session" ON public.saved_answers FOR INSERT TO authenticated WITH CHECK (((( SELECT auth.uid() AS uid) = user_id) AND (EXISTS ( SELECT 1
    FROM public.study_sessions s
   WHERE ((s.id = saved_answers.session_id) AND (s.user_id = ( SELECT auth.uid() AS uid)))))));
 
 
+--
 -- Name: saved_answers; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.saved_answers ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: section_handins; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.section_handins ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: section_papers; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.section_papers ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: section_wrapped; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.section_wrapped ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: answer_feedback send own answer feedback; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "send own answer feedback" ON public.answer_feedback FOR INSERT TO authenticated WITH CHECK (((( SELECT auth.uid() AS uid) = user_id) AND ((session_id IS NULL) OR (EXISTS ( SELECT 1
    FROM public.study_sessions s
   WHERE ((s.id = answer_feedback.session_id) AND (s.user_id = ( SELECT auth.uid() AS uid))))))));
 
 
+--
 -- Name: feedback send own feedback; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "send own feedback" ON public.feedback FOR INSERT TO authenticated WITH CHECK ((( SELECT auth.uid() AS uid) = user_id));
 
 
+--
 -- Name: sitting_shares; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.sitting_shares ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: space_members; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.space_members ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: spaces; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.spaces ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: study_days; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.study_days ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: study_plans; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.study_plans ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: study_sessions; Type: ROW SECURITY; Schema: public; Owner: -
+--
 
 ALTER TABLE public.study_sessions ENABLE ROW LEVEL SECURITY;
 
+--
 -- Name: profiles update own name; Type: POLICY; Schema: public; Owner: -
+--
 
 CREATE POLICY "update own name" ON public.profiles FOR UPDATE TO authenticated USING ((( SELECT auth.uid() AS uid) = id)) WITH CHECK ((( SELECT auth.uid() AS uid) = id));
 
 
+--
 -- Name: FUNCTION _accept_notify(); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public._accept_notify() FROM PUBLIC;
 
 
+--
 -- Name: FUNCTION _are_friends(a uuid, b uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public._are_friends(a uuid, b uuid) FROM PUBLIC;
 
 
+--
 -- Name: FUNCTION _can_see_room(p_slug text, p_private boolean, p_friend uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public._can_see_room(p_slug text, p_private boolean, p_friend uuid) FROM PUBLIC;
 
 
+--
 -- Name: FUNCTION _check_json(p public.posts); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public._check_json(p public.posts) FROM PUBLIC;
 
 
+--
 -- Name: FUNCTION _claim_post_check(p_id uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public._claim_post_check(p_id uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public._claim_post_check(p_id uuid) TO service_role;
 
 
+--
 -- Name: FUNCTION _community_hit(p_user uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public._community_hit(p_user uuid) FROM PUBLIC;
 
 
+--
 -- Name: FUNCTION _ensure_friend_code(p_user uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public._ensure_friend_code(p_user uuid) FROM PUBLIC;
 
 
+--
 -- Name: FUNCTION _ensure_pack_columns(); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public._ensure_pack_columns() FROM PUBLIC;
 
 
+--
 -- Name: FUNCTION _friendship_notify(); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public._friendship_notify() FROM PUBLIC;
 
 
+--
 -- Name: FUNCTION _in_room(state jsonb); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public._in_room(state jsonb) FROM PUBLIC;
 
 
+--
 -- Name: FUNCTION _in_space(p_space uuid, p_user uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public._in_space(p_space uuid, p_user uuid) FROM PUBLIC;
 
 
+--
 -- Name: FUNCTION _notify(p_user uuid, p_kind text, p_actor uuid, p_title text, p_body text, p_url text, p_data jsonb); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public._notify(p_user uuid, p_kind text, p_actor uuid, p_title text, p_body text, p_url text, p_data jsonb) FROM PUBLIC;
 
 
+--
 -- Name: FUNCTION _packs_ready(); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public._packs_ready() FROM PUBLIC;
 
 
+--
 -- Name: FUNCTION _pin_shares(p_session uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public._pin_shares(p_session uuid) FROM PUBLIC;
 
 
+--
 -- Name: FUNCTION _post_visible(p_status text, p_author uuid, p_user uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public._post_visible(p_status text, p_author uuid, p_user uuid) FROM PUBLIC;
 
 
+--
 -- Name: FUNCTION _private_room_for_member(p_slug text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public._private_room_for_member(p_slug text) FROM PUBLIC;
 
 
+--
 -- Name: FUNCTION _reply_notify(); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public._reply_notify() FROM PUBLIC;
 
 
+--
 -- Name: FUNCTION _room_invite_notify(); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public._room_invite_notify() FROM PUBLIC;
 
 
+--
 -- Name: FUNCTION _room_snapshot(p_slug text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public._room_snapshot(p_slug text) FROM PUBLIC;
 
 
+--
 -- Name: FUNCTION _save_post_check(p_id uuid, p_status text, p_incorrect real, p_rational real, p_harmful real, p_note text, p_fix text, p_model text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public._save_post_check(p_id uuid, p_status text, p_incorrect real, p_rational real, p_harmful real, p_note text, p_fix text, p_model text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public._save_post_check(p_id uuid, p_status text, p_incorrect real, p_rational real, p_harmful real, p_note text, p_fix text, p_model text) TO service_role;
 
 
+--
 -- Name: FUNCTION _section_public(p_questions jsonb); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public._section_public(p_questions jsonb) FROM PUBLIC;
 
 
+--
 -- Name: FUNCTION _section_slug(p_session uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public._section_slug(p_session uuid) FROM PUBLIC;
 
 
+--
 -- Name: FUNCTION _session_pack_slug(p_session uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public._session_pack_slug(p_session uuid) FROM PUBLIC;
 
 
+--
 -- Name: FUNCTION _signed_in(); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public._signed_in() FROM PUBLIC;
 
 
+--
 -- Name: FUNCTION _snippet(p_text text, p_max integer); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public._snippet(p_text text, p_max integer) FROM PUBLIC;
 
 
+--
 -- Name: FUNCTION _space_json(p_space uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public._space_json(p_space uuid) FROM PUBLIC;
 
 
+--
 -- Name: FUNCTION _space_open(p_space uuid, p_user uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public._space_open(p_space uuid, p_user uuid) FROM PUBLIC;
 
 
+--
 -- Name: FUNCTION _space_slug_ok(p_slug text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public._space_slug_ok(p_slug text) FROM PUBLIC;
 
 
+--
 -- Name: FUNCTION accept_reply(p_thread uuid, p_reply uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.accept_reply(p_thread uuid, p_reply uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.accept_reply(p_thread uuid, p_reply uuid) TO authenticated;
 
 
+--
 -- Name: FUNCTION add_page_time(p_document uuid, p_pages jsonb, p_tz text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.add_page_time(p_document uuid, p_pages jsonb, p_tz text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.add_page_time(p_document uuid, p_pages jsonb, p_tz text) TO authenticated;
 
 
+--
 -- Name: FUNCTION admin_answer_feedback(); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.admin_answer_feedback() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.admin_answer_feedback() TO authenticated;
 
 
+--
 -- Name: FUNCTION admin_insights(p_days integer); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.admin_insights(p_days integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.admin_insights(p_days integer) TO authenticated;
 
 
+--
 -- Name: FUNCTION browse_spaces(); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.browse_spaces() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.browse_spaces() TO authenticated;
 
 
+--
 -- Name: FUNCTION browse_threads(p_space text, p_sort text, p_query text, p_limit integer, p_offset integer); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.browse_threads(p_space text, p_sort text, p_query text, p_limit integer, p_offset integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.browse_threads(p_space text, p_sort text, p_query text, p_limit integer, p_offset integer) TO authenticated;
 
 
+--
 -- Name: FUNCTION bump_course_request(p_code text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.bump_course_request(p_code text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.bump_course_request(p_code text) TO anon;
 GRANT ALL ON FUNCTION public.bump_course_request(p_code text) TO authenticated;
 
 
+--
 -- Name: FUNCTION calendar_feed(p_token text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.calendar_feed(p_token text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.calendar_feed(p_token text) TO anon;
 GRANT ALL ON FUNCTION public.calendar_feed(p_token text) TO authenticated;
 
 
+--
 -- Name: FUNCTION cancel_friend_request(p_id uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.cancel_friend_request(p_id uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.cancel_friend_request(p_id uuid) TO authenticated;
 
 
+--
 -- Name: FUNCTION confu_schema_version(); Type: ACL; Schema: public; Owner: -
+--
 
 GRANT ALL ON FUNCTION public.confu_schema_version() TO authenticated;
 
 
+--
 -- Name: FUNCTION course_of(p_slug text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.course_of(p_slug text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.course_of(p_slug text) TO anon;
 GRANT ALL ON FUNCTION public.course_of(p_slug text) TO authenticated;
 
 
+--
 -- Name: FUNCTION course_of_session(p_session uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.course_of_session(p_session uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.course_of_session(p_session uuid) TO authenticated;
 
 
+--
 -- Name: FUNCTION course_requests_recent(p_slug text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.course_requests_recent(p_slug text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.course_requests_recent(p_slug text) TO authenticated;
 
 
+--
 -- Name: FUNCTION create_library_hour(p_session uuid, p_starts timestamp with time zone, p_ends timestamp with time zone, p_place text, p_topic text, p_room text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.create_library_hour(p_session uuid, p_starts timestamp with time zone, p_ends timestamp with time zone, p_place text, p_topic text, p_room text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.create_library_hour(p_session uuid, p_starts timestamp with time zone, p_ends timestamp with time zone, p_place text, p_topic text, p_room text) TO authenticated;
 
 
+--
 -- Name: FUNCTION create_noticeboard(p_title text, p_kind text, p_items jsonb); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.create_noticeboard(p_title text, p_kind text, p_items jsonb) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.create_noticeboard(p_title text, p_kind text, p_items jsonb) TO authenticated;
 
 
+--
 -- Name: FUNCTION create_space(p_name text, p_about text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.create_space(p_name text, p_about text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.create_space(p_name text, p_about text) TO authenticated;
 
 
+--
 -- Name: FUNCTION create_thread(p_title text, p_body text, p_space uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.create_thread(p_title text, p_body text, p_space uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.create_thread(p_title text, p_body text, p_space uuid) TO authenticated;
 
 
+--
 -- Name: FUNCTION delete_my_account(); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.delete_my_account() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.delete_my_account() TO authenticated;
 
 
+--
 -- Name: FUNCTION delete_post(p_id uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.delete_post(p_id uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.delete_post(p_id uuid) TO authenticated;
 
 
+--
 -- Name: FUNCTION delete_space(p_slug text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.delete_space(p_slug text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.delete_space(p_slug text) TO authenticated;
 
 
+--
 -- Name: FUNCTION digest_batch(); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.digest_batch() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.digest_batch() TO service_role;
 
 
+--
 -- Name: FUNCTION dismiss_room_invite(p_id uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.dismiss_room_invite(p_id uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.dismiss_room_invite(p_id uuid) TO authenticated;
 
 
+--
 -- Name: FUNCTION edit_post(p_id uuid, p_title text, p_body text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.edit_post(p_id uuid, p_title text, p_body text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.edit_post(p_id uuid, p_title text, p_body text) TO authenticated;
 
 
+--
 -- Name: FUNCTION first_name_of(p_id uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.first_name_of(p_id uuid) FROM PUBLIC;
 
 
+--
 -- Name: FUNCTION friend_notices(); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.friend_notices() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.friend_notices() TO authenticated;
 
 
+--
 -- Name: FUNCTION get_crib(p_token text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.get_crib(p_token text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_crib(p_token text) TO anon;
 GRANT ALL ON FUNCTION public.get_crib(p_token text) TO authenticated;
 
 
+--
 -- Name: FUNCTION get_library_hour(p_token text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.get_library_hour(p_token text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_library_hour(p_token text) TO anon;
 GRANT ALL ON FUNCTION public.get_library_hour(p_token text) TO authenticated;
 
 
+--
 -- Name: FUNCTION get_miss_map(p_token text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.get_miss_map(p_token text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_miss_map(p_token text) TO anon;
 GRANT ALL ON FUNCTION public.get_miss_map(p_token text) TO authenticated;
 
 
+--
 -- Name: FUNCTION get_noticeboard(p_code text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.get_noticeboard(p_code text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_noticeboard(p_code text) TO anon;
 GRANT ALL ON FUNCTION public.get_noticeboard(p_code text) TO authenticated;
 
 
+--
 -- Name: FUNCTION get_section_paper(p_session uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.get_section_paper(p_session uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_section_paper(p_session uuid) TO authenticated;
 
 
+--
 -- Name: FUNCTION get_section_wrapped(p_token text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.get_section_wrapped(p_token text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_section_wrapped(p_token text) TO anon;
 GRANT ALL ON FUNCTION public.get_section_wrapped(p_token text) TO authenticated;
 
 
+--
 -- Name: FUNCTION get_sitting(p_token text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.get_sitting(p_token text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_sitting(p_token text) TO anon;
 GRANT ALL ON FUNCTION public.get_sitting(p_token text) TO authenticated;
 
 
+--
 -- Name: FUNCTION get_thread(p_id uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.get_thread(p_id uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_thread(p_id uuid) TO authenticated;
 
 
+--
 -- Name: FUNCTION hand_in_section_paper(p_session uuid, p_choices integer[], p_minutes integer); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.hand_in_section_paper(p_session uuid, p_choices integer[], p_minutes integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.hand_in_section_paper(p_session uuid, p_choices integer[], p_minutes integer) TO authenticated;
 
 
+--
 -- Name: FUNCTION invite_friend_to_room(p_slug text, p_user_id uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.invite_friend_to_room(p_slug text, p_user_id uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.invite_friend_to_room(p_slug text, p_user_id uuid) TO authenticated;
 
 
+--
 -- Name: FUNCTION is_owner(); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.is_owner() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.is_owner() TO authenticated;
 
 
+--
 -- Name: FUNCTION join_space(p_slug text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.join_space(p_slug text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.join_space(p_slug text) TO authenticated;
 
 
+--
 -- Name: FUNCTION leave_space(p_slug text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.leave_space(p_slug text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.leave_space(p_slug text) TO authenticated;
 
 
+--
 -- Name: FUNCTION list_page_pins(p_session uuid, p_document uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.list_page_pins(p_session uuid, p_document uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.list_page_pins(p_session uuid, p_document uuid) TO authenticated;
 
 
+--
 -- Name: FUNCTION list_threads(p_space uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.list_threads(p_space uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.list_threads(p_space uuid) TO authenticated;
 
 
+--
 -- Name: FUNCTION lookup_course(p_code text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.lookup_course(p_code text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.lookup_course(p_code text) TO anon;
 GRANT ALL ON FUNCTION public.lookup_course(p_code text) TO authenticated;
 
 
+--
 -- Name: FUNCTION moderate_post(p_id uuid, p_action text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.moderate_post(p_id uuid, p_action text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.moderate_post(p_id uuid, p_action text) TO authenticated;
 
 
+--
 -- Name: FUNCTION moderation_queue(); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.moderation_queue() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.moderation_queue() TO authenticated;
 
 
+--
 -- Name: FUNCTION my_friends(); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.my_friends() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.my_friends() TO authenticated;
 
 
+--
 -- Name: FUNCTION my_notifications(p_limit integer); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.my_notifications(p_limit integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.my_notifications(p_limit integer) TO authenticated;
 
 
+--
 -- Name: FUNCTION my_spaces(); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.my_spaces() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.my_spaces() TO authenticated;
 
 
+--
 -- Name: FUNCTION my_study_days(p_days integer, p_tz text); Type: ACL; Schema: public; Owner: -
+--
 
 GRANT ALL ON FUNCTION public.my_study_days(p_days integer, p_tz text) TO authenticated;
 
 
+--
 -- Name: FUNCTION note_pack_lineage(p_session uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.note_pack_lineage(p_session uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.note_pack_lineage(p_session uuid) TO authenticated;
 
 
+--
 -- Name: FUNCTION pin_to_answer(p_id uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.pin_to_answer(p_id uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.pin_to_answer(p_id uuid) TO authenticated;
 
 
+--
 -- Name: FUNCTION public_roadmaps(p_limit integer); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.public_roadmaps(p_limit integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.public_roadmaps(p_limit integer) TO anon;
 GRANT ALL ON FUNCTION public.public_roadmaps(p_limit integer) TO authenticated;
 
 
+--
 -- Name: FUNCTION read_notifications(p_ids uuid[]); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.read_notifications(p_ids uuid[]) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.read_notifications(p_ids uuid[]) TO authenticated;
 
 
+--
 -- Name: FUNCTION reminder_batch(); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.reminder_batch() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.reminder_batch() TO service_role;
 
 
+--
 -- Name: FUNCTION remove_friend(p_user_id uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.remove_friend(p_user_id uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.remove_friend(p_user_id uuid) TO authenticated;
 
 
+--
 -- Name: FUNCTION reply_thread(p_id uuid, p_body text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.reply_thread(p_id uuid, p_body text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.reply_thread(p_id uuid, p_body text) TO authenticated;
 
 
+--
 -- Name: FUNCTION report_error(p_source text, p_message text, p_stack text, p_path text, p_digest text, p_user_agent text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.report_error(p_source text, p_message text, p_stack text, p_path text, p_digest text, p_user_agent text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.report_error(p_source text, p_message text, p_stack text, p_path text, p_digest text, p_user_agent text) TO anon;
 GRANT ALL ON FUNCTION public.report_error(p_source text, p_message text, p_stack text, p_path text, p_digest text, p_user_agent text) TO authenticated;
 
 
+--
 -- Name: FUNCTION report_post(p_id uuid, p_reason text, p_note text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.report_post(p_id uuid, p_reason text, p_note text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.report_post(p_id uuid, p_reason text, p_note text) TO authenticated;
 
 
+--
 -- Name: FUNCTION request_friend(p_query text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.request_friend(p_query text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.request_friend(p_query text) TO authenticated;
 
 
+--
 -- Name: FUNCTION respond_friend(p_id uuid, p_accept boolean); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.respond_friend(p_id uuid, p_accept boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.respond_friend(p_id uuid, p_accept boolean) TO authenticated;
 
 
+--
 -- Name: FUNCTION review_answer(p_item uuid, p_rating text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.review_answer(p_item uuid, p_rating text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.review_answer(p_item uuid, p_rating text) TO authenticated;
 
 
+--
 -- Name: FUNCTION revoke_room_invite(p_slug text, p_user_id uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.revoke_room_invite(p_slug text, p_user_id uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.revoke_room_invite(p_slug text, p_user_id uuid) TO authenticated;
 
 
+--
 -- Name: FUNCTION roll_miss_map(p_session uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.roll_miss_map(p_session uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.roll_miss_map(p_session uuid) TO authenticated;
 
 
+--
 -- Name: FUNCTION roll_section_crib(p_session uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.roll_section_crib(p_session uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.roll_section_crib(p_session uuid) TO authenticated;
 
 
+--
 -- Name: FUNCTION roll_section_wrapped(p_session uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.roll_section_wrapped(p_session uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.roll_section_wrapped(p_session uuid) TO authenticated;
 
 
+--
 -- Name: FUNCTION room_friends(p_slug text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.room_friends(p_slug text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.room_friends(p_slug text) TO authenticated;
 
 
+--
 -- Name: FUNCTION rotate_calendar_token(); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.rotate_calendar_token() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.rotate_calendar_token() TO authenticated;
 
 
+--
 -- Name: FUNCTION save_page_pin(p_session uuid, p_document uuid, p_page integer, p_quote text, p_question text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.save_page_pin(p_session uuid, p_document uuid, p_page integer, p_quote text, p_question text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.save_page_pin(p_session uuid, p_document uuid, p_page integer, p_quote text, p_question text) TO authenticated;
 
 
+--
 -- Name: FUNCTION save_section_lines(p_session uuid, p_lines text[]); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.save_section_lines(p_session uuid, p_lines text[]) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.save_section_lines(p_session uuid, p_lines text[]) TO authenticated;
 
 
+--
 -- Name: FUNCTION save_sitting(p_session uuid, p_score numeric, p_out_of integer, p_minutes integer, p_topics text[], p_show_name boolean); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.save_sitting(p_session uuid, p_score numeric, p_out_of integer, p_minutes integer, p_topics text[], p_show_name boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.save_sitting(p_session uuid, p_score numeric, p_out_of integer, p_minutes integer, p_topics text[], p_show_name boolean) TO authenticated;
 
 
+--
 -- Name: FUNCTION section_scope(p_slug text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.section_scope(p_slug text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.section_scope(p_slug text) TO anon;
 GRANT ALL ON FUNCTION public.section_scope(p_slug text) TO authenticated;
 
 
+--
 -- Name: FUNCTION set_course_code(p_session uuid, p_code text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.set_course_code(p_session uuid, p_code text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.set_course_code(p_session uuid, p_code text) TO authenticated;
 
 
+--
 -- Name: FUNCTION set_feedback_status(p_id bigint, p_status text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.set_feedback_status(p_id bigint, p_status text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.set_feedback_status(p_id bigint, p_status text) TO authenticated;
 
 
+--
 -- Name: FUNCTION set_friend_presence(p_slug text, p_voice boolean); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.set_friend_presence(p_slug text, p_voice boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.set_friend_presence(p_slug text, p_voice boolean) TO authenticated;
 
 
+--
 -- Name: FUNCTION set_noticeboard_plan(p_code text, p_plan jsonb); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.set_noticeboard_plan(p_code text, p_plan jsonb) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.set_noticeboard_plan(p_code text, p_plan jsonb) TO authenticated;
 
 
+--
 -- Name: FUNCTION set_pin_answer(p_id uuid, p_answer text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.set_pin_answer(p_id uuid, p_answer text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.set_pin_answer(p_id uuid, p_answer text) TO authenticated;
 
 
+--
 -- Name: FUNCTION space_state(p_slug text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.space_state(p_slug text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.space_state(p_slug text) TO authenticated;
 
 
+--
 -- Name: FUNCTION store_section_paper(p_session uuid, p_questions jsonb); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.store_section_paper(p_session uuid, p_questions jsonb) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.store_section_paper(p_session uuid, p_questions jsonb) TO authenticated;
 
 
+--
 -- Name: FUNCTION take_s2_slot(); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.take_s2_slot() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.take_s2_slot() TO anon;
 GRANT ALL ON FUNCTION public.take_s2_slot() TO authenticated;
 
 
+--
 -- Name: FUNCTION toggle_vote(p_id uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.toggle_vote(p_id uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.toggle_vote(p_id uuid) TO authenticated;
 
 
+--
 -- Name: FUNCTION track_events(p_events jsonb, p_anon text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.track_events(p_events jsonb, p_anon text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.track_events(p_events jsonb, p_anon text) TO anon;
 GRANT ALL ON FUNCTION public.track_events(p_events jsonb, p_anon text) TO authenticated;
 
 
+--
 -- Name: FUNCTION use_trial(kind text); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.use_trial(kind text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.use_trial(kind text) TO authenticated;
 
 
+--
 -- Name: FUNCTION withdraw_section_paper(p_session uuid); Type: ACL; Schema: public; Owner: -
+--
 
 REVOKE ALL ON FUNCTION public.withdraw_section_paper(p_session uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.withdraw_section_paper(p_session uuid) TO authenticated;
 
 
+--
 -- Name: TABLE ai_keys; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.ai_keys TO authenticated;
 
 
+--
 -- Name: TABLE answer_feedback; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT SELECT ON TABLE public.answer_feedback TO authenticated;
 
 
+--
 -- Name: COLUMN answer_feedback.session_id; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT INSERT(session_id) ON TABLE public.answer_feedback TO authenticated;
 
 
+--
 -- Name: COLUMN answer_feedback.rating; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT INSERT(rating) ON TABLE public.answer_feedback TO authenticated;
 
 
+--
 -- Name: COLUMN answer_feedback.comment; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT INSERT(comment) ON TABLE public.answer_feedback TO authenticated;
 
 
+--
 -- Name: COLUMN answer_feedback.correction; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT INSERT(correction) ON TABLE public.answer_feedback TO authenticated;
 
 
+--
 -- Name: COLUMN answer_feedback.answer; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT INSERT(answer) ON TABLE public.answer_feedback TO authenticated;
 
 
+--
 -- Name: COLUMN answer_feedback.path; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT INSERT(path) ON TABLE public.answer_feedback TO authenticated;
 
 
+--
 -- Name: TABLE feedback; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT SELECT ON TABLE public.feedback TO authenticated;
 
 
+--
 -- Name: COLUMN feedback.kind; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT INSERT(kind) ON TABLE public.feedback TO authenticated;
 
 
+--
 -- Name: COLUMN feedback.message; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT INSERT(message) ON TABLE public.feedback TO authenticated;
 
 
+--
 -- Name: COLUMN feedback.path; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT INSERT(path) ON TABLE public.feedback TO authenticated;
 
 
+--
 -- Name: COLUMN feedback.user_agent; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT INSERT(user_agent) ON TABLE public.feedback TO authenticated;
 
 
+--
 -- Name: TABLE notifications; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT SELECT ON TABLE public.notifications TO authenticated;
 
 
+--
 -- Name: COLUMN profiles.full_name; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT UPDATE(full_name) ON TABLE public.profiles TO authenticated;
 
 
+--
 -- Name: COLUMN profiles.onboarded_at; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT UPDATE(onboarded_at) ON TABLE public.profiles TO authenticated;
 
 
+--
 -- Name: COLUMN profiles.heard_from; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT UPDATE(heard_from) ON TABLE public.profiles TO authenticated;
 
 
+--
 -- Name: COLUMN profiles.occupation; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT UPDATE(occupation) ON TABLE public.profiles TO authenticated;
 
 
+--
 -- Name: COLUMN profiles.purpose; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT UPDATE(purpose) ON TABLE public.profiles TO authenticated;
 
 
+--
 -- Name: COLUMN profiles.purpose_detail; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT UPDATE(purpose_detail) ON TABLE public.profiles TO authenticated;
 
 
+--
 -- Name: COLUMN profiles.timezone; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT UPDATE(timezone) ON TABLE public.profiles TO authenticated;
 
 
+--
 -- Name: COLUMN profiles.email_digest; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT UPDATE(email_digest) ON TABLE public.profiles TO authenticated;
 
 
+--
 -- Name: COLUMN profiles.email_reminders; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT UPDATE(email_reminders) ON TABLE public.profiles TO authenticated;
 
 
+--
 -- Name: COLUMN profiles.push_reminders; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT UPDATE(push_reminders) ON TABLE public.profiles TO authenticated;
 
 
+--
 -- Name: TABLE saved_answers; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT SELECT,DELETE ON TABLE public.saved_answers TO authenticated;
 
 
+--
 -- Name: COLUMN saved_answers.session_id; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT INSERT(session_id) ON TABLE public.saved_answers TO authenticated;
 
 
+--
 -- Name: COLUMN saved_answers.question; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT INSERT(question) ON TABLE public.saved_answers TO authenticated;
 
 
+--
 -- Name: COLUMN saved_answers.answer; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT INSERT(answer) ON TABLE public.saved_answers TO authenticated;
 
 
+--
 -- Name: COLUMN saved_answers.page_number; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT INSERT(page_number) ON TABLE public.saved_answers TO authenticated;
 
 
+--
 -- Name: COLUMN saved_answers.document_id; Type: ACL; Schema: public; Owner: -
+--
 
 GRANT INSERT(document_id) ON TABLE public.saved_answers TO authenticated;
 
 
+--
+--
 
 
 
@@ -7519,7 +8707,6 @@ create policy "delete own files" on storage.objects
 
 alter table storage.objects enable row level security;
 
--- Live notifications, when Supabase Realtime is installed.
 -- Live delivery (Supabase Realtime), when the publication exists.
 do $$
 begin

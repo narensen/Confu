@@ -38,7 +38,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin">["se
       <div className="animate-enter rounded-xl border border-danger/50 bg-panel px-6 py-8">
         <p className="font-serif text-2xl">Insights aren&apos;t set up yet</p>
         <p className="mt-2 text-sm text-muted">
-          Run <code className="font-mono">supabase/migrations/0018_insights.sql</code> in the Supabase SQL editor, then refresh.
+          On a new project, run <code className="font-mono">supabase/schema.sql</code> once and refresh. An existing database should not run that file again.
         </p>
         {error && <p className="mt-3 font-mono text-xs text-danger">{error.message}</p>}
       </div>

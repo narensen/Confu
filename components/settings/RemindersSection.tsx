@@ -72,7 +72,7 @@ export function RemindersSection() {
   if (missing) {
     return (
       <Section id="reminders" title="Reminders & calendar">
-        <Row label="Not set up yet" hint="Run supabase/migrations/0020_habit.sql in Supabase to turn on reminders, notifications and the calendar feed." />
+        <Row label="Not set up yet" hint="A new project runs supabase/schema.sql once to turn on reminders, notifications and the calendar feed." />
       </Section>
     );
   }
