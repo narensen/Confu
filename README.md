@@ -1,8 +1,57 @@
-# Confu
+<p align="center">
+  <img src="public/icons/icon-512.png" width="88" alt="Confu" />
+</p>
 
-A free, open-source AI tutor that works from your own material. Study toward a goal with a phased plan, prepare for an exam with practice questions written from your notes, or read research papers in three passes. It's grounded in your PDFs and remembers your progress.
+<h1 align="center">Confu</h1>
 
-Confu is released under the [MIT License](LICENSE). Anyone may use it, change it, and share it, including to run it for a class or a campus. `private` in `package.json` only keeps this app off the npm registry. The fonts in `public/fonts` stay under the SIL Open Font License (`public/fonts/OFL.txt`).
+<p align="center">
+  A free, open-source AI tutor that works from your own notes, textbooks and papers.<br />
+  It plans what to learn, answers the line you highlight, and remembers your progress.
+</p>
+
+<p align="center">
+  <a href="https://confu.lol"><img src="public/readme/open.png" height="44" alt="Open Confu" /></a>
+  &nbsp;&nbsp;
+  <a href="#see-it"><img src="public/readme/watch.png" height="44" alt="Watch the demo" /></a>
+  &nbsp;&nbsp;
+  <a href="LICENSE"><img src="public/readme/license.png" height="44" alt="MIT License" /></a>
+</p>
+
+<p align="center">
+  <sub>Anyone may use it, change it, and share it, including to run it for a class or a campus. <code>private</code> in <code>package.json</code> only keeps this app off the npm registry. The fonts in <code>public/fonts</code> stay under the SIL Open Font License (<code>public/fonts/OFL.txt</code>).</sub>
+</p>
+
+## See it
+
+The real workspace, then the three short films from the site. Click a still to play.
+
+<p align="center">
+  <a href="public/demo/confu-demo.mp4">
+    <img src="public/demo/confu-demo-poster.jpg" width="820" alt="Confu workspace: a highlighted passage on the right, and a tutor answer on the left that cites page 2." />
+  </a>
+</p>
+
+<p align="center"><sub>Highlight a line. Ask. The answer cites the page, and the page opens.</sub></p>
+
+<table>
+  <tr>
+    <td align="center" width="33%">
+      <a href="public/reels/stop-highlighting.mp4"><img src="public/reels/stop-highlighting.jpg" width="220" alt="Stop highlighting your notes." /></a>
+      <br /><b>Stop highlighting</b>
+      <br /><sub>Asking beats rereading.</sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="public/reels/start.mp4"><img src="public/reels/start.jpg" width="220" alt="You just opened a 700-page textbook." /></a>
+      <br /><b>Know where to start</b>
+      <br /><sub>A goal becomes a plan.</sub>
+    </td>
+    <td align="center" width="33%">
+      <a href="public/reels/forget.mp4"><img src="public/reels/forget.jpg" width="220" alt="By next week you'll forget most of what you studied today." /></a>
+      <br /><b>Forget less</b>
+      <br /><sub>Finished topics come back.</sub>
+    </td>
+  </tr>
+</table>
 
 ## Setup
 
