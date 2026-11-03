@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import { AdminDashboard, type Insights } from "@/components/admin/AdminDashboard";
 import type { AnswerNote } from "@/components/admin/AnswerFeedback";
 import { getCurrentRole, requireUser } from "@/lib/dal";
-import { isOwner } from "@/lib/plans";
+import { isOwner } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Insights · Confu" };
@@ -29,9 +29,8 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin">["se
   const days = (RANGES as readonly number[]).includes(requested) ? requested : 30;
 
   const supabase = await createClient();
-  const [{ data, error }, billing, answerNotes] = await Promise.all([
+  const [{ data, error }, answerNotes] = await Promise.all([
     supabase.rpc("admin_insights", { p_days: days }),
-    supabase.rpc("billing_summary"),
     supabase.rpc("admin_answer_feedback"),
   ]);
   if (error || !data) {
@@ -45,35 +44,14 @@ async function Content({ searchParams }: { searchParams: PageProps<"/admin">["se
       </div>
     );
   }
-  const b = billing.data as { active: number; india: number; cancelling: number; invited_pro: number; referrals: number } | null;
   return (
-    <>
-      {b && (
-        <section aria-label="Pro" className="animate-enter mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {(
-            [
-              [b.active, "paying Pro subscribers", `${b.india} in India`],
-              [b.cancelling, "cancelled, still active", "until their paid month ends"],
-              [b.invited_pro, "on Pro from invites", "right now"],
-              [b.referrals, "accounts joined by invite", "all time"],
-            ] as const
-          ).map(([value, label, note]) => (
-            <div key={label} className="rounded-xl border border-ink bg-panel p-4">
-              <p className="font-sans text-3xl font-semibold">{value}</p>
-              <p className="mt-0.5 text-sm">{label}</p>
-              <p className="text-xs text-muted">{note}</p>
-            </div>
-          ))}
-        </section>
-      )}
-      <AdminDashboard
-        data={data as Insights}
-        days={days}
-        ranges={[...RANGES]}
-        answers={Array.isArray(answerNotes.data) ? (answerNotes.data as AnswerNote[]) : []}
-        answersMissing={Boolean(answerNotes.error)}
-      />
-    </>
+    <AdminDashboard
+      data={data as Insights}
+      days={days}
+      ranges={[...RANGES]}
+      answers={Array.isArray(answerNotes.data) ? (answerNotes.data as AnswerNote[]) : []}
+      answersMissing={Boolean(answerNotes.error)}
+    />
   );
 }
 

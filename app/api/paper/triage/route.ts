@@ -1,6 +1,6 @@
 import { after } from "next/server";
 import { z } from "zod";
-import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
+import { aiErrorResponse, resolveAi } from "@/lib/ai-access";
 import { createClient } from "@/lib/supabase/server";
 import { triagePapers } from "@/lib/tutor/paper-ai";
 import { logError } from "@/lib/log";
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   if (!parsed.success) return Response.json({ error: "Describe your research goal first (at least a sentence)." }, { status: 400 });
   const { sessionId, researchGoal, documentIds } = parsed.data;
 
-  const access = await resolveGroq(supabase, userId, sessionId, "triage");
+  const access = await resolveAi(supabase, userId, sessionId, "triage");
   if ("error" in access) return access.error;
   after(() => access.meter.flush());
 
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     }
     return Response.json({ results: results.map((r) => ({ documentId: r.paper.id, pass: r.pass, reason: r.reason })) });
   } catch (err) {
-    if ((err as { status?: number })?.status) return groqErrorResponse(err, "Couldn't triage the papers. Try again.");
+    if ((err as { status?: number })?.status) return aiErrorResponse(err, "Couldn't triage the papers. Try again.");
     logError("triage failed", err);
     return Response.json({ error: "Couldn't triage the papers. Try again." }, { status: 502 });
   }

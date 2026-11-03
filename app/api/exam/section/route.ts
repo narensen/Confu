@@ -1,6 +1,6 @@
 import { after } from "next/server";
 import { z } from "zod";
-import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
+import { aiErrorResponse, resolveAi } from "@/lib/ai-access";
 import { createClient } from "@/lib/supabase/server";
 import { generateSectionPaper, publicSectionQuestion, type SectionQuestion } from "@/lib/tutor/exam-ai";
 
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   const saved = await supabase.rpc("save_section_lines", { p_session: sessionId, p_lines: lines });
   if (saved.error) return Response.json({ error: saved.error.message }, { status: 400 });
 
-  const access = await resolveGroq(supabase, userId, sessionId, "quiz");
+  const access = await resolveAi(supabase, userId, sessionId, "quiz");
   if ("error" in access) return access.error;
   after(() => access.meter.flush());
 
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
   try {
     made = await generateSectionPaper(supabase, access.groq, { sessionId, lines });
   } catch (err) {
-    if ((err as { status?: number })?.status) return groqErrorResponse(err, "Couldn't make questions. Try again.");
+    if ((err as { status?: number })?.status) return aiErrorResponse(err, "Couldn't make questions. Try again.");
     const message = err instanceof Error ? err.message : "Couldn't make questions this time. Try again.";
     return Response.json({ error: message }, { status: 502 });
   }

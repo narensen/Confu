@@ -1,9 +1,5 @@
-// Shared between client and server.
+// Shared between client and server: why an AI request couldn't run.
 export const KEY_ERRORS = {
-  required: "GROQ_KEY_REQUIRED",
-  invalid: "GROQ_KEY_INVALID",
+  required: "AI_KEY_REQUIRED", // no AI connected (and no free prompts left)
+  invalid: "AI_KEY_INVALID", // the provider rejected the saved key
 } as const;
-
-export function looksLikeGroqKey(key: string) {
-  return /^gsk_[A-Za-z0-9]{20,}$/.test(key);
-}

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Markdown } from "@/components/workspace/Markdown";
-import { GroqKeyForm } from "@/components/keys/GroqKeyForm";
+import { KeyForm } from "@/components/keys/KeyForm";
 import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
 import { JSON_HEADERS } from "@/lib/ai-errors";
 import { countdownLabel, daysUntil, type ExamQuestion, type QuestionKind } from "@/lib/exam";
@@ -98,9 +98,11 @@ export function PracticePanel({ practice, docs, examDate, onExamDate, onJump, on
           <SectionPaper sessionId={practice.sessionId} docs={docs} onJump={onJump} />
           {showKey && (
             <div className="rounded-lg border border-ink bg-yellow-50 p-4">
-              <p className="text-sm leading-relaxed">The section paper does not use a prompt. Your own questions do. Add the free Groq key now.</p>
+              <p className="text-sm leading-relaxed">
+                The section paper does not use a prompt. Your own questions do. Connect your AI now: Groq&apos;s free tier is enough.
+              </p>
               <div className="mt-3">
-                <GroqKeyForm sessionId={practice.sessionId} onSaved={() => setKeyAdded(true)} />
+                <KeyForm sessionId={practice.sessionId} allowScopeChoice next={`/session/${practice.sessionId}`} onSaved={() => setKeyAdded(true)} />
               </div>
             </div>
           )}

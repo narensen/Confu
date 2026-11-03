@@ -1,13 +1,15 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-// Meters every Groq request a route makes: tokens used (also for streamed
-// answers), the limits Groq reports in its headers, and the daily token limit
-// Groq reveals when it's hit. Plugged into the Groq client as its `fetch`, so
-// call sites don't change. Call flush() once the route's work is done.
+// Meters every AI request a route makes: tokens used (also for streamed
+// answers), the limits a provider reports in its headers (Groq, OpenAI), and
+// the daily token limit Groq reveals when it's hit. Plugged into the client
+// as its `fetch`, so call sites don't change. Call flush() once the route's
+// work is done.
 
-// 'pro': Pro/owner usage on Confu's key pool. 'key:<id>': a user's own key.
-export type KeyRef = "pro" | "trial" | `key:${string}`;
+// 'server': the owner on the server's keys. 'trial': free prompts on them.
+// 'key:<id>': a student's own key. (Older rows also have 'pro'.)
+export type KeyRef = "server" | "trial" | `key:${string}`;
 export type Feature = "chat" | "plan" | "figure" | "quiz" | "grade" | "triage" | "pass1" | "probe" | "ocr" | "recommend" | "related" | "compare";
 
 type Usage = { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
@@ -68,9 +70,9 @@ export function createMeter(
     sessionId: string | null;
     keyRef: KeyRef;
     feature: Feature;
-    // The fetch to observe (e.g. the key pool's); defaults to the global fetch.
+    // The fetch to observe (the key pool's, or a provider's); defaults to the global fetch.
     baseFetch?: typeof fetch;
-    // Per-key limits only mean something for a user's own key, not the pool.
+    // Per-key limits only mean something for a student's own key, not the pool.
     trackQuota?: boolean;
   },
 ) {

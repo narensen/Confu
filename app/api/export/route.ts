@@ -27,7 +27,7 @@ export async function GET() {
     table("messages", "id, session_id, document_id, role, action, content, page_number, created_at"),
     table("paper_reviews"),
     table("exam_attempts"),
-    table("groq_keys", "session_id, last4, created_at"),
+    table("ai_keys", "session_id, provider, last4, via, base_url, chat_model, fast_model, vision_model, created_at"),
     table("ai_usage", "session_id, model, feature, prompt_tokens, completion_tokens, total_tokens, created_at"),
     table("feedback", "kind, message, path, status, created_at"),
     table("answer_feedback", "rating, comment, correction, answer, path, created_at"),

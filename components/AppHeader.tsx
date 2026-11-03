@@ -5,8 +5,10 @@ import { Guide } from "@/components/onboarding/Guide";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { PrimaryNav } from "@/components/PrimaryNav";
 import { RoomStatus } from "@/components/rooms/RoomStatus";
-import { getKeyInfo } from "@/lib/groq-keys";
-import { isOwner, planOf } from "@/lib/plans";
+import { serverKeysReady } from "@/lib/ai-access";
+import { keyLabel, PROVIDERS } from "@/lib/ai/providers";
+import { getKeyInfo } from "@/lib/ai-keys";
+import { isOwner } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentRole, getFirstTime, getUser } from "@/lib/dal";
 
@@ -23,16 +25,22 @@ async function UserMenu({ workspace }: { workspace: boolean }) {
   if (!user) return null;
   const supabase = await createClient();
   const [role, firstTime, key] = await Promise.all([getCurrentRole(), getFirstTime(), getKeyInfo(supabase, user.id, null)]);
+  const owner = isOwner(role);
   return (
     <div className="animate-fade flex shrink-0 items-center gap-1.5">
       {/* No button: opens by itself for new accounts, or from Settings. */}
-      <Guide userId={user.id} firstTime={firstTime} needsKey={planOf(role) !== "pro"} />
+      <Guide userId={user.id} firstTime={firstTime} needsKey={!(owner && serverKeysReady())} />
       {workspace && <PrimaryNav variant="icons" />}
       {/* The room you're in, with its timer (and its voice, if you're talking). */}
       <RoomStatus />
       <div className="flex shrink-0 items-center gap-2 border-l border-line pl-2.5">
         <NotificationBell userId={user.id} />
-        <AccountMenu name={user.name} email={user.email} plan={planOf(role)} owner={isOwner(role)} keyLast4={key?.last4 ?? null} />
+        <AccountMenu
+          name={user.name}
+          email={user.email}
+          owner={owner}
+          ai={key ? { provider: PROVIDERS[key.provider].name, label: keyLabel(key.provider, key.last4, key.via) } : null}
+        />
       </div>
     </div>
   );

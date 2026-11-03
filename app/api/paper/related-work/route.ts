@@ -1,6 +1,6 @@
 import { after } from "next/server";
 import { z } from "zod";
-import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
+import { aiErrorResponse, resolveAi } from "@/lib/ai-access";
 import { logError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import { draftRelatedWork, loadToolPapers } from "@/lib/tutor/paper-tools";
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   if (!parsed.success || parsed.data.keys.length !== parsed.data.docIds.length) return Response.json({ error: "Pick at least two papers." }, { status: 400 });
   const { sessionId, docIds, keys, goal } = parsed.data;
 
-  const access = await resolveGroq(supabase, userId, sessionId, "related");
+  const access = await resolveAi(supabase, userId, sessionId, "related");
   if ("error" in access) return access.error;
   after(() => access.meter.flush());
 
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     const markdown = await draftRelatedWork(access.groq, papers, papers.map((p) => keyOf.get(p.id)!), goal);
     return Response.json({ markdown, withNotes: papers.filter((p) => p.notes).length });
   } catch (err) {
-    if ((err as { status?: number })?.status) return groqErrorResponse(err, "Couldn't draft it. Try again.");
+    if ((err as { status?: number })?.status) return aiErrorResponse(err, "Couldn't draft it. Try again.");
     logError("related work failed", err);
     return Response.json({ error: "Couldn't draft it. Try again." }, { status: 502 });
   }

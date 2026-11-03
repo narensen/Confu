@@ -10,9 +10,6 @@ import { buttonClass, eyebrowClass, ghostButtonClass } from "@/components/ui";
 import { getUser } from "@/lib/dal";
 import { Reels } from "@/components/landing/Reels";
 import { SiteFooter } from "@/components/site/SiteNav";
-import { currentRegion } from "@/lib/billing";
-import { PLANS } from "@/lib/plans";
-import { PRICES } from "@/lib/pricing";
 import { TEMPLATES } from "@/lib/templates";
 
 export const metadata: Metadata = {
@@ -102,15 +99,15 @@ const STEPS = [
 const FAQ: { q: string; a: ReactNode }[] = [
   {
     q: "Is Confu free?",
-    a: "Yes. Every account starts with 10 free prompts on our keys, no setup. After that, Free runs on your own Groq API key, and Groq has a free tier, so you still don't pay anyone. Pro keeps running on our keys for ₹299 a month in India, $6 elsewhere.",
+    a: "Yes. Confu is free and open source, with every feature for everyone. The AI runs on an account you bring, so you pay your AI provider directly at their prices, or nothing at all on a free tier like Groq's. New accounts can try a few prompts first, without setting anything up.",
   },
   {
-    q: "Why do I need a Groq API key?",
-    a: "On Free, it keeps Confu free and makes the AI's usage yours: you can see exactly how much you've used and what's left in Settings. Getting a key takes a minute at console.groq.com. On Pro you don't need one.",
+    q: "Which AI can I use?",
+    a: "Connect your OpenRouter account in one click (hundreds of models, paid from your OpenRouter credits), or paste an API key from Groq, OpenAI, Anthropic, Google Gemini or any OpenAI-compatible server, like Ollama or LM Studio. You choose which model does what in Settings.",
   },
   {
-    q: "What's Pro?",
-    a: "The same Confu, running on our own Groq keys: no API key, no setup, with a generous daily allowance you can see in your account menu. It's ₹299 a month in India and $6 elsewhere, cancel anytime. Invite friends and you each get a free week.",
+    q: "Why bring my own AI?",
+    a: "It keeps Confu free for everyone, and it makes the AI's usage yours: you pick the model, see what you've used in Settings, and pay your provider directly, with no markup from us. Groq has a free tier, and getting a key takes a minute at console.groq.com.",
   },
   {
     q: "How much can I do on Groq's free tier?",
@@ -120,7 +117,7 @@ const FAQ: { q: string; a: ReactNode }[] = [
     q: "What happens to my API key?",
     a: (
       <>
-        It&apos;s checked with Groq, encrypted before it&apos;s stored, and used only to run the requests you make in Confu. It&apos;s
+        It&apos;s checked with your provider, encrypted before it&apos;s stored, and used only to run the requests you make in Confu. It&apos;s
         never shared, sold or logged, and you can remove it any time. Details are in the{" "}
         <Link href="/privacy" className="underline underline-offset-4">
           privacy policy
@@ -163,9 +160,9 @@ export default function Home() {
             <Link href="/templates" className="transition hover:text-ink">
               Templates
             </Link>
-            <Link href="/pricing" className="transition hover:text-ink">
-              Pricing
-            </Link>
+            <a href="#ai" className="transition hover:text-ink">
+              Your AI
+            </a>
             <a href="#faq" className="transition hover:text-ink">
               FAQ
             </a>
@@ -391,7 +388,7 @@ export default function Home() {
           <ul data-slide-group className="space-y-px overflow-hidden rounded-2xl border border-ink bg-ink">
             {[
               ["Grounded, and honest about limits", "Answers cite the page they came from. When something isn't in your material, it says so. AI can still be wrong, so check what matters."],
-              ["Your key is yours", "Your Groq key is encrypted, used only for your requests, and never shared, sold or logged."],
+              ["Your key is yours", "Your API key or OpenRouter connection is encrypted, used only for your requests, and never shared, sold or logged."],
               ["No ads, no tracking", "No advertising, no analytics cookies, and we don't train AI models on your notes."],
               ["Your data, your call", "Delete a session and its files, notes and conversations go with it. Export everything, or delete your account, from Settings."],
             ].map(([title, body]) => (
@@ -404,69 +401,72 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Plans */}
-      <section id="plans" className="scroll-mt-16 border-b border-ink bg-paper">
+      {/* Bring your own AI */}
+      <section id="ai" className="scroll-mt-16 border-b border-ink bg-paper">
         <div className="mx-auto max-w-6xl px-6 py-24">
           <div className="max-w-2xl">
             <p data-reveal className={eyebrowClass}>
-              Plans
+              Free and open source
             </p>
-            <h2 data-split className="mt-2 font-serif text-4xl leading-tight tracking-tight sm:text-5xl">Start free. Skip the setup with Pro.</h2>
+            <h2 data-split className="mt-2 font-serif text-4xl leading-tight tracking-tight sm:text-5xl">Every feature, for everyone. Bring your own AI.</h2>
             <p data-reveal className="mt-4 text-lg leading-relaxed text-muted">
-              Every feature is in both. The only difference is whose AI key does the work.
+              There are no plans. Confu runs on an AI account you already have, so you choose the model and pay your provider directly, or
+              nothing on a free tier.
             </p>
           </div>
           <div data-reveal-group className="mt-14 grid gap-6 md:grid-cols-2">
-            {(["free", "pro"] as const).map((p) => (
-              <article
-                key={p}
-                data-reveal-item
-                className={`flex flex-col rounded-2xl border border-ink p-8 ${p === "pro" ? "surface-inverse" : "bg-panel"}`}
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="font-serif text-4xl">
-                    {PLANS[p].name}
-                    {p === "pro" && <span className="text-yellow-400">.</span>}
-                  </h3>
-                  {p === "pro" ? (
-                    <Suspense fallback={<span className="h-7 w-24" />}>
-                      <ProPriceBadge />
-                    </Suspense>
-                  ) : (
-                    <span className="rounded-full border border-ink/30 px-3 py-1 font-mono text-[11px] text-muted uppercase">Free forever</span>
-                  )}
-                </div>
-                <p className={`mt-3 text-lg ${p === "pro" ? "text-white/70" : "text-muted"}`}>{PLANS[p].tagline}</p>
-                <ul className="mt-8 flex-1 space-y-3 text-sm">
-                  {PLANS[p].features.map((f) => (
-                    <li key={f} className="flex gap-3">
-                      <svg viewBox="0 0 16 16" aria-hidden className={`mt-0.5 size-4 shrink-0 ${p === "pro" ? "text-yellow-300" : ""}`}>
-                        <path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                {p === "pro" ? (
-                  <div className="mt-10">
-                    <Link
-                      href="/pricing"
-                      className="inline-flex items-center gap-2 rounded-lg border border-white bg-white px-5 py-2.5 text-sm font-medium text-ink transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[3px_3px_0_0_#facc15] active:translate-y-0"
-                    >
-                      Get Pro →
-                    </Link>
-                    <p className="mt-3 text-xs text-white/50">Cancel anytime. Or invite friends: you each get a free week.</p>
-                  </div>
-                ) : (
-                  <div className="mt-10">
-                    <Link href="/signup" className={`${buttonClass} px-5 py-2.5`}>
-                      Create your free account
-                    </Link>
-                    <p className="mt-3 text-xs text-muted">Starts with 10 free prompts. After that, add a free Groq API key.</p>
-                  </div>
-                )}
-              </article>
-            ))}
+            <article data-reveal-item className="surface-inverse flex flex-col rounded-2xl border border-ink p-8">
+              <p className="font-mono text-[11px] tracking-widest text-white/60 uppercase">Your subscription</p>
+              <h3 className="mt-2 font-serif text-4xl">
+                Connect OpenRouter<span className="text-yellow-400">.</span>
+              </h3>
+              <p className="mt-3 text-lg text-white/70">One click, no key to copy.</p>
+              <ul className="mt-8 flex-1 space-y-3 text-sm">
+                {[
+                  "Sign in on openrouter.ai and approve Confu",
+                  "Runs on your OpenRouter credits, at their prices",
+                  "Hundreds of models: GPT, Claude, Gemini, Llama and more",
+                  "Set a spending limit when you connect",
+                ].map((f) => (
+                  <li key={f} className="flex gap-3">
+                    <Check className="text-yellow-300" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-10">
+                <Link
+                  href="/signup"
+                  className="inline-flex items-center gap-2 rounded-lg border border-white bg-white px-5 py-2.5 text-sm font-medium text-ink transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[3px_3px_0_0_#facc15] active:translate-y-0"
+                >
+                  Create your free account →
+                </Link>
+              </div>
+            </article>
+            <article data-reveal-item className="flex flex-col rounded-2xl border border-ink bg-panel p-8">
+              <p className="font-mono text-[11px] tracking-widest text-muted uppercase">Your key</p>
+              <h3 className="mt-2 font-serif text-4xl">Or paste an API key</h3>
+              <p className="mt-3 text-lg text-muted">From the provider you already use.</p>
+              <ul className="mt-8 flex-1 space-y-3 text-sm">
+                {[
+                  "Groq, with a free tier",
+                  "OpenAI, Anthropic or Google Gemini",
+                  "Any OpenAI-compatible server: Ollama, LM Studio, vLLM, DeepSeek…",
+                  "Pick which model tutors, takes notes and reads figures",
+                ].map((f) => (
+                  <li key={f} className="flex gap-3">
+                    <Check />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-10">
+                <Link href="/signup" className={`${buttonClass} px-5 py-2.5`}>
+                  Get started
+                </Link>
+                <p className="mt-3 text-xs text-muted">Keys are checked with the provider, then encrypted. Only the last four characters are ever shown.</p>
+              </div>
+            </article>
           </div>
         </div>
       </section>
@@ -575,11 +575,10 @@ async function FinalAction() {
   );
 }
 
-async function ProPriceBadge() {
-  const price = PRICES[await currentRegion()];
+function Check({ className = "" }: { className?: string }) {
   return (
-    <span className="rounded-full bg-yellow-300 px-3 py-1 font-mono text-[11px] text-ink uppercase">
-      {price.amount}/{price.per === "month" ? "mo" : price.per}
-    </span>
+    <svg viewBox="0 0 16 16" aria-hidden className={`mt-0.5 size-4 shrink-0 ${className}`}>
+      <path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }

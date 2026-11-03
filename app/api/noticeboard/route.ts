@@ -1,6 +1,6 @@
 import { after } from "next/server";
 import { z } from "zod";
-import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
+import { aiErrorResponse, resolveAi } from "@/lib/ai-access";
 import { MODELS, modelBudget, parseJsonObject } from "@/lib/groq";
 import type { PackPlan, PackTopic } from "@/lib/packs";
 import { createClient } from "@/lib/supabase/server";
@@ -44,7 +44,7 @@ const PlanJson = z.object({
 });
 
 // Create a door card, or spend one plan call on titles and URLs the owner wrote.
-// GET is the public page. It does not come through here and it does not call Groq.
+// GET is the public page. It does not come through here and it does not call the AI.
 export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();
@@ -71,7 +71,7 @@ async function writePlan(supabase: Awaited<ReturnType<typeof createClient>>, use
   const card = data as { title?: string; kind?: string; items?: { title: string; url: string; kind: string; license: string }[] } | null;
   if (error || !card?.items?.length) return Response.json({ error: error?.message ?? "That card wasn't found." }, { status: 404 });
 
-  const access = await resolveGroq(supabase, userId, null, "plan");
+  const access = await resolveAi(supabase, userId, null, "plan");
   if ("error" in access) return access.error;
   after(() => access.meter.flush());
 
@@ -127,6 +127,6 @@ Return ONLY JSON: {"goal":"","goal_title":"","goal_summary":"","materials":"","o
     if (saved.error) return Response.json({ error: saved.error.message }, { status: 400 });
     return Response.json({ ok: true });
   } catch (err) {
-    return groqErrorResponse(err, "Couldn't write a plan. Try again.");
+    return aiErrorResponse(err, "Couldn't write a plan. Try again.");
   }
 }

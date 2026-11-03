@@ -1,6 +1,6 @@
 import { after } from "next/server";
 import { z } from "zod";
-import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
+import { aiErrorResponse, resolveAi } from "@/lib/ai-access";
 import { createClient } from "@/lib/supabase/server";
 import { generateQuiz } from "@/lib/tutor/exam-ai";
 
@@ -24,14 +24,14 @@ export async function POST(request: Request) {
   if (!parsed.success) return Response.json({ error: "Invalid request" }, { status: 400 });
   const { sessionId, documentId = null, topics, count, mix } = parsed.data;
 
-  const access = await resolveGroq(supabase, userId, sessionId, "quiz");
+  const access = await resolveAi(supabase, userId, sessionId, "quiz");
   if ("error" in access) return access.error;
   after(() => access.meter.flush());
 
   try {
     return Response.json({ questions: await generateQuiz(supabase, access.groq, { sessionId, documentId, topics, count, mix }) });
   } catch (err) {
-    if ((err as { status?: number })?.status) return groqErrorResponse(err, "Couldn't make questions. Try again.");
+    if ((err as { status?: number })?.status) return aiErrorResponse(err, "Couldn't make questions. Try again.");
     return Response.json({ error: err instanceof Error ? err.message : "Couldn't make questions. Try again." }, { status: 502 });
   }
 }

@@ -100,7 +100,7 @@ export function AuthShowcase() {
         </Card>
       </div>
 
-      <p className="auth-stage-muted relative px-12 pb-10 font-mono text-[11px]">Free to start · Pro in early access · Your notes stay yours</p>
+      <p className="auth-stage-muted relative px-12 pb-10 font-mono text-[11px]">Free and open source · Bring your own AI · Your notes stay yours</p>
     </div>
   );
 }

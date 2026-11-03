@@ -1,6 +1,6 @@
 import { after } from "next/server";
 import { z } from "zod";
-import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
+import { aiErrorResponse, resolveAi } from "@/lib/ai-access";
 import { logError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import { gradeShortAnswer } from "@/lib/tutor/exam-ai";
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
   const pageText = ((pageRow?.content as string | undefined) ?? "").replace(/\s+/g, " ").trim().slice(0, 2000);
   if (pageText.length < 40) return Response.json({ error: "This page doesn't have text to explain against yet." }, { status: 422 });
 
-  const access = await resolveGroq(supabase, userId, sessionId, "grade");
+  const access = await resolveAi(supabase, userId, sessionId, "grade");
   if ("error" in access) return access.error;
   after(() => access.meter.flush());
 
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     await remember(supabase, userId, { sessionId, documentId, page, topic, score: graded.score, gap });
     return Response.json({ score: graded.score, gap });
   } catch (err) {
-    return groqErrorResponse(err, "Couldn't score that explanation. Try again.");
+    return aiErrorResponse(err, "Couldn't score that explanation. Try again.");
   }
 }
 

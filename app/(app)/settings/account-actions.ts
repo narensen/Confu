@@ -3,8 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { getCurrentRole, requireUser } from "@/lib/dal";
-import { isOwner } from "@/lib/plans";
+import { requireUser } from "@/lib/dal";
 import { createClient } from "@/lib/supabase/server";
 
 export type ActionResult = { ok: true; message?: string } | { ok: false; error: string };
@@ -101,26 +100,4 @@ export async function deleteAccount(confirmText: string): Promise<ActionResult> 
   }
   await supabase.auth.signOut();
   redirect("/?account=deleted");
-}
-
-// Ask for Pro. The owner sees requests in Settings → Pro members.
-export async function requestPro(): Promise<ActionResult> {
-  await requireUser();
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("request_pro");
-  if (error) return { ok: false, error: /request_pro/.test(error.message) ? "Pro requests aren't set up yet (migration 0012)." : error.message };
-  return { ok: true, message: "Requested. Pro turns on as soon as it's approved; you'll see it here and in your account menu." };
-}
-
-// Owner only: put an account on Pro, or back on Free (also answers a request).
-export async function setPro(rawEmail: string, pro: boolean): Promise<ActionResult> {
-  await requireUser();
-  if (!isOwner(await getCurrentRole())) return { ok: false, error: "Only the owner can change plans." };
-  const email = z.email("Enter a valid email").safeParse(String(rawEmail).trim());
-  if (!email.success) return { ok: false, error: email.error.issues[0].message };
-
-  const supabase = await createClient();
-  const { error } = await supabase.rpc("set_pro", { target_email: email.data, pro });
-  if (error) return { ok: false, error: /set_pro/.test(error.message) ? "Plan changes aren't set up yet (migration 0012)." : error.message };
-  return { ok: true, message: pro ? `${email.data} is on Pro.` : `${email.data} is on Free.` };
 }

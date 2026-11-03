@@ -1,6 +1,6 @@
 # Confu
 
-An AI tutor that works from your own material. Study toward a goal with a phased plan, prepare for an exam with practice questions written from your notes, or read research papers in three passes. It's grounded in your PDFs and remembers your progress.
+A free, open-source AI tutor that works from your own material. Study toward a goal with a phased plan, prepare for an exam with practice questions written from your notes, or read research papers in three passes. It's grounded in your PDFs and remembers your progress.
 
 ## Setup
 
@@ -11,24 +11,36 @@ An AI tutor that works from your own material. Study toward a goal with a phased
 5. For real users, set up custom SMTP in **Authentication → Emails**. Supabase's built-in sender is heavily rate-limited, and sign-up confirmation, password reset and email change all send mail.
 6. `bun dev`
 
-## Plans and roles
+## Bring your own AI
 
-`profiles.role` decides how a user's AI requests are paid for. Users can never change their own role.
+Confu is free and open source, with no plans or payments. Each account brings its own AI, in **Settings → Your AI** (or the panel a session shows when nothing is connected):
 
-| Role | Plan | AI runs on |
-| --- | --- | --- |
-| `NULL` | Free | 10 free prompts on Confu's keys (migration 0014), then the user's own Groq key, saved encrypted in Settings (or per session) |
-| `'pro'` | Pro | Confu's keys (`GROQ_API_KEYS`), up to `PRO_DAILY_TOKENS` per rolling 24 hours |
-| `'admin'` | Owner | Confu's keys with no allowance, plus Settings → Pro members |
+- **Connect OpenRouter**: one click. The student approves Confu on openrouter.ai (OAuth with PKCE) and Confu receives a key of their own, billed to their OpenRouter credits.
+- **An API key** from Groq, OpenAI, Anthropic, Google Gemini, OpenRouter, or any OpenAI-compatible server (Ollama, LM Studio, vLLM, DeepSeek, Mistral…). Keys are checked with the provider, then encrypted with `KEY_ENCRYPTION_SECRET` (AES-256-GCM) before they're stored.
 
-Make yourself the owner once, in the SQL editor:
+Confu picks a model for each job from the provider's live model list (tutor, progress notes, figures and scans); students can change them. A session can have its own key that overrides the account's.
+
+Anthropic goes through the official Anthropic SDK (Messages API); every other provider goes through its OpenAI-compatible chat API. Both sit behind one client, so the rest of the code doesn't know which provider it's talking to (`lib/ai/`).
+
+### The server's own keys (optional)
+
+`GROQ_API_KEYS` are used for two things only:
+
+| Who | What runs on the server's keys |
+| --- | --- |
+| The owner (`profiles.role = 'admin'`) | Everything, until they connect an AI of their own. Also the admin dashboard. |
+| Everyone else | 10 free prompts (and 20 scanned pages), once, so they can try Confu before connecting anything (migration 0014). |
+
+Leave `GROQ_API_KEYS` empty to turn both off: then everyone, the owner included, connects their own AI. Make yourself the owner once, in the SQL editor:
 
 ```sql
 update public.profiles set role = 'admin'
 where id = (select id from auth.users where email = 'you@example.com');
 ```
 
-After that, users request Pro from **Settings → Plan**, and you approve them (or give Pro to any email) in **Settings → Pro members**.
+### Running it yourself with a local model
+
+Point "Other (OpenAI-compatible)" at your model server, e.g. `http://localhost:11434/v1` for Ollama. A server on your own network is blocked by default, so a shared deployment can't be made to fetch internal addresses. Set `ALLOW_PRIVATE_AI_URLS=1` on a server only you use.
 
 ## How it works
 
@@ -44,8 +56,9 @@ After that, users request Pro from **Settings → Plan**, and you approve them (
 | Figures: captured region → vision model notes → stored as context | `app/api/figure`, `components/pdf/PdfViewer.tsx` |
 | Exam prep: questions from your notes, strict marking, weak topics | `app/api/exam`, `lib/tutor/exam-ai.ts`, `components/exam` |
 | Papers: arXiv/DOI lookup, triage, Keshav's three passes, literature search | `app/api/paper`, `lib/scholar.ts`, `lib/tutor/paper-*.ts`, `components/paper` |
-| Plans and keys: Free (own key) vs Pro (key pool with failover) | `lib/plans.ts`, `lib/ai-access.ts`, `lib/groq-pool.ts`, `lib/groq-keys.ts` |
-| Usage meter: tokens per key and model, Groq's limits, freshness | `lib/usage.ts`, `lib/usage-summary.ts`, `lib/usage-probe.ts` |
-| Settings: profile, security, plan, key, usage, export, delete account | `app/settings`, `components/settings`, `app/api/export` |
+| Your AI: providers, models, the request adapters, OpenRouter connect | `lib/ai/`, `lib/ai-access.ts`, `lib/ai-keys.ts`, `app/api/ai/openrouter`, `components/keys` |
+| The server's keys (owner, free prompts), with failover across keys | `lib/groq-pool.ts` |
+| Usage meter: tokens per key and model, rate limits where reported, freshness | `lib/usage.ts`, `lib/usage-summary.ts`, `lib/usage-probe.ts` |
+| Settings: profile, security, your AI, usage, export, delete account | `app/settings`, `components/settings`, `app/api/export` |
 
-Models (Groq): `openai/gpt-oss-120b` (tutor, planner, marking), `openai/gpt-oss-20b` (memory), `qwen/qwen3.8-27b` (vision). Override them with the `GROQ_*_MODEL` env vars.
+Models on the server's keys (Groq): `openai/gpt-oss-120b` (tutor, planner, marking), `openai/gpt-oss-20b` (memory), `qwen/qwen3.8-27b` (vision). Override them with the `GROQ_*_MODEL` env vars; they're also the defaults for students' Groq keys.

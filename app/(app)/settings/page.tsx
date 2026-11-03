@@ -1,15 +1,13 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import type { ProMember } from "@/components/settings/ProMembers";
-import { SETTINGS_GRID, SettingsView, type BillingInfo } from "@/components/settings/SettingsView";
+import { SETTINGS_GRID, SettingsView } from "@/components/settings/SettingsView";
 import { eyebrowClass } from "@/components/ui";
 import type { UsageKey } from "@/components/usage/UsageSection";
-import { PRO_DAILY_TOKENS, PRO_KEY_REF, userKeyRef } from "@/lib/ai-access";
-import { billingConfigured, currentRegion, STUDENT_CODE } from "@/lib/billing";
-import { PRICES, type Region } from "@/lib/pricing";
+import { SERVER_KEY_REF, serverKeysReady, userKeyRef } from "@/lib/ai-access";
+import { keyLabel, PROVIDERS } from "@/lib/ai/providers";
+import { getKeyInfo, sessionKeyInfos, type KeyInfo } from "@/lib/ai-keys";
 import { getCurrentRole, requireUser } from "@/lib/dal";
-import { getKeyInfo } from "@/lib/groq-keys";
-import { isOwner, planOf } from "@/lib/plans";
+import { isOwner } from "@/lib/roles";
 import { createClient } from "@/lib/supabase/server";
 import { usageSummary } from "@/lib/usage-summary";
 
@@ -29,91 +27,55 @@ export default function SettingsPage() {
   );
 }
 
+const MODEL_LABELS = { chat: "Tutor, plans, practice", fast: "Progress notes", vision: "Scans and figures" };
+
+// What each model a key uses is for, by name.
+function labelsFor(k: KeyInfo | null): Record<string, string> {
+  const m = k?.models ?? PROVIDERS.groq.defaults;
+  return { [m.vision]: MODEL_LABELS.vision, [m.fast]: MODEL_LABELS.fast, [m.chat]: MODEL_LABELS.chat };
+}
+
 async function SettingsContent() {
   const user = await requireUser();
   const supabase = await createClient();
-  const [role, account, overrides, auth, profile, subscription, region] = await Promise.all([
+  const [role, account, sessionKeys, auth] = await Promise.all([
     getCurrentRole(),
     getKeyInfo(supabase, user.id, null),
-    supabase.from("groq_keys").select("id, session_id, last4, study_sessions(title)").eq("user_id", user.id).not("session_id", "is", null),
+    sessionKeyInfos(supabase, user.id),
     supabase.auth.getUser(),
-    // "*": pro_requested_at, paid_until and pro_until exist only once their migrations have run.
-    supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
-    supabase
-      .from("subscriptions")
-      .select("status, renews_at, ends_at, card_brand, card_last_four")
-      .eq("user_id", user.id)
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    currentRegion(),
   ]);
-  const plan = planOf(role);
   const owner = isOwner(role);
   const me = auth.data.user;
-  const p = profile.data as Profile | null;
-  const billing = billingInfo(p, owner, region, (subscription.data as BillingInfo["subscription"]) ?? null);
+  const serverKeys = owner && serverKeysReady();
 
-  const sessionKeys = ((overrides.data ?? []) as unknown as { id: string; session_id: string; last4: string; study_sessions: { title: string } | null }[]).map(
-    (o) => ({ id: o.id, sessionId: o.session_id, last4: o.last4, title: o.study_sessions?.title ?? "Untitled session" }),
-  );
-
-  // Usage per actual key: Pro runs on the plan's pool; Free on the keys saved now.
-  const keyList: Omit<UsageKey, "usage">[] =
-    plan === "pro"
-      ? [{ keyRef: PRO_KEY_REF, label: owner ? "Admin" : "Pro plan", sessionId: null }]
-      : [
-          ...(account ? [{ keyRef: userKeyRef(account.id), label: `Your account key …${account.last4}`, sessionId: null }] : []),
-          ...sessionKeys.map((k) => ({ keyRef: userKeyRef(k.id), label: `Session key …${k.last4} · ${k.title}`, sessionId: k.sessionId })),
-        ];
-
-  const [usage, members] = await Promise.all([
-    usageSummary(supabase, user.id, keyList.map((k) => k.keyRef)),
-    owner ? supabase.rpc("pro_members") : null,
-  ]);
-
-  const usageKeys: UsageKey[] = keyList.map((k) => {
-    const u = usage.find((x) => x.keyRef === k.keyRef);
-    if (k.keyRef !== PRO_KEY_REF) return { ...k, usage: u };
-    const used = (u?.models ?? []).reduce((sum, m) => sum + m.used24h, 0);
-    return { ...k, usage: u, allowance: { used, cap: owner ? null : PRO_DAILY_TOKENS } };
-  });
+  // Usage per actual key: the keys saved now, and the server's keys for the owner.
+  const keyList: (Omit<UsageKey, "usage" | "modelLabels"> & { info: KeyInfo | null })[] = [
+    ...(account ? [{ keyRef: userKeyRef(account.id), label: `Your account's AI · ${PROVIDERS[account.provider].name} ${keyLabel(account.provider, account.last4, account.via)}`, sessionId: null, info: account }] : []),
+    ...sessionKeys.map((k) => ({ keyRef: userKeyRef(k.id), label: `Session key · ${PROVIDERS[k.provider].name} ${keyLabel(k.provider, k.last4, k.via)} · ${k.title}`, sessionId: k.sessionId, info: k as KeyInfo })),
+    ...(serverKeys ? [{ keyRef: SERVER_KEY_REF, label: "The server's keys (owner)", sessionId: null, info: null, server: true }] : []),
+  ];
+  const groqKeys = keyList.filter((k) => k.info?.provider === "groq").map((k) => k.keyRef);
+  const usage = await usageSummary(supabase, user.id, keyList.map((k) => k.keyRef), groqKeys);
+  const usageKeys: UsageKey[] = keyList.map(({ info, ...k }) => ({
+    ...k,
+    usage: usage.find((x) => x.keyRef === k.keyRef),
+    modelLabels: labelsFor(info),
+  }));
 
   return (
     <SettingsView
       user={{ email: user.email, name: user.name }}
-      plan={plan}
       owner={owner}
+      serverKeys={serverKeys}
       pendingEmail={me?.new_email ?? null}
       createdAt={me?.created_at ?? null}
       lastSignInAt={me?.last_sign_in_at ?? null}
       providers={(me?.app_metadata?.providers as string[] | undefined) ?? [me?.app_metadata?.provider ?? "email"]}
-      requestedAt={p?.pro_requested_at ?? null}
-      billing={billing}
       account={account}
       sessionKeys={sessionKeys}
       usageKeys={usageKeys}
-      members={members ? ((members.data ?? []) as ProMember[]) : null}
-      membersError={
-        members?.error ? (/pro_members/.test(members.error.message) ? "Run migration 0012 to manage Pro from here." : members.error.message) : undefined
-      }
     />
   );
-}
-
-type Profile = { role?: string | null; pro_requested_at?: string | null; paid_until?: string | null; pro_until?: string | null };
-
-// Where this account's Pro comes from, for the Plan section.
-function billingInfo(p: Profile | null, owner: boolean, region: Region, subscription: BillingInfo["subscription"]): BillingInfo {
-  const live = (iso: string | null | undefined) => Boolean(iso && Date.parse(iso) > Date.now());
-  return {
-    configured: billingConfigured,
-    price: PRICES[region],
-    student: Boolean(STUDENT_CODE),
-    source: owner ? "admin" : p?.role === "pro" ? "granted" : live(p?.paid_until) ? "paid" : live(p?.pro_until) ? "invite" : null,
-    proUntil: live(p?.pro_until) ? (p?.pro_until ?? null) : null,
-    subscription,
-  };
 }
 
 function SettingsSkeleton() {

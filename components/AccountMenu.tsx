@@ -9,7 +9,7 @@ import { ago, formatTokens } from "@/lib/format-usage";
 import { setTheme, useTheme, type Theme } from "@/lib/theme";
 
 type Usage = {
-  plan: "free" | "pro" | "trial";
+  plan: "own" | "server" | "trial";
   status: "blocked" | "ok" | "stale" | "none";
   used24h: number;
   dailyLimit: number | null;
@@ -20,14 +20,12 @@ type Usage = {
 type Props = {
   name: string | null;
   email: string | null;
-  plan: "free" | "pro";
   owner: boolean;
-  keyLast4: string | null; // the account key; null when none
+  ai: { provider: string; label: string } | null; // the account's own AI; null when none
 };
 
 // The black name button in the header and its account dropdown.
-export function AccountMenu({ name, email, plan, owner, keyLast4 }: Props) {
-  const pro = plan === "pro";
+export function AccountMenu({ name, email, owner, ai }: Props) {
   const [open, setOpen] = useState(false);
   const [usage, setUsage] = useState<Usage | null | "loading">(null);
   const root = useRef<HTMLDivElement>(null);
@@ -76,7 +74,7 @@ export function AccountMenu({ name, email, plan, owner, keyLast4 }: Props) {
         onClick={() => {
           const next = !open;
           setOpen(next);
-          if (next && !pro) void loadUsage();
+          if (next) void loadUsage();
         }}
         className="flex max-w-40 items-center gap-2 rounded-full border border-line bg-panel py-1 pr-2.5 pl-1 text-sm font-medium text-ink transition duration-200 ease-fluid hover:border-ink/40 hover:bg-paper aria-expanded:border-ink/40 aria-expanded:bg-paper sm:max-w-56"
       >
@@ -84,7 +82,7 @@ export function AccountMenu({ name, email, plan, owner, keyLast4 }: Props) {
           {display.slice(0, 1).toUpperCase()}
         </span>
         <span className="hidden truncate sm:inline">{display}</span>
-        {pro && <span className="shrink-0 rounded bg-yellow-400 px-1 font-mono text-[9px] font-bold tracking-wider text-ink uppercase">{owner ? "Admin" : "Pro"}</span>}
+        {owner && <span className="shrink-0 rounded bg-yellow-400 px-1 font-mono text-[9px] font-bold tracking-wider text-ink uppercase">Admin</span>}
         <svg
           width="12"
           height="12"
@@ -109,40 +107,42 @@ export function AccountMenu({ name, email, plan, owner, keyLast4 }: Props) {
           <div className="border-b border-line px-4 py-3.5">
             <div className="flex items-center gap-2">
               <p className="min-w-0 truncate font-serif text-lg leading-tight">{name?.trim() || "Your account"}</p>
-              <span
-                className={`shrink-0 rounded px-1.5 py-px font-mono text-[10px] tracking-wider uppercase ${pro ? "bg-yellow-400 text-ink" : "border border-ink/30 text-muted"}`}
-              >
-                {owner ? "Admin" : pro ? "Pro" : "Free"}
-              </span>
+              {owner && <span className="shrink-0 rounded bg-yellow-400 px-1.5 py-px font-mono text-[10px] tracking-wider text-ink uppercase">Admin</span>}
             </div>
             {email && <p className="mt-0.5 truncate text-xs text-muted">{email}</p>}
           </div>
 
-          {/* Usage: Free only (Pro runs on Confu's keys) */}
-          {!pro && (
-            <div className="border-b border-line px-4 py-3.5">
-              <p className="font-mono text-[10px] tracking-widest text-muted uppercase">{usage !== "loading" && usage?.plan === "trial" ? "Free trial" : "Groq usage today"}</p>
-              <UsageBlock usage={usage} />
-            </div>
-          )}
+          {/* Usage */}
+          <div className="border-b border-line px-4 py-3.5">
+            <p className="font-mono text-[10px] tracking-widest text-muted uppercase">
+              {usage !== "loading" && usage?.plan === "trial" ? "Free prompts" : usage !== "loading" && usage?.plan === "server" ? "Server keys today" : "AI usage today"}
+            </p>
+            <UsageBlock usage={usage} />
+          </div>
 
-          {/* Key: Free only */}
-          {!pro && (
-            <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
-              <div className="min-w-0">
-                <p className="font-mono text-[10px] tracking-widest text-muted uppercase">API key</p>
-                <p className="mt-0.5 truncate font-mono text-sm">{keyLast4 ? `gsk_••••${keyLast4}` : <span className="text-muted">No key added</span>}</p>
-              </div>
-              <Link
-                role="menuitem"
-                href="/settings#api-key"
-                onClick={() => setOpen(false)}
-                className="shrink-0 rounded-md border border-ink px-2.5 py-1 text-xs font-medium transition hover:bg-ink hover:text-white"
-              >
-                {keyLast4 ? "Change" : "Add a key"}
-              </Link>
+          {/* The account's AI */}
+          <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
+            <div className="min-w-0">
+              <p className="font-mono text-[10px] tracking-widest text-muted uppercase">Your AI</p>
+              <p className="mt-0.5 truncate text-sm">
+                {ai ? (
+                  <>
+                    {ai.provider} <span className="font-mono text-xs text-muted">{ai.label}</span>
+                  </>
+                ) : (
+                  <span className="text-muted">Nothing connected</span>
+                )}
+              </p>
             </div>
-          )}
+            <Link
+              role="menuitem"
+              href="/settings#api-key"
+              onClick={() => setOpen(false)}
+              className="shrink-0 rounded-md border border-ink px-2.5 py-1 text-xs font-medium transition hover:bg-ink hover:text-white"
+            >
+              {ai ? "Change" : "Connect"}
+            </Link>
+          </div>
 
           {/* Actions */}
           <div className="p-1.5">
@@ -171,19 +171,6 @@ export function AccountMenu({ name, email, plan, owner, keyLast4 }: Props) {
               </svg>
               Settings
             </Link>
-            {!pro && (
-              <Link
-                role="menuitem"
-                href="/pricing"
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition hover:bg-yellow-100"
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-                  <path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9Z" />
-                </svg>
-                Upgrade to Pro
-              </Link>
-            )}
             <Link
               role="menuitem"
               href="/settings#invite"
@@ -193,7 +180,7 @@ export function AccountMenu({ name, email, plan, owner, keyLast4 }: Props) {
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
                 <path d="M20 12v9H4v-9M2 7h20v5H2zM12 21V7M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7Zm0 0h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7Z" />
               </svg>
-              Invite friends, get Pro
+              Invite friends
             </Link>
             <Link
               role="menuitem"
@@ -316,7 +303,7 @@ function UsageBlock({ usage }: { usage: Usage | null | "loading" }) {
   if (!usage) {
     return (
       <p className="mt-1.5 text-sm text-muted">
-        Add a key to start.{" "}
+        Connect your AI to start.{" "}
         <Link href="/settings#api-key" className="underline underline-offset-2 hover:text-ink">
           Settings
         </Link>
@@ -403,9 +390,9 @@ function TrialBlock({ used, total }: { used: number; total: number }) {
         <div className={`h-full rounded-full transition-[width] duration-700 ease-fluid ${tone}`} style={{ width: `${share * 100}%` }} />
       </div>
       <p className="mt-2 text-[11px] text-muted">
-        {left === 0 ? "Add your own Groq key (it's free) to keep going." : "On Confu's keys, no setup. Add your own Groq key any time."}{" "}
+        {left === 0 ? "Connect your own AI to keep going (Groq has a free tier)." : "On the server's keys, no setup. Connect your own AI any time."}{" "}
         <Link href="/settings#api-key" className="underline underline-offset-2 hover:text-ink">
-          Add key
+          Connect
         </Link>
       </p>
     </div>

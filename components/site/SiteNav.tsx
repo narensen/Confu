@@ -9,7 +9,6 @@ export const SITE_LINKS = [
   { href: "/templates", label: "Templates" },
   { href: "/packs", label: "Study packs" },
   { href: "/roadmaps", label: "Roadmaps" },
-  { href: "/pricing", label: "Pricing" },
   { href: "/changelog", label: "What's new" },
 ];
 

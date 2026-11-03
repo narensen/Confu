@@ -1,6 +1,6 @@
 import { after } from "next/server";
 import { z } from "zod";
-import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
+import { aiErrorResponse, resolveAi } from "@/lib/ai-access";
 import { MODELS, modelBudget, parseJsonObject } from "@/lib/groq";
 import { logError } from "@/lib/log";
 import { arxivByName, findByTitle, norm, openAlexByName, papersByArxivIds, resolvePaper, sameTitle, type PaperMeta } from "@/lib/scholar";
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
     links.push({ url, kind: videoIdFrom(url) ? "youtube" : "web" });
   }
 
-  const access = await resolveGroq(supabase, userId, sessionId, "recommend");
+  const access = await resolveAi(supabase, userId, sessionId, "recommend");
   if ("error" in access) return access.error;
   after(() => access.meter.flush());
 
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
     });
     named = Named.parse(parseJsonObject(res.choices[0]?.message?.content ?? ""));
   } catch (err) {
-    if ((err as { status?: number })?.status) return groqErrorResponse(err, "Couldn't read the papers in your goal.");
+    if ((err as { status?: number })?.status) return aiErrorResponse(err, "Couldn't read the papers in your goal.");
     logError("goal papers failed", err);
     return Response.json({ papers: [], links });
   }

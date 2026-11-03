@@ -38,7 +38,7 @@ export const sectionScopeFor = cache(async (slug: string): Promise<string[]> => 
 });
 
 // Create the session a pack or a door card copies into. The caller records the
-// copy, grants class-rep Pro, and deletes the session if a later step throws.
+// copy and deletes the session if a later step throws.
 // linkOnly indexes are titles and URLs the copier confirms. They are not fetched.
 export async function insertSessionFromPackContent(
   supabase: SupabaseClient,

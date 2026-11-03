@@ -238,7 +238,7 @@ function ShareDialog({ sessionId, sessionTitle, onClose }: { sessionId: string; 
                 checked={classMode}
                 onChange={setClassMode}
                 label="Class mode"
-                hint="People who copy it can choose to share their progress with you (topics done, days active), never their notes or chats. Once 30 classmates copy it, you get Pro for the term, once."
+                hint="People who copy it can choose to share their progress with you (topics done, days active), never their notes or chats."
               />
               <p className="rounded-lg border border-line bg-paper px-3 py-2.5 text-xs leading-relaxed text-muted">
                 <span className="font-medium text-ink">What&apos;s shared:</span> your sources as links and paper IDs, your plan

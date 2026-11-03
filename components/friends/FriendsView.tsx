@@ -184,7 +184,7 @@ export function FriendsView() {
             </button>
             {formError && <p className="text-sm text-danger">{formError}</p>}
             {formNote && <p className="text-sm text-ok">{formNote}</p>}
-            <p className="text-xs text-muted">They&apos;ll see your first name and can accept or decline. This is separate from inviting someone new to Confu for a free week of Pro.</p>
+            <p className="text-xs text-muted">They&apos;ll see your first name and can accept or decline. This is separate from inviting someone new to Confu.</p>
           </form>
         </div>
         <div>

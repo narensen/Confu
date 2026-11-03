@@ -1,6 +1,6 @@
 import { after } from "next/server";
 import { z } from "zod";
-import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
+import { aiErrorResponse, resolveAi } from "@/lib/ai-access";
 import { MODELS, modelBudget, stripReasoning } from "@/lib/groq";
 import { createClient } from "@/lib/supabase/server";
 
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "That page doesn't have text to answer from yet." }, { status: 422 });
   }
 
-  const access = await resolveGroq(supabase, userId, pin.session_id, "chat");
+  const access = await resolveAi(supabase, userId, pin.session_id, "chat");
   if ("error" in access) return access.error;
   after(() => access.meter.flush());
 
@@ -65,6 +65,6 @@ ${pin.question?.trim() || "What is the point of this passage?"}`,
     if (saved.error || typeof saved.data !== "string") return Response.json({ error: "Couldn't save the answer." }, { status: 500 });
     return Response.json({ answer: saved.data });
   } catch (err) {
-    return groqErrorResponse(err, "Couldn't answer from that page. Try again.");
+    return aiErrorResponse(err, "Couldn't answer from that page. Try again.");
   }
 }

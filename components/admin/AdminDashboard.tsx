@@ -10,7 +10,7 @@ import { FeedbackInbox, type FeedbackItem } from "./FeedbackInbox";
 export type Insights = {
   generated_at: string;
   days: number;
-  users: { total: number; new: number; pro: number; dau: number; wau: number; mau: number };
+  users: { total: number; new: number; dau: number; wau: number; mau: number };
   daily: { day: string; signups: number; active: number }[];
   funnel: { step: string; users: number }[];
   features: { feature: string; uses: number; users: number }[];
@@ -122,14 +122,14 @@ export function AdminDashboard({ data, days, ranges, answers = [], answersMissin
 
       {/* Headline numbers */}
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="People" value={n(u.total)} note={`+${n(u.new)} in the last ${days} days · ${n(u.pro)} on Pro`} />
+        <Stat label="People" value={n(u.total)} note={`+${n(u.new)} in the last ${days} days`} />
         <Stat label="Active, last 7 days" value={n(u.wau)} note={`${n(u.dau)} today · ${n(u.mau)} in 30 days`} />
         <Stat
           label="Landing to sign-up"
           value={data.landing.visitors ? `${pct(data.landing.signups, data.landing.visitors)}%` : "–"}
           note={`${n(data.landing.visitors)} visitors · ${n(data.landing.signups)} sign-ups`}
         />
-        <Stat label="AI tokens on Confu's keys" value={n(data.ai.confu_tokens)} note={`${n(data.ai.own_tokens)} on people's own keys · ${n(data.ai.requests)} requests`} />
+        <Stat label="AI tokens on the server's keys" value={n(data.ai.confu_tokens)} note={`${n(data.ai.own_tokens)} on people's own AI · ${n(data.ai.requests)} requests`} />
       </section>
 
       <section className="grid gap-4 lg:grid-cols-2">
@@ -327,7 +327,7 @@ export function AdminDashboard({ data, days, ranges, answers = [], answersMissin
             </Table>
           )}
         </Card>
-        <Card title="Heaviest users of Confu's keys" sub="Pro, free trial and owner usage. Watch this for cost.">
+        <Card title="Heaviest users of the server's keys" sub="Free prompts and owner usage. Watch this for cost.">
           {data.ai.top_users.length === 0 ? (
             <Empty>Nobody yet.</Empty>
           ) : (

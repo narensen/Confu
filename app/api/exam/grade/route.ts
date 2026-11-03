@@ -1,6 +1,6 @@
 import { after } from "next/server";
 import { z } from "zod";
-import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
+import { aiErrorResponse, resolveAi } from "@/lib/ai-access";
 import { createClient } from "@/lib/supabase/server";
 import { gradeShortAnswer } from "@/lib/tutor/exam-ai";
 
@@ -23,13 +23,13 @@ export async function POST(request: Request) {
   if (!parsed.success) return Response.json({ error: "Invalid request" }, { status: 400 });
   if (!parsed.data.answer.trim()) return Response.json({ score: 0, feedback: "No answer given." });
 
-  const access = await resolveGroq(supabase, userId, parsed.data.sessionId, "grade");
+  const access = await resolveAi(supabase, userId, parsed.data.sessionId, "grade");
   if ("error" in access) return access.error;
   after(() => access.meter.flush());
 
   try {
     return Response.json(await gradeShortAnswer(access.groq, parsed.data));
   } catch (err) {
-    return groqErrorResponse(err, "Couldn't mark that answer. Try again.");
+    return aiErrorResponse(err, "Couldn't mark that answer. Try again.");
   }
 }

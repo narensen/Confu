@@ -1,6 +1,6 @@
 import { after } from "next/server";
 import { z } from "zod";
-import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
+import { aiErrorResponse, resolveAi } from "@/lib/ai-access";
 import { logError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import { learnerBackground, recommendPapers } from "@/lib/tutor/recommend";
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
   if (!parsed.success) return Response.json({ error: parsed.error.issues[0].message }, { status: 400 });
   const { sessionId, goal, useHistory } = parsed.data;
 
-  const access = await resolveGroq(supabase, userId, sessionId, "recommend");
+  const access = await resolveAi(supabase, userId, sessionId, "recommend");
   if ("error" in access) return access.error;
   after(() => access.meter.flush());
 
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     });
     return Response.json(result);
   } catch (err) {
-    if ((err as { status?: number })?.status) return groqErrorResponse(err, "Couldn't build recommendations. Try again.");
+    if ((err as { status?: number })?.status) return aiErrorResponse(err, "Couldn't build recommendations. Try again.");
     logError("recommend failed", err);
     return Response.json({ error: "Couldn't build recommendations. Try again." }, { status: 502 });
   }

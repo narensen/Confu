@@ -1,28 +1,23 @@
 import "server-only";
 import Groq from "groq-sdk";
+import { PROVIDERS } from "@/lib/ai/providers";
 import { stripReasoning } from "@/lib/visible-text";
 
 export type { Groq };
 export { stripReasoning };
-
-// The server's own key, used only for admin accounts. Prefer the server-only
-// GROQ_API_KEY; NEXT_PUBLIC_GROQ_API_KEY is accepted as a fallback but is only
-// ever read here, on the server.
-export const SERVER_GROQ_KEY = process.env.GROQ_API_KEY ?? process.env.NEXT_PUBLIC_GROQ_API_KEY;
 
 // `fetchImpl` lets a usage meter observe every request (see lib/usage.ts).
 export function groqClient(apiKey: string, fetchImpl?: typeof fetch) {
   return new Groq({ apiKey, maxRetries: 1, ...(fetchImpl ? { fetch: fetchImpl } : {}) });
 }
 
-export const MODELS = {
-  // Tutor answers and plan generation.
-  chat: process.env.GROQ_CHAT_MODEL ?? "openai/gpt-oss-120b",
-  // Cheap background work: updating learner memory.
-  fast: process.env.GROQ_FAST_MODEL ?? "openai/gpt-oss-20b",
-  // Vision-language model for figures, tables and equations.
-  vision: process.env.GROQ_VISION_MODEL ?? "qwen/qwen3.8-27b",
-};
+// The model for each job, named by call sites: the server's Groq models
+// (GROQ_*_MODEL to override). On a student's own AI each one stands for the
+// model they picked for that job (lib/ai/connection.ts).
+//   chat:   tutor answers, plans, practice, marking
+//   fast:   cheap background work: updating learner memory
+//   vision: figures, tables, equations and scanned pages
+export const MODELS = PROVIDERS.groq.defaults;
 
 // Parse a JSON object out of a model reply, tolerating code fences and a
 // scratchpad that leaked into the text.

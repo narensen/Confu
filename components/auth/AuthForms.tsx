@@ -168,7 +168,7 @@ export function SignupForm() {
     <>
       {query.invited && (
         <p className="mb-4 rounded-lg border border-ink bg-yellow-100 px-3 py-2.5 text-sm leading-relaxed">
-          <span className="font-medium">You were invited.</span> Your first week of Pro is on your friend: it starts when you confirm your email.
+          <span className="font-medium">You were invited.</span> Sign up and your friend will see you joined.
         </p>
       )}
       <GoogleButton label="Sign up with Google" next={query.next} />

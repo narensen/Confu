@@ -101,8 +101,16 @@ const SessionsArt = (
 
 const KeyArt = (
   <div className="flex h-full flex-col justify-center gap-3">
-    <p className="font-mono text-[9px] tracking-widest text-muted uppercase">Bring your own key</p>
-    <p className="font-serif text-lg leading-tight">Add your Groq API key</p>
+    <p className="font-mono text-[9px] tracking-widest text-muted uppercase">Bring your own AI</p>
+    <p className="font-serif text-lg leading-tight">Connect the AI you&apos;ll study with</p>
+    <Btn dark>Connect OpenRouter</Btn>
+    <div className="flex flex-wrap gap-1 text-[9px]">
+      {["Groq", "OpenAI", "Anthropic", "Gemini", "Other"].map((p, i) => (
+        <span key={p} className={`rounded-full border px-1.5 py-0.5 ${i === 0 ? "border-ink bg-ink text-white" : "border-line text-muted"}`}>
+          {p}
+        </span>
+      ))}
+    </div>
     <Frame className="flex items-center justify-between px-3 py-2">
       <span className="font-mono text-[11px] tracking-widest">gsk_••••••••••••••••</span>
       <span className="text-[9px] text-muted">Show</span>
@@ -457,15 +465,15 @@ export const GUIDE_STEPS: GuideStep[] = [
   },
   {
     id: "key",
-    eyebrow: "Your Groq key",
-    title: "Bring your own AI key",
-    intro: "Your account starts with 10 free prompts on Confu's keys. After that, the AI runs on your own Groq API key: add it once in Settings and every session uses it.",
+    eyebrow: "Your AI",
+    title: "Bring your own AI",
+    intro: "Confu is free and open source; the AI runs on an account you bring. Your account may start with a few free prompts. After that, connect your AI once in Settings and every session uses it.",
     points: [
-      { label: "Get one", body: <>Sign in at <b>console.groq.com/keys</b> (there&apos;s a free tier), create a key and copy it. It starts with <code className="font-mono text-xs">gsk_</code>.</> },
-      { label: "Add it", body: <>Paste it in <b>Settings → API key</b>, or in the panel that appears in a session. We check it with Groq first. A session can also have its own key that overrides your account key.</> },
-      { label: "Security", body: "It's encrypted before it's stored and never shown again; you'll only see its last four characters. Replace or remove it any time in Settings." },
+      { label: "One click", body: <>Press <b>Connect OpenRouter</b> and approve Confu on openrouter.ai. It runs on your OpenRouter credits, with hundreds of models to choose from.</> },
+      { label: "Or a key", body: <>Paste an API key from Groq (free tier at <b>console.groq.com/keys</b>), OpenAI, Anthropic, Google Gemini or any OpenAI-compatible server in <b>Settings → Your AI</b>, or in the panel that appears in a session. We check it with the provider first.</> },
+      { label: "Security", body: "It's encrypted before it's stored and never shown again; you'll only see its last four characters. Pick models, replace it or remove it any time in Settings. A session can also have its own." },
     ],
-    tip: <>You can read your files without a key; you only need it for the AI features. Rather not manage a key? Request Pro in <b>Settings → Plan</b>.</>,
+    tip: <>You can read your files without connecting anything; you only need it for the AI features.</>,
     art: KeyArt,
     onlyForKeyUsers: true,
   },

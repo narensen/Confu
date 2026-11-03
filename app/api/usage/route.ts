@@ -5,7 +5,7 @@ import { meterUsage } from "@/lib/usage-probe";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // What the usage meters show. ?sessionId= picks the session's key (Free);
-// ?check=1 asks Groq directly (throttled) instead of relying on past requests.
+// ?check=1 asks the provider directly (throttled) instead of relying on past requests.
 export async function GET(request: Request) {
   await connection();
   const supabase = await createClient();

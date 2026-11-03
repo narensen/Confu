@@ -1,6 +1,6 @@
 import { after } from "next/server";
 import { z } from "zod";
-import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
+import { aiErrorResponse, resolveAi } from "@/lib/ai-access";
 import type { ChatCompletionMessageParam } from "groq-sdk/resources/chat/completions";
 import { MODELS, modelBudget, stripReasoning } from "@/lib/groq";
 import { createReasoningFilter } from "@/lib/visible-text";
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
   const { sessionId, documentId = null, action, message, page = null, topicId, selection = null, highlightId = null, documentIds } = parsed.data;
   if (action === "chat" && !message?.trim() && !selection) return new Response("Empty message", { status: 400 });
 
-  const access = await resolveGroq(supabase, userId, sessionId, "chat");
+  const access = await resolveAi(supabase, userId, sessionId, "chat");
   if ("error" in access) return access.error;
   const { groq } = access;
 
@@ -248,8 +248,8 @@ export async function POST(request: Request) {
   try {
     firstRound = await askModel(0);
   } catch (err) {
-    after(() => access.meter.flush()); // still record the limits Groq reported
-    return groqErrorResponse(err, "The tutor couldn't answer right now. Try again.");
+    after(() => access.meter.flush()); // still record the limits the provider reported
+    return aiErrorResponse(err, "The tutor couldn't answer right now. Try again.");
   }
 
   let resolveDone: (text: string) => void;

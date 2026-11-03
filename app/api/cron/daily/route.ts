@@ -28,7 +28,7 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const started = Date.now();
-  const result = { reminders: { emails: 0, pushes: 0, people: 0 }, digests: 0, deferred: 0, errors: 0, invitesRewarded: 0, email: emailConfigured, push: pushConfigured };
+  const result = { reminders: { emails: 0, pushes: 0, people: 0 }, digests: 0, deferred: 0, errors: 0, email: emailConfigured, push: pushConfigured };
 
   // Emails already sent in the last day count toward today's limit.
   const { count: sentToday } = await admin
@@ -36,10 +36,6 @@ export async function GET(request: Request) {
     .select("id", { count: "exact", head: true })
     .gte("sent_at", new Date(Date.now() - 24 * 3600_000).toISOString());
   let budget = Math.max(0, DAILY_LIMIT - (sentToday ?? 0));
-
-  // Invites: a week of Pro for inviters whose friends have now studied (migration 0023).
-  const settled = await admin.rpc("settle_referrals");
-  if (!settled.error) result.invitesRewarded = (settled.data as number) ?? 0;
 
   // Review reminders
   const { data: due, error } = await admin.rpc("reminder_batch");

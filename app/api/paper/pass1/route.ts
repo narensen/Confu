@@ -1,6 +1,6 @@
 import { after } from "next/server";
 import { z } from "zod";
-import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
+import { aiErrorResponse, resolveAi } from "@/lib/ai-access";
 import { createClient } from "@/lib/supabase/server";
 import { draftFirstPass } from "@/lib/tutor/paper-ai";
 import { logError } from "@/lib/log";
@@ -21,14 +21,14 @@ export async function POST(request: Request) {
   const { data: doc } = await supabase.from("documents").select("session_id").eq("id", parsed.data.documentId).maybeSingle();
   if (!doc) return Response.json({ error: "Not found" }, { status: 404 });
 
-  const access = await resolveGroq(supabase, userId, doc.session_id, "pass1");
+  const access = await resolveAi(supabase, userId, doc.session_id, "pass1");
   if ("error" in access) return access.error;
   after(() => access.meter.flush());
 
   try {
     return Response.json({ draft: await draftFirstPass(supabase, access.groq, parsed.data.documentId) });
   } catch (err) {
-    if ((err as { status?: number })?.status) return groqErrorResponse(err, "Couldn't draft the first pass. Try again.");
+    if ((err as { status?: number })?.status) return aiErrorResponse(err, "Couldn't draft the first pass. Try again.");
     logError("pass1 draft failed", err);
     return Response.json({ error: "Couldn't draft the first pass. Try again." }, { status: 502 });
   }

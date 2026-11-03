@@ -4,10 +4,10 @@ import { AppHeader } from "@/components/AppHeader";
 import { SharePack } from "@/components/packs/SharePack";
 import { SessionTitle } from "@/components/workspace/SessionTitle";
 import { Workspace } from "@/components/workspace/Workspace";
-import { trialPromptsLeft } from "@/lib/ai-access";
+import { serverKeysReady, trialPromptsLeft } from "@/lib/ai-access";
 import { getCurrentRole, requireUser } from "@/lib/dal";
-import { getKeyInfo } from "@/lib/groq-keys";
-import { planOf } from "@/lib/plans";
+import { getKeyInfo } from "@/lib/ai-keys";
+import { isOwner } from "@/lib/roles";
 import type { Attempt } from "@/lib/exam";
 import type { PaperReview } from "@/lib/paper";
 import { createClient } from "@/lib/supabase/server";
@@ -174,7 +174,7 @@ async function SessionWorkspace({ params, searchParams }: { params: Promise<{ id
         initialHighlights={(highlights.data ?? []) as Highlight[]}
         initialMessages={((messages.data ?? []) as ChatMessage[]).reverse()}
         initialSaved={(saved.data ?? []) as SavedAnswer[]}
-        needsKey={planOf(role) !== "pro"}
+        needsKey={!(isOwner(role) && serverKeysReady())}
         initialKey={keyInfo}
         trial={trial > 0}
         initialReviews={(reviews.data ?? []) as PaperReview[]}

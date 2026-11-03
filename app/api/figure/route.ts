@@ -1,12 +1,12 @@
 import { after } from "next/server";
 import { z } from "zod";
-import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
+import { aiErrorResponse, resolveAi } from "@/lib/ai-access";
 import { MODELS, modelBudget, stripReasoning } from "@/lib/groq";
 import { createClient } from "@/lib/supabase/server";
 
 export const maxDuration = 60;
 
-const MAX_IMAGE_BYTES = 3_500_000; // Groq accepts base64 images up to 4MB
+const MAX_IMAGE_BYTES = 3_500_000; // within every provider's limit for a base64 image (Groq's is the lowest, 4MB)
 
 const Body = z.object({
   documentId: z.uuid(),
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   ]);
   if (!doc) return Response.json({ error: "Not found" }, { status: 404 });
 
-  const access = await resolveGroq(supabase, userId, doc.session_id, "figure");
+  const access = await resolveAi(supabase, userId, doc.session_id, "figure");
   if ("error" in access) return access.error;
   after(() => access.meter.flush());
   const { groq } = access;
@@ -79,7 +79,7 @@ ${(pageRow?.content ?? "").slice(0, 3000)}
     });
     description = stripReasoning(res.choices[0]?.message?.content ?? "").trim();
   } catch (err) {
-    return groqErrorResponse(err, "The vision model could not read this region. Try again.");
+    return aiErrorResponse(err, "The vision model could not read this region. Try again.");
   }
   if (!description) return Response.json({ error: "The vision model returned nothing." }, { status: 502 });
 

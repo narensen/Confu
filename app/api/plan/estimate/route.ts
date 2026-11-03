@@ -1,6 +1,6 @@
 import { after } from "next/server";
 import { z } from "zod";
-import { hasOwnAccess, resolveGroq } from "@/lib/ai-access";
+import { hasOwnAccess, resolveAi } from "@/lib/ai-access";
 import { MODELS, modelBudget, parseJsonObject } from "@/lib/groq";
 import { logError } from "@/lib/log";
 import { materialsEstimate, type PaceEstimate } from "@/lib/pace";
@@ -17,7 +17,7 @@ const Body = z.object({
 const Refined = z.object({ hours: z.coerce.number(), low: z.coerce.number(), high: z.coerce.number(), why: z.string().catch("") });
 
 // How many hours a goal needs, for the pace calibrator: from the session's
-// PDFs and what the goal lists, then (for Pro or the student's own key, so a
+// PDFs and what the goal lists, then (on the student's own AI, or the owner's, so a
 // free-trial prompt isn't spent on it) refined by the AI for the goal's scope.
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
   const base = materialsEstimate({ books: rows.filter((d) => !papers.includes(d) && d.page_count > 0).map((d) => d.page_count), paperPdfs: papers.length, goal, level });
 
   if (!(await hasOwnAccess(supabase, userId, sessionId))) return Response.json(base);
-  const access = await resolveGroq(supabase, userId, sessionId, "plan");
+  const access = await resolveAi(supabase, userId, sessionId, "plan");
   if ("error" in access) return Response.json(base);
   after(() => access.meter.flush());
 

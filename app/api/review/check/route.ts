@@ -1,6 +1,6 @@
 import { after } from "next/server";
 import { z } from "zod";
-import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
+import { aiErrorResponse, resolveAi } from "@/lib/ai-access";
 import { cueFor, type ReviewItem } from "@/lib/review";
 import { createClient } from "@/lib/supabase/server";
 import { gradeShortAnswer } from "@/lib/tutor/exam-ai";
@@ -56,13 +56,13 @@ export async function POST(request: Request) {
     .join("\n\n")
     .slice(0, 6000);
 
-  const access = await resolveGroq(supabase, userId, item.session_id, "grade");
+  const access = await resolveAi(supabase, userId, item.session_id, "grade");
   if ("error" in access) return access.error;
   after(() => access.meter.flush());
 
   try {
     return Response.json(await gradeShortAnswer(access.groq, { question, expected: expected || cue.question, answer: parsed.data.answer }));
   } catch (err) {
-    return groqErrorResponse(err, "Couldn't check that answer. Try again.");
+    return aiErrorResponse(err, "Couldn't check that answer. Try again.");
   }
 }

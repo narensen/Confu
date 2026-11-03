@@ -1,6 +1,6 @@
 import { after } from "next/server";
 import { z } from "zod";
-import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
+import { aiErrorResponse, resolveAi } from "@/lib/ai-access";
 import { MODELS, modelBudget, stripReasoning } from "@/lib/groq";
 import { logError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     pages = ((data ?? []) as { page_number: number; content: string }[]).map((p) => p.content).join("\n\n").slice(0, 8000);
   }
 
-  const access = await resolveGroq(supabase, userId, plan.session_id, "chat");
+  const access = await resolveAi(supabase, userId, plan.session_id, "chat");
   if ("error" in access) return access.error;
   after(() => access.meter.flush());
 
@@ -77,7 +77,7 @@ It will be read aloud by a speech engine, so write plain flowing sentences: no h
     if (script.length < 80) throw new Error("empty script");
     return Response.json({ script: script.slice(0, 4000) });
   } catch (err) {
-    if ((err as { status?: number })?.status) return groqErrorResponse(err, "Couldn't write the overview. Try again.");
+    if ((err as { status?: number })?.status) return aiErrorResponse(err, "Couldn't write the overview. Try again.");
     logError("topic overview failed", err);
     return Response.json({ error: "Couldn't write the overview. Try again." }, { status: 502 });
   }

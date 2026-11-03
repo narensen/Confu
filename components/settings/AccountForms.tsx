@@ -6,13 +6,11 @@ import {
   changeEmail,
   changePassword,
   deleteAccount,
-  requestPro,
   sendPasswordResetLink,
   signOutEverywhere,
   updateName,
   type ActionResult,
 } from "@/app/(app)/settings/account-actions";
-import { LocalTime } from "@/components/LocalTime";
 import { buttonClass, ghostButtonClass, inputClass } from "@/components/ui";
 import { ask } from "@/components/dialogs";
 
@@ -236,38 +234,5 @@ export function DeleteAccount() {
       </div>
       <Feedback result={result} />
     </form>
-  );
-}
-
-export function RequestProButton({ requestedAt }: { requestedAt: string | null }) {
-  const router = useRouter();
-  const [result, setResult] = useState<ActionResult | null>(null);
-  const [pending, start] = useTransition();
-
-  if (requestedAt) {
-    return (
-      <p className="rounded-lg border border-dashed border-ink/40 bg-paper px-3 py-2 text-xs leading-relaxed text-muted">
-        <span className="font-medium text-ink">Requested</span> on <LocalTime iso={requestedAt} />. Pro turns on as soon as it&apos;s approved.
-      </p>
-    );
-  }
-  return (
-    <div>
-      <button
-        type="button"
-        disabled={pending}
-        onClick={() =>
-          start(async () => {
-            const res = await requestPro();
-            setResult(res);
-            if (res.ok) router.refresh();
-          })
-        }
-        className={`${buttonClass} w-full`}
-      >
-        {pending ? "Requesting…" : "Request Pro"}
-      </button>
-      <Feedback result={result} />
-    </div>
   );
 }

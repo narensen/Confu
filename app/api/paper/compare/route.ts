@@ -1,6 +1,6 @@
 import { after } from "next/server";
 import { z } from "zod";
-import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
+import { aiErrorResponse, resolveAi } from "@/lib/ai-access";
 import { logError } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import { comparePapers, loadToolPapers } from "@/lib/tutor/paper-tools";
@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   const parsed = Body.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return Response.json({ error: "Pick two to eight papers." }, { status: 400 });
 
-  const access = await resolveGroq(supabase, userId, parsed.data.sessionId, "compare");
+  const access = await resolveAi(supabase, userId, parsed.data.sessionId, "compare");
   if ("error" in access) return access.error;
   after(() => access.meter.flush());
 
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     if (papers.length < 2) return Response.json({ error: "Pick two to eight papers." }, { status: 400 });
     return Response.json({ rows: await comparePapers(access.groq, papers) });
   } catch (err) {
-    if ((err as { status?: number })?.status) return groqErrorResponse(err, "Couldn't compare them. Try again.");
+    if ((err as { status?: number })?.status) return aiErrorResponse(err, "Couldn't compare them. Try again.");
     logError("compare failed", err);
     return Response.json({ error: "Couldn't compare them. Try again." }, { status: 502 });
   }

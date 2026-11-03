@@ -29,7 +29,7 @@ export type ModelUsage = {
   requestsLimit: number | null;
   requestsRemaining: number | null;
   requestsResetAt: string | null;
-  checkedAt: string | null; // last time Groq told us anything about this key + model
+  checkedAt: string | null; // last time the provider told us anything about this key + model
   blockedSince: string | null;
 };
 
@@ -52,7 +52,7 @@ type QuotaRow = {
 const DAY = 86_400_000;
 
 // lastUsage: the newest recorded request on this key + model. It counts as a
-// sign of life too, so the meter works even without Groq's limit headers.
+// sign of life too, so the meter works without limit headers (most providers).
 export function statusOf(
   q: QuotaRow | undefined,
   now = Date.now(),
@@ -74,7 +74,9 @@ export function statusOf(
 }
 
 // Usage for the given keys (only keys that exist now; replaced keys are history).
-export async function usageSummary(supabase: SupabaseClient, userId: string, keyRefs: string[]): Promise<KeyUsage[]> {
+// groqKeys: the ones that are Groq keys, where Groq's free-tier allowance is
+// a fair guess at the daily limit until Groq reports the real one.
+export async function usageSummary(supabase: SupabaseClient, userId: string, keyRefs: string[], groqKeys: string[] = []): Promise<KeyUsage[]> {
   if (!keyRefs.length) return [];
   const since = new Date(Date.now() - 7 * DAY).toISOString();
   const [usage, quota] = await Promise.all([
@@ -106,7 +108,7 @@ export async function usageSummary(supabase: SupabaseClient, userId: string, key
           const q = quotas.find((x) => x.key_ref === keyRef && x.model === model);
           const mine = keyRows.filter((r) => r.model === model);
           // No limit headers seen yet: assume the free tier (most keys are), marked as an estimate.
-          const estimate = !q?.requests_limit || looksFreeTier(q) ? (FREE_TIER_DAILY_TOKENS[model] ?? null) : null;
+          const estimate = groqKeys.includes(keyRef) && (!q?.requests_limit || looksFreeTier(q)) ? (FREE_TIER_DAILY_TOKENS[model] ?? null) : null;
           const lastUsage = mine.length ? Math.max(...mine.map((r) => Date.parse(r.created_at))) : null;
           const { status, blockedSince, checkedAt } = statusOf(q, now, lastUsage);
           return {

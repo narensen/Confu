@@ -6,7 +6,7 @@ import { AI_USED_EVENT } from "@/lib/ai-errors";
 import { ago, formatTokens } from "@/lib/format-usage";
 
 type Main = {
-  plan: "free" | "pro" | "trial";
+  plan: "own" | "server" | "trial";
   status: "blocked" | "ok" | "stale" | "none";
   used24h: number;
   dailyLimit: number | null;
@@ -15,10 +15,11 @@ type Main = {
   blockedSince: string | null;
 };
 
-// Compact "how much of today's Groq allowance is left" chip for the tutor bar.
-// It never shows a stale "limit reached": while blocked it re-checks with Groq
-// every minute (the server throttles this), so it clears once tokens free up.
-export function UsageMeter({ sessionId, keyId, keyLast4 }: { sessionId: string; keyId?: string | null; keyLast4?: string | null }) {
+// Compact usage chip for the tutor bar: tokens used today on the student's
+// own AI (and, for Groq keys, how much of the daily allowance is left). It
+// never shows a stale "limit reached": while blocked it re-checks every
+// minute (the server throttles this), so it clears once tokens free up.
+export function UsageMeter({ sessionId, keyId, keyTag, keyName }: { sessionId: string; keyId?: string | null; keyTag?: string | null; keyName?: string }) {
   const [main, setMain] = useState<Main | null>(null);
 
   const load = useCallback(async () => {
@@ -63,25 +64,28 @@ export function UsageMeter({ sessionId, keyId, keyLast4 }: { sessionId: string; 
     const n = Math.max(0, (main.dailyLimit ?? 0) - main.used24h);
     label = blocked ? "free prompts used" : `${n} free prompt${n === 1 ? "" : "s"} left`;
   }
-  else if (blocked) label = main?.plan === "pro" ? "allowance used" : "limit reached";
+  else if (blocked) label = "limit reached";
   else if (main && main.status !== "none") {
     label = left !== null ? `${stale ? "~" : ""}${Math.round(left * 100)}%` : formatTokens(main.used24h);
     suffix = left !== null ? " left" : " today";
   }
-  else if (keyLast4) label = "no usage yet";
+  // Nothing used yet: just the provider's name (the tooltip says the rest).
 
   const tone = blocked ? "text-danger" : stale ? "text-muted/70" : left !== null && left < 0.1 ? "text-danger" : left !== null && left < 0.3 ? "text-warn" : "text-muted";
+  const on = keyName ? `On ${keyName}. ` : "";
   const title = !main
-    ? "Usage"
+    ? `${on}Usage`
+    : main.status === "none" && main.plan === "own"
+      ? `${on}No usage yet. See Settings → Usage.`
     : main.plan === "trial"
-      ? `Free trial on Confu's keys: ${main.used24h} of ${main.dailyLimit} prompts used. Add your own Groq key (it's free) to keep going after that.`
-      : main.plan === "pro"
-      ? `${main.dailyLimit === null ? "Admin" : "Pro"}: ${formatTokens(main.used24h)} tokens used in the last 24 h${main.dailyLimit ? ` of ${formatTokens(main.dailyLimit)}` : " (unlimited)"}.`
+      ? `Free prompts on the server's keys: ${main.used24h} of ${main.dailyLimit} used. Connect your own AI to keep going after that.`
+      : main.plan === "server"
+      ? `Owner, on the server's keys: ${formatTokens(main.used24h)} tokens used in the last 24 h.`
       : blocked
-      ? `Groq refused this key at ${new Date(main.blockedSince!).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} for its daily limit. Re-checking every minute; it frees up gradually.`
-      : `${formatTokens(main.used24h)} tokens used here in the last 24 h${main.dailyLimit ? ` of ${main.dailyLimitEstimated ? "~" : ""}${formatTokens(main.dailyLimit)} per day` : ""}. Last checked with Groq ${ago(main.checkedAt)}${stale ? " (may be out of date)" : ""}. See Settings → Usage.`;
+      ? `${on}Groq refused this key at ${new Date(main.blockedSince!).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} for its daily limit. Re-checking every minute; it frees up gradually.`
+      : `${on}${formatTokens(main.used24h)} tokens used here in the last 24 h${main.dailyLimit ? ` of ${main.dailyLimitEstimated ? "~" : ""}${formatTokens(main.dailyLimit)} per day` : ""}. Last checked ${ago(main.checkedAt)}${stale ? " (may be out of date)" : ""}. See Settings → Usage.`;
 
-  if (!label && !keyLast4 && main?.plan !== "pro") return null;
+  if (!label && !keyTag && main?.plan !== "server") return null;
   return (
     <Link
       href="/settings#usage"
@@ -90,10 +94,10 @@ export function UsageMeter({ sessionId, keyId, keyLast4 }: { sessionId: string; 
     >
       {main?.plan === "trial" ? (
         <span className="rounded border border-ink/40 px-1 text-[9px] font-bold text-ink uppercase">Trial</span>
-      ) : main?.plan === "pro" ? (
-        <span className="rounded bg-yellow-400 px-1 text-[9px] font-bold text-ink uppercase">{main.dailyLimit === null ? "Admin" : "Pro"}</span>
+      ) : main?.plan === "server" ? (
+        <span className="rounded bg-yellow-400 px-1 text-[9px] font-bold text-ink uppercase">Admin</span>
       ) : (
-        keyLast4 && <span>…{keyLast4}</span>
+        keyTag && <span>{keyTag}</span>
       )}
       {label && (
         <span className={`flex items-center gap-1.5 ${tone}`}>

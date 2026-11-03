@@ -6,7 +6,8 @@ import { deleteDocument } from "@/components/dashboard/actions";
 import type { RegionCapture, TextSelection } from "@/components/pdf/PdfViewer";
 import { JSON_HEADERS, KEY_ERROR_EVENT, notifyAiUsed, readAiError } from "@/lib/ai-errors";
 import { hashText } from "@/lib/hash";
-import type { KeyInfo } from "@/lib/groq-keys";
+import { keyLabel, keyTag, PROVIDERS } from "@/lib/ai/providers";
+import type { KeyInfo } from "@/lib/ai-keys";
 import { emptyReview, isPaperDoc, type PaperReview } from "@/lib/paper";
 import { daysUntil, type Attempt } from "@/lib/exam";
 import { useExamPractice } from "@/components/exam/useExamPractice";
@@ -78,10 +79,10 @@ type Props = {
   initialHighlights: Highlight[];
   initialMessages: ChatMessage[];
   initialSaved?: SavedAnswer[]; // tutor answers kept under Highlights (migration 0041)
-  // Regular users bring their own Groq key; admins use the server's.
+  // Everyone brings their own AI; the owner can run on the server's keys.
   needsKey: boolean;
   initialKey: KeyInfo | null;
-  trial: boolean; // no key yet, but free-trial tokens left on Confu's keys
+  trial: boolean; // no AI connected yet, but free prompts left on the server's keys
   // Paper sessions: three-pass notes per paper.
   initialReviews: PaperReview[];
   // Exam sessions: past practice answers.
@@ -1668,7 +1669,14 @@ export function Workspace({
         onFold={onFold}
         onExpand={onExpand}
         expanded={expanded}
-        usage={<UsageMeter sessionId={session.id} keyId={needsKey ? keyInfo?.id : undefined} keyLast4={needsKey ? keyInfo?.last4 : undefined} />}
+        usage={
+          <UsageMeter
+            sessionId={session.id}
+            keyId={keyInfo?.id}
+            keyTag={keyInfo ? keyTag(keyInfo.provider) : undefined}
+            keyName={keyInfo ? `${PROVIDERS[keyInfo.provider].name} ${keyLabel(keyInfo.provider, keyInfo.last4, keyInfo.via)}` : undefined}
+          />
+        }
       />
       <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
         {locked ? (

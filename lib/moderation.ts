@@ -108,7 +108,7 @@ const Verdict = z.object({
   corrected: z.string().max(8000).default(""),
 });
 
-// The second look, and the fix. Null when Confu's keys aren't set up.
+// The second look, and the fix. Null when the server's keys aren't set up.
 async function escalate(post: Claimed, scores: Scores) {
   if (!poolSize()) return null;
   const groq = groqClient("gsk_pool", poolFetch);

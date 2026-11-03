@@ -5,7 +5,7 @@ import { KEY_ERRORS } from "@/lib/ai-key";
 export const KEY_ERROR_EVENT = "confu:key-error";
 export const JSON_HEADERS = { "Content-Type": "application/json" };
 
-// Read an API error message. If it says the Groq key is missing or was
+// Read an API error message. If it says the AI key is missing or was
 // rejected, announce it so the workspace can ask for a key.
 export async function readAiError(res: Response): Promise<string> {
   const text = await res.text().catch(() => "");

@@ -1,12 +1,12 @@
 import { after } from "next/server";
 import { z } from "zod";
-import { groqErrorResponse, resolveGroq } from "@/lib/ai-access";
+import { aiErrorResponse, resolveAi } from "@/lib/ai-access";
 import { MODELS, modelBudget, stripReasoning } from "@/lib/groq";
 import { createClient } from "@/lib/supabase/server";
 
 export const maxDuration = 60;
 
-const MAX_IMAGE_BYTES = 3_500_000; // Groq accepts base64 images up to 4MB
+const MAX_IMAGE_BYTES = 3_500_000; // within every provider's limit for a base64 image (Groq's is the lowest, 4MB)
 
 const Body = z.object({
   documentId: z.uuid(),
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
   const already = (pageRow?.content ?? "").trim();
   if (already.length >= 25) return Response.json({ chars: already.length });
 
-  const access = await resolveGroq(supabase, userId, doc.session_id, "ocr");
+  const access = await resolveAi(supabase, userId, doc.session_id, "ocr");
   if ("error" in access) return access.error;
   after(() => access.meter.flush());
 
@@ -76,7 +76,7 @@ Rules:
     });
     text = stripReasoning(res.choices[0]?.message?.content ?? "").trim();
   } catch (err) {
-    return groqErrorResponse(err, "Couldn't read this page.");
+    return aiErrorResponse(err, "Couldn't read this page.");
   }
 
   const { error } = await supabase.from("document_pages").update({ content: text }).eq("document_id", documentId).eq("page_number", page);

@@ -2,17 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "@/components/dialogs";
-import { LocalTime } from "@/components/LocalTime";
 import { ghostButtonClass } from "@/components/ui";
 import { SITE } from "@/lib/site";
 import { createClient } from "@/lib/supabase/client";
 import { track } from "@/lib/telemetry";
 import { Row, Section } from "./Section";
 
-type Invites = { code: string; joined: number; rewarded: number; proUntil: string | null };
+type Invites = { code: string; joined: number };
 
-// Invite friends: they get a week of Pro when they join, and you get a week
-// once they've really studied (10 minutes, or three questions).
+// Invite friends: a link of your own, and how many have joined with it.
 export function InviteSection() {
   const [supabase] = useState(createClient);
   const [data, setData] = useState<Invites | null>(null);
@@ -23,21 +21,13 @@ export function InviteSection() {
     void (async () => {
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) return;
-      const [code, list, profile] = await Promise.all([
+      const [code, list] = await Promise.all([
         supabase.rpc("my_referral_code"),
-        supabase.from("referrals").select("rewarded_at").eq("referrer", auth.user.id),
-        supabase.from("profiles").select("*").eq("id", auth.user.id).maybeSingle(),
+        supabase.from("referrals").select("referrer", { count: "exact", head: true }).eq("referrer", auth.user.id),
       ]);
       if (!live) return;
       if (code.error || !code.data) return setMissing(true);
-      const rows = (list.data ?? []) as { rewarded_at: string | null }[];
-      const until = (profile.data as { pro_until?: string | null } | null)?.pro_until ?? null;
-      setData({
-        code: code.data as string,
-        joined: rows.length,
-        rewarded: rows.filter((r) => r.rewarded_at).length,
-        proUntil: until && Date.parse(until) > Date.now() ? until : null,
-      });
+      setData({ code: code.data as string, joined: list.count ?? 0 });
     })();
     return () => {
       live = false;
@@ -47,17 +37,17 @@ export function InviteSection() {
   if (missing) {
     return (
       <Section id="invite" title="Invite friends">
-        <Row label="Not set up yet" hint="Run supabase/migrations/0023_billing_referrals.sql in Supabase to turn on invites." />
+        <Row label="Not set up yet" hint="Invite links need the referrals tables (my_referral_code) in the database." />
       </Section>
     );
   }
 
   const link = data ? `${SITE.url}/r/${data.code}` : "";
-  const message = `I study with Confu, an AI tutor that works from your own notes and papers. Join with my link and get a week of Pro free: ${link}`;
+  const message = `I study with Confu, a free, open-source AI tutor that works from your own notes and papers. Join me: ${link}`;
 
   return (
-    <Section id="invite" title="Invite friends" description="Share Confu with friends who study. They get a week of Pro when they join; you get a week once they've studied for real.">
-      <Row wide label="Your invite link" hint="Weeks add up, and they stack on top of any Pro you already have.">
+    <Section id="invite" title="Invite friends" description="Share Confu with friends who study.">
+      <Row wide label="Your invite link" hint="Anyone who signs up with it shows up below.">
         <div className="mt-1 space-y-2.5">
           <code className="block truncate rounded-lg border border-line bg-paper px-3 py-2 font-mono text-xs">{link || "…"}</code>
           <div className="flex flex-wrap gap-2">
@@ -100,11 +90,8 @@ export function InviteSection() {
           </div>
         </div>
       </Row>
-      <Row label="Friends who joined" hint={data && data.joined > data.rewarded ? `${data.joined - data.rewarded} still to study their first 10 minutes.` : undefined}>
+      <Row label="Friends who joined">
         <span className="font-mono text-sm">{data ? data.joined : "…"}</span>
-      </Row>
-      <Row label="Weeks of Pro earned" hint={data?.proUntil ? <>Pro from invites until <LocalTime iso={data.proUntil} />.</> : "Up to five weeks every 30 days."}>
-        <span className="font-mono text-sm">{data ? data.rewarded : "…"}</span>
       </Row>
     </Section>
   );

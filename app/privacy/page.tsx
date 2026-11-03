@@ -5,7 +5,7 @@ import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Privacy Policy — Confu",
-  description: "What Confu stores, why, who processes it, how your Groq API key is protected, and how Confu uses Google user data.",
+  description: "What Confu stores, why, who processes it, how your AI API key is protected, and how Confu uses Google user data.",
 };
 
 const link = "underline underline-offset-4";
@@ -15,20 +15,20 @@ export default function PrivacyPage() {
     <LegalPage
       eyebrow="Privacy"
       title="Privacy Policy"
-      updated="November 1, 2026"
+      updated="November 3, 2026"
       summary={
         <Bullets
           items={[
             <>We store only what the app needs to work: your account, the material you add, and your study data.</>,
             <>
-              <b>Your Groq API key is used only to run the requests you make in Confu.</b> We never use it for anything
-              else, never share or sell it, never log it, and store it encrypted.
+              <b>Your AI API key (or OpenRouter connection) is used only to run the requests you make in Confu.</b> We never
+              use it for anything else, never share or sell it, never log it, and store it encrypted.
             </>,
             <>
               <b>Google Drive:</b> Confu only sees the files you pick (or ask it to convert), only to bring them into your
               sessions. We never sell Google data, use it for ads, or train AI on it.
             </>,
-            <>Payments are handled by Lemon Squeezy. We never see your card number.</>,
+            <>Confu sells nothing and takes no payments. The AI provider you connect bills you directly, under its own terms.</>,
             <>Nothing you make is public unless you choose to share it (a study pack, a Wrapped page, a sitting card, a miss map, a crib, a reading list, a library hour, or a section page), and you can take it down any time.</>,
             <>We don&apos;t sell your data, show ads, or use tracking or analytics cookies, and we don&apos;t train AI models on your material.</>,
           ]}
@@ -53,18 +53,15 @@ export default function PrivacyPage() {
               score and the gap, never the audio or the words you said.
             </>,
             <>
-              <b>Your Groq API key</b>, if you add one (see below).
+              <b>Your AI connection</b>: the API key you add, or the key OpenRouter gives Confu when you connect your OpenRouter
+              account, with the provider and models you picked (see below).
             </>,
             <>
               <b>Paper details:</b> for research papers in your sessions, their public identifiers (DOI, arXiv and OpenAlex
               ids) and the citation map we build from public databases.
             </>,
             <>
-              <b>Billing:</b> if you subscribe to Pro, the status of your subscription, its renewal or end date, and the card
-              brand and last four digits that our payment provider reports. We never receive your full card number.
-            </>,
-            <>
-              <b>Invites:</b> who invited whom, so both of you get your weeks of Pro.
+              <b>Invites:</b> who invited whom, so you can see how many friends joined with your link.
             </>,
             <>
               <b>Usage and diagnostics:</b> which Confu pages and features are used, how fast pages load and respond, and
@@ -120,7 +117,7 @@ export default function PrivacyPage() {
             </>,
             <>
               <b>How it&apos;s used:</b> only to provide Confu&apos;s features to you. For example, when you ask the tutor about
-              an imported file, the relevant text is sent to our AI provider, Groq, to answer you. We never sell Google
+              an imported file, the relevant text is sent to the AI provider you connected, to answer you. We never sell Google
               data, use it for advertising, share it for any other purpose, let people read it except where you ask us to
               (for support) or the law requires, or use it to train AI models.
             </>,
@@ -142,8 +139,11 @@ export default function PrivacyPage() {
         </p>
       </Section>
 
-      <Section title="Your Groq API key">
-        <p>If you add your own Groq API key, here is exactly how it is handled:</p>
+      <Section title="Your AI API key">
+        <p>
+          If you add an API key (from Groq, OpenAI, Anthropic, Google, OpenRouter or a server you choose), or connect your
+          OpenRouter account, which gives Confu a key of its own, here is exactly how it is handled:
+        </p>
         <Bullets
           items={[
             <>
@@ -152,11 +152,11 @@ export default function PrivacyPage() {
               runs on your key in the background or for anyone else.
             </>,
             <>
-              <b>Never shared, sold or logged.</b> Your key is not shared with anyone other than Groq, the service it
-              belongs to, and it is never written to our logs.
+              <b>Never shared, sold or logged.</b> Your key is not shared with anyone other than the provider it belongs
+              to, and it is never written to our logs.
             </>,
             <>
-              <b>Encrypted at rest.</b> It is checked with Groq, then encrypted (AES-256-GCM) on our server before
+              <b>Encrypted at rest.</b> It is checked with its provider, then encrypted (AES-256-GCM) on our server before
               it&apos;s stored, and tied to your account so it can&apos;t be decrypted for anyone else. We never show it
               again; you&apos;ll only see its last four characters.
             </>,
@@ -168,7 +168,8 @@ export default function PrivacyPage() {
               . Deleting it removes it from our database.
             </>,
             <>
-              <b>Billing.</b> Requests made with your key count toward your Groq account&apos;s usage and limits.
+              <b>Billing.</b> Requests made with your key count toward that account&apos;s usage, limits and charges, under the
+              provider&apos;s own terms. Confu adds nothing on top.
             </>,
           ]}
         />
@@ -281,7 +282,6 @@ export default function PrivacyPage() {
           items={[
             <>To run the app: store your material, build your plan, answer your questions and remember your progress.</>,
             <>To keep your account secure and the service working.</>,
-            <>To manage your subscription and the Pro weeks you earn through invites.</>,
             <>To understand which features help people learn, and to find and fix what breaks.</>,
             <>
               To send the reminders and weekly summaries you&apos;ve chosen (through our email provider, Resend), and your study
@@ -301,13 +301,10 @@ export default function PrivacyPage() {
               your account can access.
             </>,
             <>
-              <b>Groq</b>: runs the AI models. To answer you, the relevant excerpts of your material, your question,
-              captured images and your study context are sent to Groq. Groq&apos;s own privacy policy and terms apply to that
-              processing.
-            </>,
-            <>
-              <b>Lemon Squeezy</b>: our payment provider and the merchant of record for Pro. It processes your payment
-              details, taxes and receipts under its own privacy policy.
+              <b>The AI provider you connect</b> (for example Groq, OpenAI, Anthropic, Google or OpenRouter, and through
+              OpenRouter the model&apos;s own provider): runs the AI models. To answer you, the relevant excerpts of your
+              material, your question, captured images and your study context are sent to it. Its own privacy policy and
+              terms apply to that processing. Free prompts, before you connect anything, run on Groq.
             </>,
             <>
               <b>Resend</b>: sends our emails.
@@ -351,8 +348,7 @@ export default function PrivacyPage() {
               <Link href="/settings#danger" className={link}>
                 Settings
               </Link>
-              , deletes everything in it, including your usage records, feedback, packs, shared pages, friends, rooms, threads and learning spaces. Lemon
-              Squeezy keeps its own payment records as the law requires.
+              , deletes everything in it, including your usage records, feedback, packs, shared pages, friends, rooms, threads and learning spaces.
             </>,
             <>
               You can also ask us to delete your account at{" "}

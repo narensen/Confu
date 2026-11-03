@@ -5,6 +5,20 @@ export type Release = { date: string; title: string; summary: string; items: str
 
 export const CHANGELOG: Release[] = [
   {
+    date: "2026-11-03",
+    title: "Confu is free and open source. Bring your own AI",
+    summary: "No more Pro: every feature is for everyone, on the AI you choose.",
+    items: [
+      "There are no plans any more. Everything Confu does is free, for everyone, and Confu is going open source.",
+      "Connect your OpenRouter account in one click: approve Confu on openrouter.ai and it runs on your OpenRouter credits, with hundreds of models to choose from. You can set a spending limit there.",
+      "Or paste an API key from Groq (free tier), OpenAI, Anthropic, Google Gemini, or any OpenAI-compatible server, like Ollama or LM Studio on your own computer.",
+      "Pick which model does what in Settings → Your AI: one for the tutor, plans and practice, a small one for the notes it keeps on your progress, and one that reads figures and scans. Confu suggests good ones from what your key can use.",
+      "Your Groq key keeps working as it was. A session can still have its own key.",
+      "The tutor bar shows which AI you're on, and Settings → Usage counts tokens for each key.",
+      "If you had Pro: thank you. Connect your own AI in Settings to keep going; Groq's free tier is plenty to start.",
+    ],
+  },
+  {
     date: "2026-11-02",
     title: "Keep the answers that matter",
     summary: "Save a tutor answer, or clear the chat and start fresh.",

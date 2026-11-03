@@ -69,7 +69,6 @@ async function PackBody({ params }: { params: PageProps<"/p/[slug]">["params"] }
             <span className="font-mono text-xs text-muted">
               {pack.views} views · {pack.copies} copies · {pack.visibility === "public" ? "listed in the gallery" : "unlisted: only people with the link"}
             </span>
-            {pack.class_mode && <span className="text-muted">Pro for the term once 30 classmates copy it.</span>}
             {pack.class_mode && (
               <Link href={`/p/${pack.slug}/class`} className="ml-auto font-medium underline underline-offset-4">
                 Class progress →
