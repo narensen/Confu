@@ -7598,6 +7598,57 @@ ALTER TABLE public.study_sessions ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "update own name" ON public.profiles FOR UPDATE TO authenticated USING ((( SELECT auth.uid() AS uid) = id)) WITH CHECK ((( SELECT auth.uid() AS uid) = id));
 
 
+-- Privileges
+--
+-- Supabase gives anon and authenticated every privilege on each new table,
+-- sequence and function in public. Row level security guards the rows of
+-- most tables; the statements here narrow what the roles may do at all,
+-- as the original migrations did, and the grants after them add back
+-- exactly what each role needs. Without them, a signed-in user could change
+-- their own role, and anyone could call internal and cron-only functions
+-- (reminder_batch returns every user's email address).
+-- service_role keeps its defaults: it is the server's own key (the daily
+-- job) and bypasses row level security anyway.
+--
+
+-- Functions: none by default. The grants below list every function anon
+-- and authenticated may call; the rest are internal, or run from triggers,
+-- row level security policies or the daily job.
+REVOKE ALL ON ALL FUNCTIONS IN SCHEMA public FROM anon, authenticated;
+
+-- Tables reached only through functions.
+REVOKE ALL ON public.community_hits FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.course_requests FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.cribs FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.friend_presence FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.friend_request_hits FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.friendships FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.library_hours FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.miss_maps FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.noticeboards FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.notifications FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.pack_lineage FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.page_pins FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.post_reports FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.posts FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.post_votes FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.room_friend_invites FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.section_handins FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.section_papers FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.section_wrapped FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.sitting_shares FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.space_members FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.spaces FROM PUBLIC, anon, authenticated;
+
+-- Tables a student writes only in limited ways (the column grants below).
+REVOKE INSERT, UPDATE, DELETE ON public.profiles FROM anon, authenticated;
+REVOKE INSERT, UPDATE, DELETE ON public.feedback FROM anon, authenticated;
+REVOKE INSERT, UPDATE, DELETE ON public.answer_feedback FROM anon, authenticated;
+REVOKE ALL ON public.saved_answers FROM anon;
+REVOKE INSERT, UPDATE, DELETE ON public.saved_answers FROM authenticated;
+REVOKE ALL ON public.ai_keys FROM anon;
+
+--
 --
 -- Name: FUNCTION _accept_notify(); Type: ACL; Schema: public; Owner: -
 --

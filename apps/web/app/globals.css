@@ -1,0 +1,653 @@
+@import "tailwindcss";
+/* Shared components live in workspace packages, outside this app: scan them for classes too. */
+@source "../../../packages/ui/src";
+@source "../../../packages/app/src";
+
+/* Confu's two themes, as tokens: components use bg-panel, text-ink,
+   border-ink… and never need a dark: class.
+
+   Light: white surfaces, black frames, hard offset shadows, editorial type.
+   Dark: warm charcoal, glossy. Every surface is opaque (nothing shows
+   through a card, menu or dialog); depth comes from layered warm greys, a
+   top-lit sheen and a warm hairline rim on each surface, soft deep shadows,
+   and a faint amber glow on the page itself.
+
+   Roles beyond the basics:
+     inverse        a hero surface (Continue, reviews due, a running timer):
+                    ink in light; a lit, raised charcoal panel in dark
+     scrim          the backdrop behind a dialog
+     page           the body behind everything */
+:root {
+  color-scheme: light;
+  --page: #f5f5f1;
+  --paper: #f5f5f1;      /* recessed: fields, hovers, chips, the page */
+  --panel: #ffffff;      /* surfaces: cards, menus, dialogs, panels */
+  --ink: #0d0d0c;        /* text, frames, primary buttons */
+  --muted: #62625d;
+  --line: #e4e3de;       /* hairlines inside frames */
+  --accent: #0d0d0c;
+  --accent-soft: #efefeb;
+  --accent-ink: #ffffff;
+  --danger: #b42318;
+  --ok: #18794e;
+  --warn: #a15c07;
+  --inverse: #0d0d0c;
+  --inverse-ink: #ffffff;
+  --inverse-muted: rgba(255, 255, 255, 0.62);
+  --scrim: rgba(13, 13, 12, 0.42);
+  --hl-yellow: rgba(253, 216, 53, 0.42);
+  --hl-region: rgba(13, 13, 12, 0.06);
+  --viewer: #ebebe7;
+  --shadow: #0d0d0c;     /* the offset "hard" shadows */
+  --marker: #fde047;     /* highlighter-pen underlines behind headline words */
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Dark: chosen in the account menu (data-theme), or the system's setting when
+   none is chosen. The same values twice: for the system setting, and for the
+   explicit choice. "white" becomes the dark surface colour, so ink buttons
+   (bg-ink text-white) turn into light, glossy buttons with dark text. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #121211;
+    --paper: #121211;
+    --panel: #1a1a18;
+    --ink: #ecebe4;
+    --muted: #a3a29b;
+    --line: #2f2e2a;
+    --accent: #ecebe4;
+    --accent-soft: #24231f;
+    --accent-ink: #121211;
+    --danger: #f87171;
+    --ok: #4ade80;
+    --warn: #fbbf24;
+    --inverse: #24231f;
+    --inverse-ink: #f2f0e8;
+    --inverse-muted: rgba(242, 240, 232, 0.62);
+    --scrim: rgba(0, 0, 0, 0.62);
+    --hl-region: rgba(236, 235, 228, 0.08);
+    --viewer: #0b0b0a;
+    --shadow: #000000;
+    --marker: #8a6a0c;
+    --color-white: #121211;
+    --color-yellow-50: #23200f;
+    --color-yellow-100: #2c2711;
+    --color-yellow-200: #3a3313;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #121211;
+  --paper: #121211;
+  --panel: #1a1a18;
+  --ink: #ecebe4;
+  --muted: #a3a29b;
+  --line: #2f2e2a;
+  --accent: #ecebe4;
+  --accent-soft: #24231f;
+  --accent-ink: #121211;
+  --danger: #f87171;
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --inverse: #24231f;
+  --inverse-ink: #f2f0e8;
+  --inverse-muted: rgba(242, 240, 232, 0.62);
+  --scrim: rgba(0, 0, 0, 0.62);
+  --hl-region: rgba(236, 235, 228, 0.08);
+  --viewer: #0b0b0a;
+  --shadow: #000000;
+  --marker: #8a6a0c;
+  --color-white: #121211;
+  --color-yellow-50: #23200f;
+  --color-yellow-100: #2c2711;
+  --color-yellow-200: #3a3313;
+}
+
+/* On bright yellow (badges, highlights) text stays dark in either theme. */
+.bg-yellow-300,
+.bg-yellow-400 {
+  --ink: #0d0d0c;
+  --muted: #3f3e39;
+  color: #0d0d0c;
+}
+
+@theme inline {
+  --color-page: var(--page);
+  --color-paper: var(--paper);
+  --color-panel: var(--panel);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-danger: var(--danger);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-inverse: var(--inverse);
+  --color-inverse-ink: var(--inverse-ink);
+  --color-inverse-muted: var(--inverse-muted);
+  --color-scrim: var(--scrim);
+  --color-viewer: var(--viewer);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-newsreader);
+  --ease-fluid: var(--ease);
+  --shadow-hard: 3px 3px 0 0 var(--shadow);
+  --shadow-hard-sm: 2px 2px 0 0 var(--shadow);
+}
+
+body {
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+/* A whole section on the inverse surface (pricing's Pro card, Wrapped, the
+   landing page's last call): inside it, "ink" is the surface and "white" is
+   the text, so nested pieces written as ink-on-white keep working. */
+.surface-inverse {
+  --ink: var(--inverse);
+  --muted: var(--inverse-muted);
+  --color-white: var(--inverse-ink);
+  background-color: var(--inverse);
+  color: var(--inverse-ink);
+}
+
+/* The header (and the public nav): frosted, but solid enough to read over
+   anything. Never wrap a password field with it: a filtered ancestor stops
+   paste and password managers. Menus and panels are plain bg-panel. */
+.glass-bar {
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+}
+
+/* ------------------------------------------------------- dark: the gloss */
+/* Written once as a mixin-like block for each way dark can be on. Unlayered,
+   so it wins over Tailwind's utilities where it needs to. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) body {
+    background-color: var(--page);
+    background-image:
+      radial-gradient(900px 520px at 0% -12%, rgba(250, 204, 21, 0.06), transparent 62%),
+      radial-gradient(1000px 600px at 100% -14%, rgba(255, 244, 220, 0.035), transparent 60%);
+    background-attachment: fixed;
+  }
+  /* Frames become a soft rim of light. */
+  :root:not([data-theme="light"]) .border-ink:where(:not(.bg-yellow-300, .bg-yellow-400)) { border-color: rgba(255, 248, 230, 0.11); }
+  :root:not([data-theme="light"]) .border-line { border-color: var(--line); }
+  /* Surfaces: lit from the top, a fixed-height sheen so tall panels don't wash out. */
+  :root:not([data-theme="light"]) .bg-panel {
+    background-image: linear-gradient(180deg, rgba(255, 248, 230, 0.04), rgba(255, 248, 230, 0) 140px);
+  }
+  /* Light buttons and pills: glossy, like a lacquered key. */
+  :root:not([data-theme="light"]) .bg-ink {
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0) 60%);
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.18), 0 1px 2px rgba(0, 0, 0, 0.4);
+  }
+  /* Hero surfaces: a raised charcoal panel with a warm rim. */
+  :root:not([data-theme="light"]) .bg-inverse,
+  :root:not([data-theme="light"]) .surface-inverse {
+    background-image:
+      radial-gradient(120% 140% at 0% 0%, rgba(250, 204, 21, 0.1), transparent 55%),
+      linear-gradient(160deg, #2d2c27 0%, #22211d 55%, #1a1917 100%);
+    border-color: rgba(250, 204, 21, 0.24);
+    box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.08), 0 18px 44px -18px rgba(0, 0, 0, 0.75);
+  }
+  /* Hard offset shadows become depth: a lit top edge and a soft drop. */
+  :root:not([data-theme="light"]) .shadow-hard {
+    box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.06), 0 1px 2px rgba(0, 0, 0, 0.5), 0 16px 36px -12px rgba(0, 0, 0, 0.7);
+  }
+  :root:not([data-theme="light"]) .shadow-hard-sm {
+    box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.05), 0 8px 20px -10px rgba(0, 0, 0, 0.65);
+  }
+  :root:not([data-theme="light"]) .glass-bar {
+    background: rgba(18, 18, 17, 0.84);
+    box-shadow: inset 0 -1px 0 rgba(255, 248, 230, 0.04);
+  }
+  :root:not([data-theme="light"]) .auth-stage {
+    background-color: #161614;
+    background-image:
+      radial-gradient(680px 440px at 12% 0%, rgba(250, 204, 21, 0.16), transparent 62%),
+      radial-gradient(560px 420px at 100% 8%, rgba(255, 244, 220, 0.07), transparent 58%);
+    color: #f4f2ec;
+    box-shadow: inset 1px 0 0 rgba(255, 248, 230, 0.08);
+  }
+  :root:not([data-theme="light"]) .auth-stage [data-float] {
+    box-shadow: 0 22px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 248, 230, 0.12);
+  }
+  :root:not([data-theme="light"]) .glow-page {
+    background-color: transparent;
+    background-image: none;
+  }
+  :root:not([data-theme="light"]) [data-parallax="grid"] { opacity: 0.12; }
+  :root:not([data-theme="light"]) .tutor-diagram { background: #f4f3ef; }
+  :root:not([data-theme="light"]) .tutor-composer {
+    background: transparent;
+    border-color: rgba(255, 248, 230, 0.24) rgba(255, 248, 230, 0.14) rgba(255, 248, 230, 0.08);
+    box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.07);
+  }
+  :root:not([data-theme="light"]) .tutor-composer:focus-within {
+    border-color: rgba(250, 204, 21, 0.55) rgba(250, 204, 21, 0.36) rgba(250, 204, 21, 0.22);
+  }
+  :root:not([data-theme="light"]) .tutor-send { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 4px 12px -4px rgba(0, 0, 0, 0.8); }
+  :root:not([data-theme="light"]) .tutor-send:disabled { background-color: rgba(255, 248, 230, 0.07); box-shadow: inset 0 0 0 1px rgba(255, 248, 230, 0.08); }
+  :root:not([data-theme="light"]) .prose-tutor :is(th, td, pre) { border-color: rgba(255, 248, 230, 0.14); }
+  :root:not([data-theme="light"]) .prose-tutor blockquote { border-left-color: rgba(250, 204, 21, 0.55); }
+  /* A selected state (a tab, a preset, "Following") is a raised tone, not a
+     glossy button: only actions glow. White inside reads as text. */
+  :root:not([data-theme="light"]) .bg-ink:is([aria-pressed="true"], [aria-selected="true"], [aria-checked="true"], [aria-current="page"], [aria-current="true"]) {
+    --color-white: var(--ink);
+    background-color: #33322c;
+    background-image: linear-gradient(180deg, rgba(255, 248, 230, 0.07), rgba(255, 248, 230, 0) 70%);
+    color: var(--ink);
+    border-color: rgba(255, 248, 230, 0.16);
+    box-shadow: inset 0 0 0 1px rgba(255, 248, 230, 0.1);
+  }
+  /* A white page is the brightest thing on a dark screen: dim it a little,
+     and warm it, unless you chose Sepia or Night in the reader. */
+  :root:not([data-theme="light"]) [data-reader="light"] .pdf-page { filter: brightness(0.86) sepia(0.06); }
+}
+:root[data-theme="dark"] body {
+  background-color: var(--page);
+  background-image:
+    radial-gradient(900px 520px at 0% -12%, rgba(250, 204, 21, 0.06), transparent 62%),
+    radial-gradient(1000px 600px at 100% -14%, rgba(255, 244, 220, 0.035), transparent 60%);
+  background-attachment: fixed;
+}
+:root[data-theme="dark"] .border-ink:where(:not(.bg-yellow-300, .bg-yellow-400)) { border-color: rgba(255, 248, 230, 0.11); }
+:root[data-theme="dark"] .border-line { border-color: var(--line); }
+:root[data-theme="dark"] .bg-panel {
+  background-image: linear-gradient(180deg, rgba(255, 248, 230, 0.04), rgba(255, 248, 230, 0) 140px);
+}
+:root[data-theme="dark"] .bg-ink {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0) 60%);
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.18), 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+:root[data-theme="dark"] .bg-inverse,
+:root[data-theme="dark"] .surface-inverse {
+  background-image:
+    radial-gradient(120% 140% at 0% 0%, rgba(250, 204, 21, 0.1), transparent 55%),
+    linear-gradient(160deg, #2d2c27 0%, #22211d 55%, #1a1917 100%);
+  border-color: rgba(250, 204, 21, 0.24);
+  box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.08), 0 18px 44px -18px rgba(0, 0, 0, 0.75);
+}
+:root[data-theme="dark"] .shadow-hard {
+  box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.06), 0 1px 2px rgba(0, 0, 0, 0.5), 0 16px 36px -12px rgba(0, 0, 0, 0.7);
+}
+:root[data-theme="dark"] .shadow-hard-sm {
+  box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.05), 0 8px 20px -10px rgba(0, 0, 0, 0.65);
+}
+:root[data-theme="dark"] .glass-bar {
+  background: rgba(18, 18, 17, 0.84);
+  box-shadow: inset 0 -1px 0 rgba(255, 248, 230, 0.04);
+}
+:root[data-theme="dark"] .auth-stage {
+  background-color: #161614;
+  background-image:
+    radial-gradient(680px 440px at 12% 0%, rgba(250, 204, 21, 0.16), transparent 62%),
+    radial-gradient(560px 420px at 100% 8%, rgba(255, 244, 220, 0.07), transparent 58%);
+  color: #f4f2ec;
+  box-shadow: inset 1px 0 0 rgba(255, 248, 230, 0.08);
+}
+:root[data-theme="dark"] .auth-stage [data-float] {
+  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 248, 230, 0.12);
+}
+:root[data-theme="dark"] .glow-page {
+  background-color: transparent;
+  background-image: none;
+}
+:root[data-theme="dark"] [data-parallax="grid"] { opacity: 0.12; }
+:root[data-theme="dark"] .tutor-diagram { background: #f4f3ef; }
+:root[data-theme="dark"] .tutor-composer {
+  background: transparent;
+  border-color: rgba(255, 248, 230, 0.24) rgba(255, 248, 230, 0.14) rgba(255, 248, 230, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.07);
+}
+:root[data-theme="dark"] .tutor-composer:focus-within {
+  border-color: rgba(250, 204, 21, 0.55) rgba(250, 204, 21, 0.36) rgba(250, 204, 21, 0.22);
+}
+:root[data-theme="dark"] .tutor-send { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 4px 12px -4px rgba(0, 0, 0, 0.8); }
+:root[data-theme="dark"] .tutor-send:disabled { background-color: rgba(255, 248, 230, 0.07); box-shadow: inset 0 0 0 1px rgba(255, 248, 230, 0.08); }
+:root[data-theme="dark"] .prose-tutor :is(th, td, pre) { border-color: rgba(255, 248, 230, 0.14); }
+:root[data-theme="dark"] .prose-tutor blockquote { border-left-color: rgba(250, 204, 21, 0.55); }
+:root[data-theme="dark"] .bg-ink:is([aria-pressed="true"], [aria-selected="true"], [aria-checked="true"], [aria-current="page"], [aria-current="true"]) {
+  --color-white: var(--ink);
+  background-color: #33322c;
+  background-image: linear-gradient(180deg, rgba(255, 248, 230, 0.07), rgba(255, 248, 230, 0) 70%);
+  color: var(--ink);
+  border-color: rgba(255, 248, 230, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(255, 248, 230, 0.1);
+}
+:root[data-theme="dark"] [data-reader="light"] .pdf-page { filter: brightness(0.86) sepia(0.06); }
+
+/* The product glimpse beside sign-in. Light mode stays a black slab. The blur
+   lives only here: this column is not an ancestor of the password field. */
+.auth-stage { background: #0d0d0c; color: #fff; }
+.auth-stage-muted { color: rgba(255, 255, 255, 0.5); }
+
+::selection { background: rgba(253, 216, 53, 0.55); color: var(--ink); }
+
+/* ------------------------------------------------------------------ motion */
+
+@keyframes enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pop {
+  from { opacity: 0; transform: translateY(4px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(-20px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes shimmer { from { background-position: -200% 0; } to { background-position: 200% 0; } }
+@keyframes blink { 50% { opacity: 0; } }
+@keyframes indeterminate {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}
+
+.animate-enter { animation: enter 0.5s var(--ease) both; }
+.animate-pop { animation: pop 0.2s var(--ease) both; }
+.animate-slide-in { animation: slide-in 0.35s var(--ease) both; }
+.animate-fade { animation: fade 0.3s ease both; }
+@keyframes notify-in {
+  from { opacity: 0; transform: translateX(28px); }
+  to { opacity: 1; transform: none; }
+}
+.animate-notify { animation: notify-in 0.32s var(--ease) both; }
+
+.skeleton {
+  background: linear-gradient(90deg, var(--paper) 25%, color-mix(in srgb, var(--ink) 6%, var(--paper)) 50%, var(--paper) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+.indeterminate { position: relative; overflow: hidden; }
+.indeterminate::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: var(--ink);
+  animation: indeterminate 1.3s var(--ease) infinite;
+}
+
+/* Smooth height for disclosures: <div class="disclosure" data-open><div>…</div></div>
+   (not ".collapse": Tailwind already defines that as visibility: collapse) */
+.disclosure {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.35s var(--ease), opacity 0.25s ease;
+}
+.disclosure[data-open="true"] { grid-template-rows: 1fr; opacity: 1; }
+.disclosure > * { min-height: 0; overflow: hidden; }
+
+.is-streaming .prose-tutor > :last-child::after {
+  content: "";
+  display: inline-block;
+  width: 0.5em;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  background: var(--ink);
+  animation: blink 1s steps(1) infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.animate-float { animation: float 6s ease-in-out infinite; }
+
+/* Landing page (GSAP, components/landing/LandingMotion.tsx): animated pieces
+   start hidden so they don't flash before their entrance. The class is removed
+   when the motion script runs; <noscript> on the page undoes this without JS. */
+.motion-pending [data-hero],
+.motion-pending [data-word],
+.motion-pending [data-split],
+.motion-pending [data-reveal],
+.motion-pending [data-reveal-item],
+.motion-pending [data-slide-item] {
+  visibility: hidden;
+}
+
+html { scroll-behavior: smooth; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------------------------------------------------------- tutor answers */
+
+.prose-tutor {
+  line-height: 1.7;
+  font-size: 0.925rem;
+  overflow-wrap: anywhere;
+  min-width: 0;
+  max-width: 100%;
+}
+.prose-tutor > * + * { margin-top: 0.75em; }
+.prose-tutor h1, .prose-tutor h2, .prose-tutor h3, .prose-tutor h4 {
+  font-family: var(--font-newsreader), Georgia, serif;
+  font-weight: 600;
+  line-height: 1.25;
+  margin-top: 1.1em;
+  letter-spacing: -0.01em;
+}
+.prose-tutor h1 { font-size: 1.3rem; }
+.prose-tutor h2 { font-size: 1.18rem; }
+.prose-tutor h3 { font-size: 1.06rem; }
+.prose-tutor h4 { font-size: 0.98rem; }
+.prose-tutor > :first-child { margin-top: 0; }
+.prose-tutor ul { list-style: none; padding-left: 1.1rem; }
+.prose-tutor ul > li { position: relative; }
+.prose-tutor ul > li::before {
+  content: "";
+  position: absolute;
+  left: -0.85rem;
+  top: 0.68em;
+  width: 5px;
+  height: 5px;
+  background: var(--ink);
+}
+.prose-tutor ol { list-style: decimal; padding-left: 1.25rem; }
+.prose-tutor ol > li::marker { font-family: var(--font-geist-mono), monospace; font-size: 0.85em; color: var(--muted); }
+.prose-tutor li + li { margin-top: 0.3em; }
+.prose-tutor li > ul, .prose-tutor li > ol { margin-top: 0.3em; }
+.prose-tutor strong { font-weight: 600; }
+.prose-tutor em { font-style: normal; font-weight: 500; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--ink) 25%, transparent); text-underline-offset: 3px; }
+.prose-tutor a { text-decoration: underline; text-underline-offset: 3px; }
+.prose-tutor hr { border: 0; border-top: 1px solid var(--line); margin: 1.2em 0; }
+.prose-tutor code {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.84em;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  padding: 0.05em 0.3em;
+  border-radius: 4px;
+}
+.prose-tutor pre { background: var(--paper); border: 1px solid var(--ink); border-radius: 8px; padding: 0.8rem; overflow-x: auto; }
+.prose-tutor pre code { border: 0; padding: 0; background: none; }
+/* An answer the model indented, so Markdown treated it as code. Show it as text. */
+.prose-tutor pre:has(> code[data-prose]) {
+  background: none;
+  border: 0;
+  padding: 0;
+  overflow: visible;
+  font-family: inherit;
+  white-space: normal;
+}
+.prose-tutor pre code[data-prose] {
+  font-family: inherit;
+  font-size: inherit;
+  white-space: pre-wrap;
+  background: none;
+  border: 0;
+  padding: 0;
+}
+.prose-tutor pre:has(> .tutor-diagram) { background: none; border: 0; padding: 0; overflow: visible; }
+.prose-tutor blockquote {
+  border-left: 3px solid var(--ink);
+  padding: 0.15em 0 0.15em 0.8rem;
+  color: color-mix(in srgb, var(--ink) 82%, var(--paper));
+}
+/* Same idea as a display equation: the table keeps its own width and the
+   row slides. display:block on the table itself was squashing the columns. */
+.prose-tutor .tutor-table-scroll {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  margin: 0.8em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink) transparent;
+}
+.prose-tutor .tutor-table-scroll::-webkit-scrollbar { height: 8px; }
+.prose-tutor .tutor-table-scroll::-webkit-scrollbar-thumb { background: var(--ink); border-radius: 99px; }
+/* A table wraps to fit the column while every column can stay readable
+   (.tutor-cell keeps each one at least 5.5rem); with more columns than that
+   allows, it slides sideways instead of squeezing them. */
+.prose-tutor table { border-collapse: collapse; font-size: 0.86em; width: auto; min-width: 100%; }
+.prose-tutor th, .prose-tutor td {
+  border: 1px solid var(--ink);
+  padding: 0.35em 0.75em;
+  text-align: left;
+  overflow-wrap: normal;
+  word-break: normal;
+  white-space: normal;
+  vertical-align: top;
+}
+.prose-tutor th { background: var(--paper); font-weight: 600; }
+/* A long cell wraps at this width instead of stretching the table: one
+   sentence in a cell used to make the whole table enormous. */
+.prose-tutor .tutor-cell { min-width: 5.5rem; max-width: 18rem; }
+.prose-tutor .katex-display { overflow-x: auto; overflow-y: hidden; padding: 0.35em 0; }
+/* The tutor across the whole screen (only it is this wide: beside the page
+   it tops out at 720px). The reading column is 64rem there (see ChatPanel).
+   A table keeps its own size inside it, wrapping its cells to fit instead of
+   sliding, and is never stretched wider than its words need. */
+@container (min-width: 64rem) {
+  .prose-tutor .tutor-table-scroll table { width: auto; min-width: 0; max-width: 100%; }
+  .prose-tutor .tutor-cell { max-width: 22rem; }
+}
+/* Tailwind draws every svg as a block, so each symbol lands on its own line,
+   and the formula's TeX source (the MathML annotation) shows beside it. */
+.katex { white-space: nowrap; }
+.katex svg { display: inline !important; vertical-align: baseline; max-width: none; }
+.katex .katex-html { white-space: nowrap; }
+.katex .katex-newline { display: inline; }
+.katex .katex-mathml { display: none !important; }
+.katex, .katex * { overflow-wrap: normal; }
+.tutor-diagram {
+  margin: 0.85em 0;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f7f6f2;
+  padding: 0.75rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+/* Shown at its own size (the width is set on the img), centred, and never
+   stretched: stretching a small drawing is what blew its labels up. */
+.tutor-diagram { white-space: normal; font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif); color: #1a1a1a; }
+.tutor-diagram img { display: block; height: auto; margin-inline: auto; }
+.tutor-diagram-open { display: block; width: 100%; cursor: zoom-in; border-radius: 8px; }
+.tutor-diagram-open:focus-visible { outline: 2px solid #1a1a1a; outline-offset: 2px; }
+.tutor-diagram-pending { display: grid; min-height: 7rem; place-items: center; }
+.tutor-diagram-pending span {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11px;
+  color: #6b6a63;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+.tutor-diagram-failed p { margin: 0; font-size: 0.85rem; color: #45443f; }
+.tutor-diagram-failed details { margin-top: 0.5rem; font-size: 0.75rem; color: #6b6a63; }
+.tutor-diagram-failed summary { cursor: pointer; }
+.tutor-diagram-failed pre {
+  margin-top: 0.4rem;
+  max-height: 14rem;
+  overflow: auto;
+  white-space: pre;
+  border: 1px solid #dcdad2;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 0.6rem;
+  color: #1a1a1a;
+}
+
+/* The tutor's input floats over the end of the conversation with nothing
+   painted behind it: no strip, no shadow, no glow. The messages fade out
+   above it (.tutor-scroll), so it sits on the panel itself. The pill is
+   clear; its gloss is the rim, lit from above (lighter on top, deeper
+   underneath), which deepens while you type. The send button is a small
+   glossy ink bead, quiet until there's something to send. */
+.tutor-scroll {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - var(--dock, 96px) - 28px), transparent calc(100% - var(--dock, 96px) + 6px)),
+    linear-gradient(to left, #000 12px, transparent 12px);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - var(--dock, 96px) - 28px), transparent calc(100% - var(--dock, 96px) + 6px)),
+    linear-gradient(to left, #000 12px, transparent 12px);
+}
+.tutor-composer {
+  background: transparent;
+  border-color: rgba(13, 13, 12, 0.12) rgba(13, 13, 12, 0.18) rgba(13, 13, 12, 0.3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 -1px 0 rgba(13, 13, 12, 0.05);
+}
+.tutor-composer:focus-within {
+  border-color: rgba(13, 13, 12, 0.36) rgba(13, 13, 12, 0.46) rgba(13, 13, 12, 0.58);
+}
+.tutor-send {
+  color: var(--paper);
+  background-color: var(--ink);
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.06) 48%, rgba(255, 255, 255, 0) 52%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 3px 8px -3px rgba(13, 13, 12, 0.5);
+  transition: transform 160ms var(--ease, ease), box-shadow 160ms ease, background-color 160ms ease, color 160ms ease;
+}
+.tutor-send:hover:not(:disabled) { transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 6px 14px -4px rgba(13, 13, 12, 0.5); }
+.tutor-send:active:not(:disabled) { transform: scale(0.94); }
+.tutor-send:disabled {
+  color: var(--muted);
+  background-color: rgba(13, 13, 12, 0.06);
+  background-image: none;
+  box-shadow: inset 0 0 0 1px rgba(13, 13, 12, 0.06);
+  cursor: default;
+}
+.prose-compact { font-size: 0.875rem; line-height: 1.6; }
+
+/* ---------------------------------------------------------------- viewer */
+
+/* The text layer is an invisible copy of the page text, laid over the
+   rendered page so it can be selected. Keep it invisible when selected too:
+   the global ::selection colour would draw a second, slightly offset copy of
+   every selected word (it looked bold and overlapping). */
+.pdf-page .react-pdf__Page__textContent { mix-blend-mode: multiply; } /* yellow behind the ink, like a real highlighter */
+.pdf-page .react-pdf__Page__textContent ::selection { background: rgba(253, 216, 53, 0.6); color: transparent; }
+.pdf-page.region-mode .react-pdf__Page__textContent { pointer-events: none; }
+
+/* Search matches inside the page text layer (multiply keeps the ink crisp);
+   the page with the current match is orange. */
+.pdf-page .react-pdf__Page__textContent mark.pdf-hit { background: rgba(253, 216, 53, 0.9); color: transparent; border-radius: 2px; padding: 0; margin: 0; }
+.pdf-page[data-hit="current"] .react-pdf__Page__textContent mark.pdf-hit { background: rgba(255, 149, 0, 0.8); }
+
+/* Reading themes: only the page changes; the app around it stays light.
+   Night inverts the page and rotates hue back, so highlights stay yellow-ish
+   and figures keep their colours' meaning. */
+[data-reader="sepia"] .pdf-scroll { background: #e6dcc6; }
+[data-reader="sepia"] .pdf-page canvas { filter: sepia(0.42) saturate(1.15) brightness(0.97); }
+[data-reader="night"] .pdf-scroll { background: #141413; }
+[data-reader="night"] .pdf-page { filter: invert(0.88) hue-rotate(180deg); box-shadow: none; }
+
+/* Margin notes stay their own colour in night mode (the page is inverted). */
+[data-reader="night"] .pdf-page .pdf-note { filter: invert(0.88) hue-rotate(180deg); }

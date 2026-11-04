@@ -1,0 +1,20 @@
+{
+  "name": "@confu/client",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Confu on the device: the student's AI keys and connections, usage, and (next) the tutor's answer flow, over @confu/storage.",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tests",
+    "test": "bun test tests"
+  },
+  "dependencies": {
+    "@confu/ai": "workspace:*",
+    "@confu/core": "workspace:*",
+    "@confu/storage": "workspace:*"
+  }
+}

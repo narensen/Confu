@@ -1,0 +1,15 @@
+{
+  "name": "@confu/core",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Confu's tutor logic: prompts, citations, math repair, diagrams, plans. Pure TypeScript, no database or network.",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tests",
+    "test": "bun test tests"
+  }
+}

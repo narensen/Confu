@@ -6,7 +6,7 @@ Run it once on an empty Supabase project. It creates:
 
 - Every table, index, constraint, and trigger in `public`
 - The functions the app calls: search, plans, reviews, friends, spaces, moderation, insights, reminders, and account deletion
-- Row level security, and the grants for the roles `anon`, `authenticated`, and `service_role`
+- Row level security, and the grants for the roles `anon`, `authenticated`, and `service_role`. Supabase grants `anon` and `authenticated` everything on new objects by default; the file narrows that back down (the "Privileges" block), so students can't, for example, change their own role or call internal functions
 - The profile row created when someone signs up (`on_auth_user_created` on `auth.users`)
 - The private `documents` storage bucket (50 MB; PDF, JPEG, and PNG) and the four policies that keep each account's files in its own folder
 - The 33 subject spaces
@@ -39,3 +39,13 @@ Do not run `schema.sql` on it. The script creates every object from scratch, and
 The numbered files that used to live in `supabase/migrations/`, and the two paste files `community-paste.sql` and `section-loop-paste.sql`, were folded into this file and removed. This file is the result of applying those migrations in order on an empty database and keeping the final shape: tables, functions, policies, grants, the sign-up trigger, the storage bucket, and the subject-space rows.
 
 Migrations 0023 and 0024 were never in this repository, so study packs and class-rep Pro are not created here. Functions that look for a `packs` table check for it and return without writing when it is absent.
+
+## Patches for older databases
+
+`patches/` holds small, safe-to-rerun SQL files for databases created before a feature existed. Run the ones your database is missing, in date order:
+
+| Patch | Adds |
+| --- | --- |
+| `2026-11-04-saved-answers-and-answer-feedback.sql` | Saved tutor answers and answer feedback (the Save button and thumbs up/down) |
+
+A database created from `schema.sql` already has everything in `patches/`.

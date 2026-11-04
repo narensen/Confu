@@ -1,0 +1,34 @@
+{
+  "name": "@confu/app",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Confu that runs on the device: library, reader and tutor over @confu/client. No account or server needed. Hosted by the web app at /app, and later by the desktop and Android shells.",
+  "exports": {
+    "./LocalApp": "./src/LocalApp.tsx",
+    "./pdf": "./src/pdf.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@confu/ai": "workspace:*",
+    "@confu/client": "workspace:*",
+    "@confu/core": "workspace:*",
+    "@confu/storage": "workspace:*",
+    "@confu/ui": "workspace:*",
+    "pdfjs-dist": "6.3.289",
+    "react-pdf": "^11.0.0"
+  },
+  "peerDependencies": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  }
+}

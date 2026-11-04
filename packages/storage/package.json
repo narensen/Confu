@@ -1,0 +1,18 @@
+{
+  "name": "@confu/storage",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Confu's on-device database: SQLite (WASM + OPFS in the browser), full-text page search, and a change log for sync.",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tests",
+    "test": "bun test tests"
+  },
+  "dependencies": {
+    "@sqlite.org/sqlite-wasm": "^3.54.1-build1"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "@confu/ai",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "description": "Bring-your-own-AI adapters: one OpenAI-style client over Groq, OpenAI, Anthropic, Gemini, OpenRouter and any OpenAI-compatible server.",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tests",
+    "test": "bun test --conditions=react-server tests"
+  },
+  "dependencies": {
+    "@confu/core": "workspace:*",
+    "@anthropic-ai/sdk": "^1.4.0",
+    "groq-sdk": "^1.6.0",
+    "server-only": "^0.0.1"
+  }
+}

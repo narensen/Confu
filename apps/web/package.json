@@ -1,0 +1,51 @@
+{
+  "name": "@confu/web",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "next typegen && tsc --noEmit && tsc --noEmit -p tests",
+    "test": "bun test --conditions=react-server tests"
+  },
+  "dependencies": {
+    "@confu/ai": "workspace:*",
+    "@confu/app": "workspace:*",
+    "@confu/core": "workspace:*",
+    "@confu/ui": "workspace:*",
+    "@gsap/react": "^2.1.2",
+    "@mozilla/readability": "0.6.0",
+    "@pdf-lib/fontkit": "1.1.1",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.118.0",
+    "d3-force": "3.0.0",
+    "gsap": "^3.15.0",
+    "katex": "^0.19.0",
+    "linkedom": "0.18.9",
+    "mermaid": "^12.2.0",
+    "next": "16.4.2",
+    "pdf-lib": "1.17.1",
+    "pdfjs-dist": "6.3.289",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-markdown": "^10.1.0",
+    "react-pdf": "^11.0.0",
+    "rehype-katex": "^7.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0",
+    "server-only": "^0.0.1",
+    "web-push": "3.6.7",
+    "youtubei.js": "18.1.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/turbopack": "^4",
+    "@types/d3-force": "3.0.10",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/web-push": "3.6.4",
+    "tailwindcss": "^4"
+  }
+}
