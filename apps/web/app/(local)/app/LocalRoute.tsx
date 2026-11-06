@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
-import type { AccountHost, DriveHost } from "@confu/app/host";
+import type { AccountAi, AccountHost, DriveHost } from "@confu/app/host";
 import { proxyPdfFetcher } from "@confu/client/courses";
 import { broadcastOpener, type BroadcastClient, type LiveOpener } from "@confu/client/live";
 import { googleDriveToken } from "@/lib/google-drive";
@@ -82,6 +82,12 @@ function useAccount(): AccountHost | null {
       setAccount({
         email: user.email ?? "your account",
         exportUrl: "/api/export/device",
+        // The OpenRouter connection (or key) set up on the account.
+        async ai() {
+          const res = await fetch("/api/keys/device", { method: "POST", cache: "no-store" });
+          if (!res.ok) throw new Error(((await res.json().catch(() => null)) as { error?: string } | null)?.error ?? "Couldn't reach your account.");
+          return ((await res.json()) as { ai: AccountAi | null }).ai;
+        },
         async publishIndex(rows, removed) {
           if (rows.length) {
             const { error } = await supabase.from("session_index").upsert(rows.map((r) => ({ ...r, user_id: user.id })));

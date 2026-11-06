@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { keyProblem, PROVIDER_ORDER, PROVIDERS, type ProviderId } from "@confu/ai/providers";
-import type { DeviceKeyInfo } from "@confu/client/keys";
+import type { AddResult, DeviceKeyInfo, DeviceKeys } from "@confu/client/keys";
 import { openRouterAuthUrl } from "@confu/client/openrouter";
 import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@confu/ui/classes";
-import { useHost } from "./host";
+import { useHost, type AccountAi } from "./host";
 import { useDevice, useLocal } from "./local";
 
 // The student's own AI on this device: sign in with OpenRouter, or paste a
@@ -16,9 +16,55 @@ export function useAiKey() {
   return useLocal((d) => d.keys.get(null), []);
 }
 
+// The AI connected to the student's Confu account, put on this device: the
+// key is checked with its provider like a pasted one, and the models picked
+// on the account come along. null when the account has none.
+export async function takeAccountAi(keys: DeviceKeys, take: () => Promise<AccountAi | null>): Promise<AddResult | null> {
+  const ai = await take();
+  if (!ai) return null;
+  const res = await keys.add({ provider: ai.provider, key: ai.key, baseUrl: ai.baseUrl ?? undefined, via: ai.via });
+  if (!res.ok) return res;
+  try {
+    const info = await keys.setModels(null, ai.models);
+    return info ? { ...res, info } : res;
+  } catch {
+    return res; // the provider's defaults, then
+  }
+}
+
+const FROM_ACCOUNT = "ai.from-account";
+
+// Signed in, and this device has no AI yet: use the account's, once. (Removed
+// later on this device, it stays removed; the setup offers it again.)
+export function useAccountAiOnce(onDone: (res: AddResult) => void) {
+  const { account } = useHost();
+  const { store, keys, changed } = useDevice();
+  const { data: key } = useAiKey();
+  const tried = useRef(false);
+  const done = useRef(onDone);
+  useEffect(() => {
+    done.current = onDone;
+  });
+  useEffect(() => {
+    const take = account?.ai;
+    if (key !== null || !take || tried.current) return;
+    tried.current = true;
+    void (async () => {
+      if (await store.getMeta(FROM_ACCOUNT)) return;
+      const res = await takeAccountAi(keys, take).catch(() => null);
+      if (!res) return;
+      if (res.ok) {
+        await store.setMeta(FROM_ACCOUNT, new Date().toISOString());
+        changed();
+      }
+      done.current(res);
+    })();
+  }, [account, key, keys, store, changed]);
+}
+
 export function KeySetup({ onSaved }: { onSaved?: (info: DeviceKeyInfo) => void }) {
-  const { keys, changed } = useDevice();
-  const { openRouter = true } = useHost();
+  const { keys, store, changed } = useDevice();
+  const { openRouter = true, account } = useHost();
   const [provider, setProvider] = useState<ProviderId>("groq");
   const [key, setKey] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
@@ -26,6 +72,24 @@ export function KeySetup({ onSaved }: { onSaved?: (info: DeviceKeyInfo) => void 
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const p = PROVIDERS[provider];
+
+  async function fromAccount() {
+    if (!account?.ai) return;
+    setError(null);
+    setPending(true);
+    try {
+      const res = await takeAccountAi(keys, account.ai);
+      if (!res) return setError("Your Confu account has no AI connected yet. Connect one below, or in Settings on the website.");
+      if (!res.ok) return setError(res.error);
+      await store.setMeta("ai.from-account", new Date().toISOString());
+      changed();
+      onSaved?.(res.info);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Couldn't reach your account.");
+    } finally {
+      setPending(false);
+    }
+  }
 
   async function connect() {
     setError(null);
@@ -57,6 +121,17 @@ export function KeySetup({ onSaved }: { onSaved?: (info: DeviceKeyInfo) => void 
 
   return (
     <div className="space-y-5">
+      {account?.ai && (
+        <div className="rounded-xl border border-ink bg-paper p-4">
+          <button type="button" onClick={fromAccount} disabled={pending} className={`${buttonClass} w-full py-2.5`}>
+            {pending ? "Checking…" : "Use the AI from your account"}
+          </button>
+          <p className="mt-2 text-xs leading-relaxed text-muted">
+            The OpenRouter connection or key you set up on your Confu account ({account.email}), with the same models. No need to connect again.
+          </p>
+        </div>
+      )}
+
       {openRouter && (
         <div className="rounded-xl border border-ink bg-paper p-4">
           <button type="button" onClick={connect} className={`${buttonClass} w-full py-2.5`}>

@@ -11,7 +11,7 @@ import { readPublicDriveFile } from "@confu/client/sync/drive";
 import { buttonClass } from "@confu/ui/classes";
 import { Dialog, Notice, SyncChip, TopBar } from "./chrome";
 import { HostContext, useHost, type Host } from "./host";
-import { AiPanel } from "./KeySetup";
+import { AiPanel, useAccountAiOnce } from "./KeySetup";
 import { Library } from "./Library";
 import { LocalProvider, useDevice } from "./local";
 import { SessionView, type Tool } from "./Session";
@@ -63,6 +63,13 @@ function Shell() {
   const [pending, setPending] = useState<{ sessionId: string; files: File[] } | null>(null);
   const [opening, setOpening] = useState<{ sessionId: string; tool: Tool; note?: { id: string; code: string } } | null>(null);
   useOpenRouterReturn(setNotice);
+  useAccountAiOnce((res) =>
+    setNotice(
+      res.ok
+        ? { tone: "ok", text: `Using the AI from your Confu account (${res.info.via === "oauth" ? "OpenRouter" : "your key"}). Change it under Your AI.` }
+        : { tone: "danger", text: `Your account's AI didn't work here: ${res.error}` },
+    ),
+  );
   useSharedLink(setNotice);
   useSessionIndex();
   useSharedNote(setNotice, setOpening);

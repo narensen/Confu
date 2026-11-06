@@ -1,5 +1,6 @@
 import { createContext, useContext } from "react";
 import type { FetchLike } from "@confu/ai/fetch-like";
+import type { ModelRoles } from "@confu/ai/providers";
 import type { SessionIndexRow } from "@confu/client/account";
 import type { LiveOpener } from "@confu/client/live";
 import type { TokenSource } from "@confu/client/sync/drive";
@@ -16,10 +17,15 @@ export type DriveHost = {
   fetch?: FetchLike; // how to reach Google's APIs (the desktop app goes through its main process)
 };
 
+// The AI connected to the account (OpenRouter, or a saved key), so the
+// device can use it without connecting again.
+export type AccountAi = { provider: string; key: string; baseUrl: string | null; via: "key" | "oauth"; models: ModelRoles };
+
 export type AccountHost = {
   email: string;
   exportUrl: string; // GET → AccountExport (the account's data on the server)
   publishIndex: (rows: SessionIndexRow[], removed: string[]) => Promise<void>;
+  ai?: () => Promise<AccountAi | null>; // the account's AI, or null when it has none
 };
 
 export type Host = {

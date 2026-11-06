@@ -161,6 +161,11 @@ export default function PrivacyPage() {
               again; you&apos;ll only see its last four characters.
             </>,
             <>
+              <b>On your own devices.</b> When you open the on-device app (/app) while signed in, your key is sent once, over an
+              encrypted connection, to that browser, so the app there can use it without connecting again. It is kept on that
+              device, encrypted, and sent only to its provider. Removing it there doesn&apos;t remove it from your account.
+            </>,
+            <>
               <b>Yours to remove.</b> Replace or delete it any time in{" "}
               <Link href="/settings" className={link}>
                 Settings
