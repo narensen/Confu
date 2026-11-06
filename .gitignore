@@ -1,7 +1,7 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-node_modules
+/node_modules
 /.pnp
 .pnp.*
 .yarn/*
@@ -11,17 +11,14 @@ node_modules
 !.yarn/versions
 
 # testing
-coverage
+/coverage
 
 # next.js
-.next/
-out/
+/.next/
+/out/
 
 # production
-build/
-# desktop app: bundles and packaged installers
-apps/desktop/dist/
-apps/desktop/release/
+/build
 
 # misc
 .DS_Store
@@ -50,10 +47,4 @@ audio/
 
 # noise recordings (large); public/noise has the loops made from them
 /assets/noise/
-
-# Local Supabase CLI state. supabase/schema.sql is part of the source.
-/supabase/.temp
-/supabase/.branches
-
-# turborepo
-.turbo
+/supabase

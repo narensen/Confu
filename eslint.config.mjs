@@ -5,17 +5,13 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
-  // The Next.js app lives in apps/web; the other workspaces are plain TypeScript.
-  { settings: { next: { rootDir: "apps/web/" } } },
+  // Override default ignores of eslint-config-next.
   globalIgnores([
-    "**/.next/**",
-    "**/out/**",
-    "**/build/**",
-    "**/next-env.d.ts",
-    "**/.turbo/**",
-    // The desktop app's bundles and packaged installers.
-    "apps/desktop/dist/**",
-    "apps/desktop/release/**",
+    // Default ignores of eslint-config-next:
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
   ]),
 ]);
 
