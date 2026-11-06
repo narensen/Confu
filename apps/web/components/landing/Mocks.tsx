@@ -229,3 +229,42 @@ export function PaperMock() {
     </div>
   );
 }
+
+/* ---------------------------------------------------------- listen mock */
+
+export function ListenMock() {
+  const lines: [string, string, boolean?][] = [
+    ["HOST", "So PCA starts with a cloud of points. What's it looking for?"],
+    ["GUEST", "The direction they spread out the most. That's the first eigenvector of the covariance.", true],
+    ["HOST", "And the eigenvalue tells you how much spread it captures?"],
+    ["GUEST", "Exactly, it's the variance along that direction. Your notes show it on page 12."],
+  ];
+  return (
+    <div aria-hidden className="select-none space-y-3">
+      <div className="flex items-center gap-3 rounded-xl border border-ink bg-panel px-3 py-2.5">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-ink text-white">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6 5h4v14H6zM14 5h4v14h-4z" />
+          </svg>
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[11px] font-medium">Eigenvectors and variance</p>
+          <div className="mt-1.5 flex h-4 items-center gap-[3px]">
+            {[3, 6, 9, 5, 12, 8, 14, 6, 10, 4, 11, 7, 13, 5, 9, 6, 12, 4, 8, 5, 10, 3, 7, 5].map((h, i) => (
+              <span key={i} className={`w-[3px] rounded-full ${i < 9 ? "bg-ink" : "bg-ink/20"}`} style={{ height: h }} />
+            ))}
+          </div>
+        </div>
+        <span className="font-mono text-[10px] text-muted">1.15×</span>
+      </div>
+      <ol className="space-y-1.5 text-[11px] leading-snug">
+        {lines.map(([who, text, now], i) => (
+          <li key={i} className={`rounded-lg px-2 py-1 ${now ? "bg-ink text-white" : ""}`}>
+            <span className="mr-1.5 font-mono text-[9px] opacity-60">{who}</span>
+            {text}
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}

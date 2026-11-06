@@ -5,6 +5,7 @@ import { Flip } from "gsap/Flip";
 import { useGSAP } from "@gsap/react";
 import { ReviewDue } from "@/components/review/ReviewDue";
 import { StudyStreak } from "./StudyStreak";
+import { StudyTools } from "./StudyTools";
 import { TrySample } from "./TrySample";
 import Link from "next/link";
 import { useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
@@ -149,6 +150,8 @@ export function Library({ name, sessions: all }: { name: string | null; sessions
           <StudyStreak compact />
         </div>
       )}
+
+      <StudyTools />
 
       {sessions.length === 0 ? (
         <>

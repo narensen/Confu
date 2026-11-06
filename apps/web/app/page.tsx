@@ -5,7 +5,7 @@ import { Logo } from "@/components/AppHeader";
 import { AccountDeletedNotice } from "@/components/landing/AccountDeletedNotice";
 import { DemoVideo } from "@/components/landing/DemoVideo";
 import { LandingMotion, Words } from "@/components/landing/LandingMotion";
-import { ExamMock, PaperMock, PlanMock, WorkspaceMock } from "@/components/landing/Mocks";
+import { ExamMock, ListenMock, PaperMock, PlanMock, WorkspaceMock } from "@/components/landing/Mocks";
 import { buttonClass, eyebrowClass, ghostButtonClass } from "@/components/ui";
 import { getUser } from "@/lib/dal";
 import { Reels } from "@/components/landing/Reels";
@@ -15,7 +15,7 @@ import { TEMPLATES } from "@/lib/templates";
 export const metadata: Metadata = {
   title: "Confu — understand it deeply, not just skim it",
   description:
-    "An AI tutor that works from your own material. Study toward a goal, prepare for exams with practice questions from your notes, or read research papers in three passes.",
+    "An AI tutor that works from your own material. Study toward a goal, prepare for exams from your notes, read papers in three passes, listen to audio overviews, record lectures and review with flashcards.",
 };
 
 const MODES = [
@@ -90,11 +90,35 @@ const FEATURES: { title: string; body: string; icon: ReactNode }[] = [
   },
 ];
 
+// Listen, record, remember: the tools beside the tutor (in the on-device app).
+const TOOLS: { tag: string; title: string; body: string; icon: ReactNode }[] = [
+  {
+    tag: "Lectures",
+    title: "Record the lecture, read it later",
+    body: "Record in class, or the sound of an online lecture on your computer. It's transcribed into your session, so the tutor can answer from it and point to when it was said.",
+    icon: <path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3ZM5 11a7 7 0 0 0 14 0M12 18v3" />,
+  },
+  {
+    tag: "Cards",
+    title: "Flashcards that schedule themselves",
+    body: "The AI writes cards from a page or a whole file, or write your own. Each comes back just before you'd forget it, and links to the page it came from.",
+    icon: <path d="M4 7h12v12H4zM8 3h12v12" />,
+  },
+  {
+    tag: "Notes",
+    title: "Notes with maths and chemistry",
+    body: "Write notes with equations and formulas like H₂SO₄ that render properly. Share a link to write them together, encrypted end to end.",
+    icon: <path d="M5 3h10l4 4v14H5zM9 12h6M9 16h4M14 3v5h5" />,
+  },
+];
+
 const STEPS = [
   { title: "Bring your material", body: "Upload PDFs, slides or Word docs (notes, textbooks, lectures), or add papers by arXiv ID or DOI." },
   { title: "Say what you're aiming for", body: "A learning goal, an exam date, or a research question. That's what keeps the tutor focused." },
   { title: "Learn actively", body: "Highlight, ask, practise and explain back. Confu tracks your progress as you go." },
 ];
+
+const DESKTOP_DOWNLOAD = "https://github.com/narensen/Confu/releases/latest";
 
 const FAQ: { q: string; a: ReactNode }[] = [
   {
@@ -123,6 +147,31 @@ const FAQ: { q: string; a: ReactNode }[] = [
           privacy policy
         </Link>
         .
+      </>
+    ),
+  },
+  {
+    q: "Do I need an account?",
+    a: (
+      <>
+        No.{" "}
+        <Link href="/app" className="underline underline-offset-4">
+          Open Confu
+        </Link>{" "}
+        and start: your sessions, files and recordings stay on your device, and can sync to your own Google Drive. An account adds
+        reminders, study rooms and sharing with friends, and you can bring its sessions onto any device.
+      </>
+    ),
+  },
+  {
+    q: "Is there a desktop or phone app?",
+    a: (
+      <>
+        Yes, for{" "}
+        <a href={DESKTOP_DOWNLOAD} className="underline underline-offset-4">
+          Mac, Windows and Linux
+        </a>
+        , and it updates itself. On iPhone or Android, open confu.lol and add it to your Home Screen. An Android app is on the way.
       </>
     ),
   },
@@ -156,6 +205,9 @@ export default function Home() {
             </a>
             <a href="#modes" className="transition hover:text-ink">
               Modes
+            </a>
+            <a href="#tools" className="transition hover:text-ink">
+              Listen
             </a>
             <Link href="/templates" className="transition hover:text-ink">
               Templates
@@ -194,8 +246,8 @@ export default function Home() {
             </h1>
             <p data-hero="lede" className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
               Confu is an AI tutor that works from <span className="text-ink">your own material</span>: your notes, textbooks and papers.
-              It plans what to learn, answers the doubts you highlight, quizzes you before exams, and remembers what you&apos;ve
-              understood.
+              It plans what to learn, answers the doubts you highlight, quizzes you before exams, turns your notes into audio you can
+              listen to, and remembers what you&apos;ve understood.
             </p>
             {/* Animated as a wrapper: the buttons themselves stream in per request. */}
             <div data-hero="cta">
@@ -307,6 +359,74 @@ export default function Home() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Listen, record, remember */}
+      <section id="tools" className="scroll-mt-16 border-b border-ink bg-paper">
+        <div className="mx-auto max-w-6xl px-6 py-24">
+          <div className="max-w-2xl">
+            <p data-reveal className={eyebrowClass}>
+              Listen, record, remember
+            </p>
+            <h2 data-split className="mt-2 font-serif text-4xl leading-tight tracking-tight sm:text-5xl">Keep learning away from the desk.</h2>
+            <p data-reveal className="mt-4 text-lg leading-relaxed text-muted">
+              Hear your material as a conversation on the bus, catch every word of a lecture, and keep what you learn with cards that come
+              back at the right time.
+            </p>
+          </div>
+          <div data-reveal-group className="mt-14 grid gap-6 lg:grid-cols-[1.15fr_1fr]">
+            <article
+              data-reveal-item
+              className="flex flex-col rounded-2xl border border-ink bg-panel transition-[translate,box-shadow] duration-300 ease-fluid hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--ink)]"
+            >
+              <div className="border-b border-ink bg-paper/60 p-5">
+                <ListenMock />
+              </div>
+              <div className="flex flex-1 flex-col p-6">
+                <p className={eyebrowClass}>Listen</p>
+                <h3 className="mt-1.5 font-serif text-2xl leading-tight">Your notes, as a podcast</h3>
+                <p className="mt-3 text-sm leading-relaxed text-muted">
+                  Pick a file and a length. Two hosts talk it through, in plain words, from your own material. Your device reads it aloud,
+                  so it costs nothing to play and works offline once it&apos;s made.
+                </p>
+                <ul className="mt-5 space-y-2 text-sm">
+                  {["3, 5 or 10 minutes, on one file or all of them", "Tap any line to jump there; change the speed", "Steer it: “focus on the proofs”"].map((p) => (
+                    <li key={p} className="flex gap-2.5">
+                      <span className="mt-[0.5em] size-1.5 shrink-0 bg-ink" />
+                      {p}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </article>
+            <div className="grid gap-px overflow-hidden rounded-2xl border border-ink bg-ink">
+              {TOOLS.map((t) => (
+                <div key={t.tag} data-reveal-item className="flex gap-4 bg-panel p-6 transition-colors duration-300 hover:bg-paper">
+                  <svg data-draw width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="shrink-0" aria-hidden>
+                    {t.icon}
+                  </svg>
+                  <div>
+                    <p className={eyebrowClass}>{t.tag}</p>
+                    <h3 className="mt-1 font-serif text-xl leading-snug">{t.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-muted">{t.body}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div data-reveal className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3">
+            <Link href="/app" className={`${buttonClass} px-5 py-2.5`}>
+              Try them now, no account needed
+            </Link>
+            <a href={DESKTOP_DOWNLOAD} className="text-sm font-medium underline decoration-ink/30 underline-offset-4 hover:decoration-ink">
+              Get the desktop app for Mac, Windows and Linux
+            </a>
+          </div>
+          <p data-reveal className="mt-4 max-w-2xl font-mono text-xs leading-relaxed text-muted">
+            These run on your device: your library stays on it, and syncs to your own Google Drive if you want. On iPhone, add Confu to your
+            Home Screen.
+          </p>
         </div>
       </section>
 
