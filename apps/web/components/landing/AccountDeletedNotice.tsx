@@ -2,7 +2,6 @@
 
 import { useSearchParams } from "next/navigation";
 
-// Shown once after "Delete account" sends you home.
 export function AccountDeletedNotice() {
   const params = useSearchParams();
   if (params.get("account") !== "deleted") return null;
