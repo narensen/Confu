@@ -19,18 +19,18 @@
     "@confu/core": "workspace:*",
     "@confu/storage": "workspace:*",
     "@confu/ui": "workspace:*",
-    "pdfjs-dist": "6.3.289",
+    "pdfjs-dist": "6.5.438",
     "react-pdf": "^11.0.0",
     "yjs": "^13.6.33"
   },
   "peerDependencies": {
-    "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   },
   "devDependencies": {
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   }
 }
