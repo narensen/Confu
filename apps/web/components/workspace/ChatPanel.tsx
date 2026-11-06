@@ -143,94 +143,12 @@ export function ChatPanel({
         </div>
       )}
 
-<<<<<<< HEAD:apps/web/components/workspace/ChatPanel.tsx
       <div className="relative min-h-0 min-w-0 flex-1">
         <div
           ref={scrollRef}
           onScroll={(e) => {
             const el = e.currentTarget;
             stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-=======
-      <div
-        ref={scrollRef}
-        onScroll={(e) => {
-          const el = e.currentTarget;
-          stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-        }}
-        className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-5 py-5"
-      >
-        {/* A readable column, centred when the tutor has the whole screen. */}
-        <div className="mx-auto w-full max-w-3xl space-y-5">
-          {messages.length === 0 &&
-            (kind === "paper" ? (
-              <PaperEmptyState onOpenPasses={onOpenPlan} />
-            ) : kind === "exam" ? (
-              <ExamEmptyState onOpenPractice={onOpenPlan} />
-            ) : (
-              <>
-                {plan && activeTopic && activeTopic.status !== "completed" && (
-                  <StartHere
-                    topic={activeTopic}
-                    topics={topics}
-                    docs={docs}
-                    busy={Boolean(busy)}
-                    onOpen={(t) => {
-                      const d = docs.find((x) => x.id === t.document_id);
-                      if (t.source === "pdf" && t.page_start !== null && d) onJump(t.page_start, d.id);
-                    }}
-                    onOpenDoc={(id) => onJump(docs.find((d) => d.id === id)?.lastPage || 1, id)}
-                    onTeach={() => onSend({ action: "teach" })}
-                  />
-                )}
-                <EmptyState hasPlan={Boolean(plan)} onOpenPlan={onOpenPlan} />
-              </>
-            ))}
-          {messages.map((m, i) => {
-            const isNew = i >= initialCount;
-            return m.role === "user" ? (
-              <div key={m.id} className={`ml-10 ${isNew ? "animate-enter" : ""}`}>
-                <div className="rounded-xl rounded-br-sm border border-ink bg-panel px-4 py-3 text-sm shadow-hard-sm">
-                  {m.action !== "chat" && <p className={`${eyebrowClass} mb-1.5`}>{ACTION_LABELS[m.action]}</p>}
-                  <Markdown content={m.content} onPage={onCite} />
-                </div>
-              </div>
-            ) : (
-              <div key={m.id} className={`pr-2 ${isNew ? "animate-enter" : ""}`}>
-                {m.content ? (
-                  <div className={busy && m === last ? "is-streaming" : ""}>
-                    <AnswerBody
-                      sessionId={sessionId}
-                      content={m.content}
-                      onCite={onCite}
-                      done={!(busy && m === last)}
-                      savedId={savedIds.get(answerKey(m.content)) ?? null}
-                      onSave={m.content.startsWith("⚠️") ? undefined : () => onSaveAnswer(m)}
-                      onUnsave={onUnsaveAnswer}
-                    />
-                    {busy && m === last && busy !== "Thinking…" && (
-                      <p className="animate-fade mt-2 flex items-center gap-2 font-mono text-[11px] text-muted">
-                        <span className="size-1.5 animate-pulse rounded-full bg-ink" />
-                        {busy}
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <Thinking label={busy ?? "Thinking…"} />
-                )}
-              </div>
-            );
-          })}
-          {busy && last?.role !== "assistant" && <Thinking label={busy} />}
-        </div>
-      </div>
-
-      <div className="mx-auto w-full max-w-[calc(48rem+1rem)] shrink-0 px-3 pt-2 pb-2.5">
-        {/* A glossy pill: the box, and the send button inside it. */}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            submit();
->>>>>>> parent of b188efa (Info : Full Screen):components/workspace/ChatPanel.tsx
           }}
           style={{ paddingBottom: dock + 28, "--dock": `${dock}px` } as CSSProperties}
           className="tutor-scroll h-full min-w-0 overflow-x-hidden overflow-y-auto px-5 pt-5 @5xl:px-10"

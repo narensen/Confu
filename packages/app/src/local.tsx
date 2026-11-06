@@ -26,22 +26,13 @@ function openDevice(): Promise<Device> {
     const raw = await wasmDriver("confu");
     const store = await Store.open(raw);
     // Ask the browser not to clear this site's storage when space runs low.
-    // Not awaited: persist() measures the origin first, and podcast audio
-    // makes that measurement slow enough to hold the library shut.
-    void navigator.storage?.persist?.().catch(() => false);
+    await navigator.storage?.persist?.().catch(() => false);
     return { store, keys: new DeviceKeys(store, indexedDbKeySource()), files: browserFiles(), persistent: raw.persistent };
   })().catch((e) => {
     opening = null;
     throw e;
   });
   return opening;
-}
-
-// Start the database before the session screen's code has downloaded.
-// Same promise LocalProvider waits on, so the two don't open it twice.
-export function preloadDevice(): void {
-  if (typeof window === "undefined") return;
-  void openDevice().catch(() => {});
 }
 
 type Ctx = Device & { version: number; changed: () => void };

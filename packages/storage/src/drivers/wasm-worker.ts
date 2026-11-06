@@ -5,7 +5,6 @@
 // Drive picker pop-ups), at the cost of one tab at a time owning the
 // database; a second tab falls back to memory and says so.
 import sqlite3InitModule from "@sqlite.org/sqlite-wasm";
-import { openPersistent } from "./opfs-open";
 
 type Db = {
   exec(opts: { sql: string; bind?: unknown[] }): unknown;
@@ -31,44 +30,26 @@ const POOL = {
   forceReinitIfPreviouslyFailed: true,
 };
 
-type Pool = {
-  OpfsSAHPoolDb: new (filename: string) => Db;
-  // Lets go of the file locks without deleting the database.
-  pauseVfs?: () => void;
-};
-
-function release(pool: Pool) {
-  try {
-    pool.pauseVfs?.();
-  } catch {
-    // Already closed. The memory database still works.
-  }
-}
+// A reloaded page can start before the old one has let go of the files.
+// Wait for it (about 4 s in all) before giving up and running in memory.
+const WAITS = [0, 150, 300, 600, 1200, 2000];
 
 async function open(name: string) {
   const sqlite3 = await sqlite3InitModule();
-  // Held in a box so a late resolution can still release the locks. A hung
-  // lock call never rejects, and a second install waits on that same call.
-  const inflight: { current: Promise<Pool> | null } = { current: null };
-  const pool = await openPersistent(() => {
-    inflight.current = sqlite3.installOpfsSAHPoolVfs(POOL as Parameters<typeof sqlite3.installOpfsSAHPoolVfs>[0]) as Promise<Pool>;
-    return inflight.current;
-  });
-  if (pool) {
+  for (const wait of WAITS) {
+    if (wait) await new Promise((r) => setTimeout(r, wait));
     try {
-      db = new pool.OpfsSAHPoolDb(`/${name}.sqlite3`);
+      const pool = await sqlite3.installOpfsSAHPoolVfs(POOL as Parameters<typeof sqlite3.installOpfsSAHPoolVfs>[0]);
+      db = new pool.OpfsSAHPoolDb(`/${name}.sqlite3`) as unknown as Db;
       persistent = true;
       return;
-    } catch {
-      release(pool);
+    } catch (e) {
+      // No OPFS at all (private browsing in some browsers, very old ones):
+      // waiting won't help.
+      if (e instanceof Error && /Missing required OPFS APIs/.test(e.message)) break;
     }
-  } else if (inflight.current) {
-    // One budget, then memory. When the lock finally returns, let the files
-    // go so the next load can open the real database.
-    void inflight.current.then(release, () => {});
   }
-  // Another tab holds the database, the lock never returned, or there's no
-  // OPFS: keep working, in memory.
+  // Another tab holds the database, or there's no OPFS: keep working, in memory.
   db = new sqlite3.oo1.DB(":memory:", "c") as unknown as Db;
   persistent = false;
 }

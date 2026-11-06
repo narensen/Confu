@@ -7,6 +7,7 @@ import type { PlanTopic } from "@confu/core/types";
 import { eyebrowClass, ghostButtonClass } from "@confu/ui/classes";
 import { useHost } from "../host";
 import { useDevice, useLocal } from "../local";
+import { extractPdf } from "../pdf";
 
 // The session's plan: the goal, topics by phase (tick them off, or have the
 // tutor teach one), and the course's free sources.
@@ -38,7 +39,6 @@ export function PlanPanel({ sessionId, onTeach, onAdded }: { sessionId: string; 
     setProblem(null);
     setBusy(source.title);
     try {
-      const { extractPdf } = await import("../pdf");
       const doc = await addCoursePaper(store, files, { sessionId, source, extract: extractPdf, fetchPdf });
       changed();
       onAdded(doc.id);

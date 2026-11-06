@@ -7,7 +7,6 @@
   "description": "Confu that runs on the device: library, reader and tutor over @confu/client. No account or server needed. Hosted by the web app at /app, and later by the desktop and Android shells.",
   "exports": {
     "./LocalApp": "./src/LocalApp.tsx",
-    "./local": "./src/local.tsx",
     "./pdf": "./src/pdf.ts",
     "./host": "./src/host.ts"
   },

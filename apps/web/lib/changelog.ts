@@ -46,19 +46,9 @@ export const CHANGELOG: Release[] = [
       "Clear chat, at the top of the tutor, starts the conversation over. The tutor no longer sees what you talked about, except the answers you saved.",
       "Clearing the chat deletes its words, not your study days: they stay on your streak.",
       "Saved answers are in the session's Markdown export and in Copy highlights.",
-<<<<<<< HEAD:apps/web/lib/changelog.ts
-<<<<<<< HEAD:apps/web/lib/changelog.ts
       "The box you write to the tutor in is a clear pill now, with a lit edge and the send button inside it. It floats over the end of the chat, which fades out above it, and grows as you type.",
       "With the tutor across the whole screen, answers get a wider column, and tables fit it instead of sliding sideways.",
       "Tables wrap long cells instead of stretching across the panel. A small table fits beside the page; a big one still slides, but much less.",
-=======
-      "The box you write to the tutor in is a glossy pill now, with the send button inside it. It grows as you type.",
-      "With the tutor across the whole screen, a table uses the full width and wraps its cells instead of sliding sideways. Diagrams and long formulas get the room too.",
->>>>>>> parent of b188efa (Info : Full Screen):lib/changelog.ts
-=======
-      "The box you write to the tutor in is a glossy pill now, with the send button inside it. It grows as you type.",
-      "With the tutor across the whole screen, a table uses the full width and wraps its cells instead of sliding sideways. Diagrams and long formulas get the room too.",
->>>>>>> parent of b188efa (Info : Full Screen):lib/changelog.ts
       "A formula on its own line is drawn as a proper display equation, with sums and limits full size, instead of squeezed into a line of text.",
       "A formula with #, %, _ or & in its words (like “#filters” or “95%”) shows properly instead of a ParseError, and a % no longer cuts off the rest of the formula.",
     ],
