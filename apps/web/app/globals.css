@@ -559,6 +559,7 @@ html { scroll-behavior: smooth; }
 .prose-tutor .katex-display { overflow-x: auto; overflow-y: hidden; padding: 0.35em 0; }
 /* The tutor across the whole screen (only it is this wide: beside the page
 <<<<<<< HEAD:apps/web/app/globals.css
+<<<<<<< HEAD:apps/web/app/globals.css
    it tops out at 720px). The reading column is 64rem there (see ChatPanel).
    A table keeps its own size inside it, wrapping its cells to fit instead of
    sliding, and is never stretched wider than its words need. */
@@ -571,6 +572,13 @@ html { scroll-behavior: smooth; }
    on the column, at least as wide as it, and a table wraps its cells to fit
    instead of sliding. */
 @container (min-width: 64rem) {
+=======
+   it tops out at 720px). The words keep their reading column, but a table,
+   a diagram or a long formula steps out of it and uses the screen: centred
+   on the column, at least as wide as it, and a table wraps its cells to fit
+   instead of sliding. */
+@container (min-width: 64rem) {
+>>>>>>> parent of b188efa (Info : Full Screen):app/globals.css
   .prose-tutor .tutor-table-scroll,
   .prose-tutor .tutor-diagram,
   .prose-tutor .katex-display {
@@ -584,6 +592,9 @@ html { scroll-behavior: smooth; }
   .prose-tutor .tutor-table-scroll table { width: auto; min-width: min(100%, 48rem); margin-inline: auto; }
   .prose-tutor .tutor-diagram,
   .prose-tutor .katex-display { width: max-content; }
+<<<<<<< HEAD:apps/web/app/globals.css
+>>>>>>> parent of b188efa (Info : Full Screen):app/globals.css
+=======
 >>>>>>> parent of b188efa (Info : Full Screen):app/globals.css
 }
 /* Tailwind draws every svg as a block, so each symbol lands on its own line,
@@ -631,6 +642,7 @@ html { scroll-behavior: smooth; }
 }
 
 <<<<<<< HEAD:apps/web/app/globals.css
+<<<<<<< HEAD:apps/web/app/globals.css
 /* The tutor's input floats over the end of the conversation with nothing
    painted behind it: no strip, no shadow, no glow. The messages fade out
    above it (.tutor-scroll), so it sits on the panel itself. The field is a
@@ -648,6 +660,27 @@ html { scroll-behavior: smooth; }
 }
 .tutor-composer:focus-within {
   border-color: color-mix(in srgb, var(--ink) 55%, transparent);
+=======
+/* The tutor's input: a glossy pill. A lit top edge and a soft shadow lift it
+   off the panel; on focus it gets a faint yellow halo. The send button is a
+   small glossy ink bead, quiet until there's something to send. */
+.tutor-composer {
+  background: linear-gradient(180deg, #ffffff 0%, #ffffff 40%, #f4f3ee 100%);
+  border-color: rgba(13, 13, 12, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    inset 0 -1px 0 rgba(13, 13, 12, 0.04),
+    0 1px 2px rgba(13, 13, 12, 0.05),
+    0 12px 28px -16px rgba(13, 13, 12, 0.3);
+}
+.tutor-composer:focus-within {
+  border-color: rgba(13, 13, 12, 0.38);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    inset 0 -1px 0 rgba(13, 13, 12, 0.04),
+    0 0 0 4px rgba(250, 204, 21, 0.2),
+    0 14px 32px -16px rgba(13, 13, 12, 0.34);
+>>>>>>> parent of b188efa (Info : Full Screen):app/globals.css
 =======
 /* The tutor's input: a glossy pill. A lit top edge and a soft shadow lift it
    off the panel; on focus it gets a faint yellow halo. The send button is a
