@@ -192,8 +192,68 @@ a.bg-ink:hover {
   :root:not([data-theme="light"]) :is(.bg-inverse, .surface-inverse).border-ink {
     border-color: #0d0d0c;
   }
+<<<<<<< HEAD:apps/web/app/globals.css
   /* A selected tab is a flat fill. "White" inside reads as text, because
      the dark theme remaps white to the page colour. */
+=======
+  /* Light buttons and pills: glossy, like a lacquered key. */
+  :root:not([data-theme="light"]) .bg-ink {
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0) 60%);
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.18), 0 1px 2px rgba(0, 0, 0, 0.4);
+  }
+  /* Hero surfaces: a raised charcoal panel with a warm rim. */
+  :root:not([data-theme="light"]) .bg-inverse,
+  :root:not([data-theme="light"]) .surface-inverse {
+    background-image:
+      radial-gradient(120% 140% at 0% 0%, rgba(250, 204, 21, 0.1), transparent 55%),
+      linear-gradient(160deg, #2d2c27 0%, #22211d 55%, #1a1917 100%);
+    border-color: rgba(250, 204, 21, 0.24);
+    box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.08), 0 18px 44px -18px rgba(0, 0, 0, 0.75);
+  }
+  /* Hard offset shadows become depth: a lit top edge and a soft drop. */
+  :root:not([data-theme="light"]) .shadow-hard {
+    box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.06), 0 1px 2px rgba(0, 0, 0, 0.5), 0 16px 36px -12px rgba(0, 0, 0, 0.7);
+  }
+  :root:not([data-theme="light"]) .shadow-hard-sm {
+    box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.05), 0 8px 20px -10px rgba(0, 0, 0, 0.65);
+  }
+  :root:not([data-theme="light"]) .glass-bar {
+    background: rgba(18, 18, 17, 0.84);
+    box-shadow: inset 0 -1px 0 rgba(255, 248, 230, 0.04);
+  }
+  :root:not([data-theme="light"]) .auth-stage {
+    background-color: #161614;
+    background-image:
+      radial-gradient(680px 440px at 12% 0%, rgba(250, 204, 21, 0.16), transparent 62%),
+      radial-gradient(560px 420px at 100% 8%, rgba(255, 244, 220, 0.07), transparent 58%);
+    color: #f4f2ec;
+    box-shadow: inset 1px 0 0 rgba(255, 248, 230, 0.08);
+  }
+  :root:not([data-theme="light"]) .auth-stage [data-float] {
+    box-shadow: 0 22px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 248, 230, 0.12);
+  }
+  :root:not([data-theme="light"]) .glow-page {
+    background-color: transparent;
+    background-image: none;
+  }
+  :root:not([data-theme="light"]) [data-parallax="grid"] { opacity: 0.12; }
+  :root:not([data-theme="light"]) .tutor-diagram { background: #f4f3ef; }
+  :root:not([data-theme="light"]) .tutor-composer {
+    background: linear-gradient(180deg, #262522 0%, #1f1e1b 45%, #191917 100%);
+    border-color: rgba(255, 248, 230, 0.12);
+    box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.09), inset 0 -1px 0 rgba(0, 0, 0, 0.3), 0 14px 32px -16px rgba(0, 0, 0, 0.85);
+  }
+  :root:not([data-theme="light"]) .tutor-composer:focus-within {
+    border-color: rgba(250, 204, 21, 0.4);
+    box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.09), inset 0 -1px 0 rgba(0, 0, 0, 0.3), 0 0 0 4px rgba(250, 204, 21, 0.1), 0 16px 36px -16px rgba(0, 0, 0, 0.9);
+  }
+  :root:not([data-theme="light"]) .tutor-send { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 4px 12px -4px rgba(0, 0, 0, 0.8); }
+  :root:not([data-theme="light"]) .tutor-send:disabled { background-color: rgba(255, 248, 230, 0.07); box-shadow: inset 0 0 0 1px rgba(255, 248, 230, 0.08); }
+  :root:not([data-theme="light"]) .prose-tutor :is(th, td, pre) { border-color: rgba(255, 248, 230, 0.14); }
+  :root:not([data-theme="light"]) .prose-tutor blockquote { border-left-color: rgba(250, 204, 21, 0.55); }
+  /* A selected state (a tab, a preset, "Following") is a raised tone, not a
+     glossy button: only actions glow. White inside reads as text. */
+>>>>>>> parent of b188efa (Info : Full Screen):app/globals.css
   :root:not([data-theme="light"]) .bg-ink:is([aria-pressed="true"], [aria-selected="true"], [aria-checked="true"], [aria-current="page"], [aria-current="true"]) {
     --color-white: var(--ink);
     background-color: var(--accent-soft);
@@ -216,6 +276,61 @@ a.bg-ink:hover {
 :root[data-theme="dark"] :is(.bg-inverse, .surface-inverse).border-ink {
   border-color: #0d0d0c;
 }
+<<<<<<< HEAD:apps/web/app/globals.css
+=======
+:root[data-theme="dark"] .bg-ink {
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0) 60%);
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.18), 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+:root[data-theme="dark"] .bg-inverse,
+:root[data-theme="dark"] .surface-inverse {
+  background-image:
+    radial-gradient(120% 140% at 0% 0%, rgba(250, 204, 21, 0.1), transparent 55%),
+    linear-gradient(160deg, #2d2c27 0%, #22211d 55%, #1a1917 100%);
+  border-color: rgba(250, 204, 21, 0.24);
+  box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.08), 0 18px 44px -18px rgba(0, 0, 0, 0.75);
+}
+:root[data-theme="dark"] .shadow-hard {
+  box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.06), 0 1px 2px rgba(0, 0, 0, 0.5), 0 16px 36px -12px rgba(0, 0, 0, 0.7);
+}
+:root[data-theme="dark"] .shadow-hard-sm {
+  box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.05), 0 8px 20px -10px rgba(0, 0, 0, 0.65);
+}
+:root[data-theme="dark"] .glass-bar {
+  background: rgba(18, 18, 17, 0.84);
+  box-shadow: inset 0 -1px 0 rgba(255, 248, 230, 0.04);
+}
+:root[data-theme="dark"] .auth-stage {
+  background-color: #161614;
+  background-image:
+    radial-gradient(680px 440px at 12% 0%, rgba(250, 204, 21, 0.16), transparent 62%),
+    radial-gradient(560px 420px at 100% 8%, rgba(255, 244, 220, 0.07), transparent 58%);
+  color: #f4f2ec;
+  box-shadow: inset 1px 0 0 rgba(255, 248, 230, 0.08);
+}
+:root[data-theme="dark"] .auth-stage [data-float] {
+  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 248, 230, 0.12);
+}
+:root[data-theme="dark"] .glow-page {
+  background-color: transparent;
+  background-image: none;
+}
+:root[data-theme="dark"] [data-parallax="grid"] { opacity: 0.12; }
+:root[data-theme="dark"] .tutor-diagram { background: #f4f3ef; }
+:root[data-theme="dark"] .tutor-composer {
+  background: linear-gradient(180deg, #262522 0%, #1f1e1b 45%, #191917 100%);
+  border-color: rgba(255, 248, 230, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.09), inset 0 -1px 0 rgba(0, 0, 0, 0.3), 0 14px 32px -16px rgba(0, 0, 0, 0.85);
+}
+:root[data-theme="dark"] .tutor-composer:focus-within {
+  border-color: rgba(250, 204, 21, 0.4);
+  box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.09), inset 0 -1px 0 rgba(0, 0, 0, 0.3), 0 0 0 4px rgba(250, 204, 21, 0.1), 0 16px 36px -16px rgba(0, 0, 0, 0.9);
+}
+:root[data-theme="dark"] .tutor-send { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 4px 12px -4px rgba(0, 0, 0, 0.8); }
+:root[data-theme="dark"] .tutor-send:disabled { background-color: rgba(255, 248, 230, 0.07); box-shadow: inset 0 0 0 1px rgba(255, 248, 230, 0.08); }
+:root[data-theme="dark"] .prose-tutor :is(th, td, pre) { border-color: rgba(255, 248, 230, 0.14); }
+:root[data-theme="dark"] .prose-tutor blockquote { border-left-color: rgba(250, 204, 21, 0.55); }
+>>>>>>> parent of b188efa (Info : Full Screen):app/globals.css
 :root[data-theme="dark"] .bg-ink:is([aria-pressed="true"], [aria-selected="true"], [aria-checked="true"], [aria-current="page"], [aria-current="true"]) {
   --color-white: var(--ink);
   background-color: var(--accent-soft);
@@ -443,12 +558,33 @@ html { scroll-behavior: smooth; }
 .prose-tutor .tutor-cell { min-width: 5.5rem; max-width: 18rem; }
 .prose-tutor .katex-display { overflow-x: auto; overflow-y: hidden; padding: 0.35em 0; }
 /* The tutor across the whole screen (only it is this wide: beside the page
+<<<<<<< HEAD:apps/web/app/globals.css
    it tops out at 720px). The reading column is 64rem there (see ChatPanel).
    A table keeps its own size inside it, wrapping its cells to fit instead of
    sliding, and is never stretched wider than its words need. */
 @container (min-width: 64rem) {
   .prose-tutor .tutor-table-scroll table { width: auto; min-width: 0; max-width: 100%; }
   .prose-tutor .tutor-cell { max-width: 22rem; }
+=======
+   it tops out at 720px). The words keep their reading column, but a table,
+   a diagram or a long formula steps out of it and uses the screen: centred
+   on the column, at least as wide as it, and a table wraps its cells to fit
+   instead of sliding. */
+@container (min-width: 64rem) {
+  .prose-tutor .tutor-table-scroll,
+  .prose-tutor .tutor-diagram,
+  .prose-tutor .katex-display {
+    position: relative;
+    left: 50%;
+    translate: -50% 0;
+    min-width: 100%;
+    max-width: calc(100cqw - 4rem);
+  }
+  .prose-tutor .tutor-table-scroll { width: calc(100cqw - 4rem); }
+  .prose-tutor .tutor-table-scroll table { width: auto; min-width: min(100%, 48rem); margin-inline: auto; }
+  .prose-tutor .tutor-diagram,
+  .prose-tutor .katex-display { width: max-content; }
+>>>>>>> parent of b188efa (Info : Full Screen):app/globals.css
 }
 /* Tailwind draws every svg as a block, so each symbol lands on its own line,
    and the formula's TeX source (the MathML annotation) shows beside it. */
@@ -494,6 +630,7 @@ html { scroll-behavior: smooth; }
   color: #1a1a1a;
 }
 
+<<<<<<< HEAD:apps/web/app/globals.css
 /* The tutor's input floats over the end of the conversation with nothing
    painted behind it: no strip, no shadow, no glow. The messages fade out
    above it (.tutor-scroll), so it sits on the panel itself. The field is a
@@ -511,6 +648,27 @@ html { scroll-behavior: smooth; }
 }
 .tutor-composer:focus-within {
   border-color: color-mix(in srgb, var(--ink) 55%, transparent);
+=======
+/* The tutor's input: a glossy pill. A lit top edge and a soft shadow lift it
+   off the panel; on focus it gets a faint yellow halo. The send button is a
+   small glossy ink bead, quiet until there's something to send. */
+.tutor-composer {
+  background: linear-gradient(180deg, #ffffff 0%, #ffffff 40%, #f4f3ee 100%);
+  border-color: rgba(13, 13, 12, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    inset 0 -1px 0 rgba(13, 13, 12, 0.04),
+    0 1px 2px rgba(13, 13, 12, 0.05),
+    0 12px 28px -16px rgba(13, 13, 12, 0.3);
+}
+.tutor-composer:focus-within {
+  border-color: rgba(13, 13, 12, 0.38);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    inset 0 -1px 0 rgba(13, 13, 12, 0.04),
+    0 0 0 4px rgba(250, 204, 21, 0.2),
+    0 14px 32px -16px rgba(13, 13, 12, 0.34);
+>>>>>>> parent of b188efa (Info : Full Screen):app/globals.css
 }
 .tutor-send {
   color: var(--paper);

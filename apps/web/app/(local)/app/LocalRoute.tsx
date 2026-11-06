@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import type { AccountAi, AccountHost, DriveHost } from "@confu/app/host";
+import { preloadDevice } from "@confu/app/local";
 import { proxyPdfFetcher } from "@confu/client/courses";
 import { broadcastOpener, type BroadcastClient, type LiveOpener } from "@confu/client/live";
 import { googleDriveToken } from "@/lib/google-drive";
@@ -22,6 +23,11 @@ const LocalApp = dynamic(() => import("@confu/app/LocalApp").then((m) => m.Local
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
 const GOOGLE_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_API_KEY || "";
+
+// The database worker starts with this module, while the session screen
+// (reader, listen, watch) is still downloading. LocalProvider awaits the
+// same open.
+preloadDevice();
 
 // The open session is ?s=<id>. pushState keeps it one page (the database
 // stays open) while Back and Forward still work.

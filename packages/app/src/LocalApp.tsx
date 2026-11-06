@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { sessionIndex } from "@confu/client/account";
 import { importSession } from "@confu/client/bundle";
 import { finishOpenRouter } from "@confu/client/openrouter";
@@ -14,9 +14,13 @@ import { HostContext, useHost, type Host } from "./host";
 import { AiPanel, useAccountAiOnce } from "./KeySetup";
 import { Library } from "./Library";
 import { LocalProvider, useDevice } from "./local";
-import { SessionView, type Tool } from "./Session";
+import type { Tool } from "./Session";
 import { SyncProvider } from "./sync";
 import { SyncPanel } from "./SyncPanel";
+
+// The reader, the podcast panel and the video stage are not needed to list
+// the library. Loading them here is what kept "Opening your library…" up.
+const SessionView = lazy(() => import("./Session").then((m) => ({ default: m.SessionView })));
 
 // Confu on the device: no account, no server. The host (the web app's /app
 // route, the desktop shell) says which session is open, how to change it,
@@ -92,15 +96,17 @@ function Shell() {
         )}
         <Screen key={sessionId ?? "library"}>
         {sessionId ? (
-          <SessionView
-            key={`${sessionId}:${opening?.note?.id ?? ""}`}
-            sessionId={sessionId}
-            initialFiles={pending?.sessionId === sessionId ? pending.files : null}
-            onFilesTaken={onFilesTaken}
-            onBack={() => navigate(null)}
-            initialTool={opening?.sessionId === sessionId ? opening.tool : undefined}
-            openNote={opening?.sessionId === sessionId ? (opening.note ?? null) : null}
-          />
+          <Suspense fallback={<p className="flex flex-1 items-center justify-center font-mono text-xs text-muted" role="status">Opening this session…</p>}>
+            <SessionView
+              key={`${sessionId}:${opening?.note?.id ?? ""}`}
+              sessionId={sessionId}
+              initialFiles={pending?.sessionId === sessionId ? pending.files : null}
+              onFilesTaken={onFilesTaken}
+              onBack={() => navigate(null)}
+              initialTool={opening?.sessionId === sessionId ? opening.tool : undefined}
+              openNote={opening?.sessionId === sessionId ? (opening.note ?? null) : null}
+            />
+          </Suspense>
         ) : (
           <Library
             onOpen={(id, files, tool) => {

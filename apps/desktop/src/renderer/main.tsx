@@ -8,6 +8,7 @@ import { StrictMode, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import type { DriveHost } from "@confu/app/host";
+import { preloadDevice } from "@confu/app/local";
 import { LocalApp } from "@confu/app/LocalApp";
 import { configurePdfWorker } from "@confu/app/pdf";
 import type { FetchLike } from "@confu/ai/fetch-like";
@@ -24,6 +25,7 @@ declare global {
 }
 
 configurePdfWorker(workerUrl);
+preloadDevice();
 
 const bridge = window.confu;
 type Info = Awaited<ReturnType<DesktopBridge["info"]>>;

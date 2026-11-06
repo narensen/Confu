@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
@@ -17,6 +17,41 @@ export type Selection = { text: string; page: number; action: TutorAction };
 const GAP = 12; // between pages, px (gap-3)
 const NEAR = "1600px 0px"; // pages this far off screen are drawn ahead
 const MAX_WIDTH = 920;
+// Same open as the session viewer: the first 512 KB, then whatever pdf.js
+// asks for. Handing it the whole blob makes it read every byte before the
+// first page, which is the long "Opening this file…".
+const FIRST_CHUNK = 512 * 1024;
+const PDF_OPTIONS = { rangeChunkSize: FIRST_CHUNK };
+
+function useBlobRange(file: Blob) {
+  const [source, setSource] = useState<{ file: Blob; transport: pdfjs.PDFDataRangeTransport } | "error" | null>(null);
+  useEffect(() => {
+    let live = true;
+    const length = file.size;
+    const end = Math.min(length, FIRST_CHUNK);
+    void file.slice(0, end).arrayBuffer().then(
+      (buf) => {
+        if (!live) return;
+        const transport = new pdfjs.PDFDataRangeTransport(length, new Uint8Array(buf), end >= length);
+        transport.requestDataRange = (begin, stop) => {
+          void file.slice(begin, stop).arrayBuffer().then(
+            (chunk) => {
+              if (live) transport.onDataRange(begin, new Uint8Array(chunk));
+            },
+            () => {},
+          );
+        };
+        setSource({ file, transport });
+      },
+      () => live && setSource("error"),
+    );
+    return () => {
+      live = false;
+    };
+  }, [file]);
+  if (source === "error") return "error" as const;
+  return source?.file === file ? source.transport : null;
+}
 const ZOOMS = [0.6, 0.75, 0.9, 1, 1.15, 1.3, 1.5, 1.75, 2];
 
 const SELECTION_ACTIONS: { action: TutorAction; label: string }[] = [
@@ -51,6 +86,9 @@ export function Reader({
   const [ask, setAsk] = useState<{ text: string; page: number; x: number; y: number } | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const placed = useRef(false);
+  const range = useBlobRange(file);
+  // A fresh object every render makes react-pdf reload the document.
+  const pdfFile = useMemo(() => (range && range !== "error" ? { range } : null), [range]);
 
   const pageWidth = Math.max(240, Math.min(width - 32, MAX_WIDTH) * zoom);
   const heightOf = useCallback((p: number) => Math.round(pageWidth * (ratios[p] ?? defaultRatio)), [pageWidth, ratios, defaultRatio]);
@@ -192,11 +230,15 @@ export function Reader({
         }}
         className="relative min-h-0 flex-1 overflow-auto overscroll-contain"
       >
-        {failed ? (
-          <p className="m-6 rounded-lg border border-danger/40 bg-panel px-4 py-3 text-sm text-danger">{failed}</p>
+        {failed || range === "error" ? (
+          <p className="m-6 rounded-lg border border-danger/40 bg-panel px-4 py-3 text-sm text-danger">{failed ?? "This PDF couldn't be opened."}</p>
+        ) : !range ? (
+          <p className="p-6 text-sm text-muted">Opening…</p>
         ) : (
           <Document
-            file={file}
+            file={pdfFile}
+            options={PDF_OPTIONS}
+            suspense={false}
             onLoadSuccess={async (pdf) => {
               setNumPages(pdf.numPages);
               const first = await pdf.getPage(1);

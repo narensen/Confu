@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { addPdf, documentFile, getSession, listDocuments, pdfTitle, removeDocument, setLastPage, updateSession, type LocalDocument } from "@confu/client/library";
 import { docLabel } from "@confu/core/types";
 import { buttonClass, ghostButtonClass } from "@confu/ui/classes";
@@ -8,16 +8,19 @@ import { DUR, useArrive, useIndicator } from "@confu/ui/motion";
 import { Dialog, dropHandlers, InTopBar, isPdf, Notice } from "./chrome";
 import { SharePanel } from "./SyncPanel";
 import { useDevice, useLocal } from "./local";
-import { extractPdf } from "./pdf";
-import { Reader, type Selection } from "./Reader";
+import type { Selection } from "./Reader";
 import { CardsPanel } from "./tools/CardsPanel";
 import { LecturesPanel } from "./tools/LecturesPanel";
 import { ListenPanel } from "./tools/ListenPanel";
 import { NotesPanel } from "./tools/NotesPanel";
 import { PlanPanel } from "./tools/PlanPanel";
 import { TranscriptView } from "./tools/TranscriptView";
-import { WatchPanel } from "./tools/WatchPanel";
 import { Tutor, type Ask } from "./Tutor";
+
+// pdf.js and the video stage are each their own download. The listen panel
+// can open without either of them.
+const Reader = lazy(() => import("./Reader").then((m) => ({ default: m.Reader })));
+const WatchPanel = lazy(() => import("./tools/WatchPanel").then((m) => ({ default: m.WatchPanel })));
 
 type Upload = { name: string; done: number; total: number };
 export type Tool = "files" | "plan" | "notes" | "cards" | "lectures" | "listen" | "watch";
@@ -93,29 +96,37 @@ export function SessionView({
       setProblem(null);
       const pdfs = picked.filter(isPdf);
       if (pdfs.length < picked.length) setProblem("Only PDFs can be added here for now.");
-      let first = true;
-      for (const file of pdfs) {
-        setUpload({ name: file.name, done: 0, total: 0 });
-        try {
-          const doc = await addPdf(store, files, {
-            sessionId,
-            file,
-            title: pdfTitle(file.name),
-            extract: extractPdf,
-            onProgress: (done, total) => setUpload({ name: file.name, done, total }),
-          });
-          const current = await getSession(store, sessionId);
-          if (first && current?.title === "Untitled session") await updateSession(store, sessionId, { title: doc.title });
-          first = false;
-          setActiveId(doc.id);
-          setTab("read");
-          setTool("files");
-          changed();
-        } catch (e) {
-          setProblem(`${file.name} couldn't be added: ${e instanceof Error ? e.message : "unknown error"}.`);
+      try {
+        if (pdfs.length) {
+          const { extractPdf } = await import("./pdf");
+          let first = true;
+          for (const file of pdfs) {
+            setUpload({ name: file.name, done: 0, total: 0 });
+            try {
+              const doc = await addPdf(store, files, {
+                sessionId,
+                file,
+                title: pdfTitle(file.name),
+                extract: extractPdf,
+                onProgress: (done, total) => setUpload({ name: file.name, done, total }),
+              });
+              const current = await getSession(store, sessionId);
+              if (first && current?.title === "Untitled session") await updateSession(store, sessionId, { title: doc.title });
+              first = false;
+              setActiveId(doc.id);
+              setTab("read");
+              setTool("files");
+              changed();
+            } catch (e) {
+              setProblem(`${file.name} couldn't be added: ${e instanceof Error ? e.message : "unknown error"}.`);
+            }
+          }
         }
+      } catch (e) {
+        setProblem(e instanceof Error ? e.message : "Couldn't open the PDF reader.");
+      } finally {
+        setUpload(null);
       }
-      setUpload(null);
     },
     [store, files, sessionId, changed],
   );
@@ -306,11 +317,15 @@ export function SessionView({
           ) : tool === "listen" ? (
             <ListenPanel sessionId={sessionId} docs={docs} title={session?.title ?? "This session"} />
           ) : tool === "watch" ? (
-            <WatchPanel sessionId={sessionId} docs={docs} title={session?.title ?? "This session"} />
+            <Suspense fallback={<p className="m-6 font-mono text-xs text-muted" role="status">Opening the video…</p>}>
+              <WatchPanel sessionId={sessionId} docs={docs} title={session?.title ?? "This session"} />
+            </Suspense>
           ) : active && isLecture(active) ? (
             <TranscriptView key={active.id} doc={active} jump={jump} onPageChange={onPageChange} />
           ) : active && blob?.id === active.id && blob.file ? (
-            <Reader key={active.id} file={blob.file} initialPage={pages[active.id] ?? active.last_page} jump={jump} onPageChange={onPageChange} onAsk={onAsk} />
+            <Suspense fallback={<p className="m-6 font-mono text-xs text-muted" role="status">Opening this file…</p>}>
+              <Reader key={active.id} file={blob.file} initialPage={pages[active.id] ?? active.last_page} jump={jump} onPageChange={onPageChange} onAsk={onAsk} />
+            </Suspense>
           ) : active && blob?.id === active.id ? (
             <p className="m-6 text-sm text-danger">This file is missing from this device. Remove it and add it again.</p>
           ) : docs.length === 0 && session ? (
