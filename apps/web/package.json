@@ -13,7 +13,9 @@
   "dependencies": {
     "@confu/ai": "workspace:*",
     "@confu/app": "workspace:*",
+    "@confu/client": "workspace:*",
     "@confu/core": "workspace:*",
+    "@confu/storage": "workspace:*",
     "@confu/ui": "workspace:*",
     "@gsap/react": "^2.1.2",
     "@mozilla/readability": "0.6.0",
@@ -22,7 +24,7 @@
     "@supabase/supabase-js": "^2.118.0",
     "d3-force": "3.0.0",
     "gsap": "^3.15.0",
-    "katex": "^0.19.0",
+    "katex": "0.16.47",
     "linkedom": "0.18.9",
     "mermaid": "^12.2.0",
     "next": "16.4.2",

@@ -237,6 +237,18 @@ export class Store {
     return applied;
   }
 
+  // ---- device settings and sync bookkeeping (never synced) ----
+
+  async getMeta(key: string): Promise<string | null> {
+    const [row] = await this.db.all<{ value: string }>(`SELECT value FROM "_meta" WHERE key = ?`, [key]);
+    return row?.value ?? null;
+  }
+
+  async setMeta(key: string, value: string | null): Promise<void> {
+    if (value === null) await this.db.run(`DELETE FROM "_meta" WHERE key = ?`, [key]);
+    else await this.db.run(`INSERT INTO "_meta" (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value`, [key, value]);
+  }
+
   transaction<T>(fn: (tx: Sql) => Promise<T>) {
     return this.db.transaction(fn);
   }

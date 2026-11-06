@@ -3,6 +3,7 @@ import { bunDriver } from "@confu/storage/drivers/bun";
 import { Clock, formatHlc, parseHlc } from "@confu/storage/hlc";
 import { pageSnippets, searchPages, searchSessionPages } from "@confu/storage/search";
 import { memoryFiles } from "@confu/storage/files";
+import { MIGRATIONS } from "@confu/storage/schema";
 import { Store } from "@confu/storage/store";
 
 const open = (device = "dev-a") => Store.open(bunDriver(), { device });
@@ -20,7 +21,19 @@ describe("Store", () => {
     const raw = bunDriver();
     const a = await Store.open(raw, { device: "dev-a" });
     expect(a.device).toBe("dev-a");
-    expect(await a.query<{ user_version: number }>("PRAGMA user_version")).toEqual([{ user_version: 1 }]);
+    expect(await a.query<{ user_version: number }>("PRAGMA user_version")).toEqual([{ user_version: MIGRATIONS.length }]);
+  });
+
+  test("a database from before migration 2 upgrades and keeps its rows", async () => {
+    const raw = bunDriver();
+    // Build a version-1 database by hand, with a session in it.
+    for (const stmt of MIGRATIONS[0].split(/;\s*\n(?=\s*(?:CREATE|$))/)) if (stmt.trim()) await raw.run(stmt.trim().endsWith("END") ? `${stmt};` : stmt);
+    await raw.run("PRAGMA user_version = 1");
+    await raw.run(`INSERT INTO study_sessions (id, title) VALUES ('s1', 'Old')`);
+    const s = await Store.open(raw, { device: "dev-a" });
+    expect(await s.get("study_sessions", { id: "s1" })).toMatchObject({ title: "Old" });
+    await s.put("cards", { session_id: "s1", front: "Q", back: "A" });
+    expect((await s.list("cards")).length).toBe(1);
   });
 
   test("converts JSON and booleans both ways", async () => {

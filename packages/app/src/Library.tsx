@@ -1,10 +1,15 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { importSession } from "@confu/client/bundle";
+import { startCourse } from "@confu/client/courses";
+import { TEMPLATES, type Template } from "@confu/core/templates";
 import { createSession, deleteSession, listSessions, pdfTitle, updateSession, type LocalSession } from "@confu/client/library";
 import { buttonClass, eyebrowClass, ghostButtonClass } from "@confu/ui/classes";
 import { ago, dropHandlers, isPdf } from "./chrome";
+import { useHost } from "./host";
 import { useDevice, useLocal } from "./local";
+import { BringOver } from "./SyncPanel";
 
 type Row = LocalSession & { files: number };
 
@@ -17,15 +22,33 @@ async function loadLibrary(store: Parameters<typeof listSessions>[0]): Promise<R
   return sessions.map((s) => ({ ...s, files: n.get(s.id) ?? 0 }));
 }
 
-export function Library({ onOpen }: { onOpen: (id: string, files?: File[]) => void }) {
+export function Library({ onOpen }: { onOpen: (id: string, files?: File[], tool?: "plan") => void }) {
   const device = useDevice();
   const { data: sessions } = useLocal((d) => loadLibrary(d.store), []);
+  const { account } = useHost();
   const picker = useRef<HTMLInputElement>(null);
+  const sessionFile = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
+  async function openSessionFile(file: File) {
+    setProblem(null);
+    setBusy(true);
+    try {
+      const s = await importSession(device.store, device.files, file);
+      device.changed();
+      onOpen(s.id);
+    } catch (e) {
+      setProblem(e instanceof Error ? e.message : "Couldn't open that file.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function start(files?: File[]) {
     setProblem(null);
+    const sessionFiles = files?.filter((f) => /\.confu$/i.test(f.name)) ?? [];
+    if (sessionFiles.length) return openSessionFile(sessionFiles[0]);
     const pdfs = files?.filter(isPdf);
     if (files && !pdfs?.length) return setProblem("Only PDFs can be added for now.");
     setBusy(true);
@@ -48,7 +71,21 @@ export function Library({ onOpen }: { onOpen: (id: string, files?: File[]) => vo
             <p className={eyebrowClass}>On this device</p>
             <h1 className="mt-1 font-serif text-3xl sm:text-4xl">Your library</h1>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => sessionFile.current?.click()} disabled={busy} className={ghostButtonClass} title="Open a session someone shared with you (.confu)">
+              Open a session file
+            </button>
+            <input
+              ref={sessionFile}
+              type="file"
+              accept=".confu,application/x-confu-session"
+              hidden
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = "";
+                if (file) void openSessionFile(file);
+              }}
+            />
             <button type="button" onClick={() => start()} disabled={busy} className={ghostButtonClass}>
               New session
             </button>
@@ -86,6 +123,13 @@ export function Library({ onOpen }: { onOpen: (id: string, files?: File[]) => vo
           </div>
         )}
 
+        {sessions && sessions.length === 0 && account && (
+          <div className="mx-auto mt-6 max-w-md rounded-2xl border border-ink bg-panel p-5">
+            <h2 className="mb-2 font-serif text-xl">Already studying on Confu?</h2>
+            <BringOver compact />
+          </div>
+        )}
+
         {sessions && sessions.length > 0 && (
           <ul className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {sessions.map((s) => (
@@ -93,6 +137,8 @@ export function Library({ onOpen }: { onOpen: (id: string, files?: File[]) => vo
             ))}
           </ul>
         )}
+
+        <Courses onOpen={onOpen} />
       </div>
     </div>
   );
@@ -156,5 +202,57 @@ function SessionCard({ s, onOpen }: { s: Row; onOpen: () => void }) {
         </div>
       )}
     </li>
+  );
+}
+
+// Ready-made courses: a goal, a plan of topics over a few weeks, and free
+// sources (videos, readings, open papers).
+function Courses({ onOpen }: { onOpen: (id: string, files?: File[], tool?: "plan") => void }) {
+  const { store, changed } = useDevice();
+  const [all, setAll] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
+  const shown = all ? TEMPLATES : TEMPLATES.slice(0, 6);
+
+  async function start(t: Template) {
+    setBusy(t.slug);
+    try {
+      const s = await startCourse(store, t);
+      changed();
+      onOpen(s.id, undefined, "plan");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  return (
+    <section className="mt-14">
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <p className={eyebrowClass}>Start from a course</p>
+          <h2 className="mt-1 font-serif text-2xl">A plan and free sources, ready to go</h2>
+        </div>
+        {TEMPLATES.length > 6 && (
+          <button type="button" onClick={() => setAll((a) => !a)} className="shrink-0 text-sm font-medium underline underline-offset-2">
+            {all ? "Fewer" : `All ${TEMPLATES.length}`}
+          </button>
+        )}
+      </div>
+      <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {shown.map((t) => (
+          <li key={t.slug} className="flex flex-col rounded-xl border border-ink/25 bg-panel p-4">
+            <span className="font-serif text-lg leading-snug">{t.title}</span>
+            <span className="mt-1 line-clamp-2 text-sm text-muted">{t.tagline}</span>
+            <span className="mt-auto flex items-center justify-between gap-2 pt-4">
+              <span className="font-mono text-[11px] text-muted">
+                {t.weeks} wk · {t.minutesPerDay} min/day · {t.level}
+              </span>
+              <button type="button" disabled={Boolean(busy)} onClick={() => start(t)} className={`${ghostButtonClass} px-3 py-1 text-xs`}>
+                {busy === t.slug ? "Starting…" : "Start"}
+              </button>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

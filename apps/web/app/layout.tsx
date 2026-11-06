@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Newsreader } from "next/font/google";
+// The same KaTeX version that renders the math (rehype-katex, via @confu/ui).
 import "katex/dist/katex.min.css";
 import { Suspense } from "react";
 import "./globals.css";

@@ -11,5 +11,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit && tsc --noEmit -p tests",
     "test": "bun test tests"
+  },
+  "dependencies": {
+    "ts-fsrs": "^6.0.0"
   }
 }

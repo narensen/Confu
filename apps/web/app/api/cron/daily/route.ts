@@ -40,7 +40,7 @@ export async function GET(request: Request) {
   // Review reminders
   const { data: due, error } = await admin.rpc("reminder_batch");
   if (error) return Response.json({ error: error.message }, { status: 500 });
-  const dueRows = ((due ?? []) as { user_id: string; email: string; name: string | null; due: number; email_ok: boolean; push_ok: boolean }[]).slice(0, 400);
+  const dueRows = ((due ?? []) as { user_id: string; email: string; name: string | null; due: number; email_ok: boolean; push_ok: boolean; local?: boolean }[]).slice(0, 400);
   // The batch has no exam date. Look it up after the batch, in UTC, and only
   // then add one sentence. A missing column must not stop the reminders.
   const paperOver = new Set<string>();
@@ -63,7 +63,7 @@ export async function GET(request: Request) {
       budget--;
       try {
         const unsubscribe = unsubscribeUrl(r.user_id, "reminder");
-        await sendEmail({ to: r.email, unsubscribe, ...reminderEmail({ name: r.name, due: r.due, unsubscribe, paperOver: paperOver.has(r.user_id) }) });
+        await sendEmail({ to: r.email, unsubscribe, ...reminderEmail({ name: r.name, due: r.due, unsubscribe, paperOver: paperOver.has(r.user_id), local: r.local }) });
         result.reminders.emails++;
         sent = true;
         await pause(550); // Resend's rate limit
@@ -75,7 +75,7 @@ export async function GET(request: Request) {
     if (r.push_ok && pushConfigured) {
       const { data: subs } = await admin.from("push_subscriptions").select("id, endpoint, p256dh, auth").eq("user_id", r.user_id);
       for (const s of (subs ?? []) as (PushTarget & { id: number })[]) {
-        const status = await sendPush(s, { title: `${r.due} reviews are due`, body: "A few minutes now and it sticks. Tap to start.", url: `${SITE.url}/review` });
+        const status = await sendPush(s, { title: `${r.due} reviews are due`, body: "A few minutes now and it sticks. Tap to start.", url: `${SITE.url}${r.local ? "/app" : "/review"}` });
         if (status === "sent") {
           result.reminders.pushes++;
           sent = true;

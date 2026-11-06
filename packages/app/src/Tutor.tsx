@@ -14,7 +14,7 @@ import { useDevice, useLocal } from "./local";
 // The tutor, on this device: the question, the pages it needs, and the
 // answer all stay here, except what goes to the student's own AI provider.
 
-export type Ask = Pick<AskInput, "action" | "message" | "selection">;
+export type Ask = Pick<AskInput, "action" | "message" | "selection" | "topicId"> & { label?: string };
 
 type Live = { user: string; action: TutorAction; text: string; status: string | null };
 
@@ -55,12 +55,12 @@ export function Tutor({
   async function send(ask: Ask) {
     if (live) return;
     setError(null);
-    const preview = ask.message?.trim() || (ask.selection ? `> ${ask.selection.text.slice(0, 280)}` : "");
+    const preview = ask.message?.trim() || (ask.selection ? `> ${ask.selection.text.slice(0, 280)}` : (ask.label ?? ""));
     setLive({ user: preview, action: ask.action, text: "", status: null });
     try {
       for await (const ev of askTutor(
         { store: device.store, keys: device.keys },
-        { sessionId, documentId: activeDoc?.id ?? null, page: activeDoc ? page : null, ...ask },
+        { sessionId, documentId: activeDoc?.id ?? null, page: activeDoc ? page : null, action: ask.action, message: ask.message, selection: ask.selection, topicId: ask.topicId },
       )) {
         if (ev.type === "text") setLive((l) => (l ? { ...l, text: l.text + ev.text, status: null } : l));
         else if (ev.type === "status") setLive((l) => (l ? { ...l, status: ev.label } : l));

@@ -3,6 +3,9 @@
 import { Children, cloneElement, isValidElement, memo, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import rehypeKatex from "rehype-katex";
+// Chemistry: \ce{H2O}, \pu{1 mol}. Registers on the KaTeX rehype-katex uses
+// (this package pins the same version, so it's one module).
+import "katex/contrib/mhchem";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import { sanitizeSvg } from "@confu/core/tutor/diagram";

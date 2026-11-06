@@ -5,6 +5,7 @@ import { keyProblem, PROVIDER_ORDER, PROVIDERS, type ProviderId } from "@confu/a
 import type { DeviceKeyInfo } from "@confu/client/keys";
 import { openRouterAuthUrl } from "@confu/client/openrouter";
 import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@confu/ui/classes";
+import { useHost } from "./host";
 import { useDevice, useLocal } from "./local";
 
 // The student's own AI on this device: sign in with OpenRouter, or paste a
@@ -17,6 +18,7 @@ export function useAiKey() {
 
 export function KeySetup({ onSaved }: { onSaved?: (info: DeviceKeyInfo) => void }) {
   const { keys, changed } = useDevice();
+  const { openRouter = true } = useHost();
   const [provider, setProvider] = useState<ProviderId>("groq");
   const [key, setKey] = useState("");
   const [baseUrl, setBaseUrl] = useState("");
@@ -55,22 +57,27 @@ export function KeySetup({ onSaved }: { onSaved?: (info: DeviceKeyInfo) => void 
 
   return (
     <div className="space-y-5">
-      <div className="rounded-xl border border-ink bg-paper p-4">
-        <button type="button" onClick={connect} className={`${buttonClass} w-full py-2.5`}>
-          <LinkIcon />
-          Connect OpenRouter
-        </button>
-        <p className="mt-2 text-xs leading-relaxed text-muted">
-          Sign in on openrouter.ai and approve Confu. It runs on your OpenRouter credits, with free models too, and you can set a spending limit
-          there.
-        </p>
-      </div>
+      {openRouter && (
+        <div className="rounded-xl border border-ink bg-paper p-4">
+          <button type="button" onClick={connect} className={`${buttonClass} w-full py-2.5`}>
+            <LinkIcon />
+            Connect OpenRouter
+          </button>
+          <p className="mt-2 text-xs leading-relaxed text-muted">
+            Sign in on openrouter.ai and approve Confu. It runs on your OpenRouter credits, with free models too, and you can set a spending limit
+            there.
+          </p>
+        </div>
 
-      <div className="flex items-center gap-3 text-[11px] tracking-widest text-muted uppercase">
-        <span className="h-px flex-1 bg-line" />
-        or paste an API key
-        <span className="h-px flex-1 bg-line" />
-      </div>
+      )}
+
+      {openRouter && (
+        <div className="flex items-center gap-3 text-[11px] tracking-widest text-muted uppercase">
+          <span className="h-px flex-1 bg-line" />
+          or paste an API key
+          <span className="h-px flex-1 bg-line" />
+        </div>
+      )}
 
       <form onSubmit={submit} className="space-y-3">
         <div role="radiogroup" aria-label="Provider" className="flex flex-wrap gap-1.5">

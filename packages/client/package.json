@@ -15,6 +15,7 @@
   "dependencies": {
     "@confu/ai": "workspace:*",
     "@confu/core": "workspace:*",
-    "@confu/storage": "workspace:*"
+    "@confu/storage": "workspace:*",
+    "yjs": "^13.6.33"
   }
 }

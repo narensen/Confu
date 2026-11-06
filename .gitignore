@@ -19,6 +19,9 @@ out/
 
 # production
 build/
+# desktop app: bundles and packaged installers
+apps/desktop/dist/
+apps/desktop/release/
 
 # misc
 .DS_Store

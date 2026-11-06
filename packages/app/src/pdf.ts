@@ -5,6 +5,12 @@ import type { OutlineItem } from "@confu/core/types";
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
 
+// Where pdf.js's worker is, for hosts whose bundler resolves it differently
+// (the desktop app's Vite build). Call before rendering.
+export function configurePdfWorker(src: string) {
+  pdfjs.GlobalWorkerOptions.workerSrc = src;
+}
+
 type PDFDocument = Awaited<ReturnType<typeof pdfjs.getDocument>["promise"]>;
 type RawOutline = Awaited<ReturnType<PDFDocument["getOutline"]>>;
 

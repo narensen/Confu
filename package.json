@@ -27,6 +27,7 @@
     "unrs-resolver"
   ],
   "trustedDependencies": [
+    "electron",
     "sharp",
     "unrs-resolver"
   ]

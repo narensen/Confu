@@ -1,0 +1,62 @@
+name: Desktop release
+
+# Builds Confu for Mac, Windows and Linux and publishes them to a GitHub
+# Release, where the apps also look for updates. Push a tag that matches
+# apps/desktop/package.json's version: `git tag v0.2.0 && git push --tags`.
+#
+# Optional secrets (Google Drive sync in the desktop app; leave unset to ship
+# without it): CONFU_GOOGLE_DESKTOP_CLIENT_ID, CONFU_GOOGLE_DESKTOP_CLIENT_SECRET
+# (a "Desktop app" OAuth client) and CONFU_GOOGLE_API_KEY. Editing notes
+# together: VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY (the same public
+# values as the web app's NEXT_PUBLIC_SUPABASE_*).
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: apps/desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+        working-directory: .
+      - name: Tag matches the app's version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: test "v$(node -p "require('./package.json').version")" = "${GITHUB_REF_NAME}"
+      - name: Download Electron
+        run: node node_modules/electron/install.js
+      - name: Build and publish
+        run: bun run ${{ startsWith(github.ref, 'refs/tags/') && 'release' || 'dist' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CONFU_GOOGLE_DESKTOP_CLIENT_ID: ${{ secrets.CONFU_GOOGLE_DESKTOP_CLIENT_ID }}
+          CONFU_GOOGLE_DESKTOP_CLIENT_SECRET: ${{ secrets.CONFU_GOOGLE_DESKTOP_CLIENT_SECRET }}
+          CONFU_GOOGLE_API_KEY: ${{ secrets.CONFU_GOOGLE_API_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+      - name: Keep the installers (manual runs)
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: confu-${{ matrix.os }}
+          path: |
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/*.deb

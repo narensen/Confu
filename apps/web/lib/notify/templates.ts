@@ -53,8 +53,10 @@ const button = (href: string, label: string) =>
 
 /* ------------------------------------------------------------ reminder */
 
-export function reminderEmail(o: { name: string | null; due: number; unsubscribe: string; paperOver?: boolean }) {
+export function reminderEmail(o: { name: string | null; due: number; unsubscribe: string; paperOver?: boolean; local?: boolean }) {
   const n = o.due;
+  // On-device students review in the app on their device (/app).
+  const href = `${SITE.url}${o.local ? "/app" : "/review"}`;
   const minutes = Math.max(2, Math.round(n * 0.75));
   const over = "The paper is over. What you missed comes back today, in three days, and in seven.";
   const subject = `${n} reviews are waiting (about ${minutes} minutes)`;
@@ -66,7 +68,7 @@ ${headline(`${n} reviews are waiting.`)}
 <p style="margin:14px 0 0">Topics you finished, passages you asked about and questions you missed. Recalling them now, just as they start to fade, is what makes them stick.</p>
 ${o.paperOver ? `<p style="margin:10px 0 0">${over}</p>` : ""}
 <p style="margin:10px 0 0;color:${MUTED}">About ${minutes} minutes. You answer from memory, then check.</p>
-${button(`${SITE.url}/review`, "Start review")}`,
+${button(href, "Start review")}`,
     why: "You get this when reviews have been waiting a while, at most every few days.",
     unsubscribe: o.unsubscribe,
   });
@@ -74,7 +76,7 @@ ${button(`${SITE.url}/review`, "Start review")}`,
 
 ${n} reviews are waiting: about ${minutes} minutes. Recalling them now, just as they start to fade, is what makes them stick.
 ${o.paperOver ? `\n${over}\n` : ""}
-Start review: ${SITE.url}/review
+Start review: ${href}
 
 Unsubscribe: ${o.unsubscribe}`;
   return { subject, html, text };

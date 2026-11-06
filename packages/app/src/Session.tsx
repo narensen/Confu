@@ -4,15 +4,48 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { addPdf, documentFile, getSession, listDocuments, pdfTitle, removeDocument, setLastPage, updateSession, type LocalDocument } from "@confu/client/library";
 import { docLabel } from "@confu/core/types";
 import { buttonClass, ghostButtonClass } from "@confu/ui/classes";
-import { dropHandlers, InTopBar, isPdf, Notice } from "./chrome";
+import { Dialog, dropHandlers, InTopBar, isPdf, Notice } from "./chrome";
+import { SharePanel } from "./SyncPanel";
 import { useDevice, useLocal } from "./local";
 import { extractPdf } from "./pdf";
 import { Reader, type Selection } from "./Reader";
+import { CardsPanel } from "./tools/CardsPanel";
+import { LecturesPanel } from "./tools/LecturesPanel";
+import { ListenPanel } from "./tools/ListenPanel";
+import { NotesPanel } from "./tools/NotesPanel";
+import { PlanPanel } from "./tools/PlanPanel";
+import { TranscriptView } from "./tools/TranscriptView";
 import { Tutor, type Ask } from "./Tutor";
 
 type Upload = { name: string; done: number; total: number };
+export type Tool = "files" | "plan" | "notes" | "cards" | "lectures" | "listen";
 
-export function SessionView({ sessionId, initialFiles, onFilesTaken, onBack }: { sessionId: string; initialFiles: File[] | null; onFilesTaken: () => void; onBack: () => void }) {
+const TOOLS: { id: Tool; label: string }[] = [
+  { id: "files", label: "Files" },
+  { id: "plan", label: "Plan" },
+  { id: "notes", label: "Notes" },
+  { id: "cards", label: "Cards" },
+  { id: "lectures", label: "Lectures" },
+  { id: "listen", label: "Listen" },
+];
+
+const isLecture = (d: LocalDocument | null) => (d?.meta as { kind?: string } | undefined)?.kind === "lecture";
+
+export function SessionView({
+  sessionId,
+  initialFiles,
+  onFilesTaken,
+  onBack,
+  initialTool,
+  openNote,
+}: {
+  sessionId: string;
+  initialFiles: File[] | null;
+  onFilesTaken: () => void;
+  onBack: () => void;
+  initialTool?: Tool;
+  openNote?: { id: string; code: string } | null;
+}) {
   const device = useDevice();
   const { store, files, changed } = device;
   const { data: session } = useLocal((d) => getSession(d.store, sessionId), [sessionId]);
@@ -26,6 +59,8 @@ export function SessionView({ sessionId, initialFiles, onFilesTaken, onBack }: {
   const [problem, setProblem] = useState<string | null>(null);
   const [tab, setTab] = useState<"read" | "tutor">("read");
   const [title, setTitle] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
+  const [tool, setTool] = useState<Tool>(initialTool ?? "files");
   const picker = useRef<HTMLInputElement>(null);
   const [pages, setPages] = useState<Record<string, number>>({}); // where each file was left, this visit
   const taken = useRef<File[] | null>(null);
@@ -35,7 +70,7 @@ export function SessionView({ sessionId, initialFiles, onFilesTaken, onBack }: {
 
   // The open file's bytes, read once per file (not on every change).
   useEffect(() => {
-    if (!active || blob?.id === active.id) return;
+    if (!active || isLecture(active) || blob?.id === active.id) return;
     let live = true;
     documentFile(files, active).then((file) => live && setBlob({ id: active.id, file }));
     return () => {
@@ -64,6 +99,7 @@ export function SessionView({ sessionId, initialFiles, onFilesTaken, onBack }: {
           first = false;
           setActiveId(doc.id);
           setTab("read");
+          setTool("files");
           changed();
         } catch (e) {
           setProblem(`${file.name} couldn't be added: ${e instanceof Error ? e.message : "unknown error"}.`);
@@ -102,7 +138,23 @@ export function SessionView({ sessionId, initialFiles, onFilesTaken, onBack }: {
       setPage(at ?? pages[doc.id] ?? doc.last_page);
     }
     setJump((j) => (at ? { page: at, seq: (j?.seq ?? 0) + 1 } : null));
+    setTool("files");
     if (at) setTab("read");
+  }
+
+  const openById = (id: string, at?: number) => {
+    const doc = docs.find((d) => d.id === id);
+    if (doc) open(doc, at);
+    else {
+      // Just made (a transcript, a paper): the list catches up next render.
+      setActiveId(id);
+      setTool("files");
+    }
+  };
+
+  function ask(a: Ask) {
+    setIncoming((prev) => ({ ...a, seq: (prev?.seq ?? 0) + 1 }));
+    setTab("tutor");
   }
 
   async function remove(doc: LocalDocument) {
@@ -117,9 +169,7 @@ export function SessionView({ sessionId, initialFiles, onFilesTaken, onBack }: {
 
   function onAsk(s: Selection) {
     if (!active) return;
-    const selection = { text: s.text, page: s.page, documentId: active.id };
-    setIncoming((prev) => ({ action: s.action, selection, seq: (prev?.seq ?? 0) + 1 }));
-    setTab("tutor");
+    ask({ action: s.action, selection: { text: s.text, page: s.page, documentId: active.id } });
   }
 
   if (session === null) {
@@ -156,16 +206,42 @@ export function SessionView({ sessionId, initialFiles, onFilesTaken, onBack }: {
           aria-label="Session title"
           className="min-w-0 flex-1 truncate rounded-md bg-transparent px-1.5 py-1 text-sm font-medium outline-none hover:bg-paper focus:bg-paper"
         />
+        <button type="button" onClick={() => setSharing(true)} className="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium text-muted transition hover:bg-paper hover:text-ink">
+          Share
+        </button>
       </InTopBar>
+      {sharing && session && (
+        <Dialog title="Share a copy" onClose={() => setSharing(false)}>
+          <SharePanel sessionId={sessionId} title={session.title} />
+        </Dialog>
+      )}
 
       <div className="flex shrink-0 items-center gap-1.5 overflow-x-auto border-b border-line bg-panel px-3 py-1.5 sm:px-4">
-        {docs.map((d, i) => (
+        <div role="tablist" aria-label="Tools" className="flex shrink-0 rounded-full bg-paper p-0.5">
+          {TOOLS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={tool === t.id}
+              onClick={() => {
+                setTool(t.id);
+                setTab("read");
+              }}
+              className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${tool === t.id ? "bg-panel text-ink shadow-[0_0_0_1px_var(--ink)]" : "text-muted hover:text-ink"}`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        {tool === "files" && <span className="mx-1 h-5 w-px shrink-0 bg-line" aria-hidden />}
+        {tool === "files" && docs.map((d, i) => (
           <div
             key={d.id}
             className={`group flex max-w-60 shrink-0 items-center rounded-full border text-xs transition ${d.id === active?.id ? "border-ink bg-ink text-white" : "border-ink/20 text-muted hover:border-ink hover:text-ink"}`}
           >
             <button type="button" onClick={() => open(d)} className="flex min-w-0 items-center gap-1.5 py-1 pr-1 pl-3" title={d.title}>
-              <span className="font-mono text-[10px] opacity-70">{docLabel(i)}</span>
+              <span className="font-mono text-[10px] opacity-70">{isLecture(d) ? "●" : ""}{docLabel(i)}</span>
               <span className="truncate">{d.title}</span>
             </button>
             <button type="button" onClick={() => remove(d)} aria-label={`Remove ${d.title}`} className="mr-1 flex size-5 shrink-0 items-center justify-center rounded-full opacity-50 transition hover:opacity-100">
@@ -175,9 +251,11 @@ export function SessionView({ sessionId, initialFiles, onFilesTaken, onBack }: {
             </button>
           </div>
         ))}
-        <button type="button" onClick={() => picker.current?.click()} disabled={Boolean(upload)} className="shrink-0 rounded-full border border-dashed border-ink/40 px-3 py-1 text-xs font-medium text-muted transition hover:border-ink hover:text-ink disabled:opacity-40">
-          + Add PDF
-        </button>
+        {tool === "files" && (
+          <button type="button" onClick={() => picker.current?.click()} disabled={Boolean(upload)} className="shrink-0 rounded-full border border-dashed border-ink/40 px-3 py-1 text-xs font-medium text-muted transition hover:border-ink hover:text-ink disabled:opacity-40">
+            + Add PDF
+          </button>
+        )}
         <input
           ref={picker}
           type="file"
@@ -206,7 +284,19 @@ export function SessionView({ sessionId, initialFiles, onFilesTaken, onBack }: {
 
       <div className="flex min-h-0 flex-1">
         <section className={`min-w-0 flex-1 ${tab === "tutor" ? "hidden lg:block" : ""}`}>
-          {active && blob?.id === active.id && blob.file ? (
+          {tool === "plan" ? (
+            <PlanPanel sessionId={sessionId} onTeach={(t) => ask({ action: "teach", topicId: t.id, label: `**Teach me** — ${t.title}` })} onAdded={(id) => openById(id)} />
+          ) : tool === "notes" ? (
+            <NotesPanel sessionId={sessionId} openNoteId={openNote?.id ?? null} joinCode={openNote?.code ?? null} />
+          ) : tool === "cards" ? (
+            <CardsPanel sessionId={sessionId} docs={docs} activeDoc={active} page={page} onOpenPage={(id, p) => openById(id, p)} />
+          ) : tool === "lectures" ? (
+            <LecturesPanel sessionId={sessionId} onOpenDoc={(id) => openById(id)} />
+          ) : tool === "listen" ? (
+            <ListenPanel sessionId={sessionId} docs={docs} title={session?.title ?? "This session"} />
+          ) : active && isLecture(active) ? (
+            <TranscriptView key={active.id} doc={active} jump={jump} onPageChange={onPageChange} />
+          ) : active && blob?.id === active.id && blob.file ? (
             <Reader key={active.id} file={blob.file} initialPage={pages[active.id] ?? active.last_page} jump={jump} onPageChange={onPageChange} onAsk={onAsk} />
           ) : active && blob?.id === active.id ? (
             <p className="m-6 text-sm text-danger">This file is missing from this device. Remove it and add it again.</p>
@@ -232,7 +322,7 @@ export function SessionView({ sessionId, initialFiles, onFilesTaken, onBack }: {
       <nav className="flex shrink-0 gap-1 border-t border-ink bg-panel p-1.5 lg:hidden">
         {(["read", "tutor"] as const).map((t) => (
           <button key={t} type="button" onClick={() => setTab(t)} className={`${t === tab ? buttonClass : ghostButtonClass} flex-1 border-transparent`}>
-            {t === "read" ? "Read" : "Tutor"}
+            {t === "read" ? TOOLS.find((x) => x.id === tool)!.label : "Tutor"}
           </button>
         ))}
       </nav>

@@ -7,7 +7,8 @@
   "description": "Confu that runs on the device: library, reader and tutor over @confu/client. No account or server needed. Hosted by the web app at /app, and later by the desktop and Android shells.",
   "exports": {
     "./LocalApp": "./src/LocalApp.tsx",
-    "./pdf": "./src/pdf.ts"
+    "./pdf": "./src/pdf.ts",
+    "./host": "./src/host.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
@@ -19,7 +20,8 @@
     "@confu/storage": "workspace:*",
     "@confu/ui": "workspace:*",
     "pdfjs-dist": "6.3.289",
-    "react-pdf": "^11.0.0"
+    "react-pdf": "^11.0.0",
+    "yjs": "^13.6.33"
   },
   "peerDependencies": {
     "react": "19.3.0",

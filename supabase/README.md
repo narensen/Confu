@@ -47,5 +47,6 @@ Migrations 0023 and 0024 were never in this repository, so study packs and class
 | Patch | Adds |
 | --- | --- |
 | `2026-11-04-saved-answers-and-answer-feedback.sql` | Saved tutor answers and answer feedback (the Save button and thumbs up/down) |
+| `2026-11-06-session-index.sql` | The session index: the list of each student's on-device sessions (titles and next review time, no content), for reminder emails and the dashboard |
 
 A database created from `schema.sql` already has everything in `patches/`.

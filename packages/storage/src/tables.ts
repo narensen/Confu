@@ -1,6 +1,7 @@
-// What lives on the device. Each table mirrors the server table of the same
-// name (supabase/schema.sql), minus user_id: one device, one student. That
-// keeps moving data between them a straight copy.
+// What lives on the device. The first set mirrors the server table of the
+// same name (supabase/schema.sql), minus user_id: one device, one student.
+// That keeps bringing an account's data over a straight copy. Tables added
+// later (since: 2) exist only on devices and in the student's Drive.
 //
 // Types: text (also ids, dates and timestamps, as ISO strings), int, real,
 // json (stored as text, parsed on read) and bool (0/1, read as true/false).
@@ -15,6 +16,8 @@ export type TableSpec = {
   // the sync to Drive. Device-only tables (keys, usage) never leave it.
   synced: boolean;
   indexes?: string[][];
+  // The migration that created it (absent: the first). See schema.ts.
+  since?: number;
 };
 
 const t = (name: string, type: ColType = "text", notNull = false, def?: string): Column => ({ name, type, notNull, default: def });
@@ -276,6 +279,75 @@ export const TABLES: TableSpec[] = [
     key: ["day"],
     synced: true,
     columns: [t("day", "text", true), t("seconds", "int", true, "0")],
+  },
+  // ---- since 2: flashcards, notes, lectures, podcasts ----
+  {
+    // A flashcard, scheduled with FSRS (ts-fsrs field names).
+    name: "cards",
+    key: ["id"],
+    synced: true,
+    since: 2,
+    indexes: [["session_id", "due"]],
+    columns: [
+      t("id", "text", true),
+      t("session_id", "text", true),
+      t("document_id"),
+      t("page_number", "int"),
+      t("front", "text", true),
+      t("back", "text", true),
+      t("due", "text", true, now),
+      t("stability", "real", true, "0"),
+      t("difficulty", "real", true, "0"),
+      t("elapsed_days", "int", true, "0"),
+      t("scheduled_days", "int", true, "0"),
+      t("learning_steps", "int", true, "0"),
+      t("reps", "int", true, "0"),
+      t("lapses", "int", true, "0"),
+      t("state", "int", true, "0"),
+      t("last_review"),
+      t("suspended", "bool", true, "0"),
+      created,
+    ],
+  },
+  {
+    // The student's own notes. `ydoc` holds the Yjs document (base64) for
+    // live co-editing; `content` is its Markdown, for search and export.
+    name: "notes",
+    key: ["id"],
+    synced: true,
+    since: 2,
+    indexes: [["session_id", "updated_at"]],
+    columns: [t("id", "text", true), t("session_id", "text", true), t("title", "text", true, "'Notes'"), t("content", "text", true, "''"), t("ydoc"), created, updated],
+  },
+  {
+    // A recorded lecture. Its transcript becomes a document (one page per
+    // few minutes) so the tutor can cite it.
+    name: "recordings",
+    key: ["id"],
+    synced: true,
+    since: 2,
+    indexes: [["session_id"]],
+    columns: [
+      t("id", "text", true),
+      t("session_id", "text", true),
+      t("title", "text", true),
+      t("storage_path"),
+      t("mime", "text", true, "'audio/webm'"),
+      t("seconds", "int", true, "0"),
+      t("status", "text", true, "'recorded'"),
+      t("document_id"),
+      t("error"),
+      created,
+    ],
+  },
+  {
+    // A two-voice audio overview of a session, played with the device's voices.
+    name: "podcasts",
+    key: ["id"],
+    synced: true,
+    since: 2,
+    indexes: [["session_id"]],
+    columns: [t("id", "text", true), t("session_id", "text", true), t("title", "text", true), json("script", "[]"), created],
   },
   // Device only. A key never leaves the device it was added on.
   {

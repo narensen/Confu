@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { createPortal } from "react-dom";
 import { PROVIDERS } from "@confu/ai/providers";
 import { useAiKey } from "./KeySetup";
+import { useSync } from "./sync";
 
 // Pieces shared by the library and the session: the top bar, a dialog, and
 // a few formatters.
@@ -12,7 +13,7 @@ import { useAiKey } from "./KeySetup";
 // with <InTopBar> (the session: back and its title).
 const SlotContext = createContext<HTMLElement | null>(null);
 
-export function TopBar({ homeHref, onAi, children }: { homeHref: string; onAi: () => void; children: ReactNode }) {
+export function TopBar({ homeHref, onAi, right, children }: { homeHref: string; onAi: () => void; right?: ReactNode; children: ReactNode }) {
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   return (
     <SlotContext.Provider value={slot}>
@@ -21,6 +22,7 @@ export function TopBar({ homeHref, onAi, children }: { homeHref: string; onAi: (
           Confu
         </a>
         <div ref={setSlot} className="flex min-w-0 flex-1 items-center gap-1" />
+        {right}
         <AiChip onClick={onAi} />
       </header>
       {children}
@@ -113,4 +115,20 @@ export function dropHandlers(onFiles: (files: File[]) => void) {
       onFiles(files);
     },
   };
+}
+
+// Sync status, when the host offers Google Drive.
+export function SyncChip({ onClick }: { onClick: () => void }) {
+  const { state } = useSync();
+  if (!state.available) return null;
+  const text = !state.on ? "Back up" : state.busy ? "Syncing…" : state.paused ? "Sync paused" : state.error ? "Sync problem" : "Synced";
+  const tone = state.on && (state.paused || state.error) ? "text-warn border-warn/40" : "border-ink/25 text-muted hover:border-ink hover:text-ink";
+  return (
+    <button type="button" onClick={onClick} title={state.lastAt ? `Last synced ${ago(state.lastAt)}` : "Sync and backup"} className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition ${tone}`}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className={state.busy ? "animate-pulse" : ""}>
+        <path d="M17.5 19a4.5 4.5 0 1 0-1.4-8.78A6 6 0 0 0 4.5 12.5 3.5 3.5 0 0 0 6.5 19z" />
+      </svg>
+      <span className="hidden sm:inline">{text}</span>
+    </button>
+  );
 }

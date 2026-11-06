@@ -17,7 +17,7 @@ function createTable(s: TableSpec): string {
 export const MIGRATIONS: string[] = [
   // 1. The study tables, the sync bookkeeping, and page search.
   [
-    ...TABLES.map(createTable),
+    ...TABLES.filter((t) => !t.since).map(createTable),
     // Every local change to a synced table, in order, until it's uploaded.
     `CREATE TABLE IF NOT EXISTS "_changes" (
       seq INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -45,6 +45,10 @@ export const MIGRATIONS: string[] = [
       INSERT INTO page_fts(rowid, content) VALUES (new.rowid, new.content);
     END;`,
   ].join("\n"),
+  // 2. Flashcards, notes, recorded lectures and podcasts.
+  TABLES.filter((t) => t.since === 2)
+    .map(createTable)
+    .join("\n"),
 ];
 
 export async function migrate(db: Sql): Promise<number> {

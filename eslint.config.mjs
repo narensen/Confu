@@ -13,6 +13,9 @@ const eslintConfig = defineConfig([
     "**/build/**",
     "**/next-env.d.ts",
     "**/.turbo/**",
+    // The desktop app's bundles and packaged installers.
+    "apps/desktop/dist/**",
+    "apps/desktop/release/**",
   ]),
 ]);
 
