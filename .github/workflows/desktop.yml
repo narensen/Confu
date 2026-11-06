@@ -1,8 +1,10 @@
 name: Desktop release
 
 # Builds Confu for Mac, Windows and Linux and publishes them to a GitHub
-# Release, where the apps also look for updates. Push a tag that matches
-# apps/desktop/package.json's version: `git tag v0.2.0 && git push --tags`.
+# Release, where installed apps find it (they check at start and every 4
+# hours, download it quietly and offer "Restart to update"). To release:
+#   bun run --cwd apps/desktop bump patch     (or minor, major, 0.2.0)
+#   git commit -am "release: desktop v0.1.1" && git tag v0.1.1 && git push && git push --tags
 #
 # Optional secrets (Google Drive sync in the desktop app; leave unset to ship
 # without it): CONFU_GOOGLE_DESKTOP_CLIENT_ID, CONFU_GOOGLE_DESKTOP_CLIENT_SECRET

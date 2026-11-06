@@ -65,8 +65,10 @@ export default function PacksPage() {
 }
 
 async function Gallery() {
-  const anon = createAnon(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, { auth: { persistSession: false } });
-  const { data } = await anon.rpc("public_packs", { p_limit: 60 });
+  // Built without a Supabase project (a fork, a preview): an empty gallery.
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  const { data } = url && key ? await createAnon(url, key, { auth: { persistSession: false } }).rpc("public_packs", { p_limit: 60 }) : { data: null };
   const packs = (data ?? []) as Listed[];
   if (!packs.length) {
     return (

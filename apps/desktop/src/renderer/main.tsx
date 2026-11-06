@@ -15,6 +15,7 @@ import { broadcastOpener, type BroadcastClient } from "@confu/client/live";
 import { SignInNeeded } from "@confu/client/sync/drive";
 import { createClient } from "@supabase/supabase-js";
 import type { DesktopBridge } from "../main/preload";
+import { UpdateBar } from "./UpdateBar";
 
 declare global {
   interface Window {
@@ -71,6 +72,7 @@ function App() {
   }, [info]);
 
   return (
+    <>
     <LocalApp
       sessionId={sessionId}
       navigate={(id, opts) => {
@@ -85,6 +87,8 @@ function App() {
       live={live}
       shareNoteUrl={(code) => `${info?.site ?? "https://confu.lol"}/app#note=${code}`}
     />
+    {bridge && <UpdateBar updates={bridge.updates} />}
+    </>
   );
 }
 

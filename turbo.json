@@ -13,6 +13,23 @@
       "env": [
         "NEXT_PUBLIC_*",
         "CONFU_*"
+      ],
+      "passThroughEnv": [
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "KEY_ENCRYPTION_SECRET",
+        "GROQ_API_KEY",
+        "GROQ_API_KEYS",
+        "OPENALEX_MAILTO",
+        "OPENALEX_API_KEY",
+        "SEMANTIC_SCHOLAR_API_KEY",
+        "RESEND_API_KEY",
+        "EMAIL_FROM",
+        "EMAIL_DAILY_LIMIT",
+        "VAPID_PRIVATE_KEY",
+        "CRON_SECRET",
+        "TYPESAFE_API_KEY",
+        "ANTHROPIC_BASE_URL",
+        "JEV_*"
       ]
     },
     "typecheck": {

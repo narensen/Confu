@@ -60,8 +60,10 @@ export default function RoadmapsPage() {
 }
 
 async function Gallery() {
-  const anon = createAnon(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, { auth: { persistSession: false } });
-  const { data, error } = await anon.rpc("public_roadmaps", { p_limit: 60 });
+  // Built without a Supabase project (a fork, a preview): an empty list.
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  const { data, error } = url && key ? await createAnon(url, key, { auth: { persistSession: false } }).rpc("public_roadmaps", { p_limit: 60 }) : { data: null, error: null };
   if (error) {
     const missing = /public_roadmaps|schema cache|PGRST202|PGRST205/i.test(error.message);
     return (

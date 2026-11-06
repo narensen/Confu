@@ -1,8 +1,8 @@
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
-import { app, BrowserWindow, desktopCapturer, dialog, ipcMain, net, protocol, session, shell } from "electron";
-import electronUpdater from "electron-updater";
+import { app, BrowserWindow, desktopCapturer, ipcMain, Menu, net, protocol, session, shell, type MenuItemConstructorOptions } from "electron";
 import { googleAuth } from "./google";
+import { RELEASES, setUpUpdates } from "./updates";
 
 // Confu for Mac, Windows and Linux. The window shows the on-device app
 // (packages/app), served from the private confu:// scheme: a secure origin
@@ -122,8 +122,9 @@ app.whenReady().then(() => {
     return bytes;
   });
 
+  const updates = setUpUpdates(() => win);
+  Menu.setApplicationMenu(menu(updates.check));
   createWindow();
-  if (app.isPackaged) checkForUpdates();
 });
 
 app.on("window-all-closed", () => {
@@ -133,16 +134,24 @@ app.on("activate", () => {
   if (!win) createWindow();
 });
 
-// Updates come from GitHub Releases. Windows and Linux update themselves;
-// unsigned Mac builds can't, so they say a new version is out and link to it.
-function checkForUpdates() {
-  const { autoUpdater } = electronUpdater;
+// The usual menus (copy and paste, zoom, reload), plus finding updates.
+function menu(checkForUpdates: () => void) {
   const mac = process.platform === "darwin";
-  autoUpdater.autoDownload = !mac;
-  autoUpdater.on("update-available", async (info) => {
-    if (!mac) return;
-    const { response } = await dialog.showMessageBox({ type: "info", message: `Confu ${info.version} is out.`, detail: "Download it from GitHub and replace this copy.", buttons: ["Download", "Later"] });
-    if (response === 0) void shell.openExternal("https://github.com/narensen/Confu/releases/latest");
-  });
-  autoUpdater.checkForUpdatesAndNotify().catch(() => {});
+  const check: MenuItemConstructorOptions = { label: "Check for Updates…", click: () => checkForUpdates() };
+  const template: MenuItemConstructorOptions[] = [
+    ...(mac ? [{ role: "appMenu" as const, submenu: [{ role: "about" as const }, check, { type: "separator" as const }, { role: "hide" as const }, { role: "hideOthers" as const }, { role: "unhide" as const }, { type: "separator" as const }, { role: "quit" as const }] }] : []),
+    { role: "fileMenu" },
+    { role: "editMenu" },
+    { role: "viewMenu" },
+    { role: "windowMenu" },
+    {
+      role: "help",
+      submenu: [
+        ...(mac ? [] : [check]),
+        { label: `Confu ${app.getVersion()} — What's New`, click: () => void shell.openExternal(RELEASES) },
+        { label: "Report a Problem", click: () => void shell.openExternal("https://github.com/narensen/Confu/issues") },
+      ],
+    },
+  ];
+  return Menu.buildFromTemplate(template);
 }

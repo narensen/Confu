@@ -37,7 +37,8 @@
     "start": "bun run build && electron .",
     "typecheck": "tsc --noEmit",
     "dist": "bun run build && electron-builder --publish never",
-    "release": "bun run build && electron-builder --publish always"
+    "release": "bun run build && electron-builder --publish always",
+    "bump": "node scripts/bump.mjs"
   },
   "homepage": "https://confu.lol",
   "author": {

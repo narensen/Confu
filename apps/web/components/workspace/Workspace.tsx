@@ -1756,11 +1756,12 @@ export function Workspace({
           layout.tutorOpen ? (
             <>
               {/* The tutor's place in the row. Across the whole screen, it
-                  widens from here over the reader and the tools. */}
+                  widens from here over the reader, up to the tools rail
+                  (which stays beside it, never on top of the conversation). */}
               <div className="relative shrink-0" style={{ width: tutorWidth }}>
                 <aside
                   aria-label="Tutor"
-                  style={{ width: tutorFullShown ? rootWidth : tutorWidth }}
+                  style={{ width: tutorFullShown ? rootWidth - RAIL : tutorWidth }}
                   className={`@container absolute inset-y-0 left-0 flex min-w-0 flex-col bg-panel ${tutorFullShown || tutorMotion ? "z-30" : ""} ${
                     tutorMotion ? "shadow-[14px_0_40px_-20px_rgba(13,13,12,0.5)] transition-[width] duration-300 ease-fluid motion-reduce:transition-none" : ""
                   }`}
