@@ -75,7 +75,7 @@ export function ReadingMap({
     .slice(0, 6);
 
   return (
-    <aside aria-label="Where it got hard" className="animate-slide-in absolute inset-y-0 left-0 z-20 flex w-80 max-w-[90%] flex-col border-r border-ink bg-panel shadow-[6px_0_0_0_rgba(13,13,12,0.08)]">
+    <aside aria-label="Where it got hard" className="animate-slide-in absolute inset-y-0 left-0 z-20 flex w-80 max-w-[90%] flex-col border-r border-ink bg-panel">
       <div className="flex h-11 shrink-0 items-center justify-between border-b border-line pr-1.5 pl-3">
         <p className="font-mono text-[11px] font-medium tracking-[0.12em] text-muted uppercase">Where it got hard</p>
         <button type="button" aria-label="Close" onClick={onClose} className="flex size-7 items-center justify-center rounded-md text-sm hover:bg-paper">

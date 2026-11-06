@@ -53,7 +53,7 @@ export function AuthShowcase() {
 
   return (
     <div ref={root} aria-hidden className="auth-stage relative hidden overflow-hidden border-l border-ink select-none lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col lg:self-start">
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgb(255_255_255/0.06)_1px,transparent_1px),linear-gradient(90deg,rgb(255_255_255/0.06)_1px,transparent_1px)] bg-size-[44px_44px] mask-[radial-gradient(ellipse_at_center,black,transparent_75%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgb(255_255_255/0.16)_1px,transparent_1px),linear-gradient(90deg,rgb(255_255_255/0.16)_1px,transparent_1px)] bg-size-[44px_44px] mask-[radial-gradient(ellipse_at_center,black,transparent_78%)]" />
 
       <div className="relative px-12 pt-14">
         <p className="auth-stage-muted animate-enter font-mono text-[11px] tracking-[0.14em] uppercase">Confu</p>
@@ -109,7 +109,7 @@ function Card({ children, className, depth, delay }: { children: ReactNode; clas
   // The CSS entrance runs on the wrapper; GSAP moves the card inside it.
   return (
     <div className={`animate-enter absolute ${className}`} style={{ animationDelay: `${delay}ms` }}>
-      <div data-float data-depth={depth} className="rounded-xl border border-ink bg-panel p-4 text-ink shadow-[5px_5px_0_0_#facc15]">
+      <div data-float data-depth={depth} className="rounded-xl border border-ink bg-panel p-4 text-ink">
         {children}
       </div>
     </div>

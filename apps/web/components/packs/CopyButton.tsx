@@ -34,7 +34,7 @@ export function CopyButton({
       <div>
         <Link
           href={`/signup?next=${encodeURIComponent(next)}`}
-          className="inline-flex items-center gap-2 rounded-lg border border-ink bg-ink px-5 py-2.5 text-sm font-medium text-white transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[3px_3px_0_0_#facc15]"
+          className="inline-flex items-center gap-2 rounded-lg border border-ink bg-ink px-5 py-2.5 text-sm font-medium text-white transition duration-200 ease-fluid"
         >
           Sign up free to {template ? "start" : "copy"} →
         </Link>
@@ -76,7 +76,7 @@ export function CopyButton({
             setPending(false);
           }
         }}
-        className="inline-flex items-center gap-2 rounded-lg border border-ink bg-ink px-5 py-2.5 text-sm font-medium text-white transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[3px_3px_0_0_#facc15] disabled:opacity-60"
+        className="inline-flex items-center gap-2 rounded-lg border border-ink bg-ink px-5 py-2.5 text-sm font-medium text-white transition duration-200 ease-fluid disabled:opacity-60"
       >
         {pending && <span aria-hidden className="size-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />}
         {pending ? "Setting it up…" : label}

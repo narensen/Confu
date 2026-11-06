@@ -170,10 +170,10 @@ export function RoomView({ slug }: { slug: string }) {
                     className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
                       phase === next
                         ? phase === "focus"
-                          ? "bg-inverse-ink/15 text-inverse-ink ring-1 ring-inverse-ink/25 ring-inset"
+                          ? "bg-inverse-ink text-inverse"
                           : "bg-ink text-white"
                         : phase === "focus"
-                          ? "text-inverse-ink/80 hover:bg-inverse-ink/10"
+                          ? "text-inverse-ink/80 hover:text-inverse-ink"
                           : "text-muted hover:bg-paper hover:text-ink"
                     }`}
                   >

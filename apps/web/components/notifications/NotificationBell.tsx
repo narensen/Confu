@@ -144,7 +144,7 @@ export function NotificationBell({ userId }: { userId: string }) {
         onClick={() => (open ? setOpen(false) : void show())}
         aria-label={unread ? `Notifications, ${unread} new` : "Notifications"}
         aria-expanded={open}
-        className="relative flex size-9 items-center justify-center rounded-full border border-ink/20 bg-paper/70 text-muted shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition hover:text-ink aria-expanded:border-ink/40 aria-expanded:text-ink"
+        className="relative flex size-9 items-center justify-center rounded-full border border-ink/20 bg-paper/70 text-muted transition hover:text-ink aria-expanded:border-ink/40 aria-expanded:text-ink"
       >
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="M6 8a6 6 0 1 1 12 0c0 7 3 8.5 3 8.5H3S6 15 6 8" />
@@ -163,7 +163,7 @@ export function NotificationBell({ userId }: { userId: string }) {
             <aside
               role="dialog"
               aria-label="Notifications"
-              className="animate-notify absolute top-0 right-0 bottom-0 flex w-[min(26rem,100vw)] flex-col border-l border-ink bg-panel shadow-[-16px_0_40px_-20px_rgba(0,0,0,0.5)]"
+              className="animate-notify absolute top-0 right-0 bottom-0 flex w-[min(26rem,100vw)] flex-col border-l border-ink bg-panel"
             >
               <div className="flex items-center justify-between gap-3 border-b border-ink px-5 py-3.5">
                 <p className="font-serif text-xl">Notifications</p>
@@ -249,7 +249,7 @@ function Item({ notice: n, isNew, onOpen, onAnswer }: { notice: Notice; isNew: b
               await onAnswer(true);
               setBusy(false);
             }}
-            className="rounded-lg border border-ink bg-ink px-3 py-1 text-xs font-medium text-white transition hover:-translate-y-px disabled:opacity-50"
+            className="rounded-lg border border-ink bg-ink px-3 py-1 text-xs font-medium text-white transition disabled:opacity-50"
           >
             Accept
           </button>
@@ -269,7 +269,7 @@ function Item({ notice: n, isNew, onOpen, onAnswer }: { notice: Notice; isNew: b
       )}
       {n.kind === "room_invite" && n.url && (
         <div className="px-5 pb-3.5 pl-[4.25rem]">
-          <Link href={n.url} className="inline-flex rounded-lg border border-ink bg-ink px-3 py-1 text-xs font-medium text-white transition hover:-translate-y-px">
+          <Link href={n.url} className="inline-flex rounded-lg border border-ink bg-ink px-3 py-1 text-xs font-medium text-white transition">
             Join the room
           </Link>
         </div>

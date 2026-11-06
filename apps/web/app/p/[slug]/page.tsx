@@ -127,7 +127,7 @@ async function PackBody({ params }: { params: PageProps<"/p/[slug]">["params"] }
               )}
             </p>
           </div>
-          <aside className="self-start rounded-2xl border border-ink bg-panel p-6 shadow-[6px_6px_0_0_var(--ink)]">
+          <aside className="self-start rounded-2xl border border-ink bg-panel p-6">
             <p className="font-serif text-xl">Make it yours</p>
             <p className="mt-2 text-sm leading-relaxed text-muted">
               Copy it into your library: Confu fetches the papers, pages and lectures for you

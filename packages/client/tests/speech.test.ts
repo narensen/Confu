@@ -125,7 +125,7 @@ describe("the Groq voice key", () => {
 
   test("writes the script when the main AI is busy", async () => {
     const { store, keys, s } = await setup();
-    await expect(makePodcast(store, keys, { sessionId: s.id, title: "Entropy" })).rejects.toThrow(/rate limit/i);
+    await expect(makePodcast(store, keys, { sessionId: s.id, title: "Entropy" })).rejects.toThrow(/busy|rate limit/i);
     await keys.addVoice("gsk_" + "b".repeat(52));
     const pod = await makePodcast(store, keys, { sessionId: s.id, title: "Entropy" });
     expect(pod.title).toBe("From Groq");

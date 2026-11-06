@@ -630,7 +630,7 @@ export default function PdfViewer(props: Props) {
             aria-pressed={regionMode}
             title="Drag over a figure, table or equation to have it read by a vision model (Esc to cancel)"
             className={`flex h-7 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs font-medium transition duration-200 ease-fluid ${
-              regionMode ? "border-ink bg-ink text-white" : "border-ink hover:-translate-y-px hover:shadow-hard-sm"
+              regionMode ? "border-ink bg-ink text-white" : "border-ink"
             }`}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -700,7 +700,7 @@ export default function PdfViewer(props: Props) {
             <button
               type="button"
               onClick={() => window.location.reload()}
-              className="rounded-lg border border-ink bg-panel px-4 py-1.5 font-medium transition hover:-translate-y-px hover:shadow-hard-sm"
+              className="rounded-lg border border-ink bg-panel px-4 py-1.5 font-medium transition"
             >
               Reload
             </button>
@@ -755,7 +755,7 @@ export default function PdfViewer(props: Props) {
                   ref={(el) => {
                     slotRefs.current[i] = el;
                   }}
-                  className={`pdf-page relative shrink-0 border border-ink bg-[#ffffff] shadow-[4px_4px_0_0_rgba(13,13,12,0.12)] ${regionMode ? "region-mode" : ""}`}
+                  className={`pdf-page relative shrink-0 border border-ink bg-[#ffffff] ${regionMode ? "region-mode" : ""}`}
                   style={{ width: pageWidth, height }}
                 >
                   {isNear(n) && (
@@ -987,7 +987,7 @@ function NoteMarker({
         onClick={() => setOpen((v) => !v)}
         aria-label="Note"
         title={h.note ?? ""}
-        className="flex size-6 items-center justify-center rounded-md border border-ink bg-yellow-300 shadow-[2px_2px_0_0_var(--shadow)] transition hover:-translate-y-px"
+        className="flex size-6 items-center justify-center rounded-md border border-ink bg-yellow-300 transition"
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
           <path d="M4 4h16v12H8l-4 4z" />
@@ -1163,7 +1163,7 @@ function ContentsPanel({
   }, []);
 
   return (
-    <aside aria-label="Contents" className="animate-slide-in absolute inset-y-0 left-0 z-20 flex w-72 max-w-[85%] flex-col border-r border-ink bg-panel shadow-[6px_0_0_0_rgba(13,13,12,0.08)]">
+    <aside aria-label="Contents" className="animate-slide-in absolute inset-y-0 left-0 z-20 flex w-72 max-w-[85%] flex-col border-r border-ink bg-panel">
       <div className="flex h-11 shrink-0 items-center justify-between border-b border-line pr-1.5 pl-3">
         <p className="font-mono text-[11px] font-medium tracking-[0.12em] text-muted uppercase">Contents</p>
         <ToolButton label="Close contents" onClick={onClose}>

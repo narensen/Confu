@@ -46,7 +46,7 @@ async function Body({ params }: { params: PageProps<"/m/[token]">["params"] }) {
   const topics = card.topics ?? [];
   const revise = (card.revise ?? []).slice(0, 3);
   return (
-    <article className="w-full rounded-3xl border border-ink bg-panel p-8 shadow-[8px_8px_0_0_var(--ink)]">
+    <article className="w-full rounded-3xl border border-ink bg-panel p-8">
       <p className={eyebrowClass}>Miss map</p>
       <h1 className="mt-2 font-serif text-3xl leading-tight">What the section missed</h1>
       <p className="mt-3 font-mono text-xs text-muted">{card.users} people handed in</p>

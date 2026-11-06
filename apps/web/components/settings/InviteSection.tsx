@@ -60,7 +60,7 @@ export function InviteSection() {
                   track("invite.copy");
                 })
               }
-              className="inline-flex items-center rounded-lg border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white transition hover:-translate-y-px hover:shadow-[2px_2px_0_0_#facc15] disabled:opacity-40"
+              className="inline-flex items-center rounded-lg border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white transition disabled:opacity-40"
             >
               Copy link
             </button>

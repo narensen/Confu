@@ -73,10 +73,10 @@ export function FeedbackHost() {
 
   return (
     <div
-      className="animate-fade fixed inset-0 z-[70] flex items-center justify-center bg-scrim p-4 backdrop-blur-[2px]"
+      className="animate-fade fixed inset-0 z-[70] flex items-center justify-center bg-scrim p-4"
       onMouseDown={(e) => e.target === e.currentTarget && setOpen(false)}
     >
-      <div role="dialog" aria-modal="true" aria-labelledby="fb-title" className="animate-pop w-full max-w-md rounded-xl border border-ink bg-panel p-5 shadow-[6px_6px_0_0_var(--shadow)]">
+      <div role="dialog" aria-modal="true" aria-labelledby="fb-title" className="animate-pop w-full max-w-md rounded-xl border border-ink bg-panel p-5">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p id="fb-title" className="font-serif text-2xl leading-tight">
@@ -122,14 +122,14 @@ export function FeedbackHost() {
         {error && <p className="animate-pop mt-2 text-sm text-danger">{error}</p>}
 
         <div className="mt-4 flex justify-end gap-2">
-          <button type="button" onClick={() => setOpen(false)} className="rounded-lg border border-ink bg-panel px-3.5 py-2 text-sm font-medium transition hover:-translate-y-px hover:shadow-hard-sm">
+          <button type="button" onClick={() => setOpen(false)} className="rounded-lg border border-ink bg-panel px-3.5 py-2 text-sm font-medium transition">
             Cancel
           </button>
           <button
             type="button"
             disabled={!message.trim() || sending}
             onClick={send}
-            className="rounded-lg border border-ink bg-ink px-3.5 py-2 text-sm font-medium text-white transition hover:-translate-y-px hover:shadow-[2px_2px_0_0_#facc15] disabled:pointer-events-none disabled:opacity-40"
+            className="rounded-lg border border-ink bg-ink px-3.5 py-2 text-sm font-medium text-white transition disabled:pointer-events-none disabled:opacity-40"
           >
             {sending ? "Sending…" : "Send"}
           </button>

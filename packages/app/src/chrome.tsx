@@ -1,8 +1,9 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { PROVIDERS } from "@confu/ai/providers";
+import { useArrive, usePresence, useUnfold } from "@confu/ui/motion";
 import { useAiKey } from "./KeySetup";
 import { useSync } from "./sync";
 
@@ -30,6 +31,18 @@ export function TopBar({ homeHref, onAi, right, children }: { homeHref: string; 
   );
 }
 
+// One screen of the app (the library, a session). It arrives softly when
+// it opens; leaving is instant, so moving between screens never waits.
+export function Screen({ children }: { children: ReactNode }) {
+  const el = useRef<HTMLDivElement>(null);
+  useArrive(el);
+  return (
+    <div ref={el} className="flex min-h-0 flex-1 flex-col">
+      {children}
+    </div>
+  );
+}
+
 export function InTopBar({ children }: { children: ReactNode }) {
   const slot = useContext(SlotContext);
   return slot ? createPortal(children, slot) : null;
@@ -54,17 +67,21 @@ function AiChip({ onClick }: { onClick: () => void }) {
 }
 
 export function Dialog({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+  const scrim = useRef<HTMLDivElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  // Closing plays the dialog out first.
+  const close = usePresence(scrim, panel, onClose);
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [close]);
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-scrim p-0 sm:items-center sm:p-6" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal aria-label={title} className="animate-pop max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-ink bg-panel p-5 shadow-hard sm:rounded-2xl">
+    <div ref={scrim} className="fixed inset-0 z-50 flex items-end justify-center bg-scrim p-0 sm:items-center sm:p-6" onMouseDown={(e) => e.target === e.currentTarget && close()}>
+      <div ref={panel} role="dialog" aria-modal aria-label={title} className="max-h-[92dvh] w-full max-w-md overflow-y-auto rounded-t-2xl border border-ink bg-panel p-5 sm:rounded-2xl">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h2 className="font-serif text-xl">{title}</h2>
-          <button type="button" onClick={onClose} aria-label="Close" className="flex size-8 items-center justify-center rounded-full text-muted transition hover:bg-paper hover:text-ink">
+          <button type="button" onClick={close} aria-label="Close" className="flex size-8 items-center justify-center rounded-full text-muted transition hover:bg-paper hover:text-ink">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden>
               <path d="M6 6l12 12M18 6L6 18" />
             </svg>
@@ -79,8 +96,10 @@ export function Dialog({ title, onClose, children }: { title: string; onClose: (
 // A strip under the top bar for something the student should know.
 export function Notice({ tone = "warn", children, onDismiss }: { tone?: "warn" | "ok" | "danger"; children: ReactNode; onDismiss?: () => void }) {
   const color = tone === "ok" ? "text-ok" : tone === "danger" ? "text-danger" : "text-warn";
+  const strip = useRef<HTMLDivElement>(null);
+  useUnfold(strip);
   return (
-    <div className={`flex shrink-0 items-start gap-3 border-b border-line bg-paper px-4 py-2 text-xs leading-relaxed ${color}`} role="status">
+    <div ref={strip} className={`flex shrink-0 items-start gap-3 border-b border-line bg-paper px-4 py-2 text-xs leading-relaxed ${color}`} role="status">
       <p className="min-w-0 flex-1">{children}</p>
       {onDismiss && (
         <button type="button" onClick={onDismiss} className="shrink-0 text-muted hover:text-ink">

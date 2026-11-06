@@ -78,7 +78,7 @@ export function SpacesView() {
           <ul className="mt-3 flex gap-3 overflow-x-auto pb-2 [scrollbar-width:thin]">
             {[...privateSpaces, ...followed].map((s) => (
               <li key={s.id} className="shrink-0">
-                <Link href={`/spaces/${s.slug}`} className="flex w-56 items-center gap-3 rounded-xl border border-ink bg-panel p-3 transition hover:-translate-y-px hover:shadow-hard-sm">
+                <Link href={`/spaces/${s.slug}`} className="flex w-56 items-center gap-3 rounded-xl border border-ink bg-panel p-3 transition">
                   <SpaceIcon space={s} />
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-medium">{s.name}</span>
@@ -164,7 +164,7 @@ export function SpacesView() {
             <ul className="mt-5 space-y-2">
               {privateSpaces.map((s) => (
                 <li key={s.id}>
-                  <Link href={`/spaces/${s.slug}`} className="flex items-center gap-3 rounded-xl border border-ink bg-panel px-3 py-2.5 transition hover:-translate-y-px hover:shadow-hard-sm">
+                  <Link href={`/spaces/${s.slug}`} className="flex items-center gap-3 rounded-xl border border-ink bg-panel px-3 py-2.5 transition">
                     <SpaceIcon space={s} size="sm" />
                     <span className="min-w-0 flex-1 truncate text-sm font-medium">{s.name}</span>
                     <span className="shrink-0 font-mono text-[10px] text-muted">
@@ -185,7 +185,7 @@ export function SpacesView() {
 function SubjectCard({ space: s, delay, onToggle }: { space: SpaceCard; delay: number; onToggle: () => void }) {
   return (
     <li className="animate-enter" style={{ animationDelay: `${delay}ms` }}>
-      <div className="group relative flex h-full flex-col rounded-2xl border border-ink bg-panel p-4 transition hover:-translate-y-0.5 hover:shadow-hard">
+      <div className="group relative flex h-full flex-col rounded-2xl border border-ink bg-panel p-4 transition">
         <div className="flex items-start gap-3">
           <SpaceIcon space={s} />
           <div className="min-w-0 flex-1">

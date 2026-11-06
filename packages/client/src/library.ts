@@ -82,7 +82,9 @@ export async function deleteSession(store: Store, files: FileStore, id: string) 
   }
   for (const rec of await store.list<{ storage_path: string | null }>("recordings", { session_id: id })) if (rec.storage_path) await files.remove(rec.storage_path);
   for (const p of await store.list<LocalPodcast>("podcasts", { session_id: id })) for (const path of podcastAudioPaths(p)) await files.remove(path);
-  for (const table of ["messages", "saved_answers", "study_plans", "review_items", "exam_attempts", "explain_backs", "page_pins", "cards", "notes", "recordings", "podcasts", "ai_keys"]) {
+  for (const v of await store.list<{ id: string; script: { scenes?: { narration: { speaker: "A" | "B"; text: string }[] }[] } }>("videos", { session_id: id }))
+    for (const path of podcastAudioPaths({ id: v.id, script: (v.script.scenes ?? []).flatMap((s) => s.narration) } as LocalPodcast)) await files.remove(path);
+  for (const table of ["messages", "saved_answers", "study_plans", "review_items", "exam_attempts", "explain_backs", "page_pins", "cards", "notes", "recordings", "podcasts", "videos", "ai_keys"]) {
     await store.removeWhere(table, { session_id: id });
   }
   await store.removeWhere("learner_memory", { session_id: id });

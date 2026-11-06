@@ -56,7 +56,7 @@ async function Body({ params }: { params: PageProps<"/w/section/[token]">["param
   const topics = names(card.topics);
   const closed = names(card.closed);
   return (
-    <article className="w-full rounded-3xl border border-ink bg-panel p-8 shadow-[8px_8px_0_0_var(--ink)]">
+    <article className="w-full rounded-3xl border border-ink bg-panel p-8">
       <p className={eyebrowClass}>{card.course_code ?? "Section"}</p>
       <h1 className="mt-2 font-serif text-3xl leading-tight">After the paper</h1>
       <dl className="mt-6 space-y-3 text-sm">

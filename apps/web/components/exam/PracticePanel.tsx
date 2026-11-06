@@ -253,7 +253,7 @@ function QuestionCard({ practice, onJump, onAsk }: Pick<Props, "practice" | "onJ
                   disabled={show}
                   onClick={() => (sealed ? practice.holdChoice(q, i) : practice.answerChoice(q, i))}
                   className={`flex w-full items-start gap-3 rounded-lg border px-3 py-2.5 text-left text-sm transition duration-200 ease-fluid ${
-                    right ? "border-ok bg-ok/5" : wrong ? "border-danger bg-danger/5" : chosen ? "border-ink" : show ? "border-line opacity-60" : "border-ink/30 hover:-translate-y-px hover:border-ink hover:shadow-hard-sm"
+                    right ? "border-ok bg-ok/5" : wrong ? "border-danger bg-danger/5" : chosen ? "border-ink" : show ? "border-line opacity-60" : "border-ink/30 hover:border-ink"
                   }`}
                 >
                   <span

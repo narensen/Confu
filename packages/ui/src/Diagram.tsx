@@ -216,7 +216,7 @@ function DiagramViewer({ picture, onClose }: { picture: Picture; onClose: () => 
       aria-modal="true"
       aria-label="Diagram"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
-      className="animate-fade fixed inset-0 z-[75] flex items-center justify-center bg-scrim p-4 backdrop-blur-[2px] sm:p-8"
+      className="animate-fade fixed inset-0 z-[75] flex items-center justify-center bg-scrim p-4 sm:p-8"
     >
       <div className="animate-pop relative max-h-full max-w-full overflow-auto rounded-2xl border border-ink bg-[#f7f6f2] p-5 shadow-hard sm:p-7">
         {/* eslint-disable-next-line @next/next/no-img-element -- data-URL SVG; an img will not run a script */}

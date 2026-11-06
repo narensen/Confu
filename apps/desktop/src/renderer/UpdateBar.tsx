@@ -57,7 +57,7 @@ export function UpdateBar({ updates }: { updates: DesktopBridge["updates"] }) {
   if (!text || hidden === s.state) return null;
 
   return (
-    <div role="status" className="fixed bottom-4 left-4 z-[60] flex max-w-sm items-start gap-3 rounded-xl border border-ink bg-panel px-4 py-3 text-sm shadow-[0_12px_32px_-16px_rgba(13,13,12,0.5)]">
+    <div role="status" className="fixed bottom-4 left-4 z-[60] flex max-w-sm items-start gap-3 rounded-xl border border-ink bg-panel px-4 py-3 text-sm">
       <p className="min-w-0 flex-1 leading-snug">{text}</p>
       {action && (
         <button type="button" onClick={action.run} className="shrink-0 rounded-full bg-ink px-3 py-1 text-xs font-medium text-white transition hover:opacity-85">

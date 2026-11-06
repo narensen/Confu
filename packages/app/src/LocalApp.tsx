@@ -9,7 +9,7 @@ import { isShareCode } from "@confu/client/live";
 import { saveNote } from "@confu/client/tools";
 import { readPublicDriveFile } from "@confu/client/sync/drive";
 import { buttonClass } from "@confu/ui/classes";
-import { Dialog, Notice, SyncChip, TopBar } from "./chrome";
+import { Dialog, Notice, Screen, SyncChip, TopBar } from "./chrome";
 import { HostContext, useHost, type Host } from "./host";
 import { AiPanel, useAccountAiOnce } from "./KeySetup";
 import { Library } from "./Library";
@@ -90,6 +90,7 @@ function Shell() {
             {notice.text}
           </Notice>
         )}
+        <Screen key={sessionId ?? "library"}>
         {sessionId ? (
           <SessionView
             key={`${sessionId}:${opening?.note?.id ?? ""}`}
@@ -109,6 +110,7 @@ function Shell() {
             }}
           />
         )}
+        </Screen>
       </TopBar>
       {dialog === "ai" && (
         <Dialog title="Your AI" onClose={() => setDialog(null)}>

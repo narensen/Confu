@@ -51,7 +51,7 @@ export function ReviewDue({ compact = false }: { compact?: boolean }) {
     return (
       <Link
         href="/review"
-        className="animate-enter group flex items-center gap-4 rounded-2xl border border-ink bg-panel p-5 shadow-hard-sm transition duration-200 ease-fluid hover:-translate-y-0.5 hover:shadow-hard"
+        className="animate-enter group flex items-center gap-4 rounded-2xl border border-ink bg-panel p-5 shadow-hard-sm transition duration-200 ease-fluid"
       >
         <span className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-ink bg-yellow-300 font-serif text-2xl tabular-nums">{state.due}</span>
         <span className="min-w-0 flex-1">
@@ -79,7 +79,7 @@ export function ReviewDue({ compact = false }: { compact?: boolean }) {
   return (
     <Link
       href="/review"
-      className="animate-enter group flex items-center gap-5 rounded-2xl border border-ink bg-inverse px-6 py-5 text-inverse-ink shadow-[4px_4px_0_0_#facc15] transition duration-200 ease-fluid hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#facc15]"
+      className="animate-enter group flex items-center gap-5 rounded-2xl border border-ink bg-inverse px-6 py-5 text-inverse-ink transition duration-200 ease-fluid"
     >
       <span className="font-serif text-5xl leading-none tabular-nums">{state.due}</span>
       <span className="min-w-0 flex-1">

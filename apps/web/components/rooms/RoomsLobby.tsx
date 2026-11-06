@@ -73,7 +73,7 @@ export function RoomsLobby() {
   return (
     <div className="mt-8 space-y-12">
       {inRoom ? (
-        <Link href={`/rooms/${inRoom.slug}`} className="group flex items-center gap-4 rounded-2xl border border-ink bg-yellow-100 px-5 py-4 transition hover:-translate-y-px hover:shadow-hard-sm">
+        <Link href={`/rooms/${inRoom.slug}`} className="group flex items-center gap-4 rounded-2xl border border-ink bg-yellow-100 px-5 py-4 transition">
           <span className="relative flex size-3">
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-ok opacity-60" />
             <span className="relative inline-flex size-3 rounded-full bg-ok" />
@@ -131,7 +131,7 @@ export function RoomsLobby() {
                     {r.present ? `${r.present} here now` : "Empty"}
                   </span>
                   <span className="mt-4 flex items-center gap-2">
-                    <Link href={`/rooms/${r.slug}`} className="rounded-lg border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white transition hover:-translate-y-px">
+                    <Link href={`/rooms/${r.slug}`} className="rounded-lg border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white transition">
                       Open
                     </Link>
                     <button
@@ -209,7 +209,7 @@ function PublicRoom({ room: r, now }: { room: Listed; now: number }) {
   return (
     <Link
       href={`/rooms/${r.slug}`}
-      className={`group flex h-full items-center gap-5 rounded-2xl border border-ink p-5 transition-[translate,box-shadow] duration-300 ease-fluid hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-hard ${focus ? "bg-panel" : "bg-yellow-100"}`}
+      className={`group flex h-full items-center gap-5 rounded-2xl border border-ink p-5 ${focus ? "bg-panel" : "bg-yellow-100"}`}
     >
       <span className="relative flex size-20 shrink-0 items-center justify-center">
         <svg viewBox="0 0 40 40" className="absolute inset-0 size-full -rotate-90" aria-hidden>

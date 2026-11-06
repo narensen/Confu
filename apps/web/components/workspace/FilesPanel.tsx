@@ -41,7 +41,7 @@ export function FilesPanel({ docs, activeId, open, addLabel, onAdd, onAddPapers,
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-1.5 @md:flex-col @md:items-end">
-          <button type="button" onClick={onAdd} className="rounded-md border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white transition hover:-translate-y-px">
+          <button type="button" onClick={onAdd} className="rounded-md border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white transition">
             {addLabel}
           </button>
           {onAddPapers && (

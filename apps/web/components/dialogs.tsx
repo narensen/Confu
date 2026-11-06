@@ -109,14 +109,14 @@ export function DialogHost() {
     <>
       {current && (
         <div
-          className="animate-fade fixed inset-0 z-[70] flex items-center justify-center bg-scrim p-4 backdrop-blur-[2px]"
+          className="animate-fade fixed inset-0 z-[70] flex items-center justify-center bg-scrim p-4"
           onMouseDown={(e) => e.target === e.currentTarget && answer("cancel")}
         >
           <div
             role="alertdialog"
             aria-modal="true"
             aria-labelledby="confu-ask-title"
-            className="animate-pop w-full max-w-sm rounded-xl border border-ink bg-panel p-5 shadow-[6px_6px_0_0_var(--shadow)]"
+            className="animate-pop w-full max-w-sm rounded-xl border border-ink bg-panel p-5"
           >
             <p id="confu-ask-title" className="font-serif text-xl leading-snug">
               {current.title}
@@ -127,7 +127,7 @@ export function DialogHost() {
                 <button
                   type="button"
                   onClick={() => answer("alternative")}
-                  className="mr-auto rounded-lg border border-ink bg-yellow-300 px-3.5 py-2 text-sm font-medium transition hover:-translate-y-px hover:shadow-hard-sm"
+                  className="mr-auto rounded-lg border border-ink bg-yellow-300 px-3.5 py-2 text-sm font-medium transition"
                 >
                   {current.alternative}
                 </button>
@@ -136,7 +136,7 @@ export function DialogHost() {
                 ref={cancelRef}
                 type="button"
                 onClick={() => answer("cancel")}
-                className="rounded-lg border border-ink bg-panel px-3.5 py-2 text-sm font-medium transition hover:-translate-y-px hover:shadow-hard-sm"
+                className="rounded-lg border border-ink bg-panel px-3.5 py-2 text-sm font-medium transition"
               >
                 {current.cancel ?? "Cancel"}
               </button>
@@ -144,7 +144,7 @@ export function DialogHost() {
                 ref={confirmRef}
                 type="button"
                 onClick={() => answer("confirm")}
-                className={`rounded-lg border px-3.5 py-2 text-sm font-medium text-white transition hover:-translate-y-px hover:shadow-hard-sm ${
+                className={`rounded-lg border px-3.5 py-2 text-sm font-medium text-white transition ${
                   current.danger ? "border-danger bg-danger" : "border-ink bg-ink"
                 }`}
               >
@@ -253,7 +253,7 @@ function StackCard({ card, onDone }: { card: Card; onDone: () => void }) {
       {n.actions && n.actions.length > 0 && (
         <div className="flex gap-2 border-t border-line bg-paper px-3.5 py-2">
           {n.actions.map((a) => {
-            const cls = `rounded-lg border px-3 py-1 text-xs font-medium transition hover:-translate-y-px ${a.primary ? "border-ink bg-ink text-white" : "border-ink/30 bg-panel hover:border-ink"}`;
+            const cls = `rounded-lg border px-3 py-1 text-xs font-medium transition ${a.primary ? "border-ink bg-ink text-white" : "border-ink/30 bg-panel hover:border-ink"}`;
             return a.href ? (
               <Link key={a.label} href={a.href} onClick={close} className={cls}>
                 {a.label}

@@ -161,7 +161,7 @@ export function Library({ name, sessions: all }: { name: string | null; sessions
               key={k.kind}
               data-card
               onClick={() => openNewSession(k.kind)}
-              className="group flex flex-col rounded-2xl border border-ink bg-panel p-6 text-left transition-[translate,box-shadow] duration-300 ease-fluid hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-hard"
+              className="group flex flex-col rounded-2xl border border-ink bg-panel p-6 text-left transition-colors hover:bg-paper"
             >
               <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 {k.icon}
@@ -281,7 +281,7 @@ function ContinueCard({ s, today }: { s: LibrarySession; today: string | null })
     <Link
       data-continue
       href={`/session/${s.id}`}
-      className="group relative flex min-w-0 flex-1 flex-col justify-between gap-8 overflow-hidden rounded-2xl border border-ink bg-inverse p-6 text-inverse-ink shadow-[4px_4px_0_0_#facc15] transition-[translate,box-shadow] duration-300 ease-fluid hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#facc15] sm:p-7"
+      className="group relative flex min-w-0 flex-1 flex-col justify-between gap-8 rounded-2xl border border-ink bg-inverse p-6 text-inverse-ink sm:p-7"
     >
       <div className="min-w-0">
         <p className="font-mono text-[11px] tracking-widest text-inverse-muted uppercase">
@@ -294,7 +294,7 @@ function ContinueCard({ s, today }: { s: LibrarySession; today: string | null })
         {s.docs.length > 0 && (
           <ul className="mt-5 flex flex-wrap gap-2" aria-label="Files">
             {s.docs.slice(0, 3).map((d, i) => (
-              <li key={d.id} className="flex max-w-60 items-center gap-1.5 rounded-lg border border-inverse-ink/15 bg-inverse-ink/5 px-2 py-1 text-xs text-inverse-ink/85">
+              <li key={d.id} className="flex max-w-60 items-center gap-1.5 rounded-md border border-inverse-ink/40 px-2 py-1 text-xs text-inverse-ink">
                 <span className="font-mono text-[10px] text-inverse-muted">D{i + 1}</span>
                 <span className="truncate">{d.title}</span>
               </li>
@@ -306,8 +306,8 @@ function ContinueCard({ s, today }: { s: LibrarySession; today: string | null })
       <div className="flex flex-wrap items-end justify-between gap-4">
         {progress !== null ? (
           <div className="min-w-40 flex-1 sm:max-w-xs">
-            <div className="h-1.5 overflow-hidden rounded-full bg-inverse-ink/15">
-              <div className="h-full rounded-full bg-yellow-400 transition-[width] duration-700 ease-fluid" style={{ width: `${Math.round(progress * 100)}%` }} />
+            <div className="h-1 overflow-hidden rounded-full bg-inverse-ink/30">
+              <div className="h-full rounded-full bg-yellow-400" style={{ width: `${Math.round(progress * 100)}%` }} />
             </div>
             <p className="mt-1.5 font-mono text-[11px] text-inverse-muted">
               {Math.round(progress * 100)}% {label}
@@ -359,7 +359,7 @@ function SessionCard({ s, today }: { s: LibrarySession; today: string | null }) 
   }
 
   return (
-    <article className="group relative flex h-full flex-col rounded-2xl border border-ink bg-panel p-5 transition-[translate,box-shadow] duration-300 ease-fluid hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-hard">
+    <article className="group relative flex h-full flex-col rounded-2xl border border-ink bg-panel p-5 transition-colors hover:bg-paper">
       <div className="flex items-center justify-between gap-3">
         <span className="rounded border border-ink/30 px-1.5 py-px font-mono text-[10px] tracking-wider text-muted uppercase">{KIND_LABEL[s.kind]}</span>
         <div className="relative z-10 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">

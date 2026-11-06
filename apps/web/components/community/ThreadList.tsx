@@ -12,7 +12,7 @@ export function ThreadList({ threads, empty }: { threads: ThreadCard[]; empty: s
     <ul className="space-y-3">
       {threads.map((thread) => (
         <li key={thread.id}>
-          <Link href={`/threads/${thread.id}`} className="block rounded-2xl border border-ink bg-panel p-4 transition hover:-translate-y-px hover:shadow-hard-sm sm:p-5">
+          <Link href={`/threads/${thread.id}`} className="block rounded-2xl border border-ink bg-panel p-4 transition sm:p-5">
             <p className="font-serif text-xl leading-snug">{thread.title}</p>
             <p className="mt-2 line-clamp-2 text-sm text-muted">{thread.body}</p>
             <p className="mt-3 font-mono text-[11px] text-muted">

@@ -47,7 +47,7 @@ async function CardBody({ params }: { params: PageProps<"/sit/[token]">["params"
   const score = Number(card.score);
   const shown = Number.isInteger(score) ? String(score) : score.toFixed(1);
   return (
-    <article className="w-full rounded-3xl border border-ink bg-panel p-8 shadow-[8px_8px_0_0_var(--ink)]">
+    <article className="w-full rounded-3xl border border-ink bg-panel p-8">
       <p className={eyebrowClass}>{card.display_name ? `${card.display_name}'s sitting` : "A sitting"}</p>
       <h1 className="mt-2 font-serif text-3xl leading-tight">{card.title}</h1>
       <p className="mt-6 font-serif text-6xl tabular-nums">

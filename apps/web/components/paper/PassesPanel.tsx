@@ -171,7 +171,7 @@ function ResearchGoal(props: Props) {
             Suggest papers
           </button>
           {onOpenMap && docs.length > 0 && (
-            <button type="button" onClick={onOpenMap} className="rounded-md border border-ink bg-ink px-2.5 py-1 text-xs font-medium text-white transition hover:-translate-y-px">
+            <button type="button" onClick={onOpenMap} className="rounded-md border border-ink bg-ink px-2.5 py-1 text-xs font-medium text-white transition">
               Literature map
             </button>
           )}
@@ -257,7 +257,7 @@ function ResearchGoal(props: Props) {
             <button
               type="button"
               onClick={onOpenMap}
-              className="col-span-2 flex items-center justify-between gap-3 rounded-lg border border-ink bg-ink px-4 py-2.5 text-left text-white transition hover:-translate-y-px hover:shadow-[3px_3px_0_0_#facc15]"
+              className="col-span-2 flex items-center justify-between gap-3 rounded-lg border border-ink bg-ink px-4 py-2.5 text-left text-white transition"
             >
               <span>
                 <span className="block text-sm font-medium">Literature map</span>
@@ -431,7 +431,7 @@ function PaperWorkspace({
               key={a.action}
               disabled={busy}
               onClick={() => onSend({ action: a.action })}
-              className={`rounded-md border border-ink px-3 py-1.5 text-xs font-medium transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-hard-sm active:translate-y-0 disabled:pointer-events-none disabled:opacity-40 ${
+              className={`rounded-md border border-ink px-3 py-1.5 text-xs font-medium transition duration-200 ease-fluid disabled:pointer-events-none disabled:opacity-40 ${
                 a.primary ? "bg-ink text-white" : "bg-panel"
               }`}
             >

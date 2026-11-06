@@ -8,13 +8,16 @@
   "exports": {
     "./Markdown": "./src/Markdown.tsx",
     "./Diagram": "./src/Diagram.tsx",
-    "./classes": "./src/classes.ts"
+    "./classes": "./src/classes.ts",
+    "./motion": "./src/motion.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@confu/core": "workspace:*",
+    "@gsap/react": "^2.1.2",
+    "gsap": "^3.15.0",
     "katex": "0.16.47",
     "mermaid": "^12.2.0",
     "react-markdown": "^10.1.0",

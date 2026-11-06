@@ -1763,7 +1763,7 @@ export function Workspace({
                   aria-label="Tutor"
                   style={{ width: tutorFullShown ? rootWidth - RAIL : tutorWidth }}
                   className={`@container absolute inset-y-0 left-0 flex min-w-0 flex-col bg-panel ${tutorFullShown || tutorMotion ? "z-30" : ""} ${
-                    tutorMotion ? "shadow-[14px_0_40px_-20px_rgba(13,13,12,0.5)] transition-[width] duration-300 ease-fluid motion-reduce:transition-none" : ""
+                    tutorMotion ? "transition-[width] duration-300 ease-fluid motion-reduce:transition-none" : ""
                   }`}
                 >
                   {tutor(foldTutorAway, focusMode && wide ? () => showTutorFull(!tutorFullShown) : undefined, tutorFullShown)}
@@ -1861,7 +1861,7 @@ export function Workspace({
                 <button
                   type="button"
                   onClick={() => openTool("files")}
-                  className="mt-3 rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-white transition hover:-translate-y-px hover:shadow-hard-sm"
+                  className="mt-3 rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-white transition"
                 >
                   Open Files
                 </button>
@@ -1877,12 +1877,12 @@ export function Workspace({
                 <div className="mt-3 flex flex-wrap justify-center gap-2">
                   <button
                     onClick={isPaper ? () => setAddPaperOpen(true) : () => setAddMaterialOpen(true)}
-                    className="rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-white transition hover:-translate-y-px hover:shadow-hard-sm"
+                    className="rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-white transition"
                   >
                     {isPaper ? "+ Add papers" : "+ Add material"}
                   </button>
                   {isPaper && (
-                    <button onClick={openRecommendPapers} className="rounded-lg border border-ink bg-panel px-4 py-2 text-sm font-medium transition hover:-translate-y-px hover:shadow-hard-sm">
+                    <button onClick={openRecommendPapers} className="rounded-lg border border-ink bg-panel px-4 py-2 text-sm font-medium transition">
                       Suggest papers for my goal
                     </button>
                   )}
@@ -1915,7 +1915,7 @@ export function Workspace({
             className={`@container flex min-w-0 flex-col border-l border-ink bg-panel transition-[translate,opacity,visibility] duration-200 ease-fluid ${
               sheetDocked
                 ? "relative shrink-0"
-                : `absolute inset-y-0 ${tutorFullShown || tutorMotion ? "z-40" : "z-20"} shadow-[-12px_0_32px_-16px_rgba(13,13,12,0.45)]`
+                : `absolute inset-y-0 ${tutorFullShown || tutorMotion ? "z-40" : "z-20"}`
             } ${sheetOpen ? "visible translate-x-0 opacity-100" : "pointer-events-none invisible translate-x-6 opacity-0"}`}
           >
             <ResizeHandle
@@ -1941,7 +1941,7 @@ export function Workspace({
         {wide && (
           // The rail stays above an expanded tutor. It opens a right-hand
           // drawer without breaking the student's focus on the conversation.
-          <div className={`relative flex shrink-0 ${tutorFullShown ? "z-50 shadow-[-8px_0_24px_-16px_rgba(13,13,12,0.45)]" : ""}`}>
+          <div className={`relative flex shrink-0 ${tutorFullShown ? "z-50" : ""}`}>
             <ToolRail sections={sections} active={tool} onPick={(id) => (tool === id ? setTool(null) : openTool(id))} onShortcuts={() => setShortcutsOpen(true)} />
           </div>
         )}

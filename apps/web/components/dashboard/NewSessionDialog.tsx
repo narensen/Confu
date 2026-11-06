@@ -196,7 +196,7 @@ function NewSessionDialog({ initialKind, onClose }: { initialKind: SessionKind |
   return (
     <div
       ref={root}
-      className="fixed inset-0 z-60 flex items-center justify-center bg-scrim p-3 backdrop-blur-[2px] sm:p-6"
+      className="fixed inset-0 z-60 flex items-center justify-center bg-scrim p-3 sm:p-6"
       onMouseDown={(e) => e.target === e.currentTarget && close()}
     >
       <div
@@ -227,7 +227,7 @@ function NewSessionDialog({ initialKind, onClose }: { initialKind: SessionKind |
                   data-kind-card
                   type="button"
                   onClick={() => setKind(k.kind)}
-                  className="group flex flex-col rounded-xl border border-ink/30 p-4 text-left transition duration-200 ease-fluid hover:-translate-y-0.5 hover:border-ink hover:shadow-hard-sm"
+                  className="group flex flex-col rounded-xl border border-ink/30 p-4 text-left transition duration-200 ease-fluid hover:border-ink"
                 >
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                     {k.icon}

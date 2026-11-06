@@ -234,7 +234,7 @@ export default function Home() {
         <div
           aria-hidden
           data-parallax="grid"
-          className="pointer-events-none absolute inset-0 opacity-[0.35] bg-[linear-gradient(var(--line)_1px,transparent_1px),linear-gradient(90deg,var(--line)_1px,transparent_1px)] bg-size-[44px_44px] mask-[linear-gradient(to_bottom,black,transparent_85%)]"
+          className="pointer-events-none absolute inset-0 bg-[linear-gradient(var(--grid)_1px,transparent_1px),linear-gradient(90deg,var(--grid)_1px,transparent_1px)] bg-size-[44px_44px] mask-[linear-gradient(to_bottom,black_70%,transparent_100%)]"
         />
         <div className="relative mx-auto grid max-w-6xl items-center gap-14 px-6 pt-16 pb-24 lg:grid-cols-[1fr_1.15fr] lg:pt-24 lg:pb-32">
           <div data-parallax="copy">
@@ -320,7 +320,7 @@ export default function Home() {
               <article
                 key={m.tag}
                 data-reveal-item
-                className="group flex flex-col rounded-2xl border border-ink bg-panel transition-[translate,box-shadow] duration-300 ease-fluid hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--ink)]"
+                className="group flex flex-col rounded-2xl border border-ink bg-panel transition-colors hover:bg-paper"
               >
                 <div className="flex min-h-64 flex-col justify-center border-b border-ink bg-paper/60 p-5">{m.mock}</div>
                 <div className="flex flex-1 flex-col p-6">
@@ -381,7 +381,7 @@ export default function Home() {
           <div data-reveal-group className="mt-14 grid gap-6 lg:grid-cols-[1.15fr_1fr]">
             <article
               data-reveal-item
-              className="flex flex-col rounded-2xl border border-ink bg-panel transition-[translate,box-shadow] duration-300 ease-fluid hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--ink)]"
+              className="flex flex-col rounded-2xl border border-ink bg-panel transition-colors hover:bg-paper"
             >
               <div className="border-b border-ink bg-paper/60 p-5">
                 <ListenMock />
@@ -481,7 +481,7 @@ export default function Home() {
               <li key={t.slug} data-reveal-item>
                 <Link
                   href={`/templates/${t.slug}`}
-                  className="group flex h-full flex-col rounded-2xl border border-ink bg-panel p-6 transition-[translate,box-shadow] duration-300 ease-fluid hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--ink)]"
+                  className="group flex h-full flex-col rounded-2xl border border-ink bg-panel p-6 transition-colors hover:bg-paper"
                 >
                   <span className="font-serif text-2xl leading-snug">{t.title}</span>
                   <span className="mt-2 text-sm leading-relaxed text-muted">{t.tagline}</span>
@@ -560,7 +560,7 @@ export default function Home() {
               <div className="mt-10">
                 <Link
                   href="/signup"
-                  className="inline-flex items-center gap-2 rounded-lg border border-white bg-white px-5 py-2.5 text-sm font-medium text-ink transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[3px_3px_0_0_#facc15] active:translate-y-0"
+                  className="inline-flex items-center gap-2 rounded-lg border border-white bg-white px-5 py-2.5 text-sm font-medium text-ink transition duration-200 ease-fluid"
                 >
                   Create your free account →
                 </Link>
@@ -691,7 +691,7 @@ async function FinalAction() {
     <Link
       data-magnetic
       href={user ? "/dashboard" : "/signup"}
-      className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-white bg-white px-6 py-3 text-base font-medium text-ink transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[3px_3px_0_0_#facc15] active:translate-y-0"
+      className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-white bg-white px-6 py-3 text-base font-medium text-ink transition duration-200 ease-fluid"
     >
       {user ? "Go to your library" : "Create your free account"} →
     </Link>

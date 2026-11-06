@@ -49,7 +49,7 @@ export default function PacksPage() {
             <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {TEMPLATES.map((t) => (
                 <li key={t.slug}>
-                  <Link href={`/templates/${t.slug}`} className="block rounded-xl border border-ink/25 bg-paper/50 p-4 transition hover:border-ink hover:shadow-hard-sm">
+                  <Link href={`/templates/${t.slug}`} className="block rounded-xl border border-ink/25 bg-paper/50 p-4 transition hover:border-ink">
                     <span className="block font-medium">{t.title}</span>
                     <span className="mt-1 block text-sm text-muted">{t.tagline}</span>
                   </Link>
@@ -84,7 +84,7 @@ async function Gallery() {
     <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {packs.map((p) => (
         <li key={p.slug}>
-          <Link href={`/p/${p.slug}`} className="group flex h-full flex-col rounded-2xl border border-ink bg-panel p-5 transition-[translate,box-shadow] duration-300 ease-fluid hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-hard">
+          <Link href={`/p/${p.slug}`} className="group flex h-full flex-col rounded-2xl border border-ink bg-panel p-5 transition-colors hover:bg-paper">
             <span className={eyebrowClass}>{p.kind === "paper" ? "Paper pack" : p.kind === "exam" ? "Exam pack" : "Study pack"}</span>
             <span className="mt-2 line-clamp-2 font-serif text-xl leading-snug">{p.title}</span>
             {p.description && <span className="mt-2 line-clamp-3 text-sm text-muted">{p.description}</span>}

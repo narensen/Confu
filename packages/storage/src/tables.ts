@@ -349,6 +349,17 @@ export const TABLES: TableSpec[] = [
     indexes: [["session_id"]],
     columns: [t("id", "text", true), t("session_id", "text", true), t("title", "text", true), json("script", "[]"), created],
   },
+  // ---- since 3: explainer videos ----
+  {
+    // An animated explainer: a storyboard of template scenes with two-voice
+    // narration (@confu/core/video). Drawn on the device; voiced like a podcast.
+    name: "videos",
+    key: ["id"],
+    synced: true,
+    since: 3,
+    indexes: [["session_id"]],
+    columns: [t("id", "text", true), t("session_id", "text", true), t("title", "text", true), json("script", "{}"), t("model"), created],
+  },
   // Device only. A key never leaves the device it was added on.
   {
     name: "ai_keys",

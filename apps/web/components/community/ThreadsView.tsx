@@ -36,7 +36,7 @@ export function ThreadsView() {
   return (
     <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[15.5rem_minmax(0,1fr)]">
       <aside className="space-y-6 lg:sticky lg:top-6 lg:max-h-[calc(100dvh-3rem)] lg:self-start lg:overflow-y-auto lg:pb-6 [scrollbar-width:thin]">
-        <AskButton className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-ink bg-ink px-4 py-2.5 text-sm font-medium text-white shadow-hard-sm transition hover:-translate-y-px hover:shadow-hard active:translate-y-0" onPosted={(id) => router.push(`/threads/${id}`)} />
+        <AskButton className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-ink bg-ink px-4 py-2.5 text-sm font-medium text-white shadow-hard-sm transition" onPosted={(id) => router.push(`/threads/${id}`)} />
 
         {/* Phones: subjects as a row of chips. */}
         <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] lg:hidden">

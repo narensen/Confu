@@ -226,7 +226,7 @@ const ReadingArt = (
       </div>
     </div>
     {/* A tool slid out over the page, from the rail */}
-    <div className="absolute inset-y-0 right-[11%] flex w-[30%] flex-col border-l border-ink bg-panel shadow-[-6px_0_14px_-8px_rgba(13,13,12,0.4)]">
+    <div className="absolute inset-y-0 right-[11%] flex w-[30%] flex-col border-l border-ink bg-panel">
       <span className="flex items-center justify-between border-b border-ink px-2 py-1.5 font-medium">
         Plan <span className="rounded border border-ink/40 px-1 font-mono text-[7px] text-muted">Pin</span>
       </span>

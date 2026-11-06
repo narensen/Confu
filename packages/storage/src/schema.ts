@@ -49,6 +49,10 @@ export const MIGRATIONS: string[] = [
   TABLES.filter((t) => t.since === 2)
     .map(createTable)
     .join("\n"),
+  // 3. Explainer videos.
+  TABLES.filter((t) => t.since === 3)
+    .map(createTable)
+    .join("\n"),
 ];
 
 export async function migrate(db: Sql): Promise<number> {

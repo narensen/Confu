@@ -52,7 +52,7 @@ export function ConvertFiles({ files, onDone, onClose }: { files: File[]; onDone
 
   return (
     <div
-      className="animate-fade fixed inset-0 z-[65] flex items-center justify-center bg-scrim p-4 backdrop-blur-[2px]"
+      className="animate-fade fixed inset-0 z-[65] flex items-center justify-center bg-scrim p-4"
       onMouseDown={(e) => e.target === e.currentTarget && !status && onClose()}
     >
       <div role="dialog" aria-modal="true" aria-labelledby="convert-title" className="animate-pop w-full max-w-md rounded-2xl border border-ink bg-panel p-6 shadow-hard">

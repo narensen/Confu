@@ -101,7 +101,7 @@ export function Guide({ userId, firstTime, needsKey }: { userId: string; firstTi
           trapped in the header's stacking context and the page would paint over it. */}
       {open &&
         createPortal(
-          <div className="animate-fade fixed inset-0 z-60 flex items-center justify-center bg-scrim p-3 backdrop-blur-[2px] sm:p-6">
+          <div className="animate-fade fixed inset-0 z-60 flex items-center justify-center bg-scrim p-3 sm:p-6">
             <div
               role="dialog"
               aria-modal="true"
@@ -169,14 +169,14 @@ export function Guide({ userId, firstTime, needsKey }: { userId: string; firstTi
                     <button
                       onClick={() => go(-1)}
                       disabled={index === 0}
-                      className="rounded-lg border border-ink px-4 py-2 text-sm font-medium transition duration-200 hover:-translate-y-px hover:shadow-hard-sm disabled:pointer-events-none disabled:opacity-30"
+                      className="rounded-lg border border-ink px-4 py-2 text-sm font-medium transition duration-200 disabled:pointer-events-none disabled:opacity-30"
                     >
                       Back
                     </button>
                     <button
                       ref={nextRef}
                       onClick={() => (last ? close() : go(1))}
-                      className="rounded-lg border border-ink bg-ink px-5 py-2 text-sm font-medium text-white transition duration-200 hover:-translate-y-px hover:shadow-hard-sm active:translate-y-0"
+                      className="rounded-lg border border-ink bg-ink px-5 py-2 text-sm font-medium text-white transition duration-200"
                     >
                       {last ? "Start learning" : index === 0 ? "Show me around" : "Next"}
                     </button>

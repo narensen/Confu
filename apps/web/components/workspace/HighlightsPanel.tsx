@@ -231,7 +231,7 @@ function SavedCard({ a, i, onRemove, onCite }: { a: SavedAnswer; i: number; onRe
   const [open, setOpen] = useState(false);
   const long = a.answer.length > 700 || /```(?:mermaid|svg)/i.test(a.answer);
   return (
-    <li className="group animate-enter rounded-xl border border-ink bg-panel p-4 transition duration-200 ease-fluid hover:shadow-hard-sm" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
+    <li className="group animate-enter rounded-xl border border-ink bg-panel p-4 transition duration-200 ease-fluid" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
       <div className="mb-2 flex items-center gap-2 text-xs">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="#facc15" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden>
           <path d="M18 21l-6-4.5L6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z" />
@@ -290,7 +290,7 @@ function TextCard({
   const selection = { text: h.selected_text ?? "", page: h.page_number, documentId: h.document_id };
 
   return (
-    <li className="group animate-enter rounded-xl border border-ink bg-panel p-4 transition duration-200 ease-fluid hover:shadow-hard-sm" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
+    <li className="group animate-enter rounded-xl border border-ink bg-panel p-4 transition duration-200 ease-fluid" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
       <div className="mb-2.5 flex items-center gap-2 text-xs">
         <span className="size-3 rounded-full" style={{ background: meta.swatch }} />
         <button onClick={() => onJump(h.page_number, h.document_id)} className="font-mono font-medium underline-offset-4 hover:underline">
@@ -411,7 +411,7 @@ function FigureGallery({
     <div className="min-h-0 flex-1 overflow-y-auto p-4">
       <div className="grid grid-cols-2 gap-3">
         {figures.map((f) => (
-          <button key={f.id} type="button" onClick={() => setOpen(f)} className="group overflow-hidden rounded-xl border border-ink bg-panel text-left transition hover:shadow-hard-sm">
+          <button key={f.id} type="button" onClick={() => setOpen(f)} className="group overflow-hidden rounded-xl border border-ink bg-panel text-left transition">
             <div className="flex aspect-[4/3] items-center justify-center bg-paper">
               {f.image_path && urls[f.image_path] ? (
                 // eslint-disable-next-line @next/next/no-img-element -- signed storage URL

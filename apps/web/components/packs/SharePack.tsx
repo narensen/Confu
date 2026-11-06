@@ -142,7 +142,7 @@ function ShareDialog({ sessionId, sessionTitle, onClose }: { sessionId: string; 
   const link = existing ? `${SITE.url}/p/${existing.slug}` : "";
 
   return (
-    <div className="animate-fade fixed inset-0 z-[60] flex items-center justify-center bg-scrim p-3 backdrop-blur-[2px] sm:p-6" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="animate-fade fixed inset-0 z-[60] flex items-center justify-center bg-scrim p-3 sm:p-6" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div role="dialog" aria-modal="true" aria-labelledby="share-title" className="animate-pop flex max-h-full w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
         <div className="flex items-start justify-between gap-4 px-6 pt-5">
           <div>

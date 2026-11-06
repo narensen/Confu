@@ -6,6 +6,7 @@ import { startCourse } from "@confu/client/courses";
 import { TEMPLATES, type Template } from "@confu/core/templates";
 import { createSession, deleteSession, listSessions, pdfTitle, updateSession, type LocalSession } from "@confu/client/library";
 import { buttonClass, eyebrowClass, ghostButtonClass } from "@confu/ui/classes";
+import { useEnter, useFlip } from "@confu/ui/motion";
 import { ago, dropHandlers, isPdf } from "./chrome";
 import { useHost } from "./host";
 import { useDevice, useLocal } from "./local";
@@ -30,6 +31,11 @@ export function Library({ onOpen }: { onOpen: (id: string, files?: File[], tool?
   const sessionFile = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const page = useRef<HTMLDivElement>(null);
+  // Once the library is read, everything cascades in; later, cards glide
+  // into place when one is removed.
+  useEnter(page, [Boolean(sessions)]);
+  const beforeChange = useFlip(page, [sessions]);
 
   async function openSessionFile(file: File) {
     setProblem(null);
@@ -64,9 +70,11 @@ export function Library({ onOpen }: { onOpen: (id: string, files?: File[], tool?
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto" {...dropHandlers((f) => void start(f))}>
+    <div ref={page} className="min-h-0 flex-1 overflow-y-auto" {...dropHandlers((f) => void start(f))}>
+      {/* Read from this device in a moment; shown all at once when it is. */}
+      {sessions && (
       <div className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
-        <div className="flex flex-wrap items-end justify-between gap-4">
+        <div data-enter className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className={eyebrowClass}>On this device</p>
             <h1 className="mt-1 font-serif text-3xl sm:text-4xl">Your library</h1>
@@ -110,7 +118,7 @@ export function Library({ onOpen }: { onOpen: (id: string, files?: File[], tool?
         {problem && <p className="animate-pop mt-6 rounded-lg border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger">{problem}</p>}
 
         {sessions && sessions.length === 0 && (
-          <div className="mt-10 rounded-2xl border border-dashed border-ink/40 bg-panel px-6 py-14 text-center">
+          <div data-enter className="mt-10 rounded-2xl border border-dashed border-ink/40 bg-panel px-6 py-14 text-center">
             <h2 className="font-serif text-2xl">Start with a PDF</h2>
             <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted">
               Drop a textbook, lecture notes or a paper here. Confu reads it on this device, and the tutor answers from it with page citations, using
@@ -124,7 +132,7 @@ export function Library({ onOpen }: { onOpen: (id: string, files?: File[], tool?
         )}
 
         {sessions && sessions.length === 0 && account && (
-          <div className="mx-auto mt-6 max-w-md rounded-2xl border border-ink bg-panel p-5">
+          <div data-enter className="mx-auto mt-6 max-w-md rounded-2xl border border-ink bg-panel p-5">
             <h2 className="mb-2 font-serif text-xl">Already studying on Confu?</h2>
             <BringOver compact />
           </div>
@@ -133,26 +141,27 @@ export function Library({ onOpen }: { onOpen: (id: string, files?: File[], tool?
         {sessions && sessions.length > 0 && (
           <ul className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {sessions.map((s) => (
-              <SessionCard key={s.id} s={s} onOpen={() => onOpen(s.id)} />
+              <SessionCard key={s.id} s={s} onOpen={() => onOpen(s.id)} beforeRemove={beforeChange} />
             ))}
           </ul>
         )}
 
         <Courses onOpen={onOpen} />
       </div>
+      )}
     </div>
   );
 }
 
-function SessionCard({ s, onOpen }: { s: Row; onOpen: () => void }) {
+function SessionCard({ s, onOpen, beforeRemove }: { s: Row; onOpen: () => void; beforeRemove: () => void }) {
   const { store, files, changed } = useDevice();
   const [menu, setMenu] = useState(false);
   return (
-    <li className="group relative">
+    <li data-enter data-flip className="group relative">
       <button
         type="button"
         onClick={onOpen}
-        className="flex h-full w-full flex-col rounded-xl border border-ink bg-panel p-4 text-left transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-hard-sm"
+        className="flex h-full w-full flex-col rounded-xl border border-ink bg-panel p-4 text-left transition-[background-color,scale] duration-150 hover:bg-paper active:scale-[0.985]"
       >
         <span className="line-clamp-2 pr-8 font-serif text-lg leading-snug">{s.title}</span>
         <span className="mt-auto pt-4 font-mono text-[11px] text-muted">
@@ -192,6 +201,7 @@ function SessionCard({ s, onOpen }: { s: Row; onOpen: () => void }) {
             onClick={async () => {
               setMenu(false);
               if (!window.confirm(`Delete “${s.title}”? Its files, chat and progress are removed from this device.`)) return;
+              beforeRemove();
               await deleteSession(store, files, s.id);
               changed();
             }}
@@ -212,6 +222,8 @@ function Courses({ onOpen }: { onOpen: (id: string, files?: File[], tool?: "plan
   const [all, setAll] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const shown = all ? TEMPLATES : TEMPLATES.slice(0, 6);
+  const list = useRef<HTMLUListElement>(null);
+  const beforeToggle = useFlip(list, [all]);
 
   async function start(t: Template) {
     setBusy(t.slug);
@@ -226,20 +238,27 @@ function Courses({ onOpen }: { onOpen: (id: string, files?: File[], tool?: "plan
 
   return (
     <section className="mt-14">
-      <div className="flex items-end justify-between gap-4">
+      <div data-enter className="flex items-end justify-between gap-4">
         <div>
           <p className={eyebrowClass}>Start from a course</p>
           <h2 className="mt-1 font-serif text-2xl">A plan and free sources, ready to go</h2>
         </div>
         {TEMPLATES.length > 6 && (
-          <button type="button" onClick={() => setAll((a) => !a)} className="shrink-0 text-sm font-medium underline underline-offset-2">
+          <button
+            type="button"
+            onClick={() => {
+              beforeToggle();
+              setAll((a) => !a);
+            }}
+            className="shrink-0 text-sm font-medium underline underline-offset-2"
+          >
             {all ? "Fewer" : `All ${TEMPLATES.length}`}
           </button>
         )}
       </div>
-      <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <ul ref={list} className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {shown.map((t) => (
-          <li key={t.slug} className="flex flex-col rounded-xl border border-ink/25 bg-panel p-4">
+          <li key={t.slug} data-enter data-flip className="flex flex-col rounded-xl border border-ink/25 bg-panel p-4">
             <span className="font-serif text-lg leading-snug">{t.title}</span>
             <span className="mt-1 line-clamp-2 text-sm text-muted">{t.tagline}</span>
             <span className="mt-auto flex items-center justify-between gap-2 pt-4">

@@ -38,10 +38,13 @@ async function usageFromStream(body: ReadableStream<Uint8Array>): Promise<Raw | 
 export function meteredFetch(next: FetchLike, onUsage: (u: Usage) => void): FetchLike {
   return async (input, init) => {
     const res = await next(input, init);
-    let model = "unknown";
-    try {
-      model = (JSON.parse(String(init?.body ?? "{}")) as { model?: string }).model ?? model;
-    } catch {}
+    // A busy model's request may have been answered by another (fallback.ts).
+    let model = res.headers.get("x-confu-model") ?? "unknown";
+    if (model === "unknown") {
+      try {
+        model = (JSON.parse(String(init?.body ?? "{}")) as { model?: string }).model ?? model;
+      } catch {}
+    }
     const type = res.headers.get("content-type") ?? "";
     if (res.ok && type.includes("text/event-stream") && res.body) {
       const [forCaller, forMeter] = res.body.tee();

@@ -40,7 +40,7 @@ export function StartHere({
   const have = resource && isPaperResource(resource) ? docForResource(resource, docs) : null;
 
   return (
-    <div className="animate-enter rounded-xl border border-ink bg-panel p-4 shadow-[4px_4px_0_0_#facc15]">
+    <div className="animate-enter rounded-xl border border-ink bg-panel p-4">
       <div className="flex items-center justify-between gap-3">
         <p className={eyebrowClass}>{fresh ? "Start here" : "Up next"}</p>
         <span className="font-mono text-[11px] text-muted">
@@ -73,7 +73,7 @@ export function StartHere({
               track("start_here.open");
               onOpen(topic);
             }}
-            className="rounded-lg border border-ink bg-ink px-3.5 py-2 text-sm font-medium text-white transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[2px_2px_0_0_#facc15] active:translate-y-0"
+            className="rounded-lg border border-ink bg-ink px-3.5 py-2 text-sm font-medium text-white transition duration-200 ease-fluid"
           >
             Open {pages} →
           </button>
@@ -84,7 +84,7 @@ export function StartHere({
               track("start_here.open_paper");
               onOpenDoc(have.id);
             }}
-            className="rounded-lg border border-ink bg-ink px-3.5 py-2 text-sm font-medium text-white transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[2px_2px_0_0_#facc15] active:translate-y-0"
+            className="rounded-lg border border-ink bg-ink px-3.5 py-2 text-sm font-medium text-white transition duration-200 ease-fluid"
           >
             Open the paper: {resource.title} →
           </button>
@@ -95,7 +95,7 @@ export function StartHere({
               track("start_here.find_paper");
               findPaper(resource.search || resource.title);
             }}
-            className="rounded-lg border border-ink bg-ink px-3.5 py-2 text-sm font-medium text-white transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[2px_2px_0_0_#facc15] active:translate-y-0"
+            className="rounded-lg border border-ink bg-ink px-3.5 py-2 text-sm font-medium text-white transition duration-200 ease-fluid"
           >
             Find the paper: {resource.title}
           </button>
@@ -105,7 +105,7 @@ export function StartHere({
             target="_blank"
             rel="noreferrer"
             onClick={() => onOpen(topic)}
-            className="rounded-lg border border-ink bg-ink px-3.5 py-2 text-sm font-medium text-white transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[2px_2px_0_0_#facc15] active:translate-y-0"
+            className="rounded-lg border border-ink bg-ink px-3.5 py-2 text-sm font-medium text-white transition duration-200 ease-fluid"
           >
             Find: {resource.title} ↗
           </a>
@@ -117,7 +117,7 @@ export function StartHere({
             track("start_here.teach");
             onTeach(topic);
           }}
-          className="rounded-lg border border-ink bg-panel px-3.5 py-2 text-sm font-medium transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-hard-sm active:translate-y-0 disabled:pointer-events-none disabled:opacity-40"
+          className="rounded-lg border border-ink bg-panel px-3.5 py-2 text-sm font-medium transition duration-200 ease-fluid disabled:pointer-events-none disabled:opacity-40"
         >
           Teach me instead
         </button>

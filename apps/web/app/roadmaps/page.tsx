@@ -100,7 +100,7 @@ async function Gallery() {
     <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {packs.map((p) => (
         <li key={p.slug}>
-          <Link href={`/p/${p.slug}`} className="group flex h-full flex-col rounded-2xl border border-ink bg-panel p-5 transition-[translate,box-shadow] duration-300 ease-fluid hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-hard">
+          <Link href={`/p/${p.slug}`} className="group flex h-full flex-col rounded-2xl border border-ink bg-panel p-5 transition-colors hover:bg-paper">
             <span className={eyebrowClass}>Roadmap</span>
             <span className="mt-2 line-clamp-2 font-serif text-xl leading-snug">{p.title}</span>
             <span className="mt-2 line-clamp-3 text-sm text-muted">{p.goal || p.description}</span>

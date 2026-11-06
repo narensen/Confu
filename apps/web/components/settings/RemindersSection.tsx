@@ -211,7 +211,7 @@ export function RemindersSection() {
                 href={`https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcal!)}`}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center rounded-lg border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white transition hover:-translate-y-px hover:shadow-[2px_2px_0_0_#facc15]"
+                className="inline-flex items-center rounded-lg border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white transition"
               >
                 Add to Google Calendar
               </a>

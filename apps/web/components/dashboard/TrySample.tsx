@@ -58,7 +58,7 @@ export function TrySample() {
         type="button"
         onClick={start}
         disabled={Boolean(status)}
-        className="shrink-0 rounded-lg border border-ink bg-panel px-4 py-2 text-sm font-medium transition hover:-translate-y-px hover:shadow-[2px_2px_0_0_#facc15] disabled:opacity-60"
+        className="shrink-0 rounded-lg border border-ink bg-panel px-4 py-2 text-sm font-medium transition disabled:opacity-60"
       >
         {status ?? "Try a sample session"}
       </button>

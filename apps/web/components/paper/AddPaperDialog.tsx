@@ -180,7 +180,7 @@ export function AddPaperDialog({
                         <button
                           type="button"
                           onClick={() => addOne(r.paper!)}
-                          className="shrink-0 self-start rounded-md border border-ink bg-ink px-2.5 py-1 text-xs font-medium text-white transition hover:-translate-y-px"
+                          className="shrink-0 self-start rounded-md border border-ink bg-ink px-2.5 py-1 text-xs font-medium text-white transition"
                         >
                           Add
                         </button>
@@ -250,7 +250,7 @@ export function AddPaperDialog({
   const activeHint = hints?.find((h) => h.name === active);
 
   return (
-    <div className="animate-fade fixed inset-0 z-60 flex items-center justify-center bg-scrim p-3 backdrop-blur-[2px] sm:p-6" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="animate-fade fixed inset-0 z-60 flex items-center justify-center bg-scrim p-3 sm:p-6" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div role="dialog" aria-modal="true" aria-labelledby="add-paper-title" className="animate-pop flex max-h-full w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
         <div className="flex items-start justify-between gap-4 border-b border-ink px-6 pt-5 pb-4">
           <div>

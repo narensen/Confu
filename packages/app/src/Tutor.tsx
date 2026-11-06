@@ -8,6 +8,7 @@ import { ACTION_LABELS } from "@confu/core/tutor/format";
 import { docLabel, type TutorAction } from "@confu/core/types";
 import { eyebrowClass } from "@confu/ui/classes";
 import { Markdown } from "@confu/ui/Markdown";
+import { useArrive } from "@confu/ui/motion";
 import { KeySetup, useAiKey } from "./KeySetup";
 import { useDevice, useLocal } from "./local";
 
@@ -82,6 +83,10 @@ export function Tutor({
     void send(incoming);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incoming]);
+
+  // The question just asked eases in (an answer already given doesn't replay).
+  const turn = useRef<HTMLDivElement>(null);
+  useArrive(turn, [Boolean(live)], { y: 10, initial: false });
 
   // Follow the answer as it's written, unless the student scrolled up.
   useEffect(() => {
@@ -173,7 +178,7 @@ export function Tutor({
           ))}
 
           {live && (
-            <>
+            <div ref={turn} className="space-y-5">
               <UserTurn action={live.action} content={live.user} onCite={cite} />
               <div className="pr-2">
                 {live.text ? (
@@ -184,7 +189,7 @@ export function Tutor({
                   <Thinking label={live.status ?? "Thinking…"} />
                 )}
               </div>
-            </>
+            </div>
           )}
 
           {error && <p className="animate-pop rounded-lg border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</p>}

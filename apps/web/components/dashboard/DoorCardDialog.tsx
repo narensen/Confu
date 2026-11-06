@@ -109,7 +109,7 @@ function Dialog({ onClose }: { onClose: () => void }) {
   const url = code ? `${SITE.url}/b/${code}` : "";
 
   return (
-    <div className="animate-fade fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-scrim p-3 backdrop-blur-[2px] sm:items-center" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="animate-fade fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-scrim p-3 sm:items-center" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div role="dialog" aria-modal="true" aria-labelledby="reading-list-title" className="animate-pop my-6 w-full max-w-2xl overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
         <div className="flex items-start justify-between gap-4 border-b border-ink px-6 pt-5 pb-4">
           <div>

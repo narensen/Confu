@@ -381,7 +381,7 @@ function GoalForm({ sessionId, docTitles, existing, draftGoal, setup, onCreated,
               target="_blank"
               rel="noreferrer"
               onClick={() => track("goal.open_assistant", { name })}
-              className="rounded-md border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white transition hover:-translate-y-px"
+              className="rounded-md border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white transition"
             >
               Open in {name} ↗
             </a>

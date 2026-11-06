@@ -76,7 +76,7 @@ export function StudyTools() {
         </div>
         <Link
           href="/app"
-          className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-white transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[3px_3px_0_0_var(--marker)]"
+          className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-white transition duration-200 ease-fluid"
         >
           Open the tools →
         </Link>

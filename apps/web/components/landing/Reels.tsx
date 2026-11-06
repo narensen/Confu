@@ -59,7 +59,7 @@ function Reel({ id, label, sound, onSound }: { id: string; label: string; sound:
   }, [sound]);
 
   return (
-    <div className="relative w-full max-w-[17rem] rounded-[2rem] border-2 border-ink bg-ink p-1.5 shadow-[6px_6px_0_0_#facc15]">
+    <div className="relative w-full max-w-[17rem] rounded-[2rem] border-2 border-ink bg-ink p-1.5">
       <video
         ref={video}
         muted
@@ -85,7 +85,7 @@ function Reel({ id, label, sound, onSound }: { id: string; label: string; sound:
           onSound(!sound);
         }}
         aria-label={sound ? "Mute" : reduced && !playing ? "Play with sound" : "Turn sound on"}
-        className="absolute right-4 bottom-4 flex h-9 items-center gap-1.5 rounded-full border border-ink bg-panel px-3 text-xs font-medium shadow-hard-sm transition hover:-translate-y-px"
+        className="absolute right-4 bottom-4 flex h-9 items-center gap-1.5 rounded-full border border-ink bg-panel px-3 text-xs font-medium shadow-hard-sm transition"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
           <path d="M11 5 6 9H2v6h4l5 4V5Z" />

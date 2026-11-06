@@ -2,6 +2,7 @@ import type { FetchLike } from "./fetch-like";
 import { MODELS } from "./groq";
 import { anthropicFetch } from "./anthropic";
 import { openAiCompatFetch, type UrlGuard } from "./openai-compat";
+import { withFallback } from "./fallback";
 import type { ModelRoles, ProviderId } from "./providers";
 
 // A student's own AI, ready to use: the provider, the decrypted key, where
@@ -39,8 +40,9 @@ export function withModels(models: ModelRoles, next: FetchLike): FetchLike {
 
 // Where a connection's requests go. The server passes a guard for custom
 // server addresses (guard.ts); a student's own device doesn't need one.
+// A busy model hands the request to another one (fallback.ts).
 export function transportFor(conn: Connection, opts: { guard?: UrlGuard } = {}): FetchLike {
-  return conn.provider === "anthropic" ? anthropicFetch(conn) : openAiCompatFetch(conn, opts);
+  return withFallback(conn, conn.provider === "anthropic" ? anthropicFetch(conn) : openAiCompatFetch(conn, opts));
 }
 
 // Providers that report rate limits in OpenAI-style x-ratelimit headers.

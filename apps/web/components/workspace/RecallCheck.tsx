@@ -122,7 +122,7 @@ export function RecallCheck({ topic, sessionId, offer, onClose }: { topic: PlanT
   const got = ratings.filter((r) => r === "good").length;
 
   return createPortal(
-    <div className="animate-fade fixed inset-0 z-60 flex items-center justify-center bg-scrim p-3 backdrop-blur-[2px]" onMouseDown={(e) => e.target === e.currentTarget && close()}>
+    <div className="animate-fade fixed inset-0 z-60 flex items-center justify-center bg-scrim p-3" onMouseDown={(e) => e.target === e.currentTarget && close()}>
       <div role="dialog" aria-modal="true" aria-labelledby="recall-title" className="animate-pop flex max-h-full w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
         <div className="flex items-start justify-between gap-4 border-b border-ink px-6 pt-5 pb-4">
           <div className="min-w-0">

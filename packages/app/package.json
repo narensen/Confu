@@ -19,6 +19,7 @@
     "@confu/core": "workspace:*",
     "@confu/storage": "workspace:*",
     "@confu/ui": "workspace:*",
+    "mediabunny": "^1.65.2",
     "pdfjs-dist": "6.5.438",
     "react-pdf": "^11.0.0",
     "yjs": "^13.6.33"
@@ -30,6 +31,7 @@
   "devDependencies": {
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "puppeteer-core": "24",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   }

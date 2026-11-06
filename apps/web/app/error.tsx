@@ -25,11 +25,11 @@ export default function ErrorPage({ error, retry }: { error: unknown; retry: () 
         <button
           type="button"
           onClick={() => retry()}
-          className="rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-white transition hover:-translate-y-px hover:shadow-[2px_2px_0_0_#facc15]"
+          className="rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-white transition"
         >
           Try again
         </button>
-        <Link href="/dashboard" className="rounded-lg border border-ink bg-panel px-4 py-2 text-sm font-medium transition hover:-translate-y-px hover:shadow-hard-sm">
+        <Link href="/dashboard" className="rounded-lg border border-ink bg-panel px-4 py-2 text-sm font-medium transition">
           Go to your library
         </Link>
         <button

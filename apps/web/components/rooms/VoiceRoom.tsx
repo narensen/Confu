@@ -63,7 +63,7 @@ function VoiceLive({ slug }: { slug: string }) {
       {mine && v.resumable && !inVoice && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink bg-yellow-100 px-5 py-3">
           <p className="text-sm">You were in voice before the page reloaded.</p>
-          <button type="button" onClick={() => void joinVoice(slug)} disabled={v.joining} className="rounded-lg border border-ink bg-ink px-3 py-1.5 text-sm font-medium text-white transition hover:-translate-y-px disabled:opacity-50">
+          <button type="button" onClick={() => void joinVoice(slug)} disabled={v.joining} className="rounded-lg border border-ink bg-ink px-3 py-1.5 text-sm font-medium text-white transition disabled:opacity-50">
             {v.joining ? "Rejoining…" : "Rejoin voice"}
           </button>
         </div>
@@ -178,7 +178,7 @@ function JoinButton({ slug, joining, className = "" }: { slug: string; joining: 
       type="button"
       disabled={joining}
       onClick={() => void joinVoice(slug)}
-      className={`inline-flex items-center gap-2 rounded-full border border-ink bg-ink px-5 py-2.5 text-sm font-medium text-white shadow-hard-sm transition hover:-translate-y-px hover:shadow-hard active:translate-y-0 disabled:opacity-50 ${className}`}
+      className={`inline-flex items-center gap-2 rounded-full border border-ink bg-ink px-5 py-2.5 text-sm font-medium text-white shadow-hard-sm transition disabled:opacity-50 ${className}`}
     >
       <Mic off={false} />
       {joining ? "Joining…" : "Join voice"}
@@ -244,7 +244,7 @@ function RoundButton({ label, pressed, disabled, onClick, children }: { label: s
       aria-label={label}
       title={label}
       className={`flex size-10 items-center justify-center rounded-full border transition active:scale-95 disabled:opacity-40 ${
-        pressed ? "border-danger bg-danger/10 text-danger" : "border-ink bg-panel hover:-translate-y-px hover:shadow-hard-sm"
+        pressed ? "border-danger bg-danger/10 text-danger" : "border-ink bg-panel"
       }`}
     >
       {children}

@@ -149,7 +149,7 @@ export function PackSources({
                 type="button"
                 onClick={fetchAll}
                 disabled={running || busy}
-                className="rounded-md border border-ink bg-ink px-3 py-1 text-xs font-medium text-white transition hover:-translate-y-px hover:shadow-[2px_2px_0_0_#facc15] disabled:opacity-50"
+                className="rounded-md border border-ink bg-ink px-3 py-1 text-xs font-medium text-white transition disabled:opacity-50"
               >
                 {running ? "Fetching…" : "Fetch all"}
               </button>
@@ -255,7 +255,7 @@ export function PendingSourceCard({ doc, busy, onAttach }: { doc: SessionDoc; bu
                   setStatus(null);
                 }
               }}
-              className="rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-white transition hover:-translate-y-px hover:shadow-hard-sm disabled:opacity-50"
+              className="rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-white transition disabled:opacity-50"
             >
               {status ? "Fetching…" : "Fetch it now"}
             </button>

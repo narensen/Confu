@@ -64,7 +64,7 @@ export default async function TemplatePage({ params }: PageProps<"/templates/[sl
                 <span>{t.sources.length} free sources</span>
               </p>
             </div>
-            <aside className="self-start rounded-2xl border border-ink bg-panel p-6 shadow-[6px_6px_0_0_var(--ink)]">
+            <aside className="self-start rounded-2xl border border-ink bg-panel p-6">
               <p className="font-serif text-xl">Start this goal</p>
               <p className="mt-2 text-sm leading-relaxed text-muted">
                 {t.kind === "exam"
@@ -132,7 +132,7 @@ export default async function TemplatePage({ params }: PageProps<"/templates/[sl
                 .slice(0, 4)
                 .map((x) => (
                   <li key={x.slug}>
-                    <Link href={`/templates/${x.slug}`} className="block rounded-xl border border-ink/25 bg-paper/50 p-4 transition hover:border-ink hover:shadow-hard-sm">
+                    <Link href={`/templates/${x.slug}`} className="block rounded-xl border border-ink/25 bg-paper/50 p-4 transition hover:border-ink">
                       <span className="block font-medium">{x.title}</span>
                       <span className="mt-1 block text-xs text-muted">{x.tagline}</span>
                     </Link>

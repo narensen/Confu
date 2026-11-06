@@ -14,7 +14,7 @@ export const BUNDLE_TYPE = "application/x-confu-session";
 
 // What travels with a shared session. The student's own progress (tutor
 // notes about them, review schedule, exam scores, reading time) stays home.
-const SHARED = ["documents", "document_pages", "highlights", "saved_answers", "study_plans", "plan_topics", "notes", "cards", "recordings", "podcasts"] as const;
+const SHARED = ["documents", "document_pages", "highlights", "saved_answers", "study_plans", "plan_topics", "notes", "cards", "recordings", "podcasts", "videos"] as const;
 const WITH_CHAT = [...SHARED, "messages"] as const;
 
 type Row = Record<string, unknown>;

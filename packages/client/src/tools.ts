@@ -29,7 +29,7 @@ export type LocalCard = CardSchedule & {
   created_at: string;
 };
 
-async function pagesFor(store: Store, input: { sessionId: string; documentId?: string | null; from?: number; to?: number; max?: number }) {
+export async function pagesFor(store: Store, input: { sessionId: string; documentId?: string | null; from?: number; to?: number; max?: number }) {
   const docs = input.documentId
     ? [{ id: input.documentId }]
     : await store.list<{ id: string }>("documents", { session_id: input.sessionId }, { order: "position" });

@@ -145,7 +145,7 @@ export function PlanPanel(props: Props) {
             <button
               type="button"
               onClick={() => setPacing(true)}
-              className="shrink-0 rounded-md border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white transition hover:-translate-y-px"
+              className="shrink-0 rounded-md border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white transition"
             >
               Re-pace
             </button>
@@ -450,7 +450,7 @@ function SmallButton({ primary, children, ...rest }: { primary?: boolean } & Rea
   return (
     <button
       type="button"
-      className={`rounded-md border border-ink px-2.5 py-1 text-xs font-medium transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-hard-sm active:translate-y-0 active:shadow-none disabled:pointer-events-none disabled:opacity-40 ${
+      className={`rounded-md border border-ink px-2.5 py-1 text-xs font-medium transition duration-200 ease-fluid disabled:pointer-events-none disabled:opacity-40 ${
         primary ? "bg-ink text-white" : "bg-panel"
       }`}
       {...rest}

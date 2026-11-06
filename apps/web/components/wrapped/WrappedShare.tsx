@@ -57,7 +57,7 @@ export function WrappedShare({ month, initialToken }: { month: string; initialTo
           type="button"
           onClick={token ? () => navigator.clipboard.writeText(link).then(() => toast("Link copied.")) : share}
           disabled={pending}
-          className="rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-white transition hover:-translate-y-px hover:shadow-[3px_3px_0_0_#facc15] disabled:opacity-50"
+          className="rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-white transition disabled:opacity-50"
         >
           {pending ? "Sharing…" : token ? "Copy link" : "Share"}
         </button>

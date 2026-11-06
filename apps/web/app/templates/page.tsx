@@ -31,7 +31,7 @@ export default function TemplatesPage() {
                 <li key={t.slug}>
                   <Link
                     href={`/templates/${t.slug}`}
-                    className="group flex h-full flex-col rounded-2xl border border-ink bg-panel p-6 transition-[translate,box-shadow] duration-300 ease-fluid hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-hard"
+                    className="group flex h-full flex-col rounded-2xl border border-ink bg-panel p-6 transition-colors hover:bg-paper"
                   >
                     <span className="flex flex-wrap gap-1.5">
                       {t.tags.slice(0, 2).map((tag) => (

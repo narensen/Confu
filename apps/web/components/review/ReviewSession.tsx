@@ -123,7 +123,7 @@ export function ReviewSession() {
 
   if (!item) {
     return (
-      <div className="animate-enter rounded-2xl border border-ink bg-panel px-6 py-10 text-center shadow-[4px_4px_0_0_#facc15]">
+      <div className="animate-enter rounded-2xl border border-ink bg-panel px-6 py-10 text-center">
         <p className={eyebrowClass}>{doneCount ? "Done for today" : "All caught up"}</p>
         <p className="mt-2 font-serif text-3xl">{doneCount ? `${doneCount} reviewed` : "Nothing due today"}</p>
         {doneCount > 0 && (
@@ -156,7 +156,7 @@ export function ReviewSession() {
         <div className="h-full bg-ink transition-[width] duration-500 ease-fluid" style={{ width: `${(index / total) * 100}%` }} />
       </div>
 
-      <article className="mt-6 rounded-2xl border border-ink bg-panel p-6 shadow-[4px_4px_0_0_#facc15]">
+      <article className="mt-6 rounded-2xl border border-ink bg-panel p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className={eyebrowClass}>{cue!.eyebrow}</p>
           {item.study_sessions?.title && <span className="truncate rounded-full border border-line px-2.5 py-0.5 text-xs text-muted">{item.study_sessions.title}</span>}
@@ -221,7 +221,7 @@ export function ReviewSession() {
                     type="button"
                     disabled={saving}
                     onClick={() => rate(r.id)}
-                    className={`rounded-lg border px-2 py-2.5 text-center transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-hard-sm disabled:opacity-50 ${
+                    className={`rounded-lg border px-2 py-2.5 text-center transition duration-200 ease-fluid disabled:opacity-50 ${
                       suggested === r.id ? "border-ink bg-ink text-white" : "border-ink bg-panel"
                     }`}
                   >

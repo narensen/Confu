@@ -6,15 +6,13 @@
 /* Confu's two themes, as tokens: components use bg-panel, text-ink,
    border-ink… and never need a dark: class.
 
-   Light: white surfaces, black frames, hard offset shadows, editorial type.
-   Dark: warm charcoal, glossy. Every surface is opaque (nothing shows
-   through a card, menu or dialog); depth comes from layered warm greys, a
-   top-lit sheen and a warm hairline rim on each surface, soft deep shadows,
-   and a faint amber glow on the page itself.
+   Light: white surfaces, black frames, flat fills, editorial type.
+   Dark: warm charcoal, flat. Every surface is opaque. A hero slab is
+   solid black with one hard amber offset. No sheen, no glow, no gradient.
 
    Roles beyond the basics:
-     inverse        a hero surface (Continue, reviews due, a running timer):
-                    ink in light; a lit, raised charcoal panel in dark
+     inverse        a hero slab (Continue, reviews due, a running timer):
+                    solid black, with one hard amber offset
      scrim          the backdrop behind a dialog
      page           the body behind everything */
 :root {
@@ -25,6 +23,7 @@
   --ink: #0d0d0c;        /* text, frames, primary buttons */
   --muted: #62625d;
   --line: #e4e3de;       /* hairlines inside frames */
+  --grid: rgba(13, 13, 12, 0.22); /* landing checker; dark overrides this */
   --accent: #0d0d0c;
   --accent-soft: #efefeb;
   --accent-ink: #ffffff;
@@ -38,7 +37,7 @@
   --hl-yellow: rgba(253, 216, 53, 0.42);
   --hl-region: rgba(13, 13, 12, 0.06);
   --viewer: #ebebe7;
-  --shadow: #0d0d0c;     /* the offset "hard" shadows */
+  --shadow: #0d0d0c;     /* kept for a few marks; chrome does not use an offset */
   --marker: #fde047;     /* highlighter-pen underlines behind headline words */
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
@@ -46,7 +45,7 @@
 /* Dark: chosen in the account menu (data-theme), or the system's setting when
    none is chosen. The same values twice: for the system setting, and for the
    explicit choice. "white" becomes the dark surface colour, so ink buttons
-   (bg-ink text-white) turn into light, glossy buttons with dark text. */
+   (bg-ink text-white) are flat light fills with dark text. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
@@ -55,14 +54,15 @@
     --panel: #1a1a18;
     --ink: #ecebe4;
     --muted: #a3a29b;
-    --line: #2f2e2a;
+    --line: #3f3e39;
+    --grid: rgba(236, 235, 228, 0.34);
     --accent: #ecebe4;
     --accent-soft: #24231f;
     --accent-ink: #121211;
     --danger: #f87171;
     --ok: #4ade80;
     --warn: #fbbf24;
-    --inverse: #24231f;
+    --inverse: #0d0d0c;
     --inverse-ink: #f2f0e8;
     --inverse-muted: rgba(242, 240, 232, 0.62);
     --scrim: rgba(0, 0, 0, 0.62);
@@ -83,14 +83,15 @@
   --panel: #1a1a18;
   --ink: #ecebe4;
   --muted: #a3a29b;
-  --line: #2f2e2a;
+  --line: #3f3e39;
+  --grid: rgba(236, 235, 228, 0.34);
   --accent: #ecebe4;
   --accent-soft: #24231f;
   --accent-ink: #121211;
   --danger: #f87171;
   --ok: #4ade80;
   --warn: #fbbf24;
-  --inverse: #24231f;
+  --inverse: #0d0d0c;
   --inverse-ink: #f2f0e8;
   --inverse-muted: rgba(242, 240, 232, 0.62);
   --scrim: rgba(0, 0, 0, 0.62);
@@ -134,8 +135,11 @@
   --font-mono: var(--font-geist-mono);
   --font-serif: var(--font-newsreader);
   --ease-fluid: var(--ease);
-  --shadow-hard: 3px 3px 0 0 var(--shadow);
-  --shadow-hard-sm: 2px 2px 0 0 var(--shadow);
+  --shadow-hard: none;
+  --shadow-hard-sm: none;
+  /* Large corners were reading as a glossy tub. Keep them tight. */
+  --radius-2xl: 0.75rem;
+  --radius-3xl: 0.875rem;
 }
 
 body {
@@ -155,176 +159,79 @@ body {
   color: var(--inverse-ink);
 }
 
-/* The header (and the public nav): frosted, but solid enough to read over
-   anything. Never wrap a password field with it: a filtered ancestor stops
-   paste and password managers. Menus and panels are plain bg-panel. */
-.glass-bar {
-  background: color-mix(in srgb, var(--panel) 90%, transparent);
-  backdrop-filter: blur(16px) saturate(1.4);
-  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+/* Hero slabs: solid black on top, one hard amber offset. A full-bleed band
+   (no radius) stays flat, with no shadow and no gradient. */
+.bg-inverse,
+.surface-inverse[class*="rounded-"] {
+  background-image: none;
+  box-shadow: 4px 4px 0 0 #facc15;
 }
 
-/* ------------------------------------------------------- dark: the gloss */
-/* Written once as a mixin-like block for each way dark can be on. Unlayered,
-   so it wins over Tailwind's utilities where it needs to. */
+/* The header and the public nav. Solid on purpose: a blur or a translucent
+   wash reads as gloss, and a filtered ancestor also breaks password paste.
+   Menus and panels are plain bg-panel. */
+.glass-bar {
+  background: var(--panel);
+}
+
+/* Primary actions stay flat. A slight fade is the hover, in place of a lift. */
+button.bg-ink:hover:not(:disabled),
+a.bg-ink:hover {
+  opacity: 0.9;
+}
+
+/* -------------------------------------------------------- dark: flat */
+/* The same quiet adjustments for an explicit dark theme and for the system
+   setting when light was not chosen. Unlayered, so a hairline frame wins
+   over Tailwind's border utilities. No sheen, wash, or lacquer. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) body {
-    background-color: var(--page);
-    background-image:
-      radial-gradient(900px 520px at 0% -12%, rgba(250, 204, 21, 0.06), transparent 62%),
-      radial-gradient(1000px 600px at 100% -14%, rgba(255, 244, 220, 0.035), transparent 60%);
-    background-attachment: fixed;
+  :root:not([data-theme="light"]) .border-ink:where(:not(.bg-yellow-300, .bg-yellow-400, .bg-inverse, .surface-inverse)) {
+    border-color: var(--line);
   }
-  /* Frames become a soft rim of light. */
-  :root:not([data-theme="light"]) .border-ink:where(:not(.bg-yellow-300, .bg-yellow-400)) { border-color: rgba(255, 248, 230, 0.11); }
-  :root:not([data-theme="light"]) .border-line { border-color: var(--line); }
-  /* Surfaces: lit from the top, a fixed-height sheen so tall panels don't wash out. */
-  :root:not([data-theme="light"]) .bg-panel {
-    background-image: linear-gradient(180deg, rgba(255, 248, 230, 0.04), rgba(255, 248, 230, 0) 140px);
+  /* The hero slab stays black. A light frame here was the gold rim. */
+  :root:not([data-theme="light"]) :is(.bg-inverse, .surface-inverse).border-ink {
+    border-color: #0d0d0c;
   }
-  /* Light buttons and pills: glossy, like a lacquered key. */
-  :root:not([data-theme="light"]) .bg-ink {
-    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0) 60%);
-    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.18), 0 1px 2px rgba(0, 0, 0, 0.4);
-  }
-  /* Hero surfaces: a raised charcoal panel with a warm rim. */
-  :root:not([data-theme="light"]) .bg-inverse,
-  :root:not([data-theme="light"]) .surface-inverse {
-    background-image:
-      radial-gradient(120% 140% at 0% 0%, rgba(250, 204, 21, 0.1), transparent 55%),
-      linear-gradient(160deg, #2d2c27 0%, #22211d 55%, #1a1917 100%);
-    border-color: rgba(250, 204, 21, 0.24);
-    box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.08), 0 18px 44px -18px rgba(0, 0, 0, 0.75);
-  }
-  /* Hard offset shadows become depth: a lit top edge and a soft drop. */
-  :root:not([data-theme="light"]) .shadow-hard {
-    box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.06), 0 1px 2px rgba(0, 0, 0, 0.5), 0 16px 36px -12px rgba(0, 0, 0, 0.7);
-  }
-  :root:not([data-theme="light"]) .shadow-hard-sm {
-    box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.05), 0 8px 20px -10px rgba(0, 0, 0, 0.65);
-  }
-  :root:not([data-theme="light"]) .glass-bar {
-    background: rgba(18, 18, 17, 0.84);
-    box-shadow: inset 0 -1px 0 rgba(255, 248, 230, 0.04);
-  }
-  :root:not([data-theme="light"]) .auth-stage {
-    background-color: #161614;
-    background-image:
-      radial-gradient(680px 440px at 12% 0%, rgba(250, 204, 21, 0.16), transparent 62%),
-      radial-gradient(560px 420px at 100% 8%, rgba(255, 244, 220, 0.07), transparent 58%);
-    color: #f4f2ec;
-    box-shadow: inset 1px 0 0 rgba(255, 248, 230, 0.08);
-  }
-  :root:not([data-theme="light"]) .auth-stage [data-float] {
-    box-shadow: 0 22px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 248, 230, 0.12);
-  }
-  :root:not([data-theme="light"]) .glow-page {
-    background-color: transparent;
-    background-image: none;
-  }
-  :root:not([data-theme="light"]) [data-parallax="grid"] { opacity: 0.12; }
-  :root:not([data-theme="light"]) .tutor-diagram { background: #f4f3ef; }
-  :root:not([data-theme="light"]) .tutor-composer {
-    background: transparent;
-    border-color: rgba(255, 248, 230, 0.24) rgba(255, 248, 230, 0.14) rgba(255, 248, 230, 0.08);
-    box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.07);
-  }
-  :root:not([data-theme="light"]) .tutor-composer:focus-within {
-    border-color: rgba(250, 204, 21, 0.55) rgba(250, 204, 21, 0.36) rgba(250, 204, 21, 0.22);
-  }
-  :root:not([data-theme="light"]) .tutor-send { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 4px 12px -4px rgba(0, 0, 0, 0.8); }
-  :root:not([data-theme="light"]) .tutor-send:disabled { background-color: rgba(255, 248, 230, 0.07); box-shadow: inset 0 0 0 1px rgba(255, 248, 230, 0.08); }
-  :root:not([data-theme="light"]) .prose-tutor :is(th, td, pre) { border-color: rgba(255, 248, 230, 0.14); }
-  :root:not([data-theme="light"]) .prose-tutor blockquote { border-left-color: rgba(250, 204, 21, 0.55); }
-  /* A selected state (a tab, a preset, "Following") is a raised tone, not a
-     glossy button: only actions glow. White inside reads as text. */
+  /* A selected tab is a flat fill. "White" inside reads as text, because
+     the dark theme remaps white to the page colour. */
   :root:not([data-theme="light"]) .bg-ink:is([aria-pressed="true"], [aria-selected="true"], [aria-checked="true"], [aria-current="page"], [aria-current="true"]) {
     --color-white: var(--ink);
-    background-color: #33322c;
-    background-image: linear-gradient(180deg, rgba(255, 248, 230, 0.07), rgba(255, 248, 230, 0) 70%);
+    background-color: var(--accent-soft);
+    background-image: none;
     color: var(--ink);
-    border-color: rgba(255, 248, 230, 0.16);
-    box-shadow: inset 0 0 0 1px rgba(255, 248, 230, 0.1);
+    border-color: color-mix(in srgb, var(--ink) 16%, transparent);
+    box-shadow: none;
   }
+  :root:not([data-theme="light"]) .prose-tutor :is(th, td, pre) {
+    border-color: color-mix(in srgb, var(--ink) 16%, transparent);
+  }
+  :root:not([data-theme="light"]) .tutor-diagram { background: #f4f3ef; }
   /* A white page is the brightest thing on a dark screen: dim it a little,
-     and warm it, unless you chose Sepia or Night in the reader. */
-  :root:not([data-theme="light"]) [data-reader="light"] .pdf-page { filter: brightness(0.86) sepia(0.06); }
+     unless Sepia or Night is chosen in the reader. */
+  :root:not([data-theme="light"]) [data-reader="light"] .pdf-page { filter: brightness(0.92); }
 }
-:root[data-theme="dark"] body {
-  background-color: var(--page);
-  background-image:
-    radial-gradient(900px 520px at 0% -12%, rgba(250, 204, 21, 0.06), transparent 62%),
-    radial-gradient(1000px 600px at 100% -14%, rgba(255, 244, 220, 0.035), transparent 60%);
-  background-attachment: fixed;
+:root[data-theme="dark"] .border-ink:where(:not(.bg-yellow-300, .bg-yellow-400, .bg-inverse, .surface-inverse)) {
+  border-color: var(--line);
 }
-:root[data-theme="dark"] .border-ink:where(:not(.bg-yellow-300, .bg-yellow-400)) { border-color: rgba(255, 248, 230, 0.11); }
-:root[data-theme="dark"] .border-line { border-color: var(--line); }
-:root[data-theme="dark"] .bg-panel {
-  background-image: linear-gradient(180deg, rgba(255, 248, 230, 0.04), rgba(255, 248, 230, 0) 140px);
+:root[data-theme="dark"] :is(.bg-inverse, .surface-inverse).border-ink {
+  border-color: #0d0d0c;
 }
-:root[data-theme="dark"] .bg-ink {
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0) 60%);
-  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.18), 0 1px 2px rgba(0, 0, 0, 0.4);
-}
-:root[data-theme="dark"] .bg-inverse,
-:root[data-theme="dark"] .surface-inverse {
-  background-image:
-    radial-gradient(120% 140% at 0% 0%, rgba(250, 204, 21, 0.1), transparent 55%),
-    linear-gradient(160deg, #2d2c27 0%, #22211d 55%, #1a1917 100%);
-  border-color: rgba(250, 204, 21, 0.24);
-  box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.08), 0 18px 44px -18px rgba(0, 0, 0, 0.75);
-}
-:root[data-theme="dark"] .shadow-hard {
-  box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.06), 0 1px 2px rgba(0, 0, 0, 0.5), 0 16px 36px -12px rgba(0, 0, 0, 0.7);
-}
-:root[data-theme="dark"] .shadow-hard-sm {
-  box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.05), 0 8px 20px -10px rgba(0, 0, 0, 0.65);
-}
-:root[data-theme="dark"] .glass-bar {
-  background: rgba(18, 18, 17, 0.84);
-  box-shadow: inset 0 -1px 0 rgba(255, 248, 230, 0.04);
-}
-:root[data-theme="dark"] .auth-stage {
-  background-color: #161614;
-  background-image:
-    radial-gradient(680px 440px at 12% 0%, rgba(250, 204, 21, 0.16), transparent 62%),
-    radial-gradient(560px 420px at 100% 8%, rgba(255, 244, 220, 0.07), transparent 58%);
-  color: #f4f2ec;
-  box-shadow: inset 1px 0 0 rgba(255, 248, 230, 0.08);
-}
-:root[data-theme="dark"] .auth-stage [data-float] {
-  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 248, 230, 0.12);
-}
-:root[data-theme="dark"] .glow-page {
-  background-color: transparent;
-  background-image: none;
-}
-:root[data-theme="dark"] [data-parallax="grid"] { opacity: 0.12; }
-:root[data-theme="dark"] .tutor-diagram { background: #f4f3ef; }
-:root[data-theme="dark"] .tutor-composer {
-  background: transparent;
-  border-color: rgba(255, 248, 230, 0.24) rgba(255, 248, 230, 0.14) rgba(255, 248, 230, 0.08);
-  box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.07);
-}
-:root[data-theme="dark"] .tutor-composer:focus-within {
-  border-color: rgba(250, 204, 21, 0.55) rgba(250, 204, 21, 0.36) rgba(250, 204, 21, 0.22);
-}
-:root[data-theme="dark"] .tutor-send { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 4px 12px -4px rgba(0, 0, 0, 0.8); }
-:root[data-theme="dark"] .tutor-send:disabled { background-color: rgba(255, 248, 230, 0.07); box-shadow: inset 0 0 0 1px rgba(255, 248, 230, 0.08); }
-:root[data-theme="dark"] .prose-tutor :is(th, td, pre) { border-color: rgba(255, 248, 230, 0.14); }
-:root[data-theme="dark"] .prose-tutor blockquote { border-left-color: rgba(250, 204, 21, 0.55); }
 :root[data-theme="dark"] .bg-ink:is([aria-pressed="true"], [aria-selected="true"], [aria-checked="true"], [aria-current="page"], [aria-current="true"]) {
   --color-white: var(--ink);
-  background-color: #33322c;
-  background-image: linear-gradient(180deg, rgba(255, 248, 230, 0.07), rgba(255, 248, 230, 0) 70%);
+  background-color: var(--accent-soft);
+  background-image: none;
   color: var(--ink);
-  border-color: rgba(255, 248, 230, 0.16);
-  box-shadow: inset 0 0 0 1px rgba(255, 248, 230, 0.1);
+  border-color: color-mix(in srgb, var(--ink) 16%, transparent);
+  box-shadow: none;
 }
-:root[data-theme="dark"] [data-reader="light"] .pdf-page { filter: brightness(0.86) sepia(0.06); }
+:root[data-theme="dark"] .prose-tutor :is(th, td, pre) {
+  border-color: color-mix(in srgb, var(--ink) 16%, transparent);
+}
+:root[data-theme="dark"] .tutor-diagram { background: #f4f3ef; }
+:root[data-theme="dark"] [data-reader="light"] .pdf-page { filter: brightness(0.92); }
 
-/* The product glimpse beside sign-in. Light mode stays a black slab. The blur
-   lives only here: this column is not an ancestor of the password field. */
+/* The product glimpse beside sign-in: a flat black slab. This column is
+   not an ancestor of the password field. */
 .auth-stage { background: #0d0d0c; color: #fff; }
 .auth-stage-muted { color: rgba(255, 255, 255, 0.5); }
 
@@ -558,7 +465,6 @@ html { scroll-behavior: smooth; }
   border-radius: 12px;
   background: #f7f6f2;
   padding: 0.75rem;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 /* Shown at its own size (the width is set on the img), centred, and never
    stretched: stretching a small drawing is what blew its labels up. */
@@ -590,10 +496,8 @@ html { scroll-behavior: smooth; }
 
 /* The tutor's input floats over the end of the conversation with nothing
    painted behind it: no strip, no shadow, no glow. The messages fade out
-   above it (.tutor-scroll), so it sits on the panel itself. The pill is
-   clear; its gloss is the rim, lit from above (lighter on top, deeper
-   underneath), which deepens while you type. The send button is a small
-   glossy ink bead, quiet until there's something to send. */
+   above it (.tutor-scroll), so it sits on the panel itself. The field is a
+   flat hairline; the send button is a flat ink bead. */
 .tutor-scroll {
   -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - var(--dock, 96px) - 28px), transparent calc(100% - var(--dock, 96px) + 6px)),
     linear-gradient(to left, #000 12px, transparent 12px);
@@ -602,26 +506,27 @@ html { scroll-behavior: smooth; }
 }
 .tutor-composer {
   background: transparent;
-  border-color: rgba(13, 13, 12, 0.12) rgba(13, 13, 12, 0.18) rgba(13, 13, 12, 0.3);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 -1px 0 rgba(13, 13, 12, 0.05);
+  border-color: color-mix(in srgb, var(--ink) 22%, transparent);
+  box-shadow: none;
 }
 .tutor-composer:focus-within {
-  border-color: rgba(13, 13, 12, 0.36) rgba(13, 13, 12, 0.46) rgba(13, 13, 12, 0.58);
+  border-color: color-mix(in srgb, var(--ink) 55%, transparent);
 }
 .tutor-send {
   color: var(--paper);
   background-color: var(--ink);
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.06) 48%, rgba(255, 255, 255, 0) 52%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 3px 8px -3px rgba(13, 13, 12, 0.5);
-  transition: transform 160ms var(--ease, ease), box-shadow 160ms ease, background-color 160ms ease, color 160ms ease;
+  background-image: none;
+  box-shadow: none;
+  transition: opacity 160ms ease;
 }
-.tutor-send:hover:not(:disabled) { transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 6px 14px -4px rgba(13, 13, 12, 0.5); }
-.tutor-send:active:not(:disabled) { transform: scale(0.94); }
+.tutor-send:hover:not(:disabled) { opacity: 0.88; }
+.tutor-send:active:not(:disabled) { opacity: 0.75; }
 .tutor-send:disabled {
   color: var(--muted);
-  background-color: rgba(13, 13, 12, 0.06);
+  background-color: color-mix(in srgb, var(--ink) 8%, transparent);
   background-image: none;
-  box-shadow: inset 0 0 0 1px rgba(13, 13, 12, 0.06);
+  box-shadow: none;
+  opacity: 1;
   cursor: default;
 }
 .prose-compact { font-size: 0.875rem; line-height: 1.6; }

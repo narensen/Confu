@@ -54,7 +54,7 @@ export function SettingsNav({ items }: { items: NavItem[] }) {
   }, [active]);
 
   return (
-    <nav aria-label="Settings sections" className="sticky top-14 z-30 -mx-4 border-b border-ink/10 bg-paper/95 px-4 backdrop-blur lg:mx-0 lg:self-start lg:border-0 lg:bg-transparent lg:px-0">
+    <nav aria-label="Settings sections" className="sticky top-14 z-30 -mx-4 border-b border-ink/10 bg-paper/95 px-4 lg:mx-0 lg:self-start lg:border-0 lg:bg-transparent lg:px-0">
       <ul ref={list} className="relative flex gap-1 overflow-x-auto py-2 scrollbar-none lg:flex-col lg:gap-0.5 lg:overflow-visible lg:py-0">
         {marker && (
           <span

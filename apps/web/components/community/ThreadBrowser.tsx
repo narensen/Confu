@@ -133,7 +133,7 @@ export function ThreadBrowser({ space, showSpace = true, refreshKey = 0 }: { spa
 
       {threads && threads.length < total && threads.length >= PAGE_SIZE && (
         <div className="mt-4 flex justify-center">
-          <button type="button" onClick={() => void loadMore()} disabled={more} className="rounded-xl border border-ink bg-panel px-4 py-2 text-sm font-medium transition hover:-translate-y-px hover:shadow-hard-sm disabled:opacity-50">
+          <button type="button" onClick={() => void loadMore()} disabled={more} className="rounded-xl border border-ink bg-panel px-4 py-2 text-sm font-medium transition disabled:opacity-50">
             {more ? "Loading…" : `Show more (${total - threads.length} left)`}
           </button>
         </div>

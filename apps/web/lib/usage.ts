@@ -87,10 +87,13 @@ export function createMeter(
 
   const meteredFetch: FetchLike = async (input, init) => {
     const res = await baseFetch(input, init);
-    let model = "unknown";
-    try {
-      model = (JSON.parse(String(init?.body ?? "{}")) as { model?: string }).model ?? model;
-    } catch {}
+    // A busy model's request may have been answered by another (@confu/ai/fallback).
+    let model = res.headers.get("x-confu-model") ?? "unknown";
+    if (model === "unknown") {
+      try {
+        model = (JSON.parse(String(init?.body ?? "{}")) as { model?: string }).model ?? model;
+      } catch {}
+    }
 
     const h = res.headers;
     if (trackQuota && h.has("x-ratelimit-limit-requests")) {

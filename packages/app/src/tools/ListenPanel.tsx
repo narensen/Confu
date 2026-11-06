@@ -5,6 +5,8 @@ import type { LocalDocument } from "@confu/client/library";
 import { pieceAudio, pieces, SpeechError } from "@confu/client/speech";
 import { deletePodcast, listPodcasts, makePodcast, type LocalPodcast } from "@confu/client/tools";
 import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@confu/ui/classes";
+import { useIndicator } from "@confu/ui/motion";
+import { pickVoices, playBlob, silentClip, useVoices } from "../voice";
 import { useDevice, useLocal } from "../local";
 
 // Audio overviews: two hosts talk the session through. The script comes
@@ -28,6 +30,9 @@ export function ListenPanel({ sessionId, docs, title }: { sessionId: string; doc
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [playing, setPlaying] = useState<string | null>(null);
+  const switcher = useRef<HTMLDivElement>(null);
+  const pill = useRef<HTMLSpanElement>(null);
+  useIndicator(switcher, pill, voices);
 
   async function make() {
     setBusy(true);
@@ -59,7 +64,8 @@ export function ListenPanel({ sessionId, docs, title }: { sessionId: string; doc
         </header>
 
         <section aria-label="Voices" className="space-y-3">
-          <div role="radiogroup" aria-label="Voices" className="flex rounded-full bg-paper p-0.5 text-xs font-medium">
+          <div ref={switcher} role="radiogroup" aria-label="Voices" className="relative flex rounded-full bg-paper p-0.5 text-xs font-medium">
+            <span ref={pill} aria-hidden className="invisible absolute top-0 left-0 rounded-full bg-panel shadow-[0_0_0_1px_var(--ink)]" />
             {(
               [
                 ["natural", "Natural voices"],
@@ -72,7 +78,7 @@ export function ListenPanel({ sessionId, docs, title }: { sessionId: string; doc
                 role="radio"
                 aria-checked={voices === v}
                 onClick={() => void choose(v)}
-                className={`flex-1 rounded-full px-3 py-1.5 transition ${voices === v ? "bg-panel text-ink shadow-[0_0_0_1px_var(--ink)]" : "text-muted hover:text-ink"}`}
+                className={`relative flex-1 rounded-full px-3 py-1.5 transition-colors ${voices === v ? "text-ink" : "text-muted hover:text-ink"}`}
               >
                 {label}
               </button>
@@ -190,75 +196,6 @@ function VoiceKey({ sessionId, hasGroq }: { sessionId: string; hasGroq: boolean 
       {error && <p className="text-xs text-danger">{error}</p>}
     </form>
   );
-}
-
-function useVoices() {
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  useEffect(() => {
-    if (typeof speechSynthesis === "undefined") return;
-    const load = () => setVoices(speechSynthesis.getVoices());
-    load();
-    speechSynthesis.addEventListener("voiceschanged", load);
-    return () => speechSynthesis.removeEventListener("voiceschanged", load);
-  }, []);
-  return voices;
-}
-
-// Two different voices, in the page's language when there are any.
-function pickVoices(voices: SpeechSynthesisVoice[]): [SpeechSynthesisVoice | null, SpeechSynthesisVoice | null] {
-  const lang = (typeof navigator !== "undefined" ? navigator.language : "en").slice(0, 2);
-  const mine = voices.filter((v) => v.lang.toLowerCase().startsWith(lang));
-  const pool = mine.length ? mine : voices;
-  return [pool[0] ?? null, pool.find((v) => v.name !== pool[0]?.name) ?? pool[0] ?? null];
-}
-
-// A moment of silence, played straight from the click so the browser lets
-// the episode's audio play after the first piece has been fetched.
-let silence: string | null = null;
-function silentClip(): string {
-  if (silence) return silence;
-  const b = new Uint8Array(44 + 800);
-  const v = new DataView(b.buffer);
-  const w = (o: number, s: string) => [...s].forEach((c, i) => (b[o + i] = c.charCodeAt(0)));
-  w(0, "RIFF");
-  v.setUint32(4, 36 + 800, true);
-  w(8, "WAVEfmt ");
-  v.setUint32(16, 16, true);
-  v.setUint16(20, 1, true);
-  v.setUint16(22, 1, true);
-  v.setUint32(24, 8000, true);
-  v.setUint32(28, 8000, true);
-  v.setUint16(32, 1, true);
-  v.setUint16(34, 8, true);
-  w(36, "data");
-  v.setUint32(40, 800, true);
-  b.fill(128, 44);
-  silence = URL.createObjectURL(new Blob([b], { type: "audio/wav" }));
-  return silence;
-}
-
-// Resolves when the piece has played, or false if the browser wouldn't play it.
-function playBlob(audio: HTMLAudioElement, blob: Blob, rate: number, signal: AbortSignal): Promise<boolean> {
-  return new Promise((resolve) => {
-    const url = URL.createObjectURL(blob);
-    let ok = true;
-    const done = () => {
-      audio.removeEventListener("ended", done);
-      audio.removeEventListener("error", done);
-      signal.removeEventListener("abort", done);
-      URL.revokeObjectURL(url);
-      resolve(ok);
-    };
-    audio.addEventListener("ended", done);
-    audio.addEventListener("error", done);
-    signal.addEventListener("abort", done);
-    audio.src = url;
-    audio.playbackRate = rate;
-    audio.play().catch((e: unknown) => {
-      if (e instanceof DOMException && e.name === "NotAllowedError") ok = false;
-      done();
-    });
-  });
 }
 
 const AHEAD = 3; // pieces fetched ahead of the one playing

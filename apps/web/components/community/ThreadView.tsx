@@ -296,7 +296,7 @@ export function ThreadView({ id }: { id: string }) {
 
       <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
         {thread.space && (
-          <Link href={`/spaces/${thread.space.slug}`} className="block rounded-2xl border border-ink bg-panel p-4 transition hover:-translate-y-px hover:shadow-hard-sm">
+          <Link href={`/spaces/${thread.space.slug}`} className="block rounded-2xl border border-ink bg-panel p-4 transition">
             <span className="flex items-center gap-3">
               <SpaceIcon space={thread.space} />
               <span className="min-w-0">
@@ -350,7 +350,7 @@ function ReplyCard({
   onReport: () => void;
 }) {
   return (
-    <li className={`animate-enter rounded-2xl border bg-panel p-4 sm:p-5 ${r.accepted ? "border-ok shadow-[3px_3px_0_0_var(--ok)]" : "border-ink"}`}>
+    <li className={`animate-enter rounded-2xl border bg-panel p-4 sm:p-5 ${r.accepted ? "border-ok" : "border-ink"}`}>
       {r.accepted && (
         <p className="mb-3 inline-flex items-center gap-1 rounded-full bg-ok/10 px-2.5 py-0.5 text-xs font-medium text-ok">
           <Check /> Accepted answer

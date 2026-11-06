@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { addPdf, documentFile, getSession, listDocuments, pdfTitle, removeDocument, setLastPage, updateSession, type LocalDocument } from "@confu/client/library";
 import { docLabel } from "@confu/core/types";
 import { buttonClass, ghostButtonClass } from "@confu/ui/classes";
+import { DUR, useArrive, useIndicator } from "@confu/ui/motion";
 import { Dialog, dropHandlers, InTopBar, isPdf, Notice } from "./chrome";
 import { SharePanel } from "./SyncPanel";
 import { useDevice, useLocal } from "./local";
@@ -15,10 +16,11 @@ import { ListenPanel } from "./tools/ListenPanel";
 import { NotesPanel } from "./tools/NotesPanel";
 import { PlanPanel } from "./tools/PlanPanel";
 import { TranscriptView } from "./tools/TranscriptView";
+import { WatchPanel } from "./tools/WatchPanel";
 import { Tutor, type Ask } from "./Tutor";
 
 type Upload = { name: string; done: number; total: number };
-export type Tool = "files" | "plan" | "notes" | "cards" | "lectures" | "listen";
+export type Tool = "files" | "plan" | "notes" | "cards" | "lectures" | "listen" | "watch";
 
 const TOOLS: { id: Tool; label: string }[] = [
   { id: "files", label: "Files" },
@@ -27,6 +29,7 @@ const TOOLS: { id: Tool; label: string }[] = [
   { id: "cards", label: "Cards" },
   { id: "lectures", label: "Lectures" },
   { id: "listen", label: "Listen" },
+  { id: "watch", label: "Watch" },
 ];
 
 const isLecture = (d: LocalDocument | null) => (d?.meta as { kind?: string } | undefined)?.kind === "lecture";
@@ -67,6 +70,13 @@ export function SessionView({
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const active = docs.find((d) => d.id === activeId) ?? docs[0] ?? null;
+
+  // One pill slides to the chosen tool; the panel eases in when the tool or file changes.
+  const tabs = useRef<HTMLDivElement>(null);
+  const pill = useRef<HTMLSpanElement>(null);
+  useIndicator(tabs, pill, tool);
+  const panel = useRef<HTMLElement>(null);
+  useArrive(panel, [tool, active?.id], { y: 4, duration: DUR.m, initial: false });
 
   // The open file's bytes, read once per file (not on every change).
   useEffect(() => {
@@ -217,7 +227,8 @@ export function SessionView({
       )}
 
       <div className="flex shrink-0 items-center gap-1.5 overflow-x-auto border-b border-line bg-panel px-3 py-1.5 sm:px-4">
-        <div role="tablist" aria-label="Tools" className="flex shrink-0 rounded-full bg-paper p-0.5">
+        <div ref={tabs} role="tablist" aria-label="Tools" className="relative flex shrink-0 rounded-full bg-paper p-0.5">
+          <span ref={pill} aria-hidden className="invisible absolute top-0 left-0 rounded-full bg-panel shadow-[0_0_0_1px_var(--ink)]" />
           {TOOLS.map((t) => (
             <button
               key={t.id}
@@ -228,7 +239,7 @@ export function SessionView({
                 setTool(t.id);
                 setTab("read");
               }}
-              className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${tool === t.id ? "bg-panel text-ink shadow-[0_0_0_1px_var(--ink)]" : "text-muted hover:text-ink"}`}
+              className={`relative rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${tool === t.id ? "text-ink" : "text-muted hover:text-ink"}`}
             >
               {t.label}
             </button>
@@ -283,7 +294,7 @@ export function SessionView({
       )}
 
       <div className="flex min-h-0 flex-1">
-        <section className={`min-w-0 flex-1 ${tab === "tutor" ? "hidden lg:block" : ""}`}>
+        <section ref={panel} className={`min-w-0 flex-1 ${tab === "tutor" ? "hidden lg:block" : ""}`}>
           {tool === "plan" ? (
             <PlanPanel sessionId={sessionId} onTeach={(t) => ask({ action: "teach", topicId: t.id, label: `**Teach me** — ${t.title}` })} onAdded={(id) => openById(id)} />
           ) : tool === "notes" ? (
@@ -294,6 +305,8 @@ export function SessionView({
             <LecturesPanel sessionId={sessionId} onOpenDoc={(id) => openById(id)} />
           ) : tool === "listen" ? (
             <ListenPanel sessionId={sessionId} docs={docs} title={session?.title ?? "This session"} />
+          ) : tool === "watch" ? (
+            <WatchPanel sessionId={sessionId} docs={docs} title={session?.title ?? "This session"} />
           ) : active && isLecture(active) ? (
             <TranscriptView key={active.id} doc={active} jump={jump} onPageChange={onPageChange} />
           ) : active && blob?.id === active.id && blob.file ? (
