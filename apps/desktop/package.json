@@ -1,6 +1,6 @@
 {
   "name": "@confu/desktop",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "license": "MIT",
   "description": "Confu for Mac, Windows and Linux: the on-device app (packages/app) in Electron.",

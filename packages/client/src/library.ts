@@ -1,6 +1,8 @@
 import type { OutlineItem, SessionKind } from "@confu/core/types";
 import type { FileStore } from "@confu/storage/files";
 import type { Store } from "@confu/storage/store";
+import { podcastAudioPaths } from "./speech";
+import type { LocalPodcast } from "./tools";
 
 // The student's library on this device: sessions, the files in them, and
 // the chat. Rows go to the database (and from there to the sync); the
@@ -79,6 +81,7 @@ export async function deleteSession(store: Store, files: FileStore, id: string) 
     await store.removeWhere("plan_topics", { plan_id: plan.id });
   }
   for (const rec of await store.list<{ storage_path: string | null }>("recordings", { session_id: id })) if (rec.storage_path) await files.remove(rec.storage_path);
+  for (const p of await store.list<LocalPodcast>("podcasts", { session_id: id })) for (const path of podcastAudioPaths(p)) await files.remove(path);
   for (const table of ["messages", "saved_answers", "study_plans", "review_items", "exam_attempts", "explain_backs", "page_pins", "cards", "notes", "recordings", "podcasts", "ai_keys"]) {
     await store.removeWhere(table, { session_id: id });
   }

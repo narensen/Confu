@@ -13,6 +13,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     page("/packs", 0.6),
     page("/roadmaps", 0.6),
     page("/changelog", 0.5),
+    page("/download", 0.6),
     page("/privacy", 0.3),
     page("/terms", 0.3),
   ];

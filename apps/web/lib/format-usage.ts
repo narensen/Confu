@@ -39,3 +39,6 @@ export function ago(iso: string | null): string {
   const d = Math.round(h / 24);
   return d === 1 ? "yesterday" : `${d} days ago`;
 }
+
+// A file's size, for download links.
+export const megabytes = (bytes: number) => `${Math.max(1, Math.round(bytes / 1_000_000))} MB`;

@@ -5,9 +5,11 @@ import { transcriptionModel, transcriptPages, type Segment } from "@confu/core/l
 import { parsePodcast, podcastPrompt, type PodcastScript } from "@confu/core/podcast";
 import type { FileStore } from "@confu/storage/files";
 import type { Store } from "@confu/storage/store";
-import { deviceAi } from "./ai";
+import { PROVIDERS } from "@confu/ai/providers";
+import { aiFor, aiRequest, deviceAi } from "./ai";
 import type { DeviceKeys } from "./keys";
 import { touchSession } from "./library";
+import { podcastAudioPaths } from "./speech";
 
 // The study tools on the device: flashcards, notes, recorded lectures and
 // audio overviews. AI work goes straight to the student's own provider.
@@ -56,13 +58,16 @@ export async function makeCards(
   const pages = await pagesFor(store, { ...input, max: 10 });
   if (!pages.length) throw new Error("There's no readable text on those pages (a scanned file?).");
   const count = Math.max(3, Math.min(30, input.count ?? 10));
-  const res = await ai.groq.chat.completions.create({
-    model: MODELS.chat,
-    messages: cardsPrompt({ pages: pages.map((p) => ({ page: p.page, text: p.text })), count, title: input.title, focus: input.focus }),
-    response_format: { type: "json_object" },
-    temperature: 0.3,
-    ...modelBudget(MODELS.chat, 2400),
-  });
+  const res = await aiRequest(
+    ai.groq.chat.completions.create({
+      model: MODELS.chat,
+      messages: cardsPrompt({ pages: pages.map((p) => ({ page: p.page, text: p.text })), count, title: input.title, focus: input.focus }),
+      response_format: { type: "json_object" },
+      temperature: 0.3,
+      ...modelBudget(MODELS.chat, 2400),
+    }),
+    "The AI couldn't write cards right now. Try again.",
+  );
   const drafts = parseCards(res.choices[0]?.message?.content ?? "", new Set(pages.map((p) => p.page)));
   if (!drafts.length) throw new Error("The AI didn't write any usable cards. Try again, or pick other pages.");
   const now = new Date();
@@ -145,7 +150,7 @@ export async function saveRecording(store: Store, files: FileStore, input: { ses
 // might (if it runs whisper), so it gets to try.
 export async function canTranscribe(keys: DeviceKeys, sessionId: string): Promise<boolean> {
   const conn = await keys.connection(sessionId);
-  return Boolean(conn && (transcriptionModel(conn.provider) || conn.provider === "custom"));
+  return Boolean((conn && (transcriptionModel(conn.provider) || conn.provider === "custom")) || (await keys.groq(sessionId)));
 }
 
 // Sends the recording to the student's provider for a transcript, then
@@ -153,10 +158,12 @@ export async function canTranscribe(keys: DeviceKeys, sessionId: string): Promis
 export async function transcribe(store: Store, files: FileStore, keys: DeviceKeys, recordingId: string, opts: { fetch?: FetchLike; language?: string } = {}): Promise<string> {
   const rec = await store.get<LocalRecording>("recordings", { id: recordingId });
   if (!rec?.storage_path) throw new Error("That recording isn't on this device.");
-  const conn = await keys.connection(rec.session_id);
-  if (!conn) throw new Error(NO_AI);
-  const model = transcriptionModel(conn.provider, [conn.models.chat, conn.models.fast, conn.models.vision]) ?? (conn.provider === "custom" ? "whisper-1" : null);
-  if (!model) throw new Error("Your AI provider can't transcribe audio. Add a Groq key (free) or an OpenAI key for lectures.");
+  const main = await keys.connection(rec.session_id);
+  // A provider without speech-to-text (OpenRouter, Anthropic…): the Groq voice key does it.
+  const mainModel = main && (transcriptionModel(main.provider, [main.models.chat, main.models.fast, main.models.vision]) ?? (main.provider === "custom" ? "whisper-1" : null));
+  const conn = mainModel ? main : await keys.groq(rec.session_id);
+  if (!conn) throw new Error(main ? "Your AI provider can't transcribe audio. Add a free Groq key (in Listen or here) or an OpenAI key for lectures." : NO_AI);
+  const model = mainModel ?? transcriptionModel(conn.provider)!;
   const audio = await files.get(rec.storage_path);
   if (!audio) throw new Error("The recording's audio is missing on this device.");
   if (audio.size > MAX_UPLOAD) throw new Error("This recording is over 25 MB, more than providers accept in one go. Record lectures in parts of about an hour.");
@@ -209,21 +216,40 @@ export type LocalPodcast = { id: string; session_id: string; title: string; scri
 export const listPodcasts = (store: Store, sessionId: string) => store.list<LocalPodcast>("podcasts", { session_id: sessionId }, { order: "created_at", desc: true });
 
 export async function makePodcast(store: Store, keys: DeviceKeys, input: { sessionId: string; documentId?: string | null; title: string; minutes?: number; focus?: string | null }): Promise<LocalPodcast> {
-  const ai = await deviceAi(store, keys, input.sessionId, "plan");
-  if (!ai) throw new Error(NO_AI);
+  const main = await keys.connection(input.sessionId);
+  if (!main) throw new Error(NO_AI);
   const pages = await pagesFor(store, { sessionId: input.sessionId, documentId: input.documentId, max: 10 });
   if (!pages.length) throw new Error("Add a file with readable text first.");
-  const res = await ai.groq.chat.completions.create({
-    model: MODELS.chat,
-    messages: podcastPrompt({ title: input.title, pages: pages.map((p) => ({ page: p.page, text: p.text })), minutes: input.minutes ?? 5, focus: input.focus }),
-    response_format: { type: "json_object" },
-    temperature: 0.6,
-    ...modelBudget(MODELS.chat, 4000),
-  });
+  const write = (ai: ReturnType<typeof aiFor>) =>
+    aiRequest(
+      ai.groq.chat.completions.create({
+        model: MODELS.chat,
+        messages: podcastPrompt({ title: input.title, pages: pages.map((p) => ({ page: p.page, text: p.text })), minutes: input.minutes ?? 5, focus: input.focus }),
+        response_format: { type: "json_object" },
+        temperature: 0.6,
+        ...modelBudget(MODELS.chat, 4000),
+      }),
+      "The AI couldn't write the overview right now. Try again.",
+    );
+  let res;
+  try {
+    res = await write(aiFor(store, main, input.sessionId, "plan"));
+  } catch (e) {
+    // The main AI is busy (a shared free model, a rate limit): the Groq voice
+    // key, when there is one, writes the script instead.
+    const groq = main.provider === "groq" ? null : await keys.groq(input.sessionId);
+    if (!groq || !/busy|rate limit|overloaded/i.test(e instanceof Error ? e.message : "")) throw e;
+    res = await write(aiFor(store, { ...groq, models: PROVIDERS.groq.defaults }, input.sessionId, "plan"));
+  }
   const script = parsePodcast(res.choices[0]?.message?.content ?? "");
   if (!script) throw new Error("The AI didn't write a usable script. Try again.");
   const row = await store.put("podcasts", { session_id: input.sessionId, title: script.title, script: script.lines });
   return (await store.get<LocalPodcast>("podcasts", { id: row.id! }))!;
 }
 
-export const deletePodcast = (store: Store, id: string) => store.remove("podcasts", { id });
+// The episode and its voiced audio.
+export async function deletePodcast(store: Store, files: FileStore, id: string) {
+  const p = await store.get<LocalPodcast>("podcasts", { id });
+  if (p) for (const path of podcastAudioPaths(p)) await files.remove(path);
+  await store.remove("podcasts", { id });
+}

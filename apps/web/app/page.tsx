@@ -118,7 +118,7 @@ const STEPS = [
   { title: "Learn actively", body: "Highlight, ask, practise and explain back. Confu tracks your progress as you go." },
 ];
 
-const DESKTOP_DOWNLOAD = "https://github.com/narensen/Confu/releases/latest";
+const DESKTOP_DOWNLOAD = "/download";
 
 const FAQ: { q: string; a: ReactNode }[] = [
   {
@@ -168,9 +168,9 @@ const FAQ: { q: string; a: ReactNode }[] = [
     a: (
       <>
         Yes, for{" "}
-        <a href={DESKTOP_DOWNLOAD} className="underline underline-offset-4">
+        <Link href={DESKTOP_DOWNLOAD} className="underline underline-offset-4">
           Mac, Windows and Linux
-        </a>
+        </Link>
         , and it updates itself. On iPhone or Android, open confu.lol and add it to your Home Screen. An Android app is on the way.
       </>
     ),
@@ -218,6 +218,9 @@ export default function Home() {
             <a href="#faq" className="transition hover:text-ink">
               FAQ
             </a>
+            <Link href="/download" className="transition hover:text-ink">
+              Download
+            </Link>
           </div>
           {/* The page is static; only these buttons depend on who's signed in. */}
           <Suspense fallback={<div className="h-9 w-48" />}>
@@ -419,9 +422,9 @@ export default function Home() {
             <Link href="/app" className={`${buttonClass} px-5 py-2.5`}>
               Try them now, no account needed
             </Link>
-            <a href={DESKTOP_DOWNLOAD} className="text-sm font-medium underline decoration-ink/30 underline-offset-4 hover:decoration-ink">
+            <Link href={DESKTOP_DOWNLOAD} className="text-sm font-medium underline decoration-ink/30 underline-offset-4 hover:decoration-ink">
               Get the desktop app for Mac, Windows and Linux
-            </a>
+            </Link>
           </div>
           <p data-reveal className="mt-4 max-w-2xl font-mono text-xs leading-relaxed text-muted">
             These run on your device: your library stays on it, and syncs to your own Google Drive if you want. On iPhone, add Confu to your

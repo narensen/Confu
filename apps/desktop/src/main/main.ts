@@ -122,7 +122,7 @@ app.whenReady().then(() => {
     return bytes;
   });
 
-  const updates = setUpUpdates(() => win);
+  const updates = setUpUpdates(() => win, `${CONFU_CONFIG.site}/download`);
   Menu.setApplicationMenu(menu(updates.check));
   createWindow();
 });

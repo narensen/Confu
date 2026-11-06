@@ -15,6 +15,7 @@ export function podcastPrompt(input: { title: string; pages: { page: number; tex
         "You write a short study podcast: two hosts talk through a student's material so they understand and remember it.",
         "A explains; B is a sharp student who asks what a learner would ask, pushes on the hard parts, and sums up.",
         "Spoken English: short sentences, no Markdown, no lists, no math symbols (say formulas in words), no stage directions.",
+        "Keep each line short, one or two sentences (under 200 characters), like real back-and-forth conversation.",
         "Use only the material given. Start with why it matters, cover the key ideas in order, end with a recap of three things to remember.",
         `About ${lines} lines in all.`,
         'Reply with JSON only: {"title":"…","lines":[{"speaker":"A","text":"…"},{"speaker":"B","text":"…"}]}',
@@ -38,4 +39,25 @@ export function parsePodcast(raw: string): PodcastScript | null {
     .slice(0, 120);
   if (!lines.length) return null;
   return { title: String(data.title ?? "").trim().slice(0, 120) || "Audio overview", lines };
+}
+
+// Natural voices (Groq's Orpheus) read at most 200 characters at a time:
+// split a line at sentence ends, then commas, then spaces.
+export const ORPHEUS = { model: "canopylabs/orpheus-v1-english", maxChars: 200, voices: { A: "hannah", B: "troy" } } as const;
+
+export function speechChunks(text: string, max: number = ORPHEUS.maxChars): string[] {
+  const out: string[] = [];
+  let rest = text.replace(/\s+/g, " ").trim();
+  while (rest.length > max) {
+    const head = rest.slice(0, max + 1);
+    const cut = [/[.!?]["')\]]?\s/g, /[,;:—]\s/g, /\s/g].map((re) => {
+      let at = -1;
+      for (const m of head.matchAll(re)) if (m.index! + m[0].trimEnd().length <= max && m.index! > max * 0.3) at = m.index! + m[0].trimEnd().length;
+      return at;
+    }).find((at) => at > 0) ?? max;
+    out.push(rest.slice(0, cut).trim());
+    rest = rest.slice(cut).trim();
+  }
+  if (rest) out.push(rest);
+  return out;
 }

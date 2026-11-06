@@ -22,7 +22,7 @@ export type UpdateState =
 export const RELEASES = "https://github.com/narensen/Confu/releases/latest";
 const EVERY = 4 * 60 * 60 * 1000; // look again every 4 hours while open
 
-export function setUpUpdates(window: () => BrowserWindow | null) {
+export function setUpUpdates(window: () => BrowserWindow | null, downloadPage: string) {
   const { autoUpdater } = electronUpdater;
   const mac = process.platform === "darwin";
   // An AppImage updates itself; a .deb or a copy run from the source can't.
@@ -67,7 +67,8 @@ export function setUpUpdates(window: () => BrowserWindow | null) {
   ipcMain.handle("confu:update-state", () => current);
   ipcMain.handle("confu:update-check", () => check(true));
   ipcMain.handle("confu:update-install", () => {
-    if (mac || !readyVersion) return void shell.openExternal(RELEASES);
+    // A Mac downloads it by hand, from the page that explains how.
+    if (mac || !readyVersion) return void shell.openExternal(downloadPage);
     // Quietly (no installer pages on Windows), then open the new version.
     setImmediate(() => autoUpdater.quitAndInstall(true, true));
   });

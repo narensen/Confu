@@ -43,6 +43,15 @@ export function describeAiError(err: unknown, fallback: string): AiProblem {
     return { status: 400, error: `${name} doesn't offer the model picked for this. Choose another in Settings → Your AI.` };
   }
   if (status === 429) {
+    // OpenRouter's :free models share one pool between everyone using them.
+    if (provider === "openrouter" && /:free|rate-limited upstream|shared_pool/i.test(message)) {
+      const model = message.match(/[\w.-]+\/[\w.-]+:free/)?.[0];
+      return {
+        status: 429,
+        error: `${model ? `The free model ${model}` : "This free model"} is busy right now: OpenRouter shares its free models between everyone. Try again in a minute, or pick another model under Your AI (paid models aren't shared).`,
+        code: "FREE_MODEL_BUSY",
+      };
+    }
     if (/tokens per day|TPD/i.test(message)) {
       return { status: 429, error: "This Groq key has used its daily token allowance. It frees up gradually over the next hours; see Settings → Usage.", code: "GROQ_DAILY_LIMIT" };
     }

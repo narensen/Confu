@@ -10,6 +10,7 @@ export const SITE_LINKS = [
   { href: "/packs", label: "Study packs" },
   { href: "/roadmaps", label: "Roadmaps" },
   { href: "/changelog", label: "What's new" },
+  { href: "/download", label: "Download" },
 ];
 
 export function SiteNav({ links = SITE_LINKS }: { links?: { href: string; label: string }[] }) {

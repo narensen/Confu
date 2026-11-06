@@ -50,6 +50,9 @@ function hostOf(url: string | null) {
   }
 }
 
+// The slot (in session_id) for a Groq key used only for voice.
+export const VOICE_SLOT = "voice:groq";
+
 export class DeviceKeys {
   constructor(
     private readonly store: Store,
@@ -116,6 +119,28 @@ export class DeviceKeys {
     if (!r) return null;
     await this.store.put("ai_keys", { id: r.id, chat_model: models.chat, fast_model: models.fast, vision_model: models.vision });
     return this.get(sessionId);
+  }
+
+  // A Groq key kept for voice (natural podcast voices, lecture transcripts)
+  // when the main AI is another provider. Its own slot, never the tutor's.
+  async addVoice(key: string): Promise<AddResult> {
+    return this.add({ provider: "groq", key, sessionId: VOICE_SLOT });
+  }
+
+  async voiceInfo(): Promise<DeviceKeyInfo | null> {
+    const [r] = await this.store.list<KeyRow>("ai_keys", { session_id: VOICE_SLOT }, { limit: 1 });
+    return r ? this.info(r) : null;
+  }
+
+  removeVoice(): Promise<void> {
+    return this.remove(VOICE_SLOT);
+  }
+
+  // Groq, for voice: the main AI when it is Groq, else the voice key.
+  async groq(sessionId: string | null = null): Promise<Connection | null> {
+    const main = await this.connection(sessionId);
+    if (main?.provider === "groq") return main;
+    return (await this.voiceInfo()) ? this.connection(VOICE_SLOT) : null;
   }
 
   // The decrypted connection for a session, or null when there's no key

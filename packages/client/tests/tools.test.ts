@@ -91,7 +91,7 @@ describe("lectures", () => {
   test("a provider that can't transcribe says what to do", async () => {
     const store = await Store.open(bunDriver(), { device: "dev-a" });
     const files = memoryFiles();
-    const keys = { connection: async () => ({ id: "k", provider: "anthropic", key: "x", baseUrl: "https://api.anthropic.com/v1", models: { chat: "c", fast: "f", vision: "v" }, via: "key" }) } as unknown as DeviceKeys;
+    const keys = { connection: async () => ({ id: "k", provider: "anthropic", key: "x", baseUrl: "https://api.anthropic.com/v1", models: { chat: "c", fast: "f", vision: "v" }, via: "key" }), groq: async () => null } as unknown as DeviceKeys;
     const s = await createSession(store);
     const id = await saveRecording(store, files, { sessionId: s.id, audio: new Blob(["a"]), seconds: 5, title: "L" });
     await expect(transcribe(store, files, keys, id)).rejects.toThrow(/Groq key/);

@@ -5,6 +5,21 @@ export type Release = { date: string; title: string; summary: string; items: str
 
 export const CHANGELOG: Release[] = [
   {
+    date: "2026-11-06",
+    title: "Listen to your notes, and Confu on your computer",
+    summary: "Podcasts with natural voices, lectures, flashcards and notes, plus a desktop app that updates itself.",
+    items: [
+      "Listen: pick a file and a length, and two hosts talk your material through. With a free Groq key the voices are natural (Groq's Orpheus); playback starts straight away while the rest is voiced, and every episode is kept on your device, so replays are free and work offline.",
+      "If Groq's free allowance runs out mid-episode, your device's own voice carries on from the same line. If your main AI is busy (a shared free model on OpenRouter, say), the Groq key writes the script instead.",
+      "Lectures: record a class, or the sound of an online lecture on your computer, and get a transcript the tutor can answer from. A Groq key does the transcribing when your main AI can't.",
+      "Cards: flashcards from a page or a whole file, back just before you'd forget them. Notes: maths and chemistry that render properly, and a link to write them together, encrypted end to end.",
+      "Confu for Mac, Windows and Linux, from the new Download page. It checks for new versions and offers Restart to update.",
+      "Signed in? The on-device app now uses the OpenRouter connection (or key) from your account. No need to authorize again.",
+      "When a free model is busy, Confu says so in plain words and what to do, instead of showing the provider's raw error.",
+      "In full screen, the expanded tutor no longer slides under the tools rail.",
+    ],
+  },
+  {
     date: "2026-11-03",
     title: "Confu is free and open source. Bring your own AI",
     summary: "No more Pro: every feature is for everyone, on the AI you choose.",
