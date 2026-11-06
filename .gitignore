@@ -48,3 +48,11 @@ audio/
 # noise recordings (large); public/noise has the loops made from them
 /assets/noise/
 /supabase
+.turbo
+/apps/desktop
+/apps/web/.next
+/apps/web/node_modules
+packages/ai/node_modules
+packages/app/node_modules
+packages/ui/node_modules
+packages/client/node_modules
