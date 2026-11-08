@@ -189,7 +189,7 @@ export function Library({ name, sessions: all }: { name: string | null; sessions
                   <span className="font-mono text-[10px] text-muted">{counts[f]}</span>
                 </button>
               ))}
-              {bar && <span aria-hidden className="absolute -bottom-px h-0.5 bg-ink transition-all duration-300 ease-fluid" style={{ left: bar.left, width: bar.width }} />}
+              {bar && <span aria-hidden className="absolute -bottom-px h-0.5 bg-stroke transition-all duration-300 ease-fluid" style={{ left: bar.left, width: bar.width }} />}
             </div>
             <label className="relative mb-2 w-full sm:w-64">
               <span className="sr-only">Search sessions</span>

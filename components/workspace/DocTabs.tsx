@@ -364,7 +364,7 @@ function TabFace({
       >
         ✕
       </button>
-      {active && <span className="animate-fade absolute inset-x-0 -bottom-px h-0.5 bg-ink" />}
+      {active && <span className="animate-fade absolute inset-x-0 -bottom-px h-0.5 bg-stroke" />}
     </>
   );
 }
