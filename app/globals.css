@@ -4,14 +4,12 @@
    border-ink… and never need a dark: class.
 
    Light: white surfaces, black frames, hard offset shadows, editorial type.
-   Dark: warm charcoal, glossy. Every surface is opaque (nothing shows
-   through a card, menu or dialog); depth comes from layered warm greys, a
-   top-lit sheen and a warm hairline rim on each surface, soft deep shadows,
-   and a faint amber glow on the page itself.
+   Dark: the same elements. White becomes black, black becomes white.
+   Frames, hard shadows, yellow and the type stay as they are.
 
    Roles beyond the basics:
      inverse        a hero surface (Continue, reviews due, a running timer):
-                    ink in light; a lit, raised charcoal panel in dark
+                    black in light, white in dark
      scrim          the backdrop behind a dialog
      page           the body behind everything */
 :root {
@@ -42,63 +40,47 @@
 
 /* Dark: chosen in the account menu (data-theme), or the system's setting when
    none is chosen. The same values twice: for the system setting, and for the
-   explicit choice. "white" becomes the dark surface colour, so ink buttons
-   (bg-ink text-white) turn into light, glossy buttons with dark text. */
+   explicit choice. White surfaces become black, black frames and text become
+   white. Yellow, danger, ok and warn are untouched. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --page: #121211;
-    --paper: #121211;
-    --panel: #1a1a18;
-    --ink: #ecebe4;
-    --muted: #a3a29b;
-    --line: #2f2e2a;
-    --accent: #ecebe4;
-    --accent-soft: #24231f;
-    --accent-ink: #121211;
-    --danger: #f87171;
-    --ok: #4ade80;
-    --warn: #fbbf24;
-    --inverse: #24231f;
-    --inverse-ink: #f2f0e8;
-    --inverse-muted: rgba(242, 240, 232, 0.62);
-    --scrim: rgba(0, 0, 0, 0.62);
-    --hl-region: rgba(236, 235, 228, 0.08);
-    --viewer: #0b0b0a;
-    --shadow: #000000;
-    --marker: #8a6a0c;
-    --color-white: #121211;
-    --color-yellow-50: #23200f;
-    --color-yellow-100: #2c2711;
-    --color-yellow-200: #3a3313;
+    --page: #0d0d0c;
+    --paper: #0d0d0c;
+    --panel: #000000;
+    --ink: #ffffff;
+    --muted: #9d9da2;
+    --line: #2b2b26;
+    --accent: #ffffff;
+    --accent-soft: #1a1a18;
+    --accent-ink: #000000;
+    --inverse: #ffffff;
+    --inverse-ink: #0d0d0c;
+    --inverse-muted: rgba(13, 13, 12, 0.62);
+    --hl-region: rgba(255, 255, 255, 0.06);
+    --viewer: #161614;
+    --shadow: #ffffff;
+    --color-white: #000000;
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --page: #121211;
-  --paper: #121211;
-  --panel: #1a1a18;
-  --ink: #ecebe4;
-  --muted: #a3a29b;
-  --line: #2f2e2a;
-  --accent: #ecebe4;
-  --accent-soft: #24231f;
-  --accent-ink: #121211;
-  --danger: #f87171;
-  --ok: #4ade80;
-  --warn: #fbbf24;
-  --inverse: #24231f;
-  --inverse-ink: #f2f0e8;
-  --inverse-muted: rgba(242, 240, 232, 0.62);
-  --scrim: rgba(0, 0, 0, 0.62);
-  --hl-region: rgba(236, 235, 228, 0.08);
-  --viewer: #0b0b0a;
-  --shadow: #000000;
-  --marker: #8a6a0c;
-  --color-white: #121211;
-  --color-yellow-50: #23200f;
-  --color-yellow-100: #2c2711;
-  --color-yellow-200: #3a3313;
+  --page: #0d0d0c;
+  --paper: #0d0d0c;
+  --panel: #000000;
+  --ink: #ffffff;
+  --muted: #9d9da2;
+  --line: #2b2b26;
+  --accent: #ffffff;
+  --accent-soft: #1a1a18;
+  --accent-ink: #000000;
+  --inverse: #ffffff;
+  --inverse-ink: #0d0d0c;
+  --inverse-muted: rgba(13, 13, 12, 0.62);
+  --hl-region: rgba(255, 255, 255, 0.06);
+  --viewer: #161614;
+  --shadow: #ffffff;
+  --color-white: #000000;
 }
 
 /* On bright yellow (badges, highlights) text stays dark in either theme. */
@@ -141,6 +123,19 @@ body {
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
+/* Paper stays white when printing, even if the screen is in dark mode. */
+@media print {
+  :root {
+    color-scheme: light;
+    --color-white: #ffffff;
+    --page: #ffffff;
+    --paper: #ffffff;
+    --panel: #ffffff;
+    --ink: #0d0d0c;
+    --shadow: #0d0d0c;
+  }
+}
+
 /* A whole section on the inverse surface (pricing's Pro card, Wrapped, the
    landing page's last call): inside it, "ink" is the surface and "white" is
    the text, so nested pieces written as ink-on-white keep working. */
@@ -161,171 +156,17 @@ body {
   -webkit-backdrop-filter: blur(16px) saturate(1.4);
 }
 
-/* ------------------------------------------------------- dark: the gloss */
-/* Written once as a mixin-like block for each way dark can be on. Unlayered,
-   so it wins over Tailwind's utilities where it needs to. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) body {
-    background-color: var(--page);
-    background-image:
-      radial-gradient(900px 520px at 0% -12%, rgba(250, 204, 21, 0.06), transparent 62%),
-      radial-gradient(1000px 600px at 100% -14%, rgba(255, 244, 220, 0.035), transparent 60%);
-    background-attachment: fixed;
-  }
-  /* Frames become a soft rim of light. */
-  :root:not([data-theme="light"]) .border-ink:where(:not(.bg-yellow-300, .bg-yellow-400)) { border-color: rgba(255, 248, 230, 0.11); }
-  :root:not([data-theme="light"]) .border-line { border-color: var(--line); }
-  /* Surfaces: lit from the top, a fixed-height sheen so tall panels don't wash out. */
-  :root:not([data-theme="light"]) .bg-panel {
-    background-image: linear-gradient(180deg, rgba(255, 248, 230, 0.04), rgba(255, 248, 230, 0) 140px);
-  }
-  /* Light buttons and pills: glossy, like a lacquered key. */
-  :root:not([data-theme="light"]) .bg-ink {
-    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0) 60%);
-    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.18), 0 1px 2px rgba(0, 0, 0, 0.4);
-  }
-  /* Hero surfaces: a raised charcoal panel with a warm rim. */
-  :root:not([data-theme="light"]) .bg-inverse,
-  :root:not([data-theme="light"]) .surface-inverse {
-    background-image:
-      radial-gradient(120% 140% at 0% 0%, rgba(250, 204, 21, 0.1), transparent 55%),
-      linear-gradient(160deg, #2d2c27 0%, #22211d 55%, #1a1917 100%);
-    border-color: rgba(250, 204, 21, 0.24);
-    box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.08), 0 18px 44px -18px rgba(0, 0, 0, 0.75);
-  }
-  /* Hard offset shadows become depth: a lit top edge and a soft drop. */
-  :root:not([data-theme="light"]) .shadow-hard {
-    box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.06), 0 1px 2px rgba(0, 0, 0, 0.5), 0 16px 36px -12px rgba(0, 0, 0, 0.7);
-  }
-  :root:not([data-theme="light"]) .shadow-hard-sm {
-    box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.05), 0 8px 20px -10px rgba(0, 0, 0, 0.65);
-  }
-  :root:not([data-theme="light"]) .glass-bar {
-    background: rgba(18, 18, 17, 0.84);
-    box-shadow: inset 0 -1px 0 rgba(255, 248, 230, 0.04);
-  }
-  :root:not([data-theme="light"]) .auth-stage {
-    background-color: #161614;
-    background-image:
-      radial-gradient(680px 440px at 12% 0%, rgba(250, 204, 21, 0.16), transparent 62%),
-      radial-gradient(560px 420px at 100% 8%, rgba(255, 244, 220, 0.07), transparent 58%);
-    color: #f4f2ec;
-    box-shadow: inset 1px 0 0 rgba(255, 248, 230, 0.08);
-  }
-  :root:not([data-theme="light"]) .auth-stage [data-float] {
-    box-shadow: 0 22px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 248, 230, 0.12);
-  }
-  :root:not([data-theme="light"]) .glow-page {
-    background-color: transparent;
-    background-image: none;
-  }
-  :root:not([data-theme="light"]) [data-parallax="grid"] { opacity: 0.12; }
-  :root:not([data-theme="light"]) .tutor-diagram { background: #f4f3ef; }
-  :root:not([data-theme="light"]) .tutor-composer {
-    background: transparent;
-    border-color: rgba(255, 248, 230, 0.22) rgba(255, 248, 230, 0.13) rgba(255, 248, 230, 0.07);
-    box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.07), 0 12px 28px -18px rgba(0, 0, 0, 0.9);
-  }
-  :root:not([data-theme="light"]) .tutor-composer:focus-within {
-    border-color: rgba(250, 204, 21, 0.5) rgba(250, 204, 21, 0.34) rgba(250, 204, 21, 0.22);
-    box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.07), 0 0 0 4px rgba(250, 204, 21, 0.08), 0 14px 32px -18px rgba(0, 0, 0, 0.9);
-  }
-  :root:not([data-theme="light"]) .tutor-send { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 4px 12px -4px rgba(0, 0, 0, 0.8); }
-  :root:not([data-theme="light"]) .tutor-send:disabled { background-color: rgba(255, 248, 230, 0.07); box-shadow: inset 0 0 0 1px rgba(255, 248, 230, 0.08); }
-  :root:not([data-theme="light"]) .prose-tutor :is(th, td, pre) { border-color: rgba(255, 248, 230, 0.14); }
-  :root:not([data-theme="light"]) .prose-tutor blockquote { border-left-color: rgba(250, 204, 21, 0.55); }
-  /* A selected state (a tab, a preset, "Following") is a raised tone, not a
-     glossy button: only actions glow. White inside reads as text. */
-  :root:not([data-theme="light"]) .bg-ink:is([aria-pressed="true"], [aria-selected="true"], [aria-checked="true"], [aria-current="page"], [aria-current="true"]) {
-    --color-white: var(--ink);
-    background-color: #33322c;
-    background-image: linear-gradient(180deg, rgba(255, 248, 230, 0.07), rgba(255, 248, 230, 0) 70%);
-    color: var(--ink);
-    border-color: rgba(255, 248, 230, 0.16);
-    box-shadow: inset 0 0 0 1px rgba(255, 248, 230, 0.1);
-  }
-  /* A white page is the brightest thing on a dark screen: dim it a little,
-     and warm it, unless you chose Sepia or Night in the reader. */
-  :root:not([data-theme="light"]) [data-reader="light"] .pdf-page { filter: brightness(0.86) sepia(0.06); }
-}
-:root[data-theme="dark"] body {
-  background-color: var(--page);
-  background-image:
-    radial-gradient(900px 520px at 0% -12%, rgba(250, 204, 21, 0.06), transparent 62%),
-    radial-gradient(1000px 600px at 100% -14%, rgba(255, 244, 220, 0.035), transparent 60%);
-  background-attachment: fixed;
-}
-:root[data-theme="dark"] .border-ink:where(:not(.bg-yellow-300, .bg-yellow-400)) { border-color: rgba(255, 248, 230, 0.11); }
-:root[data-theme="dark"] .border-line { border-color: var(--line); }
-:root[data-theme="dark"] .bg-panel {
-  background-image: linear-gradient(180deg, rgba(255, 248, 230, 0.04), rgba(255, 248, 230, 0) 140px);
-}
-:root[data-theme="dark"] .bg-ink {
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0) 60%);
-  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.18), 0 1px 2px rgba(0, 0, 0, 0.4);
-}
-:root[data-theme="dark"] .bg-inverse,
-:root[data-theme="dark"] .surface-inverse {
-  background-image:
-    radial-gradient(120% 140% at 0% 0%, rgba(250, 204, 21, 0.1), transparent 55%),
-    linear-gradient(160deg, #2d2c27 0%, #22211d 55%, #1a1917 100%);
-  border-color: rgba(250, 204, 21, 0.24);
-  box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.08), 0 18px 44px -18px rgba(0, 0, 0, 0.75);
-}
-:root[data-theme="dark"] .shadow-hard {
-  box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.06), 0 1px 2px rgba(0, 0, 0, 0.5), 0 16px 36px -12px rgba(0, 0, 0, 0.7);
-}
-:root[data-theme="dark"] .shadow-hard-sm {
-  box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.05), 0 8px 20px -10px rgba(0, 0, 0, 0.65);
-}
-:root[data-theme="dark"] .glass-bar {
-  background: rgba(18, 18, 17, 0.84);
-  box-shadow: inset 0 -1px 0 rgba(255, 248, 230, 0.04);
-}
-:root[data-theme="dark"] .auth-stage {
-  background-color: #161614;
-  background-image:
-    radial-gradient(680px 440px at 12% 0%, rgba(250, 204, 21, 0.16), transparent 62%),
-    radial-gradient(560px 420px at 100% 8%, rgba(255, 244, 220, 0.07), transparent 58%);
-  color: #f4f2ec;
-  box-shadow: inset 1px 0 0 rgba(255, 248, 230, 0.08);
-}
-:root[data-theme="dark"] .auth-stage [data-float] {
-  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 248, 230, 0.12);
-}
-:root[data-theme="dark"] .glow-page {
-  background-color: transparent;
-  background-image: none;
-}
-:root[data-theme="dark"] [data-parallax="grid"] { opacity: 0.12; }
-:root[data-theme="dark"] .tutor-diagram { background: #f4f3ef; }
-:root[data-theme="dark"] .tutor-composer {
-  background: transparent;
-  border-color: rgba(255, 248, 230, 0.22) rgba(255, 248, 230, 0.13) rgba(255, 248, 230, 0.07);
-  box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.07), 0 12px 28px -18px rgba(0, 0, 0, 0.9);
-}
-:root[data-theme="dark"] .tutor-composer:focus-within {
-  border-color: rgba(250, 204, 21, 0.5) rgba(250, 204, 21, 0.34) rgba(250, 204, 21, 0.22);
-  box-shadow: inset 0 1px 0 rgba(255, 248, 230, 0.07), 0 0 0 4px rgba(250, 204, 21, 0.08), 0 14px 32px -18px rgba(0, 0, 0, 0.9);
-}
-:root[data-theme="dark"] .tutor-send { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), 0 4px 12px -4px rgba(0, 0, 0, 0.8); }
-:root[data-theme="dark"] .tutor-send:disabled { background-color: rgba(255, 248, 230, 0.07); box-shadow: inset 0 0 0 1px rgba(255, 248, 230, 0.08); }
-:root[data-theme="dark"] .prose-tutor :is(th, td, pre) { border-color: rgba(255, 248, 230, 0.14); }
-:root[data-theme="dark"] .prose-tutor blockquote { border-left-color: rgba(250, 204, 21, 0.55); }
-:root[data-theme="dark"] .bg-ink:is([aria-pressed="true"], [aria-selected="true"], [aria-checked="true"], [aria-current="page"], [aria-current="true"]) {
-  --color-white: var(--ink);
-  background-color: #33322c;
-  background-image: linear-gradient(180deg, rgba(255, 248, 230, 0.07), rgba(255, 248, 230, 0) 70%);
-  color: var(--ink);
-  border-color: rgba(255, 248, 230, 0.16);
-  box-shadow: inset 0 0 0 1px rgba(255, 248, 230, 0.1);
-}
-:root[data-theme="dark"] [data-reader="light"] .pdf-page { filter: brightness(0.86) sepia(0.06); }
-
-/* The product glimpse beside sign-in. Light mode stays a black slab. The blur
-   lives only here: this column is not an ancestor of the password field. */
+/* The product glimpse beside sign-in. Black in light, white in dark: the same
+   slab, colours swapped. The blur lives only here, so it is not an ancestor
+   of the password field. */
 .auth-stage { background: #0d0d0c; color: #fff; }
 .auth-stage-muted { color: rgba(255, 255, 255, 0.5); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .auth-stage { background: #ffffff; color: #0d0d0c; }
+  :root:not([data-theme="light"]) .auth-stage-muted { color: rgba(13, 13, 12, 0.5); }
+}
+:root[data-theme="dark"] .auth-stage { background: #ffffff; color: #0d0d0c; }
+:root[data-theme="dark"] .auth-stage-muted { color: rgba(13, 13, 12, 0.5); }
 
 ::selection { background: rgba(253, 216, 53, 0.55); color: var(--ink); }
 
@@ -579,40 +420,46 @@ html { scroll-behavior: smooth; }
   color: #1a1a1a;
 }
 
-/* The tutor's input: a clear pill, no fill of its own. The gloss is in the
-   rim, lit from above (lighter on top, deeper underneath), with a soft
+/* The tutor's input: a clear pill, no fill of its own. The rim is the frame
+   colour (black in light, white in dark), lighter along the top, with a soft
    shadow below; on focus it gets a faint yellow halo. The send button is a
-   small glossy ink bead, quiet until there's something to send. */
+   small ink bead, quiet until there's something to send. */
 .tutor-composer {
   background: transparent;
-  border-color: rgba(13, 13, 12, 0.11) rgba(13, 13, 12, 0.17) rgba(13, 13, 12, 0.26);
+  border-color:
+    color-mix(in srgb, var(--ink) 11%, transparent)
+    color-mix(in srgb, var(--ink) 17%, transparent)
+    color-mix(in srgb, var(--ink) 26%, transparent);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    inset 0 -1px 0 rgba(13, 13, 12, 0.05),
-    0 10px 24px -18px rgba(13, 13, 12, 0.35);
+    inset 0 1px 0 color-mix(in srgb, var(--panel) 90%, transparent),
+    inset 0 -1px 0 color-mix(in srgb, var(--ink) 5%, transparent),
+    0 10px 24px -18px color-mix(in srgb, var(--ink) 35%, transparent);
 }
 .tutor-composer:focus-within {
-  border-color: rgba(13, 13, 12, 0.32) rgba(13, 13, 12, 0.4) rgba(13, 13, 12, 0.5);
+  border-color:
+    color-mix(in srgb, var(--ink) 32%, transparent)
+    color-mix(in srgb, var(--ink) 40%, transparent)
+    color-mix(in srgb, var(--ink) 50%, transparent);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    inset 0 -1px 0 rgba(13, 13, 12, 0.05),
+    inset 0 1px 0 color-mix(in srgb, var(--panel) 90%, transparent),
+    inset 0 -1px 0 color-mix(in srgb, var(--ink) 5%, transparent),
     0 0 0 4px rgba(250, 204, 21, 0.2),
-    0 12px 28px -18px rgba(13, 13, 12, 0.4);
+    0 12px 28px -18px color-mix(in srgb, var(--ink) 40%, transparent);
 }
 .tutor-send {
   color: var(--paper);
   background-color: var(--ink);
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0.06) 48%, rgba(255, 255, 255, 0) 52%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 3px 8px -3px rgba(13, 13, 12, 0.5);
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--panel) 26%, transparent) 0%, color-mix(in srgb, var(--panel) 6%, transparent) 48%, transparent 52%);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--panel) 30%, transparent), 0 3px 8px -3px color-mix(in srgb, var(--ink) 50%, transparent);
   transition: transform 160ms var(--ease, ease), box-shadow 160ms ease, background-color 160ms ease, color 160ms ease;
 }
-.tutor-send:hover:not(:disabled) { transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 6px 14px -4px rgba(13, 13, 12, 0.5); }
+.tutor-send:hover:not(:disabled) { transform: translateY(-1px); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--panel) 30%, transparent), 0 6px 14px -4px color-mix(in srgb, var(--ink) 50%, transparent); }
 .tutor-send:active:not(:disabled) { transform: scale(0.94); }
 .tutor-send:disabled {
   color: var(--muted);
-  background-color: rgba(13, 13, 12, 0.06);
+  background-color: color-mix(in srgb, var(--ink) 6%, transparent);
   background-image: none;
-  box-shadow: inset 0 0 0 1px rgba(13, 13, 12, 0.06);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 6%, transparent);
   cursor: default;
 }
 .prose-compact { font-size: 0.875rem; line-height: 1.6; }

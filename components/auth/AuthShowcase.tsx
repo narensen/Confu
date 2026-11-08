@@ -6,8 +6,9 @@ import { useRef, type ReactNode } from "react";
 
 gsap.registerPlugin(useGSAP);
 
-// The dark half of the sign-in pages: a few moments from the product,
-// floating gently and leaning toward the pointer. Decorative only.
+// The contrasting half of the sign-in pages: black beside the light form,
+// white beside the dark one. A few moments from the product, floating gently
+// and leaning toward the pointer. Decorative only.
 export function AuthShowcase() {
   const root = useRef<HTMLDivElement>(null);
 
@@ -53,7 +54,7 @@ export function AuthShowcase() {
 
   return (
     <div ref={root} aria-hidden className="auth-stage relative hidden overflow-hidden border-l border-ink select-none lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col lg:self-start">
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgb(255_255_255/0.06)_1px,transparent_1px),linear-gradient(90deg,rgb(255_255_255/0.06)_1px,transparent_1px)] bg-size-[44px_44px] mask-[radial-gradient(ellipse_at_center,black,transparent_75%)]" />
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(currentColor_1px,transparent_1px),linear-gradient(90deg,currentColor_1px,transparent_1px)] bg-size-[44px_44px] opacity-[0.06] mask-[radial-gradient(ellipse_at_center,black,transparent_75%)]" />
 
       <div className="relative px-12 pt-14">
         <p className="auth-stage-muted animate-enter font-mono text-[11px] tracking-[0.14em] uppercase">Confu</p>
