@@ -78,7 +78,7 @@ const FEATURES: { title: string; body: string; icon: ReactNode }[] = [
   },
   {
     title: "Bring anything",
-    body: "PDFs and slides, web pages, YouTube lectures, Google Drive and Zotero all become study material.",
+    body: "PDFs and slides, web pages printed to PDF, YouTube lectures, Google Drive and Zotero all become study material.",
     icon: <path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v3h16v-3" />,
   },
   {

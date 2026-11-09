@@ -217,8 +217,8 @@ const ReadingArt = (
         </div>
       </div>
     </div>
-    {/* A tool slid out over the page, from the rail */}
-    <div className="absolute inset-y-0 right-[11%] flex w-[30%] flex-col border-l border-ink bg-panel shadow-[-6px_0_14px_-8px_rgba(13,13,12,0.4)]">
+    {/* A tool slid out over the page, the small bar riding its edge */}
+    <div className="absolute inset-y-0 right-0 flex w-[30%] flex-col border-l border-ink bg-panel shadow-[-6px_0_14px_-8px_rgba(13,13,12,0.4)]">
       <span className="flex items-center justify-between border-b border-ink px-2 py-1.5 font-medium">
         Plan <span className="rounded border border-ink/40 px-1 font-mono text-[7px] text-muted">Pin</span>
       </span>
@@ -228,11 +228,11 @@ const ReadingArt = (
         <Line w="60%" />
       </div>
     </div>
-    <div className="flex w-[11%] shrink-0 flex-col items-center gap-1 border-l border-ink bg-panel py-1.5 text-[7px]">
-      <span className="w-[85%] rounded bg-ink py-1 text-center text-white">Plan</span>
-      <span className="py-1 text-muted">Highlights</span>
-      <span className="py-1 text-muted">Progress</span>
-      <span className="py-1 text-muted">Files</span>
+    <div className="absolute top-1/2 right-[32%] flex -translate-y-1/2 flex-col gap-1 rounded-lg border border-ink/20 bg-panel p-1 shadow-hard-sm">
+      <span className="size-3 rounded bg-ink" />
+      <span className="size-3 rounded border border-ink/30" />
+      <span className="size-3 rounded border border-ink/30" />
+      <span className="size-3 rounded border border-ink/30" />
     </div>
   </Frame>
 );
@@ -502,9 +502,9 @@ export const GUIDE_STEPS: GuideStep[] = [
     id: "reading",
     eyebrow: "Reading",
     title: "The tutor beside you, your tools a click away",
-    intro: "The tutor sits on the left, what you're reading is in the middle, and your tools (Plan, Highlights, Progress, Files) are in the rail on the right. Each one slides out over the page when you need it.",
+    intro: "The tutor sits on the left and what you're reading fills the rest. Your tools (Plan, Highlights, Progress, Files) wait in a small bar on the right edge that tucks itself away while you read. Move toward the edge and it comes out.",
     points: [
-      { label: "Tools", body: <>Press a tool in the right rail (or its key: <b>p</b>, <b>h</b>, <b>f</b>) to slide it out. Click back into the page, or press Esc, to put it away. <b>Pin</b> keeps it open beside the page instead.</> },
+      { label: "Tools", body: <>Press a tool in the bar on the right (or its key: <b>p</b>, <b>h</b>, <b>f</b>) to slide it out. Click back into the page, or press Esc, to put it away. <b>Pin</b> keeps it open beside the page instead.</> },
       { label: "Files and tabs", body: <>Everything you add lands in <b>Files</b>; open one and it becomes a tab (D1, D2, …). ✕ on a tab only closes it; delete files from Files. PDFs, slides and Word docs all work.</> },
       { label: "Make room", body: "Drag any edge to resize, or fold the tutor away (t) to read wider; it comes back when it answers. Full screen (⛶ or the . key) keeps the same layout without the header. Press ? for every shortcut." },
     ],

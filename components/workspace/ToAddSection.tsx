@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { eyebrowClass, ghostButtonClass } from "@/components/ui";
 import type { GoalLink, Later } from "@/lib/goal-later";
 
@@ -11,16 +12,20 @@ export type ToAddProps = {
   onImport: (links: GoalLink[]) => void;
   onPlaylist: (url: string) => void; // pick a playlist's lectures to import
   onRemoveLink: (url: string) => void;
+  onPrinted: (url: string, file: File) => void; // a web page, printed to PDF by the student
 };
 
 const isPlaylist = (url: string) => /[?&]list=/.test(url) && /youtube\.com|youtu\.be/i.test(url) && !/[?&]v=/.test(url);
 
 // In Files: what the goal names that isn't in the session yet. Papers Confu
 // found were added on their own; these it couldn't pin down, plus links to
-// bring in. Here until they're added or removed.
-export function ToAddSection({ later, busy, onFind, onRemovePaper, onImport, onPlaylist, onRemoveLink }: ToAddProps) {
+// bring in. Here until they're added or removed. Lectures are fetched; web
+// pages the student prints to PDF (so diagrams come along) and adds here.
+export function ToAddSection({ later, busy, onFind, onRemovePaper, onImport, onPlaylist, onRemoveLink, onPrinted }: ToAddProps) {
   const { papers, links } = later;
-  const importable = links.filter((l) => !isPlaylist(l.url));
+  const importable = links.filter((l) => l.kind === "youtube" && !isPlaylist(l.url));
+  const printInput = useRef<HTMLInputElement>(null);
+  const printFor = useRef<string | null>(null);
   if (!papers.length && !links.length) return null;
   return (
     <section className="rounded-xl border border-ink bg-yellow-50 p-4">
@@ -94,16 +99,22 @@ export function ToAddSection({ later, busy, onFind, onRemovePaper, onImport, onP
                         ? "YouTube playlist: pick the lectures you'll watch"
                         : l.kind === "youtube"
                           ? "Lecture: its transcript, with the video's timestamps"
-                          : "Web page: its text, as a clean PDF"}
+                          : "Web page: open it, print it (Ctrl+P or ⌘P) as a PDF, and add the PDF"}
                     </span>
                   </span>
                   <button
                     type="button"
-                    onClick={() => (playlist ? onPlaylist(l.url) : onImport([l]))}
+                    onClick={() => {
+                      if (playlist) return onPlaylist(l.url);
+                      if (l.kind === "youtube") return onImport([l]);
+                      printFor.current = l.url;
+                      printInput.current?.click();
+                    }}
                     disabled={busy}
+                    title={l.kind === "web" ? "Add the page, printed as a PDF" : undefined}
                     className="shrink-0 rounded-md border border-ink px-2 py-0.5 text-xs font-medium transition hover:bg-ink hover:text-white disabled:opacity-40"
                   >
-                    {playlist ? "Choose" : "Import"}
+                    {playlist ? "Choose" : l.kind === "youtube" ? "Import" : "Add PDF"}
                   </button>
                   <button type="button" onClick={() => onRemoveLink(l.url)} aria-label="Remove link" className="shrink-0 rounded px-1 text-muted hover:text-danger">
                     ✕
@@ -112,6 +123,17 @@ export function ToAddSection({ later, busy, onFind, onRemovePaper, onImport, onP
               );
             })}
           </ul>
+          <input
+            ref={printInput}
+            type="file"
+            accept="application/pdf"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (file && printFor.current) onPrinted(printFor.current, file);
+            }}
+          />
         </div>
       )}
     </section>

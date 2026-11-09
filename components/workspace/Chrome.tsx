@@ -1,9 +1,9 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { Section, Tab } from "./TutorPanel";
 
-// The frame around the reader: the tutor's side (left), the tools rail
+// The frame around the reader: the tutor's side (left), the small tool bar
 // (right) with the panel each tool slides out into, and the tab bar phones
 // use instead. The panels' contents are in TutorPanel.
 
@@ -92,55 +92,146 @@ const iconButton = "flex size-8 shrink-0 items-center justify-center rounded-md 
 
 /* ------------------------------------------------------------- the rails */
 
-// One tool in a rail: icon over its name, with a count or a dot.
-function RailItem({ icon, label, badge, dot, active, title, onClick }: { icon: IconName; label: string; badge?: string; dot?: boolean; active: boolean; title: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      title={title}
-      className={`group relative flex w-full flex-col items-center gap-1 rounded-lg px-0.5 pt-2 pb-1.5 transition duration-150 ease-fluid active:scale-95 ${
-        active ? "bg-ink text-white" : "text-muted hover:bg-paper hover:text-ink"
-      }`}
-    >
-      <Icon name={icon} />
-      <span className="max-w-full truncate text-[10px] leading-none font-medium">{label}</span>
-      {/* A count; yellow when something there is waiting on you. */}
-      {badge ? (
-        <span
-          className={`absolute top-0.5 right-0.5 min-w-4 rounded-full px-1 font-mono text-[9px] leading-[14px] tabular-nums ${
-            dot ? "border border-ink bg-yellow-300" : active ? "bg-white/20 text-white" : "border border-line bg-panel text-muted group-hover:text-ink"
-          }`}
-        >
-          {badge}
-        </span>
-      ) : (
-        dot && <span aria-hidden className="absolute top-1.5 right-2.5 size-2 rounded-full border border-ink bg-yellow-300" />
-      )}
-    </button>
-  );
-}
+// Right edge: the session's tools in a small bar that keeps out of the way.
+// It tucks itself away while you read and comes out when the pointer moves
+// toward it (or Tab reaches it). While a tool is open it stays out, riding
+// the open tool's left edge. Touch screens, with no pointer to follow, keep
+// it out. It peeks once when the session opens, so you know where it lives.
+const HOVER = "(hover: hover) and (pointer: fine)";
+const subscribeHover = (fn: () => void) => {
+  const m = window.matchMedia(HOVER);
+  m.addEventListener("change", fn);
+  return () => m.removeEventListener("change", fn);
+};
+const REACH = 88; // px from the edge that bring it out
+const BAND = 170; // px above and below its middle that count
+const LINGER = 450; // ms it waits before tucking away again
 
-// Right edge: every tool of the session, one click from sliding out.
-export function ToolRail({ sections, active, onPick, onShortcuts }: { sections: Section[]; active: Tab | null; onPick: (id: Section["id"]) => void; onShortcuts: () => void }) {
+export function ToolDock({
+  sections,
+  active,
+  offset,
+  hidden = false,
+  onPick,
+}: {
+  sections: Section[];
+  active: Tab | null;
+  offset: number; // the open tool's width: the bar sits at its edge
+  hidden?: boolean; // the tutor across the whole screen
+  onPick: (id: Section["id"]) => void;
+}) {
+  const edge = useRef<HTMLDivElement>(null);
+  const canHover = useSyncExternalStore(subscribeHover, () => window.matchMedia(HOVER).matches, () => true);
+  const [near, setNear] = useState(false);
+  const [over, setOver] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [peek, setPeek] = useState(true);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setPeek(false), 2200);
+    return () => window.clearTimeout(id);
+  }, []);
+
+  // Follow the pointer (once a frame, and only a change re-renders): close
+  // to the edge, level with the bar, it comes out; away, it waits a moment.
+  useEffect(() => {
+    if (!canHover) return;
+    let frame = 0;
+    let linger = 0;
+    let isNear = false;
+    let x = -1;
+    let y = -1;
+    const check = () => {
+      frame = 0;
+      const box = edge.current?.getBoundingClientRect();
+      if (!box) return;
+      const close = x <= box.right && box.right - x < REACH && y >= box.top && y <= box.bottom && Math.abs(y - (box.top + box.height / 2)) < BAND;
+      if (close) {
+        window.clearTimeout(linger);
+        linger = 0;
+        if (!isNear) setNear((isNear = true));
+      } else if (isNear && !linger) {
+        linger = window.setTimeout(() => {
+          linger = 0;
+          setNear((isNear = false));
+        }, LINGER);
+      }
+    };
+    const onMove = (e: PointerEvent) => {
+      x = e.clientX;
+      y = e.clientY;
+      if (!frame) frame = requestAnimationFrame(check);
+    };
+    const onLeave = () => {
+      x = y = -1;
+      if (!frame) frame = requestAnimationFrame(check);
+    };
+    window.addEventListener("pointermove", onMove, { passive: true });
+    document.documentElement.addEventListener("pointerleave", onLeave);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      document.documentElement.removeEventListener("pointerleave", onLeave);
+      cancelAnimationFrame(frame);
+      window.clearTimeout(linger);
+    };
+  }, [canHover]);
+
+  const shown = !hidden && (active !== null || near || over || focused || peek || !canHover);
+
   return (
-    <nav aria-label="Session tools" className="flex w-18 shrink-0 flex-col gap-1 border-l border-ink bg-panel px-1.5 py-2">
-      {sections.map((s) => (
-        <RailItem
-          key={s.id}
-          icon={s.id}
-          label={s.label}
-          badge={s.badge}
-          dot={s.dot}
-          active={active === s.id}
-          title={`${s.label}: ${s.hint}${s.shortcut ? ` (${s.shortcut})` : ""}`}
-          onClick={() => onPick(s.id)}
-        />
-      ))}
-      <div className="flex-1" />
-      <RailItem icon="keys" label="Keys" active={false} title="Keyboard shortcuts (?)" onClick={onShortcuts} />
-    </nav>
+    <div
+      ref={edge}
+      inert={hidden}
+      style={{ transform: `translateX(${-offset}px)` }}
+      className="pointer-events-none absolute inset-y-0 right-0 z-30 flex w-14 items-center justify-end transition-transform duration-300 ease-fluid motion-reduce:transition-none"
+    >
+      {/* While it's tucked away: a short line on the edge says it's there. */}
+      <span
+        aria-hidden
+        className={`absolute right-1 h-9 w-1 rounded-full bg-ink/20 transition-opacity duration-300 ${shown || hidden ? "opacity-0" : "opacity-100 delay-150"}`}
+      />
+      <nav
+        aria-label="Session tools"
+        onPointerEnter={() => setOver(true)}
+        onPointerLeave={() => setOver(false)}
+        onFocus={() => setFocused(true)}
+        onBlur={(e) => !e.currentTarget.contains(e.relatedTarget as Node | null) && setFocused(false)}
+        className={`mr-2.5 flex origin-right flex-col gap-0.5 rounded-2xl border border-ink/15 bg-panel p-1 shadow-hard-sm transition-[translate,scale,opacity] duration-300 ease-fluid motion-reduce:transition-none ${
+          shown ? "pointer-events-auto translate-x-0 scale-100 opacity-100" : "translate-x-3 scale-95 opacity-0"
+        }`}
+      >
+        {sections.map((s, i) => {
+          const on = active === s.id;
+          return (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => onPick(s.id)}
+              aria-pressed={on}
+              aria-label={`${s.label}${s.badge ? ` (${s.badge})` : ""}: ${s.hint}`}
+              // Each one follows the bar out, a beat after the one above.
+              style={{ transitionDelay: shown ? `${70 + i * 35}ms` : "0ms" }}
+              className={`group/tool relative flex size-9 items-center justify-center rounded-xl transition-[translate,opacity,background-color,color] duration-300 ease-fluid active:scale-95 motion-reduce:transition-none ${
+                shown ? "translate-x-0 opacity-100" : "translate-x-1.5 opacity-0"
+              } ${on ? "bg-ink text-white" : "text-muted hover:bg-paper hover:text-ink"}`}
+            >
+              <Icon name={s.id} size={17} />
+              {/* Waiting on you (a goal to set, files still to come in). */}
+              {s.dot && !on && <span aria-hidden className="absolute top-1 right-1 size-2 rounded-full border border-ink bg-yellow-300" />}
+              {/* Its name, its count and its key, on hover or focus. */}
+              <span
+                aria-hidden
+                className="pointer-events-none absolute top-1/2 right-full mr-2.5 flex -translate-y-1/2 translate-x-1 items-center gap-2 rounded-md bg-ink px-2 py-1 text-xs font-medium whitespace-nowrap text-white opacity-0 transition duration-150 ease-fluid group-hover/tool:translate-x-0 group-hover/tool:opacity-100 group-focus-visible/tool:translate-x-0 group-focus-visible/tool:opacity-100"
+              >
+                {s.label}
+                {s.badge && <span className="font-mono text-[10px] text-white/60">{s.badge}</span>}
+                {s.shortcut && <kbd className="rounded border border-white/25 px-1 font-mono text-[10px] text-white/70">{s.shortcut}</kbd>}
+              </span>
+            </button>
+          );
+        })}
+      </nav>
+    </div>
   );
 }
 
@@ -168,7 +259,8 @@ export function TutorRail({ busy, onOpen }: { busy: boolean; onOpen: () => void 
 
 // The tutor's header: who it is, what page it's reading along with, usage.
 // In full screen it can also take the whole screen (onExpand), and come back.
-// Clear chat starts the conversation over (saved answers stay).
+// Clear chat starts the conversation over (saved answers stay). The keyboard
+// shortcuts live here too, beside the page (phones have no keyboard).
 export function TutorHeader({
   where,
   busy,
@@ -177,6 +269,7 @@ export function TutorHeader({
   onExpand,
   expanded = false,
   onClear,
+  onShortcuts,
 }: {
   where: string | null;
   busy: boolean;
@@ -185,6 +278,7 @@ export function TutorHeader({
   onExpand?: () => void;
   expanded?: boolean;
   onClear?: () => void; // absent when there's nothing to clear
+  onShortcuts?: () => void;
 }) {
   return (
     <div className="flex h-12 shrink-0 items-center gap-2 border-b border-ink pr-2 pl-4">
@@ -231,6 +325,11 @@ export function TutorHeader({
             <Icon name="expand" size={16} />
           </button>
         ))}
+      {onShortcuts && !expanded && (
+        <button type="button" onClick={onShortcuts} aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)" className={`${iconButton} hidden @[22rem]:flex`}>
+          <Icon name="keys" size={16} />
+        </button>
+      )}
       {onFold && !expanded && (
         <button type="button" onClick={onFold} aria-label="Fold the tutor away" title="Fold the tutor away (T)" className={iconButton}>
           <Icon name="fold" size={16} />
@@ -340,7 +439,7 @@ export function ResizeHandle({
       }}
       className={`group z-10 flex w-2 shrink-0 cursor-col-resize justify-center outline-none ${className}`}
     >
-      <span className="h-full w-px bg-ink transition-all duration-200 group-hover:w-[3px] group-focus-visible:w-[3px] group-active:w-[3px]" />
+      <span className="h-full w-px bg-stroke transition-all duration-200 group-hover:w-[3px] group-focus-visible:w-[3px] group-active:w-[3px]" />
     </div>
   );
 }

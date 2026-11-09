@@ -43,7 +43,7 @@ export default function PrivacyPage() {
               Google shares with us. Passwords are handled by our authentication provider and stored hashed; we never see them.
             </>,
             <>
-              <b>Your materials:</b> the PDFs you upload or import (from web pages, YouTube lectures, Google Drive or
+              <b>Your materials:</b> the PDFs you upload (web pages you print to PDF included) or import (from YouTube lectures, Google Drive or
               Zotero), a photo of a board, which becomes a page you uploaded, the text extracted from them, and images of
               regions you capture.
             </>,
@@ -321,8 +321,8 @@ export default function PrivacyPage() {
               when checking whether it&apos;s a research paper. Nothing that identifies you is sent.
             </>,
             <>
-              <b>Sources you import from</b>: when you import a web page, a YouTube lecture or a paper&apos;s PDF, our server
-              fetches it from that site. Zotero is reached directly from your browser, with your own key.
+              <b>Sources you import from</b>: when you import a YouTube lecture or a paper&apos;s PDF, our server
+              fetches it from that site. Web pages aren&apos;t fetched: you print them to PDF in your own browser. Zotero is reached directly from your browser, with your own key.
             </>,
           ]}
         />

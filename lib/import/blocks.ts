@@ -1,4 +1,4 @@
-// Imported material (web pages, courses, lecture transcripts, the sample) is
+// Imported material (lecture transcripts, the sample) is
 // described as blocks, then typeset into a PDF in the browser (build-pdf.ts)
 // so it flows through the same pipeline as an uploaded PDF: text extraction,
 // search, highlights, contents, plans, the tutor and spaced review.
@@ -14,7 +14,7 @@ export type Block =
 export type Chapter = { title: string; url?: string; byline?: string; blocks: Block[] };
 
 export type DocumentSpec = {
-  kind: string; // eyebrow on the first page, e.g. "Web page", "YouTube lecture"
+  kind: string; // eyebrow on the first page, e.g. "YouTube lecture"
   title: string;
   byline?: string;
   sourceUrl?: string;

@@ -106,7 +106,7 @@ export default async function TemplatePage({ params }: PageProps<"/templates/[sl
         <section className="border-b border-ink">
           <div className="mx-auto max-w-6xl px-6 py-14">
             <p className={eyebrowClass}>Sources</p>
-            <h2 className="mt-2 font-serif text-3xl tracking-tight">Free, and fetched for you</h2>
+            <h2 className="mt-2 font-serif text-3xl tracking-tight">Free to read and watch</h2>
             <ul className="mt-6 divide-y divide-ink/10 rounded-2xl border border-ink bg-panel">
               {t.sources.map((s) => (
                 <li key={s.title} className="flex flex-wrap items-center gap-x-4 gap-y-1 px-5 py-3.5">
@@ -120,7 +120,7 @@ export default async function TemplatePage({ params }: PageProps<"/templates/[sl
                 </li>
               ))}
             </ul>
-            <p className="mt-4 text-xs text-muted">All sources belong to their creators and are free to watch or read; Confu links to them and turns them into study PDFs for you.</p>
+            <p className="mt-4 text-xs text-muted">All sources belong to their creators and are free to watch or read. Confu fetches the lectures and papers for you; web pages you print to PDF (Ctrl+P), which keeps their diagrams.</p>
           </div>
         </section>
 

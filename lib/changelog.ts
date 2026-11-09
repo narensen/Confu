@@ -5,6 +5,18 @@ export type Release = { date: string; title: string; summary: string; items: str
 
 export const CHANGELOG: Release[] = [
   {
+    date: "2026-11-10",
+    title: "More room for the page",
+    summary: "The tools rail is now a small bar that keeps out of the way.",
+    items: [
+      "Plan, Highlights, Progress and Files sit in a small bar on the right edge instead of a rail down the whole side, so the page gets that width back.",
+      "The bar tucks itself away while you read, leaving a short line on the edge. Move toward it and it comes out; hover a tool to see its name and key.",
+      "Open a tool and the bar rides its edge, so switching tools or putting one away is still one click. The keys still work: p, h and f.",
+      "Keyboard shortcuts moved to the tutor's header (or press ?).",
+      "In dark mode, the line between the tutor and the page is a quiet edge instead of a white line.",
+    ],
+  },
+  {
     date: "2026-11-02",
     title: "Keep the answers that matter",
     summary: "Save a tutor answer, or clear the chat and start fresh.",

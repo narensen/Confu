@@ -46,10 +46,33 @@ function columns(line: string): number {
   return parts.length;
 }
 
-// |x| inside a cell is an absolute value, not a new column. Escape it so the
-// row keeps the columns the header declared.
-function escapeAbs(line: string): string {
-  return line.replace(/(?<!\\)\|(?=\S)([^|\n]*?)(?<=\S)\|/g, (_, inner: string) => `\\|${inner}\\|`);
+// |x| inside a cell is an absolute value (and P(a|b) a condition), not a new
+// column. Only a row with more cells than the header declared has one: a
+// pipe inside $…$ becomes {\vert} (the same bar to KaTeX; an escaped \| would
+// draw a double bar ‖, and a bare "\vert " left a space before the closing $
+// that read as a new formula), then |x| pairs in the text are escaped, one at a
+// time, until the row is back to its columns. Escaping every |word| broke
+// tables written without spaces ("|**Unigram**|Single token|"): the column
+// pipes were taken for absolute values and the table fell back to raw text.
+const ABS_PAIR = /(?<!\\)\|(?=\S)([^|\n]*?)(?<=\S)(?<!\\)\|/g;
+
+function fitRow(line: string, cols: number): string {
+  if (columns(line) <= cols) return line;
+  let row = line.replace(/(?<!\\)(\${1,2})(?!\s)([^$\n]+?)(?<!\s|\\)\1/g, (math, fence: string, inner: string) =>
+    /(?<!\\)\|/.test(inner) ? `${fence}${inner.replace(/(?<!\\)\|/g, "{\\vert}")}${fence}` : math,
+  );
+  for (let guard = 0; guard < 12 && columns(row) > cols; guard++) {
+    let changed = false;
+    for (const m of row.matchAll(ABS_PAIR)) {
+      const next = `${row.slice(0, m.index)}\\|${m[1]}\\|${row.slice(m.index + m[0].length)}`;
+      if (columns(next) < cols) continue;
+      row = next;
+      changed = true;
+      break;
+    }
+    if (!changed) break;
+  }
+  return row;
 }
 
 // Pull a cell's wrapped lines back onto its row. A line is part of the cell
@@ -66,22 +89,22 @@ function stitchTables(md: string): string {
       continue;
     }
     const cols = columns(lines[i + 1]);
-    out.push(escapeAbs(lines[i]), lines[i + 1]);
+    out.push(fitRow(lines[i], cols), lines[i + 1]);
     i += 2;
     while (i < lines.length && lines[i].trim()) {
       if (!/^\s*\|/.test(lines[i])) break;
-      let row = escapeAbs(lines[i]);
+      let row = lines[i];
       let extra = 0;
       i++;
       while (i < lines.length && lines[i].trim() && columns(row) < cols && extra < 24) {
-        const next = escapeAbs(lines[i]);
+        const next = lines[i];
         if (/^\s*\|/.test(next) && columns(next) >= cols) break;
         if (!next.includes("|") && next.trim().length > 180) break;
         row += CELL_BREAK + next.trim();
         extra++;
         i++;
       }
-      out.push(row);
+      out.push(fitRow(row, cols));
     }
   }
   return out.join("\n");
@@ -194,11 +217,12 @@ export const Markdown = memo(function Markdown({
               </div>
             );
           },
-          td({ children }) {
-            return <td>{withBreaks(children)}</td>;
+          // The column's alignment (:---: and ---:) comes through as a style.
+          td({ children, style }) {
+            return <td style={style}>{withBreaks(children)}</td>;
           },
-          th({ children }) {
-            return <th>{withBreaks(children)}</th>;
+          th({ children, style }) {
+            return <th style={style}>{withBreaks(children)}</th>;
           },
           code({ className: codeClass, children }) {
             const text = String(children).replace(/\n$/, "");

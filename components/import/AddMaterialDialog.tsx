@@ -2,9 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
-import { JSON_HEADERS } from "@/lib/ai-errors";
-import { buildPdfFile } from "@/lib/import/build-pdf";
-import { BlockedError, lecturePdf, playlistLectures, TranscriptError, webError, webPagePdf, type Article, type PlaylistLecture } from "@/lib/import/fetch-client";
+import { lecturePdf, playlistLectures, TranscriptError, type PlaylistLecture } from "@/lib/import/fetch-client";
 import { driveConfigured, driveReady, importFromDrive, prepareDrive } from "@/lib/import/drive";
 import {
   connectZotero,
@@ -21,10 +19,10 @@ import { boardPhotoPdf } from "@/lib/import/board-pdf";
 import { metaFor, type PaperMeta } from "@/lib/pdf/add-paper";
 import { track } from "@/lib/telemetry";
 
-// "Add material": PDFs, web pages, YouTube lectures, Google
-// Drive and Zotero. Everything except papers becomes a PDF (imports are
-// typeset in the browser), so it gets search, highlights, contents, plans,
-// the tutor and spaced review like any upload.
+// "Add material": PDFs, web pages (printed to PDF by the student), YouTube
+// lectures, Google Drive and Zotero. Everything except papers becomes a PDF
+// (lectures are typeset in the browser), so it gets search, highlights,
+// contents, plans, the tutor and spaced review like any upload.
 
 export type ImportedFile = { file: File; title?: string; sourceUrl?: string | null; meta?: Record<string, unknown> };
 type Tab = "upload" | "web" | "youtube" | "drive" | "zotero" | "board";
@@ -90,7 +88,7 @@ export function AddMaterialDialog({
             <h2 id="add-material-title" className="mt-1 font-serif text-2xl">
               Study from anything
             </h2>
-            <p className="mt-1 text-sm text-muted">PDFs, slides and Word docs, a photo of the board, web pages, lecture videos, Google Drive and Zotero.</p>
+            <p className="mt-1 text-sm text-muted">PDFs, slides and Word docs, a photo of the board, web pages saved as PDFs, lecture videos, Google Drive and Zotero.</p>
           </div>
           <button onClick={onClose} disabled={Boolean(busy)} aria-label="Close" className="flex size-8 items-center justify-center rounded-md text-muted hover:bg-paper disabled:opacity-30">
             ✕
@@ -142,7 +140,15 @@ export function AddMaterialDialog({
             </>
           )}
           {tab === "board" && <BoardTab {...shared} />}
-          {tab === "web" && <WebTab {...shared} />}
+          {tab === "web" && (
+            <WebTab
+              onFiles={(files) => {
+                track("import.done", { source: "web_print", count: files.length });
+                onFiles(files);
+                onClose();
+              }}
+            />
+          )}
           {tab === "youtube" && (
             <YouTubeTab
               {...shared}
@@ -192,10 +198,19 @@ type Shared = {
 /* ------------------------------------------------------------- upload */
 
 function UploadTab({ onFiles }: { onFiles: (files: File[]) => void }) {
+  return (
+    <div>
+      <DropZone accept="application/pdf,.pptx,.ppt,.odp,.docx,.doc,.odt,.rtf" title="Drop files here" hint="or click to choose files. Scanned pages are read too." onFiles={onFiles} />
+      <p className="mt-3 text-xs text-muted">PowerPoint and Word files are turned into PDFs through Google Drive.</p>
+    </div>
+  );
+}
+
+function DropZone({ accept, title, hint, onFiles }: { accept: string; title: string; hint: string; onFiles: (files: File[]) => void }) {
   const input = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
   return (
-    <div>
+    <>
       <button
         type="button"
         onClick={() => input.current?.click()}
@@ -212,13 +227,13 @@ function UploadTab({ onFiles }: { onFiles: (files: File[]) => void }) {
         }}
         className={`flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-6 py-12 text-center transition ${over ? "border-ink bg-paper" : "border-ink/30 hover:border-ink"}`}
       >
-        <span className="font-serif text-xl">Drop files here</span>
-        <span className="text-sm text-muted">or click to choose files. Scanned pages are read too.</span>
+        <span className="font-serif text-xl">{title}</span>
+        <span className="text-sm text-muted">{hint}</span>
       </button>
       <input
         ref={input}
         type="file"
-        accept="application/pdf,.pptx,.ppt,.odp,.docx,.doc,.odt,.rtf"
+        accept={accept}
         multiple
         className="hidden"
         onChange={(e) => {
@@ -227,150 +242,38 @@ function UploadTab({ onFiles }: { onFiles: (files: File[]) => void }) {
           if (files.length) onFiles(files);
         }}
       />
-      <p className="mt-3 text-xs text-muted">PowerPoint and Word files are turned into PDFs through Google Drive.</p>
-    </div>
+    </>
   );
 }
 
 /* ---------------------------------------------------------------- web */
 
-function WebTab({ busy, setBusy, setError, done }: Shared) {
-  const [url, setUrl] = useState("");
-  const [paste, setPaste] = useState(false);
+const kbdClass = "rounded border border-ink/30 bg-paper px-1.5 py-0.5 font-mono text-[11px]";
 
-  async function importPage() {
-    setError(null);
-    try {
-      const got = await webPagePdf(url, setBusy);
-      done([got], got.meta.words ? "web_page" : "web_pdf");
-    } catch (err) {
-      if (err instanceof BlockedError) setPaste(true);
-      setError(err instanceof Error ? err.message : "Couldn't import that page.");
-    } finally {
-      setBusy(null);
-    }
-  }
+// A web page comes in as the student's own print of it. The browser draws
+// the page as they see it, so diagrams, images, maths and tables come along
+// (reading the page's text on the server lost every figure), and pages behind
+// a login or a bot check work the same.
 
+function WebTab({ onFiles }: { onFiles: (files: File[]) => void }) {
   return (
     <div className="space-y-4">
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (url.trim().length > 3) void importPage();
-        }}
-        className="space-y-3"
-      >
-        <input
-          autoFocus
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://distill.pub/2016/augmented-rnns/"
-          aria-label="Web page address"
-          className={`${inputClass} font-mono text-[13px]`}
-        />
-        <div className="flex justify-end">
-          <button className={`${buttonClass} py-1.5`} disabled={Boolean(busy) || url.trim().length < 4}>
-            Import page
-          </button>
-        </div>
-        <p className="text-xs leading-relaxed text-muted">
-          The article&apos;s text, headings, lists, code and maths become a clean PDF. A link to a PDF imports the PDF itself.{" "}
-          {!paste && (
-            <button type="button" onClick={() => setPaste(true)} className="underline underline-offset-2 hover:text-ink">
-              Site won&apos;t load? Paste the page instead.
-            </button>
-          )}
-        </p>
-      </form>
-
-      {paste && <PastePage url={url} busy={busy} setBusy={setBusy} setError={setError} done={done} />}
-    </div>
-  );
-}
-
-// Some sites (behind Anubis, Cloudflare or a login) only open in a real
-// browser. The student has the page open anyway: they copy it, Confu cleans
-// it up the same way, and nothing is fetched from the site.
-function PastePage({ url, busy, setBusy, setError, done }: Shared & { url: string }) {
-  const [text, setText] = useState("");
-  const [html, setHtml] = useState<string | null>(null);
-  const [title, setTitle] = useState("");
-  const link = /^https?:\/\//i.test(url.trim()) ? url.trim() : url.trim() ? `https://${url.trim()}` : "";
-  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
-
-  async function importPasted() {
-    setError(null);
-    setBusy("Cleaning up the page…");
-    try {
-      const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-      const body =
-        html ??
-        text
-          .split(/\n{2,}/)
-          .map((p) => `<p>${esc(p.trim()).replace(/\n/g, "<br>")}</p>`)
-          .join("");
-      if (body.length > 3_900_000) throw new Error("That's too much to import at once. Paste one article or chapter at a time.");
-      const res = await fetch("/api/import/web", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ mode: "paste", url: link, html: body, title: title.trim() || undefined }) });
-      if (!res.ok) throw await webError(res);
-      const got = (await res.json()) as Article;
-      setBusy(`Typesetting “${got.title}”…`);
-      const file = await buildPdfFile({ kind: "Web page", title: got.title, byline: got.byline, sourceUrl: got.url || undefined, chapters: [{ title: got.title, blocks: got.blocks }] });
-      done([{ file, title: got.title, sourceUrl: got.url || null, meta: { source: "web_paste", words: got.words } }], "web_paste");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't import that.");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  return (
-    <div className="animate-enter space-y-3 rounded-xl border border-ink bg-paper p-4">
       <div>
-        <p className="text-sm font-medium">Paste the page instead</p>
-        <ol className="mt-1.5 list-decimal space-y-0.5 pl-5 text-xs leading-relaxed text-muted">
-          <li>
-            {link ? (
-              <a href={link} target="_blank" rel="noreferrer" className="font-medium text-ink underline underline-offset-2">
-                Open the page
-              </a>
-            ) : (
-              "Open the page"
-            )}{" "}
-            in your browser and let it load.
-          </li>
-          <li>Select the article (Ctrl+A or ⌘A) and copy it (Ctrl+C or ⌘C).</li>
-          <li>Paste it below. Headings, lists, code and maths come along.</li>
-        </ol>
+        <p className="text-sm font-medium">Print the page as a PDF, then add it here</p>
+        <p className="mt-1 text-xs leading-relaxed text-muted">Your browser keeps the page as you see it: diagrams, images, maths and tables included. Pages behind a login work too.</p>
       </div>
-      <textarea
-        rows={6}
-        value={text}
-        onPaste={(e) => {
-          const rich = e.clipboardData.getData("text/html");
-          if (!rich) return; // plain text pastes normally
-          e.preventDefault();
-          // Inline images can be megabytes of base64; the PDF is text only.
-          setHtml(rich.replace(/src="data:[^"]*"/gi, 'src=""'));
-          setText(e.clipboardData.getData("text/plain") || rich.replace(/<[^>]+>/g, " "));
-        }}
-        onChange={(e) => {
-          setText(e.target.value);
-          setHtml(null); // edited by hand: use the text as typed
-        }}
-        placeholder="Paste here"
-        aria-label="Pasted page"
-        className={`${inputClass} resize-y text-[13px] leading-relaxed`}
-      />
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="min-w-48 flex-1">
-          <span className="mb-1 block text-xs font-medium">Title (optional)</span>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Taken from the first heading" className={`${inputClass} py-1.5`} />
-        </label>
-        <button type="button" onClick={importPasted} disabled={Boolean(busy) || words < 40} className={`${buttonClass} py-1.5`}>
-          Import pasted page
-        </button>
-      </div>
-      {words > 0 && words < 40 && <p className="text-xs text-muted">That&apos;s only {words} words: copy the whole article.</p>}
+      <ol className="list-decimal space-y-1.5 pl-5 text-sm leading-relaxed">
+        <li>Open the page and scroll to the end, so every image has loaded.</li>
+        <li>
+          Press <kbd className={kbdClass}>Ctrl</kbd> <kbd className={kbdClass}>P</kbd> (<kbd className={kbdClass}>⌘</kbd> <kbd className={kbdClass}>P</kbd> on a Mac). On a phone: Share, then Print.
+        </li>
+        <li>
+          Choose <b>Save as PDF</b>. Under More settings, turn on <b>Background graphics</b> (<b>Print backgrounds</b> in Firefox and Safari) so diagrams keep their colours.
+        </li>
+        <li>Save it, then drop the PDF below.</li>
+      </ol>
+      <DropZone accept="application/pdf" title="Drop the PDF here" hint="or click to choose it." onFiles={onFiles} />
+      <p className="text-xs leading-relaxed text-muted">For a cleaner PDF without menus and ads, switch to your browser&apos;s Reader view first, or use the site&apos;s own print or PDF version.</p>
     </div>
   );
 }

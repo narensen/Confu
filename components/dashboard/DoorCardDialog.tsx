@@ -70,7 +70,7 @@ function Dialog({ onClose }: { onClose: () => void }) {
 
   async function create() {
     const kept = items
-      .map((item) => ({ title: item.title.trim() || guessTitle(item.url.trim()), url: item.url.trim(), kind: item.kind, license: (item.fetch ? "open" : "link") as License }))
+      .map((item) => ({ title: item.title.trim() || guessTitle(item.url.trim()), url: item.url.trim(), kind: item.kind, license: (item.fetch || item.kind === "web" ? "open" : "link") as License }))
       .filter((item) => item.url);
     if (!title.trim()) return setError("Give the list a title.");
     if (!kept.length) return setError("Add at least one link.");
@@ -226,10 +226,15 @@ function Dialog({ onClose }: { onClose: () => void }) {
                           </option>
                         ))}
                       </select>
-                      <label className="flex items-center gap-1.5 text-xs text-muted" title="Off: the session keeps the link, and doesn't download it (for pages behind a login, or that you'd rather not copy).">
-                        <input type="checkbox" checked={item.fetch} onChange={(e) => patch(i, { fetch: e.target.checked })} className="accent-[var(--ink)]" />
-                        Download into the session
-                      </label>
+                      {item.kind === "web" ? (
+                        // Web pages aren't downloaded: each student prints the page to PDF, which keeps its diagrams.
+                        <span className="text-xs text-muted">Students print it to PDF</span>
+                      ) : (
+                        <label className="flex items-center gap-1.5 text-xs text-muted" title="Off: the session keeps the link, and doesn't download it (for files you'd rather not copy).">
+                          <input type="checkbox" checked={item.fetch} onChange={(e) => patch(i, { fetch: e.target.checked })} className="accent-[var(--ink)]" />
+                          Download into the session
+                        </label>
+                      )}
                     </div>
                   </li>
                 ))}

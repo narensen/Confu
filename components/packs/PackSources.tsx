@@ -5,7 +5,7 @@ import { ask, toast } from "@/components/dialogs";
 import { eyebrowClass, ghostButtonClass } from "@/components/ui";
 import { JSON_HEADERS } from "@/lib/ai-errors";
 import { buildPdfFile } from "@/lib/import/build-pdf";
-import { lecturePdf, webPagePdf } from "@/lib/import/fetch-client";
+import { lecturePdf } from "@/lib/import/fetch-client";
 import { SAMPLE } from "@/lib/import/sample";
 import { SOURCE_LABEL, type PackSource } from "@/lib/packs";
 import { createClient } from "@/lib/supabase/client";
@@ -13,13 +13,15 @@ import { track } from "@/lib/telemetry";
 import type { SessionDoc } from "@/lib/types";
 
 // A session copied from a study pack or a template starts with its sources
-// as placeholders. This fetches them into real PDFs (papers, web pages,
-// courses, lectures) and asks for the student's own copy of files the author
-// uploaded. Also shows where the session came from, and lets the student stop
-// sharing progress with a class.
+// as placeholders. This fetches papers and lectures into real PDFs, and asks
+// the student to add the rest themselves: web pages printed to PDF (which
+// keeps their diagrams) and their own copy of files the author uploaded. Also
+// shows where the session came from, and lets the student stop sharing
+// progress with a class.
 
 export const pendingSource = (d: SessionDoc): PackSource | null => (!d.hasPdf ? ((d.meta as { pack_source?: PackSource }).pack_source ?? null) : null);
-const fetchable = (s: PackSource) => (s.kind === "paper" ? Boolean(s.pdf_url) : s.kind !== "file");
+const fetchable = (s: PackSource) => (s.kind === "paper" ? Boolean(s.pdf_url) : s.kind === "youtube" || s.kind === "sample");
+const isPage = (s: PackSource) => (s.kind === "web" || s.kind === "web_course") && Boolean(s.url);
 
 export async function fetchSourceFile(s: PackSource, onStatus: (s: string) => void): Promise<File> {
   switch (s.kind) {
@@ -29,9 +31,6 @@ export async function fetchSourceFile(s: PackSource, onStatus: (s: string) => vo
       if (!res.ok) throw new Error(((await res.json().catch(() => ({}))) as { error?: string }).error ?? "Couldn't fetch the PDF.");
       return new File([await res.blob()], `${(s.arxiv_id ?? s.title).replace(/[^\w.-]+/g, "_").slice(0, 60)}.pdf`, { type: "application/pdf" });
     }
-    case "web":
-    case "web_course": // packs shared before whole-course imports were retired: the first page
-      return (await webPagePdf(s.url!, onStatus)).file;
     case "youtube":
       return (await lecturePdf({ url: s.url! }, onStatus)).file;
     case "sample":
@@ -176,17 +175,24 @@ export function PackSources({
                         {st ? "Retry" : "Fetch"}
                       </button>
                     ) : (
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => {
-                          uploadFor.current = d.id;
-                          upload.current?.click();
-                        }}
-                        className={`${ghostButtonClass} shrink-0 px-2 py-0.5 text-xs`}
-                      >
-                        Add your copy
-                      </button>
+                      <>
+                        {isPage(s) && (
+                          <a href={s.url!} target="_blank" rel="noreferrer" title="Open it, print it as a PDF (Ctrl+P or ⌘P), then add the PDF" className="shrink-0 text-xs text-muted underline-offset-2 hover:text-ink hover:underline">
+                            Open ↗
+                          </a>
+                        )}
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => {
+                            uploadFor.current = d.id;
+                            upload.current?.click();
+                          }}
+                          className={`${ghostButtonClass} shrink-0 px-2 py-0.5 text-xs`}
+                        >
+                          {isPage(s) ? "Add PDF" : "Add your copy"}
+                        </button>
+                      </>
                     )}
                     {st && st !== "working" && (
                       <span className="max-w-48 shrink-0 truncate text-xs text-danger" title={st}>
@@ -236,7 +242,9 @@ export function PendingSourceCard({ doc, busy, onAttach }: { doc: SessionDoc; bu
         <p className="mt-5 text-sm leading-relaxed text-muted">
           {fetchable(s)
             ? "This came with the pack. Fetch it and it becomes a PDF you can read, highlight and ask about, like anything you upload."
-            : "The pack's author used their own copy of this. Add yours (a PDF) and it slots into the plan."}
+            : isPage(s)
+              ? "A web page from the pack. Open it, print it as a PDF (Ctrl+P or ⌘P, then Save as PDF, with Background graphics on so diagrams keep their colours), and add the PDF. It slots into the plan."
+              : "The pack's author used their own copy of this. Add yours (a PDF) and it slots into the plan."}
         </p>
         {error && <p className="animate-pop mt-3 rounded-lg border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</p>}
         <div className="mt-5 flex items-center gap-3">
@@ -273,7 +281,7 @@ export function PendingSourceCard({ doc, busy, onAttach }: { doc: SessionDoc; bu
                 }}
               />
               <button type="button" disabled={busy} onClick={() => input.current?.click()} className={`${ghostButtonClass} py-2`}>
-                Add your copy (PDF)
+                {isPage(s) ? "Add the printed PDF" : "Add your copy (PDF)"}
               </button>
             </>
           )}

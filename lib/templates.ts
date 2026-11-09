@@ -1,5 +1,6 @@
 // Goal templates: ready-made starting points with free, checked sources
-// (every link imports cleanly: videos have transcripts, papers have open PDFs).
+// (videos have transcripts, papers have open PDFs; web pages the student
+// prints to PDF, which keeps their diagrams).
 // Starting one creates a session with these sources and the goal filled in;
 // the plan is then made for the student's own level, deadline and hours.
 

@@ -67,6 +67,8 @@ export function ChatPanel({
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const stick = useRef(true);
+  // Scrolled up from the latest message: a button brings it back.
+  const [away, setAway] = useState(false);
   // The box grows with what's typed (up to 10rem), then scrolls.
   useLayoutEffect(() => {
     const el = inputRef.current;
@@ -81,6 +83,14 @@ export function ChatPanel({
     const el = scrollRef.current;
     if (el && stick.current) el.scrollTo({ top: el.scrollHeight, behavior: initialCount === messages.length ? "auto" : "smooth" });
   }, [messages, busy, initialCount]);
+
+  function toLatest() {
+    const el = scrollRef.current;
+    if (!el) return;
+    stick.current = true;
+    setAway(false);
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }
 
   function submit() {
     const text = draft.trim();
@@ -125,88 +135,106 @@ export function ChatPanel({
         </div>
       )}
 
-      <div
-        ref={scrollRef}
-        onScroll={(e) => {
-          const el = e.currentTarget;
-          stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-        }}
-        className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-5 py-5 @5xl:px-10"
-      >
-        {/* A reading column beside the page. With the tutor across the whole
-            screen (the panel is 64rem or wider only then), it uses the screen. */}
-        <div className="mx-auto w-full max-w-3xl space-y-5 @5xl:max-w-[96rem]">
-          {messages.length === 0 &&
-            (kind === "paper" ? (
-              <PaperEmptyState onOpenPasses={onOpenPlan} />
-            ) : kind === "exam" ? (
-              <ExamEmptyState onOpenPractice={onOpenPlan} />
-            ) : (
-              <>
-                {plan && activeTopic && activeTopic.status !== "completed" && (
-                  <StartHere
-                    topic={activeTopic}
-                    topics={topics}
-                    docs={docs}
-                    busy={Boolean(busy)}
-                    onOpen={(t) => {
-                      const d = docs.find((x) => x.id === t.document_id);
-                      if (t.source === "pdf" && t.page_start !== null && d) onJump(t.page_start, d.id);
-                    }}
-                    onOpenDoc={(id) => onJump(docs.find((d) => d.id === id)?.lastPage || 1, id)}
-                    onTeach={() => onSend({ action: "teach" })}
-                  />
-                )}
-                <EmptyState hasPlan={Boolean(plan)} onOpenPlan={onOpenPlan} />
-              </>
-            ))}
-          {messages.map((m, i) => {
-            const isNew = i >= initialCount;
-            return m.role === "user" ? (
-              <div key={m.id} className={`ml-10 ${isNew ? "animate-enter" : ""}`}>
-                <div className="rounded-xl rounded-br-sm border border-ink bg-panel px-4 py-3 text-sm shadow-hard-sm">
-                  {m.action !== "chat" && <p className={`${eyebrowClass} mb-1.5`}>{ACTION_LABELS[m.action]}</p>}
-                  <Markdown content={m.content} onPage={onCite} />
-                </div>
-              </div>
-            ) : (
-              <div key={m.id} className={`pr-2 ${isNew ? "animate-enter" : ""}`}>
-                {m.content ? (
-                  <div className={busy && m === last ? "is-streaming" : ""}>
-                    <AnswerBody
-                      sessionId={sessionId}
-                      content={m.content}
-                      onCite={onCite}
-                      done={!(busy && m === last)}
-                      savedId={savedIds.get(answerKey(m.content)) ?? null}
-                      onSave={m.content.startsWith("⚠️") ? undefined : () => onSaveAnswer(m)}
-                      onUnsave={onUnsaveAnswer}
+      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+        <div
+          ref={scrollRef}
+          onScroll={(e) => {
+            const el = e.currentTarget;
+            const gap = el.scrollHeight - el.scrollTop - el.clientHeight;
+            stick.current = gap < 80;
+            setAway(gap > 240);
+          }}
+          className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-5 py-6 @5xl:px-10"
+        >
+          {/* A reading column beside the page. With the tutor across the whole
+              screen (the panel is 64rem or wider only then), it uses the screen. */}
+          <div className="mx-auto w-full max-w-3xl space-y-6 @5xl:max-w-[96rem]">
+            {messages.length === 0 &&
+              (kind === "paper" ? (
+                <PaperEmptyState onOpenPasses={onOpenPlan} />
+              ) : kind === "exam" ? (
+                <ExamEmptyState onOpenPractice={onOpenPlan} />
+              ) : (
+                <>
+                  {plan && activeTopic && activeTopic.status !== "completed" && (
+                    <StartHere
+                      topic={activeTopic}
+                      topics={topics}
+                      docs={docs}
+                      busy={Boolean(busy)}
+                      onOpen={(t) => {
+                        const d = docs.find((x) => x.id === t.document_id);
+                        if (t.source === "pdf" && t.page_start !== null && d) onJump(t.page_start, d.id);
+                      }}
+                      onOpenDoc={(id) => onJump(docs.find((d) => d.id === id)?.lastPage || 1, id)}
+                      onTeach={() => onSend({ action: "teach" })}
                     />
-                    {busy && m === last && busy !== "Thinking…" && (
-                      <p className="animate-fade mt-2 flex items-center gap-2 font-mono text-[11px] text-muted">
-                        <span className="size-1.5 animate-pulse rounded-full bg-ink" />
-                        {busy}
-                      </p>
-                    )}
+                  )}
+                  <EmptyState hasPlan={Boolean(plan)} onOpenPlan={onOpenPlan} />
+                </>
+              ))}
+            {messages.map((m, i) => {
+              const isNew = i >= initialCount;
+              return m.role === "user" ? (
+                <div key={m.id} className={`flex justify-end pl-8 ${isNew ? "animate-enter" : ""}`}>
+                  <div className="min-w-0 max-w-[85%] rounded-2xl rounded-br-md border border-line bg-paper px-4 py-2.5 text-sm">
+                    {m.action !== "chat" && <p className="mb-1 text-[11px] font-medium text-muted">{ACTION_LABELS[m.action]}</p>}
+                    <Markdown content={m.content} onPage={onCite} />
                   </div>
-                ) : (
-                  <Thinking label={busy ?? "Thinking…"} />
-                )}
-              </div>
-            );
-          })}
-          {busy && last?.role !== "assistant" && <Thinking label={busy} />}
+                </div>
+              ) : (
+                <div key={m.id} className={`group/answer pr-2 ${isNew ? "animate-enter" : ""}`}>
+                  {m.content ? (
+                    <div className={busy && m === last ? "is-streaming" : ""}>
+                      <AnswerBody
+                        sessionId={sessionId}
+                        content={m.content}
+                        onCite={onCite}
+                        done={!(busy && m === last)}
+                        latest={m === last}
+                        savedId={savedIds.get(answerKey(m.content)) ?? null}
+                        onSave={m.content.startsWith("⚠️") ? undefined : () => onSaveAnswer(m)}
+                        onUnsave={onUnsaveAnswer}
+                      />
+                      {busy && m === last && busy !== "Thinking…" && (
+                        <p className="animate-fade mt-2 flex items-center gap-2 font-mono text-[11px] text-muted">
+                          <span className="size-1.5 animate-pulse rounded-full bg-ink" />
+                          {busy}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <Thinking label={busy ?? "Thinking…"} />
+                  )}
+                </div>
+              );
+            })}
+            {busy && last?.role !== "assistant" && <Thinking label={busy} />}
+          </div>
         </div>
+        {away && (
+          <button
+            type="button"
+            onClick={toLatest}
+            aria-label="Go to the latest message"
+            title="Latest message"
+            className="animate-fade absolute bottom-3 left-1/2 flex size-8 -translate-x-1/2 items-center justify-center rounded-full border border-line bg-panel text-muted transition hover:text-ink"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M12 5v14M6 13l6 6 6-6" />
+            </svg>
+          </button>
+        )}
       </div>
 
       <div className="mx-auto w-full max-w-[calc(48rem+1rem)] shrink-0 px-3 pt-2 pb-2.5 @5xl:max-w-[calc(96rem+5rem)] @5xl:px-10">
-        {/* A glossy pill: the box, and the send button inside it. */}
+        {/* A flat pill: the box, and the send button inside it. */}
         <form
           onSubmit={(e) => {
             e.preventDefault();
             submit();
           }}
-          className="tutor-composer flex items-end gap-1.5 rounded-[24px] border py-1.5 pr-1.5 pl-4 transition-[border-color,box-shadow] duration-200 ease-fluid"
+          className="tutor-composer flex items-end gap-1.5 rounded-[22px] border py-1.5 pr-1.5 pl-4 transition-[border-color] duration-150 ease-fluid"
         >
           <textarea
             ref={inputRef}
@@ -246,6 +274,7 @@ function AnswerBody({
   content,
   onCite,
   done,
+  latest,
   savedId,
   onSave,
   onUnsave,
@@ -254,6 +283,7 @@ function AnswerBody({
   content: string;
   onCite: (page: number, docLabel?: string) => void;
   done: boolean;
+  latest: boolean; // the newest answer keeps its actions in view; older ones show them on hover
   savedId: string | null;
   onSave?: () => void; // absent for an error notice
   onUnsave: (id: string) => void;
@@ -318,7 +348,11 @@ function AnswerBody({
       </div>
       {done && (
         <div className="mt-1.5">
-          <div className="flex items-center gap-0.5">
+          <div
+            className={`flex items-center gap-0.5 transition-opacity duration-150 ${
+              latest || savedId || rating || open ? "" : "[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/answer:opacity-100 [@media(hover:hover)]:focus-within:opacity-100"
+            }`}
+          >
             <IconButton label={copied ? "Copied" : "Copy"} onClick={() => void copy()}>
               {copied ? <CheckIcon /> : <CopyIcon />}
             </IconButton>
@@ -395,7 +429,7 @@ function IconButton({ label, pressed, onClick, children }: { label: string; pres
       title={label}
       aria-pressed={pressed}
       onClick={onClick}
-      className={`rounded-md p-1 transition ${pressed ? "bg-ink text-white" : "text-muted hover:bg-paper hover:text-ink"}`}
+      className={`rounded-md p-1 transition ${pressed ? "bg-paper text-ink" : "text-muted hover:bg-paper hover:text-ink"}`}
     >
       {children}
     </button>
@@ -533,7 +567,7 @@ function Thinking({ label }: { label: string }) {
     <div className="animate-fade flex items-center gap-2.5 text-sm text-muted">
       <span className="flex gap-1">
         {[0, 1, 2].map((i) => (
-          <span key={i} className="size-1.5 animate-bounce rounded-full bg-ink" style={{ animationDelay: `${i * 120}ms` }} />
+          <span key={i} className="size-1.5 animate-pulse rounded-full bg-ink/70" style={{ animationDelay: `${i * 180}ms` }} />
         ))}
       </span>
       {label}
@@ -555,7 +589,7 @@ function EmptyState({ hasPlan, onOpenPlan }: { hasPlan: boolean; onOpenPlan: () 
       <ol className="mt-5 space-y-4">
         {items.map(([title, body], i) => (
           <li key={title} className="animate-enter flex gap-3 text-sm" style={{ animationDelay: `${100 + i * 80}ms` }}>
-            <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-ink font-mono text-[11px]">{i + 1}</span>
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-line bg-paper font-mono text-[11px]">{i + 1}</span>
             <p className="leading-relaxed text-muted">
               <span className="font-medium text-ink">{title}</span> {body}
             </p>
@@ -587,7 +621,7 @@ function PaperEmptyState({ onOpenPasses }: { onOpenPasses: () => void }) {
       <ol className="mt-5 space-y-4">
         {items.map(([title, body], i) => (
           <li key={title} className="animate-enter flex gap-3 text-sm" style={{ animationDelay: `${100 + i * 80}ms` }}>
-            <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-ink font-mono text-[11px]">{i + 1}</span>
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-line bg-paper font-mono text-[11px]">{i + 1}</span>
             <p className="leading-relaxed text-muted">
               <span className="font-medium text-ink">{title}.</span> {body}
             </p>

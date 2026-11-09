@@ -281,7 +281,7 @@ function NewSessionDialog({ initialKind, onClose }: { initialKind: SessionKind |
               ) : (
                 <div>
                   <span className={labelClass}>
-                    Files <span className="font-normal text-muted">(optional: PDFs, slides or Word docs; add web pages, YouTube lectures, Google Drive or Zotero inside the session)</span>
+                    Files <span className="font-normal text-muted">(optional: PDFs, slides or Word docs, or a web page printed to PDF with Ctrl+P; add YouTube lectures, Google Drive or Zotero inside the session)</span>
                   </span>
                   <input ref={fileInput} type="file" accept="application/pdf,.pptx,.ppt,.odp,.docx,.doc,.odt,.rtf" multiple className="hidden" onChange={(e) => {
                       addFiles(e.target.files);

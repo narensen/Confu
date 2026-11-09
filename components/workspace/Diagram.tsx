@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import type { Mermaid } from "mermaid";
 import { quoteMermaidLabels, svgSize, tidyMermaid } from "@/lib/tutor/diagram";
+import { fitSvg } from "@/lib/tutor/svg-fit";
 
 // The tutor's diagrams. A ```mermaid block is laid out here (the boxes fit
 // their labels, arrows route around them); a ```svg block is the tutor's own
-// drawing, already made safe. Both are shown as an image at their own size,
+// drawing, already made safe, with its labels fitted to their boxes and kept
+// apart (svg-fit.ts). Both are shown as an image at their own size,
 // on a light card in either theme. Click one to see it larger.
 
 type Picture = { src: string; width: number; height: number };
@@ -174,8 +176,18 @@ function DiagramFailed({ code }: { code: string }) {
 
 /* ----------------------------------------------------------------- svg */
 
+const unchanging = () => () => {};
+
 export function SvgDiagram({ svg }: { svg: string }) {
-  return <DiagramFigure picture={toPicture(svg)} />;
+  // Fitting measures text, so it runs in the browser; the server's copy (and
+  // the first render while hydrating) is the drawing as written.
+  const fitted = useSyncExternalStore(
+    unchanging,
+    () => fitSvg(svg),
+    () => svg,
+  );
+  const picture = useMemo(() => toPicture(fitted), [fitted]);
+  return <DiagramFigure picture={picture} />;
 }
 
 /* -------------------------------------------------------------- figure */

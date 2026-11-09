@@ -30,7 +30,7 @@ import { LiteratureMap } from "@/components/paper/LiteratureMap";
 import { exportBibtex, PaperTools } from "@/components/paper/PaperTools";
 import type { PaperTool } from "@/components/paper/PassesPanel";
 import { addLater, removeLater, useLater, type GoalHint, type GoalLink, type GoalPaper } from "@/lib/goal-later";
-import { lecturePdf, webPagePdf } from "@/lib/import/fetch-client";
+import { lecturePdf } from "@/lib/import/fetch-client";
 import { assignDueDates, currentTopic, toISODate } from "@/lib/schedule";
 import { track } from "@/lib/telemetry";
 import { createClient } from "@/lib/supabase/client";
@@ -59,7 +59,7 @@ import { RecallCheck, recallOffered } from "./RecallCheck";
 import { ShortcutsDialog } from "./Shortcuts";
 import type { PlanJob } from "./PlanPanel";
 import { toolSections, TutorPanel, type PanelProps, type Section, type Tab, type ToolTab } from "./TutorPanel";
-import { MobileNav, ResizeHandle, ToolHeader, ToolRail, TutorHeader, TutorRail, type MobileItem } from "./Chrome";
+import { MobileNav, ResizeHandle, ToolDock, ToolHeader, TutorHeader, TutorRail, type MobileItem } from "./Chrome";
 import { UsageMeter } from "@/components/usage/UsageMeter";
 import { ask, toast } from "@/components/dialogs";
 
@@ -112,7 +112,6 @@ export type CiteFiles = {
 const LAYOUT_KEY = "confu:layout";
 type Layout = { tutor: number; sheet: number; tutorOpen: boolean; pinned: boolean };
 const DEFAULT_LAYOUT: Layout = { tutor: 400, sheet: 440, tutorOpen: true, pinned: false };
-const RAIL = 72; // the tools rail (w-18)
 const TUTOR_RAIL = 32; // the folded tutor (w-8): only the logo peeks out
 const READER_MIN = 440; // a tool is only pinned beside the reader if this much is left for it
 const SHEET_MIN = 340;
@@ -197,7 +196,8 @@ export function Workspace({
   useEffect(() => () => window.clearTimeout(motionTimer.current), []);
 
   // The layout: the tutor on the left, what you're reading in the middle, and
-  // the session's tools in a rail on the right. A tool slides out over the
+  // the session's tools in a small bar on the right edge that tucks itself
+  // away until the pointer comes near (see ToolDock). A tool slides out over the
   // reader and goes away when you click back into the page, or is pinned
   // beside it. Full screen is the same layout without the app's header.
   // Phones show one thing at a time, switched from a tab bar.
@@ -422,8 +422,8 @@ export function Workspace({
   // while the reader keeps enough room; otherwise it floats over it.
   const tutorWidth = clamp(layout.tutor, 300, Math.max(300, Math.round(rootWidth * 0.45)));
   const leftWidth = layout.tutorOpen ? tutorWidth : TUTOR_RAIL;
-  const floatWidth = clamp(layout.sheet, SHEET_MIN, Math.max(SHEET_MIN, Math.min(Math.round(rootWidth * 0.55), rootWidth - leftWidth - RAIL - 120)));
-  const roomBeside = rootWidth - leftWidth - RAIL - READER_MIN;
+  const floatWidth = clamp(layout.sheet, SHEET_MIN, Math.max(SHEET_MIN, Math.min(Math.round(rootWidth * 0.55), rootWidth - leftWidth - 120)));
+  const roomBeside = rootWidth - leftWidth - READER_MIN;
   const canPin = roomBeside >= SHEET_MIN;
   const docked = layout.pinned && canPin;
   const sheetWidth = docked ? Math.min(floatWidth, roomBeside) : floatWidth;
@@ -919,7 +919,7 @@ export function Workspace({
   // A plan being queued or built: kept here, so leaving the Plan tab doesn't lose it.
   const [planJob, setPlanJob] = useState<PlanJob | null>(null);
 
-  // Imported material (web pages, lectures, Drive, Zotero PDFs):
+  // Imported material (lectures, Drive, Zotero, printed web pages):
   // PDFs built or downloaded in the browser, with their title and source.
   const addImported = useCallback(
     (items: ImportedFile[]) =>
@@ -1234,9 +1234,10 @@ export function Workspace({
     return () => window.removeEventListener(FIND_PAPER_EVENT, onFind);
   }, []);
 
-  // Lectures and pages (from the goal, or a playlist), read into PDFs one by
+  // YouTube lectures (from the goal, or a playlist), read into PDFs one by
   // one, each listed in Files as it comes in. `keep`: a failure stays there
   // with Retry; otherwise it's handed back (a goal's links return to its list).
+  // Web pages aren't fetched: the student prints them to PDF (see ToAddSection).
   const importLinks = useCallback(
     async (links: (GoalLink & { title?: string })[], keep = false) => {
       const done: string[] = [];
@@ -1245,7 +1246,7 @@ export function Workspace({
           tracked(
             l.title || l.url.replace(/^https?:\/\/(www\.)?/, ""),
             async (userId, position, onStatus) => {
-              const got = l.kind === "youtube" ? await lecturePdf({ url: l.url }, onStatus) : await webPagePdf(l.url, onStatus);
+              const got = await lecturePdf({ url: l.url }, onStatus);
               const { id } = await uploadPdfToSession(supabase, {
                 userId,
                 sessionId: session.id,
@@ -1598,6 +1599,11 @@ export function Workspace({
                 setAddMaterialOpen(true);
               },
               onRemoveLink: (url) => removeLater(session.id, { links: [url] }),
+              // A web page from the goal, printed to PDF by the student: kept with its link.
+              onPrinted: (url, file) => {
+                removeLater(session.id, { links: [url] });
+                void addImported([{ file, sourceUrl: url, meta: { source: "web" } }]).then(addedToFiles);
+              },
             },
       // Shows it in the reader (Files stays out if it's pinned).
       onOpen: (docId) => {
@@ -1668,6 +1674,7 @@ export function Workspace({
         onFold={onFold}
         onExpand={onExpand}
         expanded={expanded}
+        onShortcuts={wide ? () => setShortcutsOpen(true) : undefined}
         usage={<UsageMeter sessionId={session.id} keyId={needsKey ? keyInfo?.id : undefined} keyLast4={needsKey ? keyInfo?.last4 : undefined} />}
       />
       <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
@@ -1694,7 +1701,7 @@ export function Workspace({
   };
   const dragSheet = (x: number) => {
     const box = rootRef.current?.getBoundingClientRect();
-    if (box) setLayout((l) => ({ ...l, sheet: clamp(Math.round(box.right - RAIL - x), SHEET_MIN, 760) }));
+    if (box) setLayout((l) => ({ ...l, sheet: clamp(Math.round(box.right - x), SHEET_MIN, 760) }));
   };
 
   // Phones: one thing at a time.
@@ -1831,7 +1838,7 @@ export function Workspace({
                 <p className="max-w-sm text-sm text-muted">
                   {isPaper
                     ? "Add papers by arXiv ID, DOI, link or title. No PDF needed."
-                    : "Add PDFs, slides, Word docs, web pages, YouTube lectures, Google Drive or Zotero. The tutor still works from your goal meanwhile."}
+                    : "Add PDFs, slides, Word docs, web pages saved as PDFs, YouTube lectures, Google Drive or Zotero. The tutor still works from your goal meanwhile."}
                 </p>
                 <div className="mt-3 flex flex-wrap justify-center gap-2">
                   <button
@@ -1864,13 +1871,13 @@ export function Workspace({
         </section>
 
         {/* Right: the tool that's out (floating over the reader, or pinned
-            beside it), then the rail of every tool. */}
+            beside it), and the small bar of every tool at its edge. */}
         {wide && lastTool && (
           <aside
             aria-label={sectionOf(lastTool).label}
             aria-hidden={!sheetOpen}
             inert={!sheetOpen || tutorFullShown}
-            style={{ width: sheetWidth, right: sheetDocked ? undefined : RAIL }}
+            style={{ width: sheetWidth, right: sheetDocked ? undefined : 0 }}
             className={`@container flex min-w-0 flex-col border-l border-ink bg-panel transition-[translate,opacity,visibility] duration-200 ease-fluid ${
               sheetDocked ? "relative shrink-0" : "absolute inset-y-0 z-20 shadow-[-12px_0_32px_-16px_rgba(13,13,12,0.45)]"
             } ${sheetOpen ? "visible translate-x-0 opacity-100" : "pointer-events-none invisible translate-x-6 opacity-0"}`}
@@ -1896,9 +1903,13 @@ export function Workspace({
           </aside>
         )}
         {wide && (
-          <div inert={tutorFullShown} className="flex shrink-0">
-            <ToolRail sections={sections} active={tool} onPick={(id) => (tool === id ? setTool(null) : openTool(id))} onShortcuts={() => setShortcutsOpen(true)} />
-          </div>
+          <ToolDock
+            sections={sections}
+            active={tool}
+            offset={sheetOpen ? sheetWidth : 0}
+            hidden={tutorFullShown}
+            onPick={(id) => (tool === id ? setTool(null) : openTool(id))}
+          />
         )}
       </div>
 

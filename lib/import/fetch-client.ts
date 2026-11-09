@@ -4,40 +4,12 @@ import { JSON_HEADERS } from "@/lib/ai-errors";
 import type { Block } from "@/lib/import/blocks";
 import { buildPdfFile } from "@/lib/import/build-pdf";
 
-// Turning a web page, a whole course or a YouTube lecture into a PDF, in the
-// browser: the server fetches and cleans up the text, the browser typesets it.
-// Shared by "+ Add material" and by copying a study pack.
+// Turning a YouTube lecture into a PDF, in the browser: the server fetches
+// the transcript, the browser typesets it. Shared by "+ Add material" and by
+// copying a study pack. (Web pages aren't fetched: the student prints them
+// to PDF, which keeps their diagrams.)
 
 export type Fetched = { file: File; title: string; sourceUrl: string | null; meta: Record<string, unknown> };
-export type Article = { kind: "article"; url: string; title: string; byline: string; blocks: Block[]; words: number };
-
-// The site turned Confu away (a bot check or a login): offer pasting instead.
-export class BlockedError extends Error {}
-
-export async function webError(res: Response) {
-  const body = (await res.json().catch(() => ({}))) as { error?: string; blocked?: boolean };
-  const message = body.error ?? `Request failed (${res.status}).`;
-  return body.blocked ? new BlockedError(message) : new Error(message);
-}
-
-export async function fetchArticle(url: string): Promise<Article | { pdf: File }> {
-  const res = await fetch("/api/import/web", { method: "POST", headers: JSON_HEADERS, body: JSON.stringify({ url, mode: "page" }) });
-  if (!res.ok) throw await webError(res);
-  if (res.headers.get("content-type")?.includes("application/pdf")) {
-    const name = decodeURIComponent(res.headers.get("x-confu-filename") ?? "document.pdf");
-    return { pdf: new File([await res.blob()], name.endsWith(".pdf") ? name : `${name}.pdf`, { type: "application/pdf" }) };
-  }
-  return (await res.json()) as Article;
-}
-
-export async function webPagePdf(url: string, onStatus: (s: string) => void = () => {}): Promise<Fetched> {
-  onStatus("Reading the page…");
-  const got = await fetchArticle(url);
-  if ("pdf" in got) return { file: got.pdf, title: got.pdf.name.replace(/\.pdf$/i, ""), sourceUrl: url, meta: { source: "web" } };
-  onStatus(`Typesetting “${got.title}”…`);
-  const file = await buildPdfFile({ kind: "Web page", title: got.title, byline: got.byline, sourceUrl: got.url, chapters: [{ title: got.title, blocks: got.blocks }] });
-  return { file, title: got.title, sourceUrl: got.url, meta: { source: "web", words: got.words } };
-}
 
 export class TranscriptError extends Error {
   constructor(

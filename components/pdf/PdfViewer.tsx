@@ -290,13 +290,100 @@ export default function PdfViewer(props: Props) {
   }, []);
   const readAloud = useReadAloud({ pageText, numPages, onPage: (n) => scrollToPage(n, true) });
 
+  // Zooming keeps the spot being read in place on screen: the point under
+  // the pointer for Ctrl+scroll and pinch, the middle of the view for the
+  // buttons. The anchor is taken just before the zoom changes and used once
+  // the pages have re-laid out (below). zoomNow runs ahead of the state so
+  // quick wheel events in a row each take a step.
+  const zoomNow = useRef(1);
+  const zoomAnchor = useRef<{ slot: number; fx: number; fy: number; cx: number; cy: number } | null>(null);
+  const zoomTo = useCallback(
+    (next: number, at?: { x: number; y: number }) => {
+      if (next === zoomNow.current) return;
+      zoomNow.current = next;
+      const root = scrollRef.current;
+      if (root && numPages) {
+        const box = root.getBoundingClientRect();
+        const inside = at !== undefined && at.x >= box.left && at.x <= box.right && at.y >= box.top && at.y <= box.bottom;
+        const cx = at && inside ? at.x - box.left : root.clientWidth / 2;
+        const cy = at && inside ? at.y - box.top : root.clientHeight / 2;
+        const y = root.scrollTop + cy;
+        let i = 0;
+        for (let k = 0; k < numPages; k++) {
+          const el = slotRefs.current[k];
+          if (el && el.offsetTop <= y) i = k;
+          else break;
+        }
+        const el = slotRefs.current[i];
+        if (el) zoomAnchor.current = { slot: i, fx: (root.scrollLeft + cx - el.offsetLeft) / el.offsetWidth, fy: (y - el.offsetTop) / el.offsetHeight, cx, cy };
+      }
+      setZoom(next);
+    },
+    [numPages],
+  );
+
   // Keep the reading position when zooming or resizing.
   const pageRef = useRef(initialPage);
   useLayoutEffect(() => {
-    if (numPages) scrollToPage(pageRef.current);
+    const anchor = zoomAnchor.current;
+    zoomAnchor.current = null;
+    const root = scrollRef.current;
+    const el = anchor ? slotRefs.current[anchor.slot] : null;
+    if (anchor && root && el) {
+      root.scrollTop = el.offsetTop + anchor.fy * el.offsetHeight - anchor.cy;
+      root.scrollLeft = el.offsetLeft + anchor.fx * el.offsetWidth - anchor.cx;
+    } else if (numPages) scrollToPage(pageRef.current);
     const id = requestAnimationFrame(() => requestAnimationFrame(() => (resizing.current = false)));
     return () => cancelAnimationFrame(id);
   }, [zoom, fitWidth, numPages, scrollToPage]);
+
+  // Ctrl+scroll and trackpad pinch zoom the PDF, a step at a time like − and
+  // +, instead of the whole page. A mouse wheel notch is one step; a pinch's
+  // small deltas add up to one. Safari reports a pinch as gesture events.
+  const wheelSum = useRef({ delta: 0, at: 0 });
+  const pinchFrom = useRef(1);
+  useEffect(() => {
+    const el = viewerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      const px = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaMode === 2 ? e.deltaY * el.clientHeight : e.deltaY;
+      const sum = wheelSum.current;
+      // A pause or a change of direction starts over.
+      if (e.timeStamp - sum.at > 250 || Math.sign(px) !== Math.sign(sum.delta)) sum.delta = 0;
+      sum.at = e.timeStamp;
+      sum.delta += px;
+      if (Math.abs(sum.delta) < 40) return;
+      sum.delta = 0;
+      const i = ZOOMS.indexOf(zoomNow.current);
+      zoomTo(ZOOMS[Math.min(ZOOMS.length - 1, Math.max(0, i + (px < 0 ? 1 : -1)))], { x: e.clientX, y: e.clientY });
+    };
+    type Gesture = Event & { scale: number; clientX: number; clientY: number };
+    const onGestureStart = (e: Event) => {
+      e.preventDefault();
+      pinchFrom.current = zoomNow.current;
+    };
+    const onGestureChange = (e: Event) => {
+      e.preventDefault();
+      const g = e as Gesture;
+      const want = pinchFrom.current * g.scale;
+      const nearest = ZOOMS.reduce((best, z) => (Math.abs(Math.log(z / want)) < Math.abs(Math.log(best / want)) ? z : best));
+      zoomTo(nearest, { x: g.clientX, y: g.clientY });
+    };
+    // Phones and tablets keep their own pinch zoom.
+    const gestures = navigator.maxTouchPoints === 0;
+    el.addEventListener("wheel", onWheel, { passive: false });
+    if (gestures) {
+      el.addEventListener("gesturestart", onGestureStart);
+      el.addEventListener("gesturechange", onGestureChange);
+    }
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("gesturestart", onGestureStart);
+      el.removeEventListener("gesturechange", onGestureChange);
+    };
+  }, [zoomTo]);
 
   const onScroll = useCallback(() => {
     setPopover(null);
@@ -499,8 +586,8 @@ export default function PdfViewer(props: Props) {
   }
 
   const zoomIndex = ZOOMS.indexOf(zoom);
-  const zoomOut = () => setZoom(ZOOMS[Math.max(0, zoomIndex - 1)]);
-  const zoomIn = () => setZoom(ZOOMS[Math.min(ZOOMS.length - 1, zoomIndex + 1)]);
+  const zoomOut = () => zoomTo(ZOOMS[Math.max(0, zoomIndex - 1)]);
+  const zoomIn = () => zoomTo(ZOOMS[Math.min(ZOOMS.length - 1, zoomIndex + 1)]);
 
   return (
     <div ref={viewerRef} className="relative flex h-full flex-col bg-viewer" data-reader={theme}>
@@ -546,7 +633,7 @@ export default function PdfViewer(props: Props) {
             </ToolButton>
             <button
               type="button"
-              onClick={() => setZoom(1)}
+              onClick={() => zoomTo(1)}
               className="h-7 min-w-11 rounded-md px-1 font-mono text-xs tabular-nums text-muted transition hover:bg-paper hover:text-ink"
               title="Fit width"
             >
@@ -582,7 +669,7 @@ export default function PdfViewer(props: Props) {
                     <ToolButton label="Zoom out" disabled={zoomIndex <= 0} onClick={zoomOut}>
                       −
                     </ToolButton>
-                    <button type="button" onClick={() => setZoom(1)} title="Fit width" className="h-7 min-w-11 rounded-md px-1 font-mono text-xs tabular-nums text-muted hover:bg-paper">
+                    <button type="button" onClick={() => zoomTo(1)} title="Fit width" className="h-7 min-w-11 rounded-md px-1 font-mono text-xs tabular-nums text-muted hover:bg-paper">
                       {Math.round(zoom * 100)}%
                     </button>
                     <ToolButton label="Zoom in" disabled={zoomIndex >= ZOOMS.length - 1} onClick={zoomIn}>

@@ -329,7 +329,7 @@ html { scroll-behavior: smooth; }
   padding: 0.05em 0.3em;
   border-radius: 4px;
 }
-.prose-tutor pre { background: var(--paper); border: 1px solid var(--ink); border-radius: 8px; padding: 0.8rem; overflow-x: auto; }
+.prose-tutor pre { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 0.8rem 0.95rem; overflow-x: auto; line-height: 1.55; }
 .prose-tutor pre code { border: 0; padding: 0; background: none; }
 /* An answer the model indented, so Markdown treated it as code. Show it as text. */
 .prose-tutor pre:has(> code[data-prose]) {
@@ -350,42 +350,43 @@ html { scroll-behavior: smooth; }
 }
 .prose-tutor pre:has(> .tutor-diagram) { background: none; border: 0; padding: 0; overflow: visible; }
 .prose-tutor blockquote {
-  border-left: 3px solid var(--ink);
-  padding: 0.15em 0 0.15em 0.8rem;
-  color: color-mix(in srgb, var(--ink) 82%, var(--paper));
+  border-left: 2px solid color-mix(in srgb, var(--ink) 22%, transparent);
+  padding: 0.1em 0 0.1em 0.85rem;
+  color: color-mix(in srgb, var(--ink) 72%, var(--paper));
 }
-/* Same idea as a display equation: the table keeps its own width and the
-   row slides. display:block on the table itself was squashing the columns. */
+/* A table fills the answer's width and its cells wrap. Every column keeps
+   room for a few words, so a narrow panel slides the table sideways instead
+   of squeezing words into letters. (Sized to its longest line, a table ran
+   far past the answer.) Hairline rules, a quiet header, no black grid. */
 .prose-tutor .tutor-table-scroll {
   display: block;
   width: 100%;
   max-width: 100%;
-  margin: 0.8em 0;
+  margin: 0.9em 0;
   overflow-x: auto;
   overflow-y: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
   scrollbar-width: thin;
-  scrollbar-color: var(--ink) transparent;
+  scrollbar-color: color-mix(in srgb, var(--ink) 28%, transparent) transparent;
 }
 .prose-tutor .tutor-table-scroll::-webkit-scrollbar { height: 8px; }
-.prose-tutor .tutor-table-scroll::-webkit-scrollbar-thumb { background: var(--ink); border-radius: 99px; }
-.prose-tutor table { border-collapse: collapse; font-size: 0.86em; width: max-content; min-width: 100%; }
+.prose-tutor .tutor-table-scroll::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--ink) 28%, transparent); border-radius: 99px; }
+.prose-tutor table { border-collapse: separate; border-spacing: 0; font-size: 0.86em; width: 100%; line-height: 1.55; }
 .prose-tutor th, .prose-tutor td {
-  border: 1px solid var(--ink);
-  padding: 0.35em 0.75em;
+  min-width: 7.5rem;
+  padding: 0.55em 0.85em;
   text-align: left;
-  overflow-wrap: normal;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: break-word;
   word-break: normal;
   white-space: normal;
-  vertical-align: top;
 }
+.prose-tutor th + th, .prose-tutor td + td { border-left: 1px solid var(--line); }
+.prose-tutor tbody tr:last-child td { border-bottom: 0; }
 .prose-tutor th { background: var(--paper); font-weight: 600; }
 .prose-tutor .katex-display { overflow-x: auto; overflow-y: hidden; padding: 0.35em 0; }
-/* The tutor across the whole screen (only it is this wide: beside the page
-   it tops out at 720px). The reading column uses the screen there (see
-   ChatPanel), and a table fits it, wrapping its cells instead of sliding. */
-@container (min-width: 64rem) {
-  .prose-tutor .tutor-table-scroll table { width: auto; min-width: 100%; }
-}
 /* Tailwind draws every svg as a block, so each symbol lands on its own line,
    and the formula's TeX source (the MathML annotation) shows beside it. */
 .katex { white-space: nowrap; }
@@ -401,7 +402,6 @@ html { scroll-behavior: smooth; }
   border-radius: 12px;
   background: #f7f6f2;
   padding: 0.75rem;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 /* Shown at its own size (the width is set on the img), centred, and never
    stretched: stretching a small drawing is what blew its labels up. */
@@ -431,46 +431,21 @@ html { scroll-behavior: smooth; }
   color: #1a1a1a;
 }
 
-/* The tutor's input: a clear pill, no fill of its own. The rim is the stroke
-   (black in light, a matte edge in dark), lighter along the top, with a soft
-   shadow below; on focus it gets a faint yellow halo. The send button is a
-   small ink bead, quiet until there's something to send. */
-.tutor-composer {
-  background: transparent;
-  border-color:
-    color-mix(in srgb, var(--stroke) 11%, transparent)
-    color-mix(in srgb, var(--stroke) 17%, transparent)
-    color-mix(in srgb, var(--stroke) 26%, transparent);
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--panel) 90%, transparent),
-    inset 0 -1px 0 color-mix(in srgb, var(--stroke) 5%, transparent),
-    0 10px 24px -18px color-mix(in srgb, var(--stroke) 35%, transparent);
-}
-.tutor-composer:focus-within {
-  border-color:
-    color-mix(in srgb, var(--stroke) 32%, transparent)
-    color-mix(in srgb, var(--stroke) 40%, transparent)
-    color-mix(in srgb, var(--stroke) 50%, transparent);
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--panel) 90%, transparent),
-    inset 0 -1px 0 color-mix(in srgb, var(--stroke) 5%, transparent),
-    0 0 0 4px rgba(250, 204, 21, 0.2),
-    0 12px 28px -18px color-mix(in srgb, var(--stroke) 40%, transparent);
-}
+/* The tutor's input: a flat pill with a hairline edge that darkens while
+   typing. The send button is a plain ink circle, quiet until there's
+   something to send. No gloss, glow or drop shadow. */
+.tutor-composer { background: var(--panel); border-color: var(--line); }
+.tutor-composer:focus-within { border-color: color-mix(in srgb, var(--ink) 38%, transparent); }
 .tutor-send {
-  color: var(--paper);
+  color: var(--panel);
   background-color: var(--ink);
-  background-image: linear-gradient(180deg, color-mix(in srgb, var(--panel) 26%, transparent) 0%, color-mix(in srgb, var(--panel) 6%, transparent) 48%, transparent 52%);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--panel) 30%, transparent), 0 3px 8px -3px color-mix(in srgb, var(--ink) 50%, transparent);
-  transition: transform 160ms var(--ease, ease), box-shadow 160ms ease, background-color 160ms ease, color 160ms ease;
+  transition: transform 120ms var(--ease, ease), opacity 120ms ease, background-color 120ms ease, color 120ms ease;
 }
-.tutor-send:hover:not(:disabled) { transform: translateY(-1px); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--panel) 30%, transparent), 0 6px 14px -4px color-mix(in srgb, var(--ink) 50%, transparent); }
+.tutor-send:hover:not(:disabled) { opacity: 0.85; }
 .tutor-send:active:not(:disabled) { transform: scale(0.94); }
 .tutor-send:disabled {
   color: var(--muted);
-  background-color: color-mix(in srgb, var(--ink) 6%, transparent);
-  background-image: none;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 6%, transparent);
+  background-color: color-mix(in srgb, var(--ink) 7%, transparent);
   cursor: default;
 }
 .prose-compact { font-size: 0.875rem; line-height: 1.6; }
