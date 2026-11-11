@@ -243,7 +243,7 @@ export function TutorRail({ busy, onOpen }: { busy: boolean; onOpen: () => void 
         type="button"
         onClick={onOpen}
         aria-label="Show the tutor"
-        title="Show the tutor (T)"
+        title="Show the tutor (Ctrl+T)"
         className="relative rounded-md px-0.5 py-2 text-ink transition hover:bg-paper"
       >
         <span className="font-serif text-[13px] font-semibold tracking-tight [writing-mode:vertical-rl] rotate-180">
@@ -314,14 +314,14 @@ export function TutorHeader({
           <button
             type="button"
             onClick={onExpand}
-            title="Back to the page (E)"
+            title="Back to the page (Ctrl+E)"
             className="flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-ink/25 px-2.5 text-xs font-medium text-ink transition duration-150 ease-fluid hover:border-ink hover:bg-paper"
           >
             <Icon name="shrink" size={14} />
             Back to the page
           </button>
         ) : (
-          <button type="button" onClick={onExpand} aria-label="Tutor across the whole screen" title="Tutor across the whole screen (E)" className={iconButton}>
+          <button type="button" onClick={onExpand} aria-label="Tutor across the whole screen" title="Tutor across the whole screen (Ctrl+E)" className={iconButton}>
             <Icon name="expand" size={16} />
           </button>
         ))}
@@ -331,7 +331,7 @@ export function TutorHeader({
         </button>
       )}
       {onFold && !expanded && (
-        <button type="button" onClick={onFold} aria-label="Fold the tutor away" title="Fold the tutor away (T)" className={iconButton}>
+        <button type="button" onClick={onFold} aria-label="Fold the tutor away" title="Fold the tutor away (Ctrl+T)" className={iconButton}>
           <Icon name="fold" size={16} />
         </button>
       )}
@@ -372,7 +372,7 @@ export function ToolHeader({
               ? "Float it over the reader again"
               : canPin
                 ? "Keep it open beside the reader"
-                : "Not enough room beside the page: fold the tutor away (t) or widen the window"
+                : "Not enough room beside the page: fold the tutor away (Ctrl+T) or widen the window"
           }
           className={`flex h-7 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs font-medium transition duration-150 disabled:cursor-not-allowed disabled:opacity-40 ${
             pinned ? "border-ink bg-ink text-white" : "border-ink/25 text-muted enabled:hover:border-ink enabled:hover:text-ink"

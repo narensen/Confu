@@ -5,14 +5,15 @@ import { createPortal } from "react-dom";
 import { eyebrowClass } from "@/components/ui";
 
 // The workspace's keyboard shortcuts (they work when you're not typing in a
-// box and no dialog is open). "?" shows this list.
+// box and no dialog is open). "?" shows this list. Ctrl/Cmd+E and Ctrl/Cmd+T
+// also work while you're writing to the tutor, since plain e and t would type.
 export const SHORTCUTS: { group: string; keys: [string, string][] }[] = [
   {
     group: "Tutor",
     keys: [
-      ["t", "Show or fold away the tutor"],
+      ["t  Ctrl T  ⌘ T", "Show or fold away the tutor. Ctrl T and ⌘ T work while you write."],
       ["/", "Write to the tutor"],
-      ["e", "In full screen: the tutor across the whole screen, or back beside the page"],
+      ["e  Ctrl E  ⌘ E", "In full screen: the tutor across the whole screen, or back beside the page. Ctrl E and ⌘ E work while you write."],
     ],
   },
   {

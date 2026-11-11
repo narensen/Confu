@@ -1424,6 +1424,8 @@ export function Workspace({
 
   // Keyboard shortcuts (see Shortcuts.tsx). Only when not typing and no
   // dialog is open; one listener, reading the latest state through a ref.
+  // Ctrl/Cmd+E and Ctrl/Cmd+T are the exception: they still run while the
+  // tutor box is focused, because plain e and t would just be typed.
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [recall, setRecall] = useState<{ topic: PlanTopic; offer: boolean } | null>(null);
 
@@ -1457,9 +1459,16 @@ export function Workspace({
   const onKey = useRef<(e: KeyboardEvent) => void>(() => {});
   useEffect(() => {
     onKey.current = (e) => {
-      if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented) return;
+      if (e.defaultPrevented) return;
+      const key = e.key.toLowerCase();
+      // Plain e and t type into the box. Ctrl/Cmd+E and Ctrl/Cmd+T still
+      // run those commands from there.
+      const tutorChord = (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (key === "e" || key === "t");
+      if (tutorChord && e.repeat) return;
+      if ((e.ctrlKey || e.metaKey || e.altKey) && !tutorChord) return;
       const el = e.target as HTMLElement | null;
-      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+      const typing = Boolean(el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)));
+      if (typing && !tutorChord) return;
       if (document.querySelector('[role="dialog"][aria-modal="true"]')) return;
       // A tool's key brings it out, or puts it away if it's already out.
       const toggleTool = (t: ToolTab) => (wideRef.current && tool === t ? setTool(null) : openTool(t));
@@ -1500,7 +1509,7 @@ export function Workspace({
         },
         ".": () => toggleFocus(),
       };
-      const run = go[e.key];
+      const run = tutorChord ? go[key] : go[e.key];
       if (!run) return;
       e.preventDefault();
       run();
