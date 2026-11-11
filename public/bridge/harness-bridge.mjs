@@ -5,15 +5,16 @@
 
 import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:http";
-import { randomBytes } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
 const PORT = Number(process.env.CONFU_BRIDGE_PORT) || 17321;
-const TOKEN = randomBytes(5).toString("hex");
 const MAX_BODY = 400_000;
 const TEACH_MS = 120_000;
+// After the lesson text stops arriving, don't wait out a harness that keeps
+// thinking in silence. The chat would sit on "Asking…" for the whole timeout.
+const QUIET_MS = 8_000;
 
 const HARNESSES = [
   { id: "claude", name: "Claude", bin: "claude" },
@@ -58,7 +59,7 @@ function cors(req, res) {
   const origin = req.headers.origin;
   if (origin) res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Vary", "Origin");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Confu-Bridge");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Private-Network", "true");
 }
@@ -91,6 +92,7 @@ function brief(body) {
   return [
     "You are teaching one student. Follow the teaching brief below.",
     "Reply in markdown with the lesson only.",
+    "Teach the requested point now. Do not plan the lesson, do not ask which part to start with, and do not mention these instructions or which model you are.",
     "Do not edit files, do not run commands, and do not call tools.",
     "",
     "Teaching brief:",
@@ -104,7 +106,7 @@ function brief(body) {
 
 // Each CLI gets the lesson on stdin or in a prompt file, in a throwaway
 // directory, so a coding agent has nothing nearby to edit.
-function teachArgs(id, effort, promptPath) {
+function teachArgs(id, effort, prompt, promptPath) {
   if (id === "claude") {
     return {
       bin: "claude",
@@ -129,26 +131,39 @@ function teachArgs(id, effort, promptPath) {
       stdin: true,
     };
   }
-  // -p takes the next word as the prompt, so the lesson stays in TEACH.md
-  // and this line only tells the agent to read it.
+  // Do not pass --mode=plan. Antigravity treats that as the /plan slash
+  // command, which makes it plan and ask which part to start instead of teaching.
+  // A short prompt fits on the command line, so it never has to open TEACH.md.
+  // A long one stays in the file; skip-permissions keeps that read from waiting
+  // on a yes/no that nobody can answer.
   if (id === "antigravity") {
+    const head = ["--effort", effort, "--sandbox", "--disable-slash-commands", "--output-format", "text"];
+    const teachNow = "Teach that lesson now, in markdown only. Do not plan. Do not ask which part to start with. Do not use tools or edit files.";
+    if (prompt.length <= 60_000) {
+      return { bin: "agy", args: [...head, "-p", `${prompt}\n\n${teachNow}`], stdin: false };
+    }
     return {
       bin: "agy",
-      args: [
-        "--effort",
-        effort,
-        "--mode=plan",
-        "--output-format",
-        "text",
-        "-p",
-        "Read TEACH.md and teach the student exactly as it asks. Reply in markdown only. Do not create, edit, or delete any file. Do not run commands.",
-      ],
+      args: [...head, "--dangerously-skip-permissions", "-p", `Read TEACH.md. ${teachNow}`],
       stdin: false,
     };
   }
   return {
     bin: "grok",
-    args: ["--prompt-file", promptPath, "--reasoning-effort", effort, "--max-turns", "1", "--permission-mode", "plan", "--output-format", "plain"],
+    args: [
+      "--prompt-file",
+      promptPath,
+      "--reasoning-effort",
+      effort,
+      "--max-turns",
+      "1",
+      "--permission-mode",
+      "plan",
+      "--no-plan",
+      "--verbatim",
+      "--output-format",
+      "plain",
+    ],
     stdin: false,
   };
 }
@@ -157,7 +172,7 @@ function runTeach(id, effort, prompt, res) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "confu-teach-"));
   const promptPath = path.join(dir, "TEACH.md");
   fs.writeFileSync(promptPath, prompt);
-  const spec = teachArgs(id, effort, promptPath);
+  const spec = teachArgs(id, effort, prompt, promptPath);
   const child = spawn(spec.bin, spec.args, {
     cwd: dir,
     env,
@@ -168,6 +183,7 @@ function runTeach(id, effort, prompt, res) {
   let sent = false;
   let settled = false;
   let opened = false;
+  let quiet = null;
   const open = () => {
     if (opened) return;
     opened = true;
@@ -180,6 +196,7 @@ function runTeach(id, effort, prompt, res) {
     if (settled) return;
     settled = true;
     clearTimeout(timer);
+    if (quiet) clearTimeout(quiet);
     const answerPath = path.join(dir, "answer.md");
     let fileAnswer = "";
     try {
@@ -208,6 +225,12 @@ function runTeach(id, effort, prompt, res) {
     sent = true;
     open();
     res.write(chunk);
+    if (quiet) clearTimeout(quiet);
+    quiet = setTimeout(() => {
+      if (!sent || settled) return;
+      kill();
+      finish(0);
+    }, QUIET_MS);
   });
   child.stdin.on("error", () => {});
   if (spec.stdin) {
@@ -221,31 +244,6 @@ function runTeach(id, effort, prompt, res) {
   child.on("close", (code) => finish(code || 0));
 }
 
-function pairPage() {
-  const safe = TOKEN.replace(/[^a-z0-9]/gi, "");
-  return `<!doctype html>
-<meta charset="utf-8">
-<title>Confu bridge</title>
-<style>
-  body { font: 16px/1.45 ui-sans-serif, system-ui, sans-serif; margin: 8vh auto; max-width: 28rem; padding: 0 1.25rem; color: #14120b; }
-  code { font-size: 1.6rem; letter-spacing: 0.08em; }
-  button { margin-top: 1rem; font: inherit; padding: 0.4rem 0.8rem; }
-</style>
-<h1>Confu bridge</h1>
-<p>The connection code is</p>
-<p><code id="code">${safe}</code></p>
-<button id="send" type="button">Send this code to Confu</button>
-<p id="note"></p>
-<script>
-  const token = ${JSON.stringify(safe)};
-  document.getElementById("send").onclick = () => {
-    if (window.opener) window.opener.postMessage({ source: "confu-bridge", token }, "*");
-    navigator.clipboard?.writeText(token).catch(() => {});
-    document.getElementById("note").textContent = window.opener ? "Sent. You can close this tab." : "Copied. Paste it into Confu.";
-  };
-</script>`;
-}
-
 const server = createServer(async (req, res) => {
   cors(req, res);
   const url = new URL(req.url || "/", "http://127.0.0.1");
@@ -254,22 +252,12 @@ const server = createServer(async (req, res) => {
     res.end();
     return;
   }
-  if (req.method === "GET" && url.pathname === "/pair") {
-    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-    res.end(pairPage());
-    return;
-  }
   if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/health")) {
     res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-    res.end(JSON.stringify({ ok: true, authorized: req.headers["x-confu-bridge"] === TOKEN, os: os.platform(), harnesses: detected() }));
+    res.end(JSON.stringify({ ok: true, os: os.platform(), harnesses: detected() }));
     return;
   }
   if (req.method === "POST" && url.pathname === "/teach") {
-    if (req.headers["x-confu-bridge"] !== TOKEN) {
-      res.writeHead(401, { "Content-Type": "application/json; charset=utf-8" });
-      res.end(JSON.stringify({ error: "That connection code doesn't match this bridge." }));
-      return;
-    }
     let body;
     try {
       body = JSON.parse(await readBody(req));
@@ -310,6 +298,6 @@ server.listen(PORT, "127.0.0.1", () => {
     .map((h) => `  ${h.name.padEnd(12)} ${h.installed ? h.version : "not installed"}`)
     .join("\n");
   process.stdout.write(
-    `Confu bridge\nListening on http://127.0.0.1:${PORT}\nConnection code: ${TOKEN}\n\n${rows}\n\nLeave this window open while you study.\n`,
+    `Confu bridge\nListening on http://127.0.0.1:${PORT}\n\n${rows}\n\nLeave this window open while you study.\n`,
   );
 });

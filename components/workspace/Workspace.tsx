@@ -525,7 +525,7 @@ export function Workspace({
       const setReply = (text: string) => setMessages((m) => m.map((x) => (x.id === replyId ? { ...x, content: text } : x)));
       try {
         if (viaHarness) {
-          if (!harness.connected) throw new Error("Start the bridge and connect it. The steps are above the chat.");
+          if (!harness.connected) throw new Error("That tutor isn't connected. Open Tutors — the bridge has to be running, and the harness has to be installed.");
           const prepared = await fetch("/api/chat", {
             method: "POST",
             headers: JSON_HEADERS,
@@ -1751,13 +1751,15 @@ export function Workspace({
         onExpand={onExpand}
         expanded={expanded}
         onShortcuts={wide ? () => setShortcutsOpen(true) : undefined}
+        tutors={
+          <HarnessBar
+            onChange={(link) => {
+              harnessRef.current = link;
+              setLocalTutor(link.id !== "groq");
+            }}
+          />
+        }
         usage={<UsageMeter sessionId={session.id} keyId={needsKey ? keyInfo?.id : undefined} keyLast4={needsKey ? keyInfo?.last4 : undefined} />}
-      />
-      <HarnessBar
-        onChange={(link) => {
-          harnessRef.current = link;
-          setLocalTutor(link.id !== "groq");
-        }}
       />
       <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
         {locked && !localTutor ? (

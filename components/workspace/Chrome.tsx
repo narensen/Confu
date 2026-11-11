@@ -265,6 +265,7 @@ export function TutorHeader({
   where,
   busy,
   usage,
+  tutors,
   onFold,
   onExpand,
   expanded = false,
@@ -274,6 +275,7 @@ export function TutorHeader({
   where: string | null;
   busy: boolean;
   usage: ReactNode;
+  tutors?: ReactNode;
   onFold?: () => void;
   onExpand?: () => void;
   expanded?: boolean;
@@ -287,6 +289,7 @@ export function TutorHeader({
         {busy && <span aria-hidden className="absolute -top-0.5 -right-0.5 size-1.5 animate-pulse rounded-full bg-yellow-400" />}
       </span>
       <p className="font-medium">Tutor</p>
+      {tutors}
       {where && (
         <span
           title="The tutor answers with the page you're on in mind"

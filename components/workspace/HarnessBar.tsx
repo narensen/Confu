@@ -1,33 +1,33 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { eyebrowClass } from "@/components/ui";
-import { BRIDGE_ORIGIN, bridgeCommand, detectComputer, harnessById, installCommand, osLabel } from "@/lib/harnesses";
+import { bridgeCommand, detectComputer, harnessById, HARNESSES, installCommand, osLabel, type DesktopOS, type HarnessId } from "@/lib/harnesses";
 import { loadTutorLink, probeBridge, saveTutorLink, type BridgeHealth, type TutorLink } from "@/lib/harness-client";
 
-const ENGINES: { id: TutorLink["id"]; label: string }[] = [
-  { id: "groq", label: "Confu" },
-  { id: "claude", label: "Claude" },
-  { id: "codex", label: "Codex" },
-  { id: "antigravity", label: "Antigravity" },
-  { id: "grok", label: "Grok" },
-];
+const NAMES: Record<TutorLink["id"], string> = {
+  groq: "Confu",
+  claude: "Claude",
+  codex: "Codex",
+  antigravity: "Antigravity",
+  grok: "Grok",
+};
 
-const GROQ_SAFE: TutorLink = { id: "groq", effort: "low", token: "", connected: false, installed: true };
-
-// Picks who teaches, and shows the one install line for this computer when
-// that harness (or the bridge that runs it) isn't there yet.
+// One Tutors button. Opening it asks the local bridge which harnesses are
+// installed and connects the one you pick. No connection code.
 export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }) {
-  const [link, setLink] = useState<TutorLink>(GROQ_SAFE);
+  const [link, setLink] = useState<TutorLink>({ id: "groq", effort: "low", connected: false, installed: true });
+  const [open, setOpen] = useState(false);
   const [health, setHealth] = useState<BridgeHealth | null>(null);
   const [down, setDown] = useState(false);
-  const [code, setCode] = useState("");
+  const [checking, setChecking] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const [computer, setComputer] = useState<{ os: DesktopOS; mobile: boolean }>({ os: "linux", mobile: false });
   const linkRef = useRef(link);
   const onChangeRef = useRef(onChange);
+  const root = useRef<HTMLDivElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
   linkRef.current = link;
   onChangeRef.current = onChange;
-  const computer = typeof window === "undefined" ? { os: "linux" as const, mobile: false } : detectComputer();
 
   function publish(next: TutorLink) {
     linkRef.current = next;
@@ -37,37 +37,65 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
   }
 
   useEffect(() => {
+    setComputer(detectComputer());
     const stored = loadTutorLink();
-    setCode(stored.token);
     linkRef.current = stored;
     setLink(stored);
     onChangeRef.current(stored);
   }, []);
 
   useEffect(() => {
-    if (link.id === "groq") return;
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (root.current && !root.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+        button.current?.focus();
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  // Probe when the menu is open, and keep probing while a harness is the
+  // tutor so a bridge that stops is noticed before the next question.
+  // Staying on Confu does not probe, so the browser is not asked for loopback.
+  useEffect(() => {
+    if (link.id === "groq" && !open) return;
     let stop = false;
     const look = async () => {
       const current = linkRef.current;
       try {
-        const found = await probeBridge(current.token);
-        if (stop || linkRef.current.id !== current.id || linkRef.current.token !== current.token) return;
+        const found = await probeBridge();
+        if (stop || linkRef.current.id !== current.id) return;
+        setChecking(false);
         setDown(false);
         setHealth(found);
+        if (current.id === "groq") return;
         const row = found?.harnesses.find((h) => h.id === current.id);
-        const next = { ...current, connected: Boolean(found?.authorized && row?.installed), installed: Boolean(row?.installed) };
+        const next = { ...current, connected: Boolean(found && row?.installed), installed: Boolean(row?.installed) };
         const changed = next.connected !== current.connected || next.installed !== current.installed;
         linkRef.current = next;
         setLink(next);
         if (changed) onChangeRef.current(next);
       } catch {
         if (stop) return;
+        setChecking(false);
         setHealth(null);
         setDown(true);
-        const next = { ...current, connected: false, installed: false };
-        linkRef.current = next;
-        setLink(next);
-        onChangeRef.current(next);
+        if (current.id === "groq") return;
+        const next = { ...current, connected: false };
+        if (next.connected !== current.connected) {
+          linkRef.current = next;
+          setLink(next);
+          onChangeRef.current(next);
+        }
       }
     };
     void look();
@@ -76,19 +104,15 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
       stop = true;
       window.clearInterval(timer);
     };
-  }, [link.id, link.token]);
+  }, [link.id, open]);
 
-  useEffect(() => {
-    const onMessage = (event: MessageEvent) => {
-      if (event.origin !== BRIDGE_ORIGIN) return;
-      const data = event.data as { source?: string; token?: string } | null;
-      if (data?.source !== "confu-bridge" || !data.token) return;
-      setCode(data.token);
-      publish({ ...linkRef.current, token: data.token });
-    };
-    window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
-  }, []);
+  function choose(id: TutorLink["id"]) {
+    const row = id === "groq" ? null : health?.harnesses.find((h) => h.id === id);
+    const installed = id === "groq" || Boolean(row?.installed);
+    const connected = id !== "groq" && Boolean(health) && installed;
+    publish({ ...linkRef.current, id, connected, installed });
+    if (id === "groq" || connected) setOpen(false);
+  }
 
   async function copy(text: string, key: string) {
     try {
@@ -100,117 +124,109 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
 
   const selected = link.id === "groq" ? null : harnessById(link.id);
   const origin = typeof window === "undefined" ? "" : window.location.origin;
-  const row = health?.harnesses.find((h) => h.id === link.id);
+  const statusOf = (id: HarnessId) => {
+    if (checking && !health) return "Checking";
+    if (!health) return "Bridge off";
+    return health.harnesses.find((h) => h.id === id)?.installed ? "Ready" : "Not installed";
+  };
 
   return (
-    <div className="shrink-0 border-b border-line bg-paper px-3 py-2">
-      <div className="flex flex-wrap items-center gap-1.5">
-        <span className={`${eyebrowClass} mr-1`}>Tutor</span>
-        <div role="group" aria-label="Who teaches" className="flex flex-wrap gap-1">
-          {ENGINES.map((engine) => {
-            const on = link.id === engine.id;
+    <div ref={root} className="relative">
+      <button
+        ref={button}
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="Tutors"
+        title="Choose who teaches"
+        onClick={() => {
+          const next = !open;
+          setOpen(next);
+          if (next) setChecking(true);
+        }}
+        className="flex h-7 max-w-36 items-center gap-1 rounded-md border border-ink/25 px-2 text-xs font-medium text-ink hover:border-ink aria-expanded:border-ink"
+      >
+        <span className="truncate">{link.id === "groq" ? "Tutors" : NAMES[link.id]}</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden className={`shrink-0 ${open ? "rotate-180" : ""}`}>
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
+
+      {open && (
+        <div role="menu" aria-label="Tutors" className="animate-pop absolute top-full left-0 z-50 mt-2 w-72 origin-top-left overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
+          <button type="button" role="menuitem" onClick={() => choose("groq")} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-paper">
+            <span className="min-w-0 flex-1">Confu</span>
+            <Mark on={link.id === "groq"} />
+          </button>
+          {HARNESSES.map((h) => {
+            const status = statusOf(h.id);
+            const on = link.id === h.id;
             return (
-              <button
-                key={engine.id}
-                type="button"
-                aria-pressed={on}
-                onClick={() => publish({ ...link, id: engine.id, connected: false, installed: engine.id === "groq" })}
-                className={`rounded-md border px-2 py-0.5 text-xs font-medium ${on ? "border-ink bg-ink text-white" : "border-ink/25 text-muted hover:border-ink hover:text-ink"}`}
-              >
-                {engine.label}
+              <button key={h.id} type="button" role="menuitem" onClick={() => choose(h.id)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-paper">
+                <span className="min-w-0 flex-1">{h.name}</span>
+                <span className={`font-mono text-[10px] ${status === "Ready" ? "text-ink" : "text-muted"}`}>{status}</span>
+                <Mark on={on} />
               </button>
             );
           })}
-        </div>
-        {selected && (
-          <div role="group" aria-label="Effort" className="ml-auto flex gap-1">
-            {(["low", "medium"] as const).map((effort) => (
-              <button
-                key={effort}
-                type="button"
-                aria-pressed={link.effort === effort}
-                onClick={() => publish({ ...link, effort })}
-                className={`rounded-md border px-2 py-0.5 text-xs ${link.effort === effort ? "border-ink text-ink" : "border-transparent text-muted hover:text-ink"}`}
-              >
-                {effort}
-              </button>
-            ))}
+
+          <div className="space-y-2 border-t border-line px-3 py-2.5 text-xs leading-relaxed text-muted">
+            {computer.mobile && <p>Open Confu on a Mac, Windows, or Linux computer. A phone can't run these.</p>}
+            {!computer.mobile && selected && !link.connected && !health && (
+              <>
+                <p>
+                  Start the bridge once on this {osLabel(computer.os)}. It needs{" "}
+                  <a className="underline underline-offset-2" href="https://nodejs.org" target="_blank" rel="noreferrer">
+                    Node.js
+                  </a>
+                  . Leave that window open.
+                </p>
+                <Command text={bridgeCommand(computer.os, origin)} copied={copied === "bridge"} onCopy={() => void copy(bridgeCommand(computer.os, origin), "bridge")} />
+                {down && <p>The browser blocked it, or it isn't running. Allow loopback access if asked.</p>}
+              </>
+            )}
+            {!computer.mobile && selected && health && !link.installed && (
+              <>
+                <p>{selected.name} isn't installed. Run this, then run {selected.signIn} once to sign in.</p>
+                <Command
+                  text={installCommand(selected.id, computer.os)}
+                  copied={copied === "install"}
+                  onCopy={() => void copy(installCommand(selected.id, computer.os), "install")}
+                />
+              </>
+            )}
+            {selected && link.connected && <p className="text-ink">{selected.name} is teaching. Leave the bridge window open.</p>}
+            <div className="flex items-center gap-1">
+              <span className="mr-1">Effort</span>
+              {(["low", "medium"] as const).map((effort) => (
+                <button
+                  key={effort}
+                  type="button"
+                  aria-pressed={link.effort === effort}
+                  onClick={() => publish({ ...linkRef.current, effort })}
+                  className={`rounded-md border px-2 py-0.5 ${link.effort === effort ? "border-ink text-ink" : "border-transparent hover:text-ink"}`}
+                >
+                  {effort}
+                </button>
+              ))}
+            </div>
           </div>
-        )}
-      </div>
-
-      {selected && computer.mobile && <p className="mt-2 text-xs leading-relaxed text-muted">Open Confu on a Mac, Windows, or Linux computer. A phone can't run these.</p>}
-
-      {selected && !computer.mobile && !link.connected && (
-        <div className="mt-2 space-y-2 text-xs leading-relaxed text-muted">
-          <p>{selected.name} teaches from this {osLabel(computer.os)} on {link.effort} effort. Sign-in stays in that app.</p>
-          {down && <p>The bridge isn't running, or the browser blocked it. Allow loopback access if the browser asks.</p>}
-          {row && !row.installed && <p>{selected.name} isn't installed yet.</p>}
-          {(!row || !row.installed) && (
-            <Command text={installCommand(selected.id, computer.os)} copied={copied === "install"} onCopy={() => void copy(installCommand(selected.id, computer.os), "install")} />
-          )}
-          <p>
-            {row?.installed ? "If you haven't signed in yet, run" : "Open a new terminal and run"} <code className="font-mono text-ink">{selected.signIn}</code> once
-            {row?.installed ? "." : " to sign in."}
-          </p>
-          {!health && (
-            <>
-              <p>
-                Start the bridge. It needs{" "}
-                <a className="underline underline-offset-2" href="https://nodejs.org" target="_blank" rel="noreferrer">
-                  Node.js
-                </a>
-                .
-              </p>
-              <Command text={bridgeCommand(computer.os, origin)} copied={copied === "bridge"} onCopy={() => void copy(bridgeCommand(computer.os, origin), "bridge")} />
-            </>
-          )}
-          {health && link.token && !health.authorized && <p>That code doesn't match the bridge window.</p>}
-          {health && (
-            <form
-              className="flex flex-wrap items-center gap-1.5"
-              onSubmit={(e) => {
-                e.preventDefault();
-                const token = code.trim();
-                if (token) publish({ ...link, token });
-              }}
-            >
-              <label className="text-ink" htmlFor="bridge-code">
-                Connection code
-              </label>
-              <input
-                id="bridge-code"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                autoCapitalize="off"
-                autoCorrect="off"
-                spellCheck={false}
-                className="w-28 rounded-md border border-ink/25 bg-panel px-2 py-1 font-mono text-xs outline-none focus:border-ink"
-              />
-              <button type="submit" className="rounded-md border border-ink px-2 py-1 text-xs font-medium text-ink">
-                Connect
-              </button>
-              <button type="button" onClick={() => window.open(`${BRIDGE_ORIGIN}/pair`, "confu-bridge", "width=460,height=420")} className="rounded-md px-2 py-1 text-xs text-muted underline-offset-2 hover:underline">
-                Open the code
-              </button>
-            </form>
-          )}
         </div>
-      )}
-
-      {selected && link.connected && (
-        <p className="mt-1.5 text-[11px] text-muted">
-          {selected.name} is teaching{row?.version ? ` · ${row.version}` : ""}. Leave the bridge window open.
-        </p>
       )}
     </div>
+  );
+}
+
+function Mark({ on }: { on: boolean }) {
+  return (
+    <span aria-hidden className={`size-1.5 shrink-0 rounded-full ${on ? "bg-ink" : "bg-transparent"}`} />
   );
 }
 
 function Command({ text, copied, onCopy }: { text: string; copied: boolean; onCopy: () => void }) {
   return (
     <div className="flex items-start gap-2">
-      <code className="min-w-0 flex-1 overflow-x-auto rounded-md border border-ink/20 bg-panel px-2 py-1.5 font-mono text-[11px] leading-snug text-ink">{text}</code>
+      <code className="min-w-0 flex-1 overflow-x-auto rounded-md border border-ink/20 bg-paper px-2 py-1 font-mono text-[11px] leading-snug text-ink">{text}</code>
       <button type="button" onClick={onCopy} className="shrink-0 rounded-md border border-ink/25 px-2 py-1 text-[11px] font-medium text-ink">
         {copied ? "Copied" : "Copy"}
       </button>
