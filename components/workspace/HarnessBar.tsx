@@ -7,8 +7,8 @@ import { loadTutorLink, probeBridge, saveTutorLink, type BridgeHealth, type Brid
 const NAMES: Record<TutorLink["id"], string> = {
   groq: "Confu",
   claude: "Claude",
-  codex: "Codex",
-  antigravity: "Antigravity",
+  codex: "ChatGPT",
+  antigravity: "Gemini",
   grok: "Grok",
 };
 
@@ -165,7 +165,7 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
         }}
         className="flex h-7 max-w-44 items-center gap-1 rounded-md border border-ink/25 px-2 text-xs font-medium text-ink hover:border-ink aria-expanded:border-ink"
       >
-        <span className="truncate">{link.id === "groq" ? "Tutors" : link.modelName || NAMES[link.id]}</span>
+        <span className="truncate">{link.id === "groq" ? "Tutors" : NAMES[link.id]}</span>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden className={`shrink-0 ${open ? "rotate-180" : ""}`}>
           <path d="m6 9 6 6 6-6" />
         </svg>
@@ -180,12 +180,9 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
           {HARNESSES.map((h) => {
             const status = statusOf(h.id);
             const on = link.id === h.id;
-            const info = health?.harnesses.find((row) => row.id === h.id);
-            const using = on ? link.modelName || info?.modelName : info?.modelName;
             return (
-              <button key={h.id} type="button" role="menuitem" onClick={() => choose(h.id)} title={using ? `${h.name} · ${using}` : h.name} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-paper">
-                <span className="min-w-0 flex-1 truncate">{using || h.name}</span>
-                {using && <span className="shrink-0 text-[10px] text-muted">{h.name}</span>}
+              <button key={h.id} type="button" role="menuitem" onClick={() => choose(h.id)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-paper">
+                <span className="min-w-0 flex-1">{h.name}</span>
                 <span className={`shrink-0 font-mono text-[10px] ${status === "Ready" ? "text-ink" : "text-muted"}`}>{status}</span>
                 <Mark on={on} />
               </button>
@@ -237,22 +234,11 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
               </>
             )}
             {selected && link.connected && (
-              <p className="text-ink">{link.modelName || selected.name} is teaching. Leave the bridge window open.</p>
+              <p className="text-ink">
+                {selected.name}
+                {link.modelName ? ` · ${link.modelName}` : ""} is teaching. Leave the bridge window open.
+              </p>
             )}
-            <div className="flex items-center gap-1">
-              <span className="mr-1">Effort</span>
-              {(["low", "medium"] as const).map((effort) => (
-                <button
-                  key={effort}
-                  type="button"
-                  aria-pressed={link.effort === effort}
-                  onClick={() => publish({ ...linkRef.current, effort })}
-                  className={`rounded-md border px-2 py-0.5 ${link.effort === effort ? "border-ink text-ink" : "border-transparent hover:text-ink"}`}
-                >
-                  {effort}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
       )}

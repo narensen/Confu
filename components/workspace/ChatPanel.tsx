@@ -196,12 +196,6 @@ export function ChatPanel({
                         onSave={m.content.startsWith("⚠️") ? undefined : () => onSaveAnswer(m)}
                         onUnsave={onUnsaveAnswer}
                       />
-                      {busy && m === last && busy !== "Thinking…" && (
-                        <p className="animate-fade mt-2 flex items-center gap-2 font-mono text-[11px] text-muted">
-                          <span className="size-1.5 animate-pulse rounded-full bg-ink" />
-                          {busy}
-                        </p>
-                      )}
                     </div>
                   ) : (
                     <Thinking label={busy ?? "Thinking…"} />

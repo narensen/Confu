@@ -15,11 +15,11 @@ const TEACH_MS = 120_000;
 // Once the lesson text stops growing, end the turn. A CLI often keeps
 // "thinking" after it has already printed the answer, and the chat would
 // sit on "Asking…" until the process exits.
-const QUIET_MS = 1_200;
+const QUIET_MS = 450;
 
 const HARNESSES = [
   { id: "claude", name: "Claude", bin: "claude" },
-  { id: "codex", name: "Codex", bin: "codex" },
+  { id: "codex", name: "ChatGPT", bin: "codex" },
   { id: "antigravity", name: "Gemini", bin: "agy" },
   { id: "grok", name: "Grok", bin: "grok" },
 ];
@@ -246,7 +246,10 @@ function brief(body) {
 
 // Each CLI gets the lesson on stdin or in a prompt file, in a throwaway
 // directory, so a coding agent has nothing nearby to edit.
-function teachArgs(id, effort, model, prompt, promptPath) {
+function teachArgs(id, _effort, model, prompt, promptPath) {
+  // Low is the fast setting. Gemini's speed is the model itself
+  // (Flash Low, Flash Medium, …), so it is not applied again here.
+  const effort = "low";
   // None of these are started in plan mode. Plan mode makes the model
   // outline the lesson and ask which part to start, then wait.
   const chosen = cleanModel(model);
@@ -402,11 +405,14 @@ function runTeach(id, effort, model, prompt, res) {
     // Spinner and cursor noise are not more lesson. Don't let them keep the
     // turn open after the answer has stopped.
     if (next === shown) return;
+    const grew = next.replace(/\s+/g, " ").trim() !== shown.replace(/\s+/g, " ").trim();
     const delta = next.slice(shown.length);
     shown = next;
     sent = true;
     open();
     if (delta) res.write(delta);
+    // Blank padding and a spinner must not hold the lesson open.
+    if (!grew) return;
     if (quiet) clearTimeout(quiet);
     const doneNote = /spend limit|usage limit|rate limit|limit resets/i.test(shown);
     quiet = setTimeout(() => {
