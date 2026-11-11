@@ -1507,7 +1507,8 @@ export function Workspace({
             openTool("plan");
           }
         },
-        ".": () => toggleFocus(),
+        // Tab, not Shift+Tab, so moving focus backward still works.
+        Tab: e.shiftKey ? undefined : () => toggleFocus(),
       };
       const run = tutorChord ? go[key] : go[e.key];
       if (!run) return;

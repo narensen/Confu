@@ -734,7 +734,7 @@ export default function PdfViewer(props: Props) {
           <FocusSound />
           <FocusTimer />
           <ToolButton
-            label={focusMode ? "Exit full screen" : "Full screen"}
+            label={focusMode ? "Exit full screen (Tab)" : "Full screen (Tab)"}
             onClick={() => {
               if (!focusMode) track("reader.fullscreen");
               onToggleFocus();

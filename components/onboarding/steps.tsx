@@ -506,7 +506,7 @@ export const GUIDE_STEPS: GuideStep[] = [
     points: [
       { label: "Tools", body: <>Press a tool in the bar on the right (or its key: <b>p</b>, <b>h</b>, <b>f</b>) to slide it out. Click back into the page, or press Esc, to put it away. <b>Pin</b> keeps it open beside the page instead.</> },
       { label: "Files and tabs", body: <>Everything you add lands in <b>Files</b>; open one and it becomes a tab (D1, D2, …). ✕ on a tab only closes it; delete files from Files. PDFs, slides and Word docs all work.</> },
-      { label: "Make room", body: "Drag any edge to resize, or fold the tutor away (Ctrl+T) to read wider; it comes back when it answers. Full screen (⛶ or the . key) keeps the same layout without the header. Press ? for every shortcut." },
+      { label: "Make room", body: "Drag any edge to resize, or fold the tutor away (Ctrl+T) to read wider; it comes back when it answers. Full screen (⛶ or Tab) keeps the same layout without the header. Press ? for every shortcut." },
     ],
     art: ReadingArt,
   },

@@ -31,7 +31,7 @@ export const SHORTCUTS: { group: string; keys: [string, string][] }[] = [
       ["[  ]", "Previous / next open file"],
       ["w", "Close this file's tab (it stays in Files)"],
       ["n", "Open the next topic's pages"],
-      [".", "Full screen on or off"],
+      ["Tab", "Full screen on or off"],
       ["Ctrl F  ⌘ F", "Search in this file"],
     ],
   },
