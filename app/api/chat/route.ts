@@ -38,6 +38,8 @@ const Body = z.object({
   highlightId: z.uuid().nullable().optional(),
   // Files this question may cite. Absent means the whole session, as before.
   documentIds: z.array(z.uuid()).max(60).optional(),
+  // Prepare the lesson and hand it to a harness on the student's computer.
+  local: z.boolean().optional(),
 });
 
 const HISTORY_TURNS = 8;
@@ -53,12 +55,8 @@ export async function POST(request: Request) {
 
   const parsed = Body.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return new Response("Invalid request", { status: 400 });
-  const { sessionId, documentId = null, action, message, page = null, topicId, selection = null, highlightId = null, documentIds } = parsed.data;
+  const { sessionId, documentId = null, action, message, page = null, topicId, selection = null, highlightId = null, documentIds, local = false } = parsed.data;
   if (action === "chat" && !message?.trim() && !selection) return new Response("Empty message", { status: 400 });
-
-  const access = await resolveGroq(supabase, userId, sessionId, "chat");
-  if ("error" in access) return access.error;
-  const { groq } = access;
 
   const state = await loadTutorState(supabase, sessionId);
   if (!state.session) return new Response("Not found", { status: 404 });
@@ -223,6 +221,24 @@ export async function POST(request: Request) {
       content: (m.role === "assistant" ? stripReasoning(m.content) : m.content).slice(0, 1800).trim(),
     }))
     .filter((m) => m.content);
+
+  // A local harness teaches from this brief. The model call happens on the
+  // student's computer, so this request stops once the brief is ready.
+  if (local) {
+    return Response.json({
+      system,
+      history: pastTurns,
+      instruction,
+      display,
+      citeMode,
+      multi,
+      retrieved: [...excerpts, ...figures].map((e) => ({ label: e.label, page: e.page })),
+    });
+  }
+
+  const access = await resolveGroq(supabase, userId, sessionId, "chat");
+  if ("error" in access) return access.error;
+  const { groq } = access;
 
   // Paper sessions get tools for finding papers. One tool round, then an
   // answer: a second hop resends the whole prompt and its reasoning budget.

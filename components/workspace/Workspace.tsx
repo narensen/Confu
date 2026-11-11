@@ -5,6 +5,9 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, use
 import { deleteDocument } from "@/components/dashboard/actions";
 import type { RegionCapture, TextSelection } from "@/components/pdf/PdfViewer";
 import { JSON_HEADERS, KEY_ERROR_EVENT, notifyAiUsed, readAiError } from "@/lib/ai-errors";
+import { GROQ_LINK, teachWithHarness, type TutorLink } from "@/lib/harness-client";
+import { harnessById } from "@/lib/harnesses";
+import { HarnessBar } from "@/components/workspace/HarnessBar";
 import { hashText } from "@/lib/hash";
 import type { KeyInfo } from "@/lib/groq-keys";
 import { emptyReview, isPaperDoc, type PaperReview } from "@/lib/paper";
@@ -268,6 +271,9 @@ export function Workspace({
   const [keyNotice, setKeyNotice] = useState<string | null>(null);
   const [onTrial, setOnTrial] = useState(trial);
   const locked = needsKey && !keyInfo && !onTrial;
+  // A local harness teaches without a Groq key. The ref is what send() reads.
+  const harnessRef = useRef<TutorLink>(GROQ_LINK);
+  const [localTutor, setLocalTutor] = useState(false);
 
   // An AI request reported a missing or rejected key: ask for one again.
   useEffect(() => {
@@ -484,7 +490,9 @@ export function Workspace({
 
   const send = useCallback(
     async (req: SendRequest) => {
-      if (locked) return revealGate();
+      const harness = harnessRef.current;
+      const viaHarness = harness.id !== "groq";
+      if (locked && !viaHarness) return revealGate();
       if (busyRef.current) return;
       busyRef.current = true;
       const topic = topics.find((t) => t.id === req.topicId) ?? activeTopic;
@@ -512,10 +520,63 @@ export function Workspace({
         { id: replyId, role: "assistant", action: req.action, content: "", ...meta, highlight_id: null, created_at: now },
       ]);
       revealTutor();
-      setBusy("Thinking…");
+      setBusy(viaHarness ? `Asking ${harnessById(harness.id)?.name ?? "the harness"}…` : "Thinking…");
 
       const setReply = (text: string) => setMessages((m) => m.map((x) => (x.id === replyId ? { ...x, content: text } : x)));
       try {
+        if (viaHarness) {
+          if (!harness.connected) throw new Error("Start the bridge and connect it. The steps are above the chat.");
+          const prepared = await fetch("/api/chat", {
+            method: "POST",
+            headers: JSON_HEADERS,
+            body: JSON.stringify({
+              sessionId: session.id,
+              documentId: activeDoc?.id ?? null,
+              action: req.action,
+              message: req.message,
+              page: activeDoc ? page : null,
+              topicId: topic?.id ?? null,
+              selection: req.selection ?? null,
+              highlightId: req.highlightId ?? null,
+              documentIds: citing.length ? citing : undefined,
+              local: true,
+            }),
+          });
+          if (!prepared.ok) throw new Error(await readAiError(prepared));
+          const prep = (await prepared.json()) as {
+            system: string;
+            history: { role: string; content: string }[];
+            instruction: string;
+            display: string;
+            citeMode: boolean;
+            multi: boolean;
+            retrieved: { label: string; page: number }[];
+          };
+          const answer = await teachWithHarness(harness, prep, setReply);
+          const saved = await fetch("/api/chat/commit", {
+            method: "POST",
+            headers: JSON_HEADERS,
+            body: JSON.stringify({
+              sessionId: session.id,
+              action: req.action,
+              display: prep.display,
+              reply: answer,
+              documentId: where?.documentId ?? null,
+              page: where?.page ?? null,
+              topicId: topic?.id ?? null,
+              highlightId: req.highlightId ?? null,
+              citeMode: prep.citeMode,
+              multi: prep.multi,
+              retrieved: prep.retrieved,
+              selection: req.selection ?? null,
+            }),
+          });
+          if (saved.ok) {
+            const body = (await saved.json()) as { reply?: string };
+            if (body.reply) setReply(body.reply);
+          }
+          return;
+        }
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: JSON_HEADERS,
@@ -560,7 +621,12 @@ export function Workspace({
           setReply(text);
         }
       } catch (err) {
-        setReply(`⚠️ ${err instanceof Error ? err.message : "Something went wrong."}`);
+        const raw = err instanceof Error ? err.message : "Something went wrong.";
+        const message =
+          viaHarness && /failed to fetch|networkerror|load failed/i.test(raw)
+            ? "Couldn't reach the bridge. Leave its window open, and allow loopback access if the browser asks."
+            : raw;
+        setReply(`⚠️ ${message}`);
       } finally {
         busyRef.current = false;
         setBusy(null);
@@ -1687,8 +1753,14 @@ export function Workspace({
         onShortcuts={wide ? () => setShortcutsOpen(true) : undefined}
         usage={<UsageMeter sessionId={session.id} keyId={needsKey ? keyInfo?.id : undefined} keyLast4={needsKey ? keyInfo?.last4 : undefined} />}
       />
+      <HarnessBar
+        onChange={(link) => {
+          harnessRef.current = link;
+          setLocalTutor(link.id !== "groq");
+        }}
+      />
       <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
-        {locked ? (
+        {locked && !localTutor ? (
           <KeyGate
             sessionId={session.id}
             notice={keyNotice}
