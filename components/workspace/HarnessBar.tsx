@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { bridgeCommand, detectComputer, harnessById, HARNESSES, installCommand, osLabel, type DesktopOS, type HarnessId } from "@/lib/harnesses";
-import { loadTutorLink, probeBridge, saveTutorLink, type BridgeHealth, type TutorLink } from "@/lib/harness-client";
+import { loadTutorLink, probeBridge, saveTutorLink, type BridgeHealth, type BridgeModel, type TutorLink } from "@/lib/harness-client";
 
 const NAMES: Record<TutorLink["id"], string> = {
   groq: "Confu",
@@ -15,7 +15,7 @@ const NAMES: Record<TutorLink["id"], string> = {
 // One Tutors button. Opening it asks the local bridge which harnesses are
 // installed and connects the one you pick. No connection code.
 export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }) {
-  const [link, setLink] = useState<TutorLink>({ id: "groq", effort: "low", connected: false, installed: true });
+  const [link, setLink] = useState<TutorLink>({ id: "groq", effort: "low", model: null, modelName: null, connected: false, installed: true });
   const [open, setOpen] = useState(false);
   const [health, setHealth] = useState<BridgeHealth | null>(null);
   const [down, setDown] = useState(false);
@@ -79,8 +79,16 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
         setHealth(found);
         if (current.id === "groq") return;
         const row = found?.harnesses.find((h) => h.id === current.id);
-        const next = { ...current, connected: Boolean(found && row?.installed), installed: Boolean(row?.installed) };
-        const changed = next.connected !== current.connected || next.installed !== current.installed;
+        const options = row?.models ?? [];
+        const picked = options.find((m) => m.id === current.model);
+        const model = options.length ? picked?.id || row?.model || null : current.model || row?.model || null;
+        const modelName = options.length ? picked?.name || row?.modelName || null : current.modelName || row?.modelName || null;
+        const next = { ...current, model, modelName, connected: Boolean(found && row?.installed), installed: Boolean(row?.installed) };
+        const changed =
+          next.connected !== current.connected ||
+          next.installed !== current.installed ||
+          next.model !== current.model ||
+          next.modelName !== current.modelName;
         linkRef.current = next;
         setLink(next);
         if (changed) onChangeRef.current(next);
@@ -110,8 +118,19 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
     const row = id === "groq" ? null : health?.harnesses.find((h) => h.id === id);
     const installed = id === "groq" || Boolean(row?.installed);
     const connected = id !== "groq" && Boolean(health) && installed;
-    publish({ ...linkRef.current, id, connected, installed });
+    const same = linkRef.current.id === id;
+    const keep = id !== "groq" && same ? linkRef.current.model : null;
+    const picked = row?.models.find((m) => m.id === keep);
+    const model = id === "groq" ? null : picked?.id || row?.model || keep;
+    const modelName = id === "groq" ? null : picked?.name || (model && model === row?.model ? row?.modelName : null) || (same ? linkRef.current.modelName : null);
+    publish({ ...linkRef.current, id, model, modelName: id === "groq" ? null : modelName, connected, installed });
     if (id === "groq" || connected) setOpen(false);
+  }
+
+  function pickModel(model: BridgeModel) {
+    if (linkRef.current.id === "groq") return;
+    publish({ ...linkRef.current, model: model.id, modelName: model.name });
+    setOpen(false);
   }
 
   async function copy(text: string, key: string) {
@@ -144,16 +163,16 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
           setOpen(next);
           if (next) setChecking(true);
         }}
-        className="flex h-7 max-w-36 items-center gap-1 rounded-md border border-ink/25 px-2 text-xs font-medium text-ink hover:border-ink aria-expanded:border-ink"
+        className="flex h-7 max-w-44 items-center gap-1 rounded-md border border-ink/25 px-2 text-xs font-medium text-ink hover:border-ink aria-expanded:border-ink"
       >
-        <span className="truncate">{link.id === "groq" ? "Tutors" : NAMES[link.id]}</span>
+        <span className="truncate">{link.id === "groq" ? "Tutors" : link.modelName || NAMES[link.id]}</span>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden className={`shrink-0 ${open ? "rotate-180" : ""}`}>
           <path d="m6 9 6 6 6-6" />
         </svg>
       </button>
 
       {open && (
-        <div role="menu" aria-label="Tutors" className="animate-pop absolute top-full left-0 z-50 mt-2 w-72 origin-top-left overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
+        <div role="menu" aria-label="Tutors" className="animate-pop absolute top-full left-0 z-50 mt-2 max-h-[70vh] w-72 origin-top-left overflow-y-auto rounded-2xl border border-ink bg-panel shadow-hard">
           <button type="button" role="menuitem" onClick={() => choose("groq")} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-paper">
             <span className="min-w-0 flex-1">Confu</span>
             <Mark on={link.id === "groq"} />
@@ -161,14 +180,36 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
           {HARNESSES.map((h) => {
             const status = statusOf(h.id);
             const on = link.id === h.id;
+            const info = health?.harnesses.find((row) => row.id === h.id);
+            const using = on ? link.modelName || info?.modelName : info?.modelName;
             return (
-              <button key={h.id} type="button" role="menuitem" onClick={() => choose(h.id)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-paper">
-                <span className="min-w-0 flex-1">{h.name}</span>
-                <span className={`font-mono text-[10px] ${status === "Ready" ? "text-ink" : "text-muted"}`}>{status}</span>
+              <button key={h.id} type="button" role="menuitem" onClick={() => choose(h.id)} title={using ? `${h.name} · ${using}` : h.name} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-paper">
+                <span className="min-w-0 flex-1 truncate">{using || h.name}</span>
+                {using && <span className="shrink-0 text-[10px] text-muted">{h.name}</span>}
+                <span className={`shrink-0 font-mono text-[10px] ${status === "Ready" ? "text-ink" : "text-muted"}`}>{status}</span>
                 <Mark on={on} />
               </button>
             );
           })}
+          {selected && (health?.harnesses.find((row) => row.id === link.id)?.models.length ?? 0) > 0 && (
+            <div className="border-t border-line px-1.5 py-1.5">
+              <p className="px-1.5 py-1 font-mono text-[10px] tracking-widest text-muted uppercase">Model</p>
+              {health?.harnesses
+                .find((row) => row.id === link.id)
+                ?.models.map((model) => (
+                  <button
+                    key={model.id}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => pickModel(model)}
+                    className={`flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-left text-xs hover:bg-paper ${link.model === model.id ? "text-ink" : "text-muted"}`}
+                  >
+                    <Mark on={link.model === model.id} />
+                    <span className="min-w-0 flex-1 truncate">{model.name}</span>
+                  </button>
+                ))}
+            </div>
+          )}
 
           <div className="space-y-2 border-t border-line px-3 py-2.5 text-xs leading-relaxed text-muted">
             {computer.mobile && <p>Open Confu on a Mac, Windows, or Linux computer. A phone can't run these.</p>}
@@ -195,7 +236,9 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
                 />
               </>
             )}
-            {selected && link.connected && <p className="text-ink">{selected.name} is teaching. Leave the bridge window open.</p>}
+            {selected && link.connected && (
+              <p className="text-ink">{link.modelName || selected.name} is teaching. Leave the bridge window open.</p>
+            )}
             <div className="flex items-center gap-1">
               <span className="mr-1">Effort</span>
               {(["low", "medium"] as const).map((effort) => (

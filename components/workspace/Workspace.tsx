@@ -520,7 +520,7 @@ export function Workspace({
         { id: replyId, role: "assistant", action: req.action, content: "", ...meta, highlight_id: null, created_at: now },
       ]);
       revealTutor();
-      setBusy(viaHarness ? `Asking ${harnessById(harness.id)?.name ?? "the harness"}…` : "Thinking…");
+      setBusy(viaHarness ? `Asking ${harness.modelName || harnessById(harness.id)?.name || "the tutor"}…` : "Thinking…");
 
       const setReply = (text: string) => setMessages((m) => m.map((x) => (x.id === replyId ? { ...x, content: text } : x)));
       try {
@@ -552,7 +552,14 @@ export function Workspace({
             multi: boolean;
             retrieved: { label: string; page: number }[];
           };
-          const answer = await teachWithHarness(harness, prep, setReply);
+          let hideAsking: number | undefined;
+          const answer = await teachWithHarness(harness, prep, (text) => {
+            setReply(text);
+            // The line under the answer is only for while text is still arriving.
+            window.clearTimeout(hideAsking);
+            hideAsking = window.setTimeout(() => setBusy(null), 400);
+          });
+          window.clearTimeout(hideAsking);
           const saved = await fetch("/api/chat/commit", {
             method: "POST",
             headers: JSON_HEADERS,

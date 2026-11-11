@@ -21,8 +21,8 @@ export type HarnessInfo = {
 export const HARNESSES: HarnessInfo[] = [
   { id: "claude", name: "Claude", bin: "claude", signIn: "claude" },
   { id: "codex", name: "Codex", bin: "codex", signIn: "codex" },
-  { id: "antigravity", name: "Antigravity", bin: "agy", signIn: "agy" },
-  { id: "grok", name: "Grok Build", bin: "grok", signIn: "grok" },
+  { id: "antigravity", name: "Gemini", bin: "agy", signIn: "agy" },
+  { id: "grok", name: "Grok", bin: "grok", signIn: "grok" },
 ];
 
 export const harnessById = (id: string): HarnessInfo | undefined => HARNESSES.find((h) => h.id === id);

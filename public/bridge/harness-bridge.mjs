@@ -12,15 +12,16 @@ import path from "node:path";
 const PORT = Number(process.env.CONFU_BRIDGE_PORT) || 17321;
 const MAX_BODY = 400_000;
 const TEACH_MS = 120_000;
-// After the lesson text stops arriving, don't wait out a harness that keeps
-// thinking in silence. The chat would sit on "Asking…" for the whole timeout.
-const QUIET_MS = 8_000;
+// Once the lesson text stops growing, end the turn. A CLI often keeps
+// "thinking" after it has already printed the answer, and the chat would
+// sit on "Asking…" until the process exits.
+const QUIET_MS = 1_200;
 
 const HARNESSES = [
   { id: "claude", name: "Claude", bin: "claude" },
   { id: "codex", name: "Codex", bin: "codex" },
-  { id: "antigravity", name: "Antigravity", bin: "agy" },
-  { id: "grok", name: "Grok Build", bin: "grok" },
+  { id: "antigravity", name: "Gemini", bin: "agy" },
+  { id: "grok", name: "Grok", bin: "grok" },
 ];
 
 const home = os.homedir();
@@ -48,10 +49,149 @@ function versionOf(bin) {
   return line.slice(0, 80) || "installed";
 }
 
+function cleanModel(id) {
+  if (typeof id !== "string") return null;
+  const s = id.trim();
+  return /^[A-Za-z0-9][A-Za-z0-9._:-]{0,80}$/.test(s) ? s : null;
+}
+
+function visibleText(raw) {
+  return raw
+    .replace(/\x1b\[[0-9;?]*[ -/]*[@-~]/g, "")
+    .replace(/\x1b\][^\x07]*(?:\x07|\x1b\\)/g, "")
+    .replace(/\r/g, "");
+}
+
+// Model lists are cached. Listing asks each CLI what it can run; it does not
+// start a lesson. /health only reads the cache so a slow list can't block a turn.
+let modelCache = {};
+function rememberModels(id, found) {
+  modelCache[id] = found || { current: null, currentName: null, list: [] };
+}
+
+function runCmd(bin, args, ms) {
+  return new Promise((resolve) => {
+    let child;
+    try {
+      child = spawn(bin, args, { env, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] });
+    } catch {
+      resolve("");
+      return;
+    }
+    let out = "";
+    const timer = setTimeout(() => {
+      try { child.kill("SIGTERM"); } catch {}
+    }, ms);
+    child.stdout.on("data", (chunk) => {
+      out = (out + chunk.toString("utf8")).slice(0, 2_000_000);
+    });
+    const done = () => {
+      clearTimeout(timer);
+      resolve(out);
+    };
+    child.on("close", done);
+    child.on("error", done);
+  });
+}
+
+function claudeModels() {
+  const dir = path.join(home, ".claude", "cache", "model-catalog");
+  let files = [];
+  try {
+    files = fs.readdirSync(dir).filter((name) => name.endsWith(".json")).map((name) => path.join(dir, name));
+  } catch {
+    return;
+  }
+  files.sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+  if (!files.length) return;
+  let catalog;
+  try {
+    catalog = JSON.parse(fs.readFileSync(files[0], "utf8"));
+  } catch {
+    return;
+  }
+  const models = catalog?.catalog?.config?.models;
+  if (!Array.isArray(models)) return;
+  const list = models
+    .filter((m) => m && cleanModel(m.id) && typeof m.name === "string")
+    .map((m) => ({ id: m.id, name: String(m.name).slice(0, 80), section: m.section || "" }));
+  list.sort((a, b) => (a.section === "main" ? 0 : 1) - (b.section === "main" ? 0 : 1));
+  const current = list[0] || null;
+  rememberModels("claude", {
+    current: current?.id || null,
+    currentName: current?.name || null,
+    list: list.map(({ id, name }) => ({ id, name })),
+  });
+}
+
+async function codexModels() {
+  let preferred = null;
+  try {
+    const text = fs.readFileSync(path.join(home, ".codex", "config.toml"), "utf8");
+    preferred = cleanModel((text.match(/^model\s*=\s*"([^"]+)"/m) || [])[1] || "");
+  } catch {}
+  let catalog;
+  try {
+    catalog = JSON.parse(await runCmd("codex", ["debug", "models", "--bundled"], 8000));
+  } catch {
+    return;
+  }
+  const list = (Array.isArray(catalog?.models) ? catalog.models : [])
+    .filter((m) => m && m.visibility !== "hide" && cleanModel(m.slug) && typeof m.display_name === "string")
+    .map((m) => ({ id: m.slug, name: String(m.display_name).slice(0, 80) }));
+  const current = list.find((m) => m.id === preferred) || list[0] || null;
+  rememberModels("codex", { current: current?.id || null, currentName: current?.name || null, list });
+}
+
+async function agyModels() {
+  const text = await runCmd("agy", ["models"], 12000);
+  const list = [];
+  for (const line of text.split(/\r?\n/)) {
+    const [id, name] = line.split("\t");
+    if (cleanModel(id || "") && name && name.trim()) list.push({ id: id.trim(), name: name.trim().slice(0, 80) });
+  }
+  const current = list.find((m) => /-low$/.test(m.id)) || list[0] || null;
+  rememberModels("antigravity", { current: current?.id || null, currentName: current?.name || null, list });
+}
+
+function grokName(id) {
+  return `Grok ${id.replace(/^grok-/, "").replace(/-/g, " ")}`;
+}
+
+async function grokModels() {
+  const text = await runCmd("grok", ["models"], 8000);
+  const list = [];
+  for (const line of text.split(/\r?\n/)) {
+    const match = line.match(/^\s*[*-]\s+(\S+)/);
+    const id = cleanModel(match?.[1] || "");
+    if (id) list.push({ id, name: grokName(id) });
+  }
+  const preferred = cleanModel((text.match(/Default model:\s*(\S+)/) || [])[1] || "");
+  const current = list.find((m) => m.id === preferred) || list[0] || null;
+  rememberModels("grok", { current: current?.id || null, currentName: current?.name || null, list });
+}
+
+async function refreshModels() {
+  for (const load of [claudeModels, codexModels, agyModels, grokModels]) {
+    try {
+      await load();
+    } catch {}
+  }
+}
+
 function detected() {
   return HARNESSES.map((h) => {
     const version = versionOf(h.bin);
-    return { id: h.id, name: h.name, installed: Boolean(version), version };
+    const models = modelCache[h.id] || { current: null, currentName: null, list: [] };
+    return {
+      id: h.id,
+      name: h.name,
+      installed: Boolean(version),
+      version,
+      model: models.current,
+      modelName: models.currentName,
+      models: models.list,
+    };
   });
 }
 
@@ -106,14 +246,16 @@ function brief(body) {
 
 // Each CLI gets the lesson on stdin or in a prompt file, in a throwaway
 // directory, so a coding agent has nothing nearby to edit.
-function teachArgs(id, effort, prompt, promptPath) {
+function teachArgs(id, effort, model, prompt, promptPath) {
   // None of these are started in plan mode. Plan mode makes the model
   // outline the lesson and ask which part to start, then wait.
+  const chosen = cleanModel(model);
   if (id === "claude") {
     return {
       bin: "claude",
       args: [
         "-p",
+        ...(chosen ? ["--model", chosen] : []),
         "--effort",
         effort,
         "--permission-mode",
@@ -135,6 +277,7 @@ function teachArgs(id, effort, prompt, promptPath) {
       bin: "codex",
       args: [
         "exec",
+        ...(chosen ? ["-m", chosen] : []),
         "--ephemeral",
         "--skip-git-repo-check",
         "--sandbox",
@@ -153,7 +296,14 @@ function teachArgs(id, effort, prompt, promptPath) {
   // A long one stays in the file; skip-permissions keeps that read from waiting
   // on a yes/no that nobody can answer.
   if (id === "antigravity") {
-    const head = ["--effort", effort, "--sandbox", "--disable-slash-commands", "--output-format", "text"];
+    const head = [
+      ...(chosen ? ["--model", chosen] : []),
+      ...(chosen && /-(low|medium|high)$/.test(chosen) ? [] : ["--effort", effort]),
+      "--sandbox",
+      "--disable-slash-commands",
+      "--output-format",
+      "text",
+    ];
     const teachNow = "Teach that lesson now, in markdown only. Do not plan. Do not ask which part to start with. Do not use tools or edit files.";
     if (prompt.length <= 60_000) {
       return { bin: "agy", args: [...head, "-p", `${prompt}\n\n${teachNow}`], stdin: false };
@@ -169,6 +319,7 @@ function teachArgs(id, effort, prompt, promptPath) {
     args: [
       "--prompt-file",
       promptPath,
+      ...(chosen ? ["-m", chosen] : []),
       "--reasoning-effort",
       effort,
       "--max-turns",
@@ -184,14 +335,15 @@ function teachArgs(id, effort, prompt, promptPath) {
   };
 }
 
-function runTeach(id, effort, prompt, res) {
+function runTeach(id, effort, model, prompt, res) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "confu-teach-"));
   const promptPath = path.join(dir, "TEACH.md");
   fs.writeFileSync(promptPath, prompt);
-  const spec = teachArgs(id, effort, prompt, promptPath);
+  const spec = teachArgs(id, effort, model, prompt, promptPath);
   const child = spawn(spec.bin, spec.args, {
     cwd: dir,
     env,
+    detached: true,
     stdio: ["pipe", "pipe", "pipe"],
     windowsHide: true,
   });
@@ -206,7 +358,12 @@ function runTeach(id, effort, prompt, res) {
     res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" });
   };
   const kill = () => {
-    if (!child.killed && child.exitCode === null) child.kill("SIGTERM");
+    if (child.exitCode !== null || child.signalCode) return;
+    try {
+      process.kill(-child.pid, "SIGTERM");
+    } catch {
+      child.kill("SIGTERM");
+    }
   };
   const finish = (code) => {
     if (settled) return;
@@ -236,17 +393,27 @@ function runTeach(id, effort, prompt, res) {
   child.stderr.on("data", (chunk) => {
     stderr = (stderr + chunk.toString("utf8")).slice(-4000);
   });
+  let raw = "";
+  let shown = "";
   child.stdout.on("data", (chunk) => {
     if (settled || !chunk.length) return;
+    raw += chunk.toString("utf8");
+    const next = visibleText(raw);
+    // Spinner and cursor noise are not more lesson. Don't let them keep the
+    // turn open after the answer has stopped.
+    if (next === shown) return;
+    const delta = next.slice(shown.length);
+    shown = next;
     sent = true;
     open();
-    res.write(chunk);
+    if (delta) res.write(delta);
     if (quiet) clearTimeout(quiet);
+    const doneNote = /spend limit|usage limit|rate limit|limit resets/i.test(shown);
     quiet = setTimeout(() => {
       if (!sent || settled) return;
       kill();
       finish(0);
-    }, QUIET_MS);
+    }, doneNote ? 150 : QUIET_MS);
   });
   child.stdin.on("error", () => {});
   if (spec.stdin) {
@@ -294,7 +461,7 @@ const server = createServer(async (req, res) => {
       res.end(`${harness.name} is not installed.`);
       return;
     }
-    runTeach(harness.id, effort, brief(body), res);
+    runTeach(harness.id, effort, body.model, brief(body), res);
     return;
   }
   res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
@@ -308,6 +475,9 @@ server.on("error", (err) => {
   }
   throw err;
 });
+
+setTimeout(refreshModels, 50);
+setInterval(refreshModels, 10 * 60 * 1000);
 
 server.listen(PORT, "127.0.0.1", () => {
   const rows = detected()
