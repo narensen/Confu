@@ -107,10 +107,26 @@ function brief(body) {
 // Each CLI gets the lesson on stdin or in a prompt file, in a throwaway
 // directory, so a coding agent has nothing nearby to edit.
 function teachArgs(id, effort, prompt, promptPath) {
+  // None of these are started in plan mode. Plan mode makes the model
+  // outline the lesson and ask which part to start, then wait.
   if (id === "claude") {
     return {
       bin: "claude",
-      args: ["-p", "--effort", effort, "--permission-mode", "plan", "--tools", "", "--restricted", "--output-format", "text"],
+      args: [
+        "-p",
+        "--effort",
+        effort,
+        "--permission-mode",
+        "dontAsk",
+        "--permission-prompts",
+        "none",
+        "--tools",
+        "",
+        "--disable-slash-commands",
+        "--restricted",
+        "--output-format",
+        "text",
+      ],
       stdin: true,
     };
   }
@@ -158,7 +174,7 @@ function teachArgs(id, effort, prompt, promptPath) {
       "--max-turns",
       "1",
       "--permission-mode",
-      "plan",
+      "dontAsk",
       "--no-plan",
       "--verbatim",
       "--output-format",
