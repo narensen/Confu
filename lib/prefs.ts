@@ -99,3 +99,52 @@ export function useReaderTheme(): ReaderTheme {
   const dark = useAppDark();
   return pref === "auto" ? (dark ? "night" : "light") : pref;
 }
+
+// Sessions pinned to the top of the library, on this device. (Kept here
+// rather than in the database so it needs no schema change.)
+const PINNED_KEY = "confu:pinned-sessions";
+let pinnedRaw: string | null = null;
+let pinnedList: string[] = [];
+
+function pinnedSnapshot(): string[] {
+  const raw = get(PINNED_KEY);
+  if (raw !== pinnedRaw) {
+    pinnedRaw = raw;
+    try {
+      const parsed: unknown = raw ? JSON.parse(raw) : [];
+      pinnedList = Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === "string") : [];
+    } catch {
+      pinnedList = [];
+    }
+  }
+  return pinnedList;
+}
+
+const NO_PINS: string[] = [];
+
+export function usePinnedSessions(): string[] {
+  return useSyncExternalStore(subscribe, pinnedSnapshot, () => NO_PINS);
+}
+
+export function togglePinnedSession(id: string) {
+  const now = pinnedSnapshot();
+  const next = now.includes(id) ? now.filter((x) => x !== id) : [id, ...now];
+  put(PINNED_KEY, next.length ? JSON.stringify(next.slice(0, 50)) : null);
+}
+
+// How the library's sessions are ordered, on this device.
+export type LibrarySort = "recent" | "deadline" | "name";
+const SORT_KEY = "confu:library-sort";
+
+function librarySort(): LibrarySort {
+  const v = get(SORT_KEY);
+  return v === "deadline" || v === "name" ? v : "recent";
+}
+
+export function useLibrarySort(): LibrarySort {
+  return useSyncExternalStore(subscribe, librarySort, () => "recent");
+}
+
+export function setLibrarySort(sort: LibrarySort) {
+  put(SORT_KEY, sort === "recent" ? null : sort);
+}

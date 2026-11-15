@@ -6,6 +6,18 @@ export type Release = { date: string; title: string; summary: string; items: str
 export const CHANGELOG: Release[] = [
   {
     date: "2026-11-15",
+    title: "A library that says what's next",
+    summary: "Continue shows the next step, and Today gathers what's due across your sessions.",
+    items: [
+      "Continue names the next topic, with its pages, time and due date, and takes you back to the page you were reading.",
+      "Today lists what's due across every session: reviews, plan topics due today or behind, and exams in the next two weeks. Each opens where it's done.",
+      "Exam cards show the countdown and how practice is going, not a bar that looked like progress. Paper cards show each paper's passes.",
+      "Sort your sessions by recent use, deadline or name, and pin the ones you want at the top (on this device).",
+      "On a phone, a card's Pin, Archive and Delete are always there; they no longer wait for a hover that can't happen.",
+    ],
+  },
+  {
+    date: "2026-11-15",
     title: "Easier to find your way",
     summary: "Fewer places to look, tools always in view, and a Stop button for the tutor.",
     items: [
