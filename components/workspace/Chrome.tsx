@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { Section, Tab } from "./TutorPanel";
 
-// The frame around the reader: the tutor's side (left), the tool rail
-// (right) with the panel each tool slides out into, and the tab bar phones
+// The frame around the reader: the tutor's side (left), the tool bar
+// (right, hidden until you reach for it) with the panel each tool slides out into, and the tab bar phones
 // use instead. The panels' contents are in TutorPanel.
 
 /* ------------------------------------------------------------------ icons */
@@ -105,21 +105,92 @@ const iconButton = "flex size-8 shrink-0 items-center justify-center rounded-md 
 
 /* ------------------------------------------------------------- the rails */
 
-// Right edge: the session's tools in a labelled column, always in view, so
-// there's nothing to discover by moving the mouse about. The tool that's out
-// is filled in; a dot means it's waiting on you (a goal to set, files still
-// to come in). Tools slide out from its left edge.
-export function ToolRail({
+// Right edge: the session's tools in a small bar that keeps out of the way.
+// It tucks itself away while you read and comes out when the pointer moves
+// toward it (or Tab reaches it). While a tool is open it stays out, riding
+// the open tool's left edge. Touch screens, with no pointer to follow, keep
+// it out. It peeks once when the session opens, so you know where it lives.
+const HOVER = "(hover: hover) and (pointer: fine)";
+const subscribeHover = (fn: () => void) => {
+  const m = window.matchMedia(HOVER);
+  m.addEventListener("change", fn);
+  return () => m.removeEventListener("change", fn);
+};
+const REACH = 88; // px from the edge that bring it out
+const BAND = 170; // px above and below its middle that count
+const LINGER = 450; // ms it waits before tucking away again
+
+export function ToolDock({
   sections,
   active,
+  offset,
   hidden = false,
   onPick,
 }: {
   sections: Section[];
   active: Tab | null;
+  offset: number; // the open tool's width: the bar sits at its edge
   hidden?: boolean; // the tutor across the whole screen
   onPick: (id: Section["id"]) => void;
 }) {
+  const edge = useRef<HTMLDivElement>(null);
+  const canHover = useSyncExternalStore(subscribeHover, () => window.matchMedia(HOVER).matches, () => true);
+  const [near, setNear] = useState(false);
+  const [over, setOver] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [peek, setPeek] = useState(true);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setPeek(false), 2200);
+    return () => window.clearTimeout(id);
+  }, []);
+
+  // Follow the pointer (once a frame, and only a change re-renders): close
+  // to the edge, level with the bar, it comes out; away, it waits a moment.
+  useEffect(() => {
+    if (!canHover) return;
+    let frame = 0;
+    let linger = 0;
+    let isNear = false;
+    let x = -1;
+    let y = -1;
+    const check = () => {
+      frame = 0;
+      const box = edge.current?.getBoundingClientRect();
+      if (!box) return;
+      const close = x <= box.right && box.right - x < REACH && y >= box.top && y <= box.bottom && Math.abs(y - (box.top + box.height / 2)) < BAND;
+      if (close) {
+        window.clearTimeout(linger);
+        linger = 0;
+        if (!isNear) setNear((isNear = true));
+      } else if (isNear && !linger) {
+        linger = window.setTimeout(() => {
+          linger = 0;
+          setNear((isNear = false));
+        }, LINGER);
+      }
+    };
+    const onMove = (e: PointerEvent) => {
+      x = e.clientX;
+      y = e.clientY;
+      if (!frame) frame = requestAnimationFrame(check);
+    };
+    const onLeave = () => {
+      x = y = -1;
+      if (!frame) frame = requestAnimationFrame(check);
+    };
+    window.addEventListener("pointermove", onMove, { passive: true });
+    document.documentElement.addEventListener("pointerleave", onLeave);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      document.documentElement.removeEventListener("pointerleave", onLeave);
+      cancelAnimationFrame(frame);
+      window.clearTimeout(linger);
+    };
+  }, [canHover]);
+
+  const shown = !hidden && (active !== null || near || over || focused || peek || !canHover);
+
   return (
     <nav aria-label="Session tools" inert={hidden} className="relative z-30 flex w-[4.5rem] shrink-0 flex-col gap-1 border-l border-ink bg-panel px-1 py-2">
       {sections.map((s) => {
@@ -134,13 +205,13 @@ export function ToolRail({
             aria-keyshortcuts={s.shortcut?.toLowerCase()}
             title={`${s.hint}${s.shortcut ? ` (${s.shortcut.toLowerCase()})` : ""}`}
             className={`relative flex flex-col items-center gap-1 rounded-xl px-0.5 pt-2 pb-1.5 transition duration-200 ease-fluid active:scale-95 motion-reduce:transition-none ${
-              on ? "bg-ink text-on-ink" : "text-muted hover:bg-paper hover:text-ink"
+              on ? "bg-ink text-white" : "text-muted hover:bg-paper hover:text-ink"
             }`}
           >
             <Icon name={s.id} size={18} />
-            <span className="max-w-full truncate text-xs leading-none font-medium">{s.label}</span>
-            {s.badge && <span className={`font-mono text-xs leading-none tabular-nums ${on ? "text-on-ink/70" : "text-muted"}`}>{s.badge}</span>}
-            {s.dot && !on && <span aria-hidden className="absolute top-1.5 right-2 size-2 rounded-full border border-ink bg-brand" />}
+            <span className="max-w-full truncate text-[11px] leading-none font-medium">{s.label}</span>
+            {s.badge && <span className={`font-mono text-[10px] leading-none tabular-nums ${on ? "text-white/70" : "text-muted"}`}>{s.badge}</span>}
+            {s.dot && !on && <span aria-hidden className="absolute top-1.5 right-2 size-2 rounded-full border border-ink bg-yellow-300" />}
           </button>
         );
       })}
