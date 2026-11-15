@@ -26,7 +26,6 @@ export const CHANGELOG: Release[] = [
     items: [
       "The header has three places: Library, Review (with how many reviews are due) and Community, which gathers Threads, Spaces, Study rooms and Friends under tabs. On a phone they're a tab bar along the bottom.",
       "Go to… (Ctrl K, or ⌘ K on a Mac) jumps to any session or place, and in a session runs its tools: open the plan, fold the tutor, go full screen.",
-      "In a session, your tools sit in a labelled column on the right that stays in view, instead of a bar that hid until the mouse came near.",
       "Stop ends an answer while the tutor is still writing. What it wrote so far is kept.",
       "Above the message box: Teach me this topic, Quiz me, Explain this page. Sources, under it, sets which files the tutor may cite and whether every answer must cite a page.",
       "The Focus strip opens into what to do next, in one place instead of three. Hover a page citation in an answer to see that page's text first.",
