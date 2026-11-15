@@ -274,18 +274,29 @@ export async function POST(request: Request) {
 
   // Text streams as-is. Status updates (e.g. "Searching papers…") are sent as
   // \u001e{json}\n records, which the client shows but doesn't keep.
+  // Stopped by the student (the Stop button aborts the request): stop asking
+  // the model, and still save what was written so far, marked as stopped.
+  let stopped = false;
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       let reply = "";
       const sources: Source[] = [];
+      const send = (bytes: Uint8Array) => {
+        if (stopped) return;
+        try {
+          controller.enqueue(bytes);
+        } catch {
+          stopped = true; // the reader went away
+        }
+      };
       const write = (text: string) => {
         if (!text) return;
         reply += text;
         // Cite mode keeps the meter on the stream and holds the tutor text
         // until the filter has run. Status lines still go out as they happen.
-        if (!citeMode) controller.enqueue(encoder.encode(text));
+        if (!citeMode) send(encoder.encode(text));
       };
-      const status = (label: string) => controller.enqueue(encoder.encode(`\u001e${JSON.stringify({ type: "status", label })}\n`));
+      const status = (label: string) => send(encoder.encode(`\u001e${JSON.stringify({ type: "status", label })}\n`));
 
       try {
         let completion = firstRound;
@@ -301,6 +312,7 @@ export async function POST(request: Request) {
             write(shown);
           };
           for await (const chunk of completion) {
+            if (stopped) break; // leaving the loop ends the model's stream too
             const choice = chunk.choices[0];
             if (choice?.finish_reason === "length") hitCap = true;
             const delta = choice?.delta;
@@ -321,7 +333,7 @@ export async function POST(request: Request) {
           // Stop even if the model asks for another tool. Another round would
           // resend the whole prompt, and a model that keeps calling tools would
           // never stop.
-          const lastRound = !pending.length || !tools || round >= MAX_TOOL_ROUNDS;
+          const lastRound = stopped || !pending.length || !tools || round >= MAX_TOOL_ROUNDS;
           if (hitCap && lastRound) write("\n\n_(Stopped here so this stays short. Ask me to continue.)_");
           if (lastRound) break;
 
@@ -339,11 +351,11 @@ export async function POST(request: Request) {
           status("Reading the results…");
           completion = await askModel(round + 1);
         }
-        if (sources.length && !citeMode) {
+        if (sources.length && !citeMode && !stopped) {
           write(`\n\n**Sources**\n${sources.slice(0, 10).map((x) => `- [${x.title.replace(/[[\]]/g, "")}](${x.url})`).join("\n")}`);
         }
       } catch {
-        write("\n\n_(The answer was cut off — please try again.)_");
+        if (!stopped) write("\n\n_(The answer was cut off — please try again.)_");
       } finally {
         if (citeMode) {
           const retrieved = retrievedKeys(
@@ -353,11 +365,19 @@ export async function POST(request: Request) {
           const aimed = preferAnswerCitations(reply, excerpts, multi);
           const filtered = keepCited(aimed, retrieved, multi).trim();
           reply = filtered || reply.trim() || "The tutor didn't send an answer. Try again.";
-          controller.enqueue(encoder.encode(reply));
+          send(encoder.encode(reply));
         }
-        controller.close();
+        if (stopped && reply.trim()) reply = `${reply.trimEnd()}\n\n_(Stopped.)_`;
+        if (!stopped) {
+          try {
+            controller.close();
+          } catch {}
+        }
         resolveDone(reply);
       }
+    },
+    cancel() {
+      stopped = true;
     },
   });
 

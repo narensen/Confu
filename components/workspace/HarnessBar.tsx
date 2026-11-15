@@ -156,16 +156,16 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-label="Tutors"
+        aria-label={`Tutor: ${NAMES[link.id]}. Choose who teaches`}
         title="Choose who teaches"
         onClick={() => {
           const next = !open;
           setOpen(next);
           if (next) setChecking(true);
         }}
-        className="flex h-7 max-w-44 items-center gap-1 rounded-md border border-ink/25 px-2 text-xs font-medium text-ink hover:border-ink aria-expanded:border-ink"
+        className="flex h-7 max-w-44 items-center gap-1 rounded-md px-1.5 text-sm text-muted transition hover:bg-paper hover:text-ink aria-expanded:bg-paper aria-expanded:text-ink"
       >
-        <span className="truncate">{link.id === "groq" ? "Tutors" : NAMES[link.id]}</span>
+        <span className="truncate">{NAMES[link.id]}</span>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden className={`shrink-0 ${open ? "rotate-180" : ""}`}>
           <path d="m6 9 6 6 6-6" />
         </svg>

@@ -78,13 +78,14 @@ export function AccountMenu({ name, email, plan, owner, keyLast4 }: Props) {
           setOpen(next);
           if (next && !pro) void loadUsage();
         }}
-        className="flex max-w-40 items-center gap-2 rounded-full border border-line bg-panel py-1 pr-2.5 pl-1 text-sm font-medium text-ink transition duration-200 ease-fluid hover:border-ink/40 hover:bg-paper aria-expanded:border-ink/40 aria-expanded:bg-paper sm:max-w-56"
+        className="flex max-w-40 items-center gap-2 rounded-full border border-line bg-panel p-1 text-sm sm:pr-2.5 font-medium text-ink transition duration-200 ease-fluid hover:border-ink/40 hover:bg-paper aria-expanded:border-ink/40 aria-expanded:bg-paper sm:max-w-56"
       >
         <span aria-hidden className="flex size-6 shrink-0 items-center justify-center rounded-full bg-yellow-300 font-serif text-xs text-ink">
           {display.slice(0, 1).toUpperCase()}
         </span>
         <span className="hidden truncate sm:inline">{display}</span>
-        {pro && <span className="shrink-0 rounded bg-yellow-400 px-1 font-mono text-[9px] font-bold tracking-wider text-ink uppercase">{owner ? "Admin" : "Pro"}</span>}
+        {/* On a phone the button is just the initial (the plan is in the menu), so a session's title has room. */}
+        {pro && <span className="hidden shrink-0 rounded bg-yellow-400 px-1 font-mono text-[9px] font-bold tracking-wider text-ink uppercase sm:inline">{owner ? "Admin" : "Pro"}</span>}
         <svg
           width="12"
           height="12"
@@ -93,7 +94,7 @@ export function AccountMenu({ name, email, plan, owner, keyLast4 }: Props) {
           stroke="currentColor"
           strokeWidth="2.5"
           aria-hidden
-          className={`shrink-0 transition-transform duration-300 ease-fluid ${open ? "rotate-180" : ""}`}
+          className={`hidden shrink-0 transition-transform duration-300 ease-fluid sm:block ${open ? "rotate-180" : ""}`}
         >
           <path d="m6 9 6 6 6-6" />
         </svg>
@@ -194,62 +195,6 @@ export function AccountMenu({ name, email, plan, owner, keyLast4 }: Props) {
                 <path d="M20 12v9H4v-9M2 7h20v5H2zM12 21V7M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7Zm0 0h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7Z" />
               </svg>
               Invite friends, get Pro
-            </Link>
-            <Link
-              role="menuitem"
-              href="/friends"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition hover:bg-paper"
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-                <circle cx="9" cy="8" r="3" />
-                <path d="M3 19v-1a4 4 0 0 1 4-4h4a4 4 0 0 1 1 .1M19 8v6M16 11h6" />
-              </svg>
-              Friends
-            </Link>
-            <Link
-              role="menuitem"
-              href="/rooms"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition hover:bg-paper"
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-                <path d="M16 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1M9 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM22 19v-1a4 4 0 0 0-3-3.9M16 4.1a3 3 0 0 1 0 5.8" />
-              </svg>
-              Study rooms
-            </Link>
-            <Link
-              role="menuitem"
-              href="/threads"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition hover:bg-paper"
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-                <path d="M5 5h14v10H8l-3 3z" />
-              </svg>
-              Threads
-            </Link>
-            <Link
-              role="menuitem"
-              href="/spaces"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition hover:bg-paper"
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-                <path d="M4 10.5 12 4l8 6.5V20H4zM9 20v-6h6v6" />
-              </svg>
-              Learning spaces
-            </Link>
-            <Link
-              role="menuitem"
-              href="/map"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition hover:bg-paper"
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
-                <path d="M6 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm12 4a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM8 21a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm-.6-15.1 8.8 3.2M16.6 10.6l-7.4 7M6.4 7l1.2 10" />
-              </svg>
-              Literature map
             </Link>
             <ThemeSwitch />
             <Link

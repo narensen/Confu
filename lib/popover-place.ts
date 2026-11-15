@@ -21,6 +21,9 @@ export function placePopover(opts: {
   host: Edges;
   view: Edges;
   margin?: number;
+  // A text selection's toolbar sits above the lines (so it never hides the
+  // next one); a capture card, which grows a preview and a field, below.
+  prefer?: "above" | "below";
 }): PopoverPlace {
   const margin = opts.margin ?? 8;
   const boundTop = Math.max(opts.host.top, opts.view.top) + margin;
@@ -36,11 +39,14 @@ export function placePopover(opts: {
   if (left + width > boundRight) left = boundRight - width;
   if (left < boundLeft) left = boundLeft;
 
-  // Prefer just under the selection. If that would push the card (and the
-  // field at its bottom) past the reader, sit it above the selection instead.
+  // The preferred side, if the card fits there; otherwise the other side.
+  // (Below: if the card and the field at its bottom would run past the
+  // reader, it sits above the selection instead.)
   const below = opts.y + margin;
   const above = opts.top - margin - height;
-  let top = below + height <= boundBottom ? below : above;
+  const fitsBelow = below + height <= boundBottom;
+  const fitsAbove = above >= boundTop;
+  let top = opts.prefer === "above" ? (fitsAbove || !fitsBelow ? above : below) : fitsBelow ? below : above;
   if (top < boundTop) top = boundTop;
   if (top + height > boundBottom) top = Math.max(boundTop, boundBottom - height);
 

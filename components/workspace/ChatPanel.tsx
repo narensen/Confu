@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "@/components/dialogs";
 import { eyebrowClass } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
@@ -22,6 +22,7 @@ type Props = {
   activeTopic: PlanTopic | null;
   topics: PlanTopic[];
   onSend: (req: SendRequest) => void;
+  onStop?: () => void; // only while an answer is being written
   onJump: (page: number, docId?: string | null) => void;
   onCite: (page: number, docLabel?: string) => void;
   onOpenPlan: () => void;
@@ -30,6 +31,7 @@ type Props = {
   onCiteMode: (on: boolean) => void;
   citeFiles: CiteFiles | null;
   activeDocId: string | null;
+  reading: string | null; // "D1 · p. 2": the page the tutor reads along with
   paperFocus: { label: string; title: string; done: number; target: number } | null;
   onOpenPaper?: () => void;
   // Answers kept under Highlights (and in the tutor's context all session).
@@ -37,6 +39,13 @@ type Props = {
   onSaveAnswer: (message: ChatMessage) => void;
   onUnsaveAnswer: (id: string) => void;
 };
+
+// One-tap requests: the same ones whatever the panel's width, so nothing has
+// to be learnt from a list of instructions.
+type Quick = { id: string; label: string; hint: string; run: () => void };
+
+const EXPLAIN_PAGE = "Explain this page in plain words: what it says, and why it matters.";
+const SUMMARIZE_PAGE = "Summarize what I'm reading here in a few short points.";
 
 export function ChatPanel({
   sessionId,
@@ -47,6 +56,7 @@ export function ChatPanel({
   activeTopic,
   topics,
   onSend,
+  onStop,
   onJump,
   onCite,
   onOpenPlan,
@@ -56,6 +66,7 @@ export function ChatPanel({
   onCiteMode,
   citeFiles,
   activeDocId,
+  reading,
   paperFocus,
   saved,
   onSaveAnswer,
@@ -69,6 +80,10 @@ export function ChatPanel({
   const stick = useRef(true);
   // Scrolled up from the latest message: a button brings it back.
   const [away, setAway] = useState(false);
+  // The focus topic's details (pages, aim, Open / Teach me): shown while the
+  // chat is empty, folded into the strip once it isn't, unless opened.
+  const [nextChoice, setNextChoice] = useState<boolean | null>(null);
+  const nextOpen = nextChoice ?? messages.length === 0;
   // The box grows with what's typed (up to 10rem), then scrolls.
   useLayoutEffect(() => {
     const el = inputRef.current;
@@ -81,7 +96,10 @@ export function ChatPanel({
 
   useEffect(() => {
     const el = scrollRef.current;
-    if (el && stick.current) el.scrollTo({ top: el.scrollHeight, behavior: initialCount === messages.length ? "auto" : "smooth" });
+    // An empty chat keeps its top in view (it used to scroll to the bottom
+    // and cut off the start of the first card).
+    if (!el || !messages.length) return;
+    if (stick.current) el.scrollTo({ top: el.scrollHeight, behavior: initialCount === messages.length ? "auto" : "smooth" });
   }, [messages, busy, initialCount]);
 
   function toLatest() {
@@ -100,7 +118,33 @@ export function ChatPanel({
     stick.current = true;
   }
 
+  function quick(id: string, run: () => void) {
+    track("chat.quick", { id });
+    stick.current = true;
+    run();
+  }
+
   const last = messages[messages.length - 1];
+  const studyTopic = kind === "study" && plan && activeTopic && activeTopic.status !== "completed" ? activeTopic : null;
+
+  // What can be asked for in one tap, for this kind of session.
+  const quicks: Quick[] = [];
+  if (kind === "study") {
+    if (studyTopic) {
+      quicks.push({ id: "teach", label: "Teach me this topic", hint: `One idea at a time: ${studyTopic.title}`, run: () => onSend({ action: "teach" }) });
+      quicks.push({ id: "quiz", label: "Quiz me", hint: `Check your understanding of ${studyTopic.title}`, run: () => onSend({ action: "quiz" }) });
+    } else if (!plan) {
+      quicks.push({ id: "goal", label: "Set my goal", hint: "Get a phased plan across your files", run: onOpenPlan });
+    }
+  } else if (kind === "exam") {
+    quicks.push({ id: "practice", label: "Practise questions", hint: "Exam-style questions from your notes", run: onOpenPlan });
+  } else if (kind === "paper" && paperFocus) {
+    quicks.push({ id: "passes", label: paperFocus.done >= paperFocus.target ? "Review the passes" : `Pass ${Math.min(3, paperFocus.done + 1)}`, hint: "Read this paper in passes", run: onOpenPaper ?? onOpenPlan });
+  }
+  if (reading) {
+    quicks.push({ id: "explain_page", label: "Explain this page", hint: `What ${reading} says, in plain words`, run: () => onSend({ action: "chat", message: EXPLAIN_PAGE }) });
+    if (kind !== "study" || !studyTopic) quicks.push({ id: "summarize_page", label: "Summarize this page", hint: `The main points of ${reading}`, run: () => onSend({ action: "chat", message: SUMMARIZE_PAGE }) });
+  }
 
   return (
     <div className="flex h-full min-w-0 flex-col">
@@ -116,22 +160,57 @@ export function ChatPanel({
         </div>
       )}
 
-      {/* Current focus keeps the conversation anchored to the goal */}
+      {/* Current focus keeps the conversation anchored to the goal. The one
+          place the next step is spelled out: open it for pages, aim and
+          Open / Teach me. */}
       {plan && activeTopic && (
-        <div className="flex shrink-0 items-center gap-3 border-b border-line bg-paper px-5 py-2.5 text-xs">
-          <span className={eyebrowClass}>Focus</span>
-          <button onClick={onOpenPlan} className="min-w-0 flex-1 truncate text-left font-medium hover:underline" title={activeTopic.title}>
-            {activeTopic.title}
-          </button>
-          {activeTopic.source === "pdf" && activeTopic.page_start && topicDoc ? (
-            <button onClick={() => onJump(activeTopic.page_start!, topicDoc.id)} className="shrink-0 font-mono text-muted transition hover:text-ink">
-              {docs.length > 1 ? `${topicDoc.label} ` : ""}
-              {activeTopic.page_start === activeTopic.page_end ? `p. ${activeTopic.page_start}` : `pp. ${activeTopic.page_start}–${activeTopic.page_end}`}
+        <div className="shrink-0 border-b border-line bg-paper">
+          <div className="flex items-center gap-3 px-5 py-2.5 text-xs">
+            <span className={eyebrowClass}>Focus</span>
+            <button
+              type="button"
+              onClick={() => setNextChoice(!nextOpen)}
+              aria-expanded={nextOpen}
+              aria-controls="focus-details"
+              className="group flex min-w-0 flex-1 items-center gap-1.5 text-left font-medium"
+              title={nextOpen ? "Hide the details" : `Show what to do next for ${activeTopic.title}`}
+            >
+              <span className="truncate group-hover:underline">{activeTopic.title}</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" aria-hidden className={`shrink-0 text-muted transition-transform duration-300 ease-fluid ${nextOpen ? "rotate-180" : ""}`}>
+                <path d="M6 9l6 6 6-6" />
+              </svg>
             </button>
-          ) : (
-            <span className="shrink-0 font-mono text-muted">beyond your files</span>
-          )}
-          <span className="shrink-0 font-mono tabular-nums">{Math.round(activeTopic.mastery * 100)}%</span>
+            {activeTopic.source === "pdf" && activeTopic.page_start && topicDoc ? (
+              <button onClick={() => onJump(activeTopic.page_start!, topicDoc.id)} className="shrink-0 font-mono text-muted transition hover:text-ink">
+                {docs.length > 1 ? `${topicDoc.label} ` : ""}
+                {activeTopic.page_start === activeTopic.page_end ? `p. ${activeTopic.page_start}` : `pp. ${activeTopic.page_start}–${activeTopic.page_end}`}
+              </button>
+            ) : (
+              <span className="shrink-0 font-mono text-muted">beyond your files</span>
+            )}
+            <span className="shrink-0 font-mono tabular-nums" title="How well you know it, from your answers">
+              {Math.round(activeTopic.mastery * 100)}%
+            </span>
+          </div>
+          <div id="focus-details" className="disclosure" data-open={nextOpen}>
+            <div>
+              <div className="px-4 pb-4">
+                <StartHere
+                  bare
+                  topic={activeTopic}
+                  topics={topics}
+                  docs={docs}
+                  busy={Boolean(busy)}
+                  onOpen={(t) => {
+                    const d = docs.find((x) => x.id === t.document_id);
+                    if (t.source === "pdf" && t.page_start !== null && d) onJump(t.page_start, d.id);
+                  }}
+                  onOpenDoc={(id) => onJump(docs.find((d) => d.id === id)?.lastPage || 1, id)}
+                  onTeach={() => onSend({ action: "teach" })}
+                />
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -155,23 +234,8 @@ export function ChatPanel({
               ) : kind === "exam" ? (
                 <ExamEmptyState onOpenPractice={onOpenPlan} />
               ) : (
-                <>
-                  {plan && activeTopic && activeTopic.status !== "completed" && (
-                    <StartHere
-                      topic={activeTopic}
-                      topics={topics}
-                      docs={docs}
-                      busy={Boolean(busy)}
-                      onOpen={(t) => {
-                        const d = docs.find((x) => x.id === t.document_id);
-                        if (t.source === "pdf" && t.page_start !== null && d) onJump(t.page_start, d.id);
-                      }}
-                      onOpenDoc={(id) => onJump(docs.find((d) => d.id === id)?.lastPage || 1, id)}
-                      onTeach={() => onSend({ action: "teach" })}
-                    />
-                  )}
-                  <EmptyState hasPlan={Boolean(plan)} onOpenPlan={onOpenPlan} />
-                </>
+                // The open Up next card already offers "Teach me instead".
+                <StudyEmptyState quicks={nextOpen && studyTopic ? quicks.filter((q) => q.id !== "teach") : quicks} busy={Boolean(busy)} onPick={quick} />
               ))}
             {messages.map((m, i) => {
               const isNew = i >= initialCount;
@@ -222,7 +286,24 @@ export function ChatPanel({
       </div>
 
       <div className="mx-auto w-full max-w-[calc(48rem+1rem)] shrink-0 px-3 pt-2 pb-2.5 @5xl:max-w-[calc(96rem+5rem)] @5xl:px-10">
-        {/* A flat pill: the box, and the send button inside it. */}
+        {/* One-tap requests, once there's a conversation (an empty chat shows them as cards). */}
+        {messages.length > 0 && quicks.length > 0 && (
+          <div className="mb-2 flex gap-1.5 overflow-x-auto px-1 [scrollbar-width:none]" role="group" aria-label="Quick requests">
+            {quicks.map((q) => (
+              <button
+                key={q.id}
+                type="button"
+                disabled={Boolean(busy)}
+                title={q.hint}
+                onClick={() => quick(q.id, q.run)}
+                className="shrink-0 rounded-full border border-line bg-panel px-3 py-1 text-xs font-medium text-ink transition duration-150 ease-fluid hover:border-ink disabled:pointer-events-none disabled:opacity-40"
+              >
+                {q.label}
+              </button>
+            ))}
+          </div>
+        )}
+        {/* A flat pill: the box, and the send button inside it (Stop while the tutor writes). */}
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -242,25 +323,197 @@ export function ChatPanel({
               }
             }}
             rows={1}
+            aria-label="Message the tutor"
             placeholder={citeFiles ? "Ask about the files you've turned on…" : "Ask anything, about your files or beyond them…"}
             className="max-h-40 min-h-9 flex-1 resize-none self-center bg-transparent py-2 text-sm leading-5 outline-none placeholder:text-muted"
           />
-          <button disabled={!draft.trim() || Boolean(busy)} aria-label="Send" title="Send (Enter)" className="tutor-send flex size-9 shrink-0 items-center justify-center rounded-full">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M12 19V5M6 11l6-6 6 6" />
-            </svg>
-          </button>
+          {onStop ? (
+            <button type="button" onClick={onStop} aria-label="Stop the answer" title="Stop the answer (what's written so far is kept)" className="tutor-send flex size-9 shrink-0 items-center justify-center rounded-full">
+              <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden>
+                <rect x="4" y="4" width="16" height="16" rx="3" fill="currentColor" />
+              </svg>
+            </button>
+          ) : (
+            <button disabled={!draft.trim() || Boolean(busy)} aria-label="Send" title="Send (Enter)" className="tutor-send flex size-9 shrink-0 items-center justify-center rounded-full">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M12 19V5M6 11l6-6 6 6" />
+              </svg>
+            </button>
+          )}
         </form>
-        <div className="mt-1.5 flex items-center gap-3 px-3">
-          {citeFiles && <CitePicker docs={docs} activeDocId={activeDocId} citeFiles={citeFiles} />}
-          <label title="Answers have to cite a page in this session." className="ml-auto flex shrink-0 cursor-pointer items-center gap-1.5 text-[11px] leading-none text-muted">
-            <input type="checkbox" checked={citeMode} onChange={(e) => onCiteMode(e.target.checked)} className="size-3.5" />
-            <span>Answers must cite</span>
-          </label>
+        <div className="mt-1.5 flex min-w-0 items-center gap-3 px-3">
+          {reading && (
+            <span title="The tutor answers with the page you're on in mind" className="min-w-0 truncate font-mono text-[11px] text-muted">
+              Reading {reading}
+            </span>
+          )}
+          <div className="ml-auto shrink-0">
+            <SourcesPicker docs={docs} activeDocId={activeDocId} citeFiles={citeFiles} citeMode={citeMode} onCiteMode={onCiteMode} />
+          </div>
         </div>
       </div>
     </div>
   );
+}
+
+// Where answers may come from, in one place: which files (with several),
+// and whether every answer has to cite a page.
+function SourcesPicker({
+  docs,
+  activeDocId,
+  citeFiles,
+  citeMode,
+  onCiteMode,
+}: {
+  docs: SessionDoc[];
+  activeDocId: string | null;
+  citeFiles: CiteFiles | null;
+  citeMode: boolean;
+  onCiteMode: (on: boolean) => void;
+}) {
+  const root = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const ids = citeFiles?.ids ?? [];
+  const on = new Set(ids);
+  const one = ids.length === 1 ? docs.find((d) => d.id === ids[0]) : null;
+  const files = !citeFiles ? null : ids.length === docs.length ? "All files" : one ? one.label : `${ids.length} files`;
+  const summary = [files, citeMode ? "must cite" : null].filter(Boolean).join(" · ") || "Settings";
+  const showAll = citeFiles ? ids.length < docs.length : false;
+  const showOpenOnly = Boolean(citeFiles?.custom && activeDocId);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (!root.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div ref={root} className="relative">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex max-w-full items-center gap-1 rounded-md px-1 py-0.5 text-[11px] text-muted transition duration-200 ease-fluid hover:bg-paper hover:text-ink"
+      >
+        <span className="font-mono text-[10px] font-medium uppercase tracking-[0.12em]">Sources</span>
+        <span className="truncate font-medium text-ink">{summary}</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden className={`shrink-0 transition-transform duration-200 ease-fluid ${open ? "rotate-180" : ""}`}>
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+      {open && (
+        <div
+          role="dialog"
+          aria-label="Sources"
+          className="animate-pop absolute right-0 bottom-full z-30 mb-1.5 w-72 max-w-[min(18rem,calc(100vw-2.5rem))] origin-bottom-right overflow-hidden rounded-xl border border-ink bg-panel shadow-hard"
+        >
+          {citeFiles && (
+            <>
+              <div className="flex items-center gap-3 border-b border-line px-3 py-2">
+                <p className={`${eyebrowClass} flex-1`}>Files it may use</p>
+                {showAll && (
+                  <button type="button" onClick={citeFiles.onAll} className="text-xs font-medium underline underline-offset-2 transition hover:opacity-70">
+                    All
+                  </button>
+                )}
+                {showOpenOnly && (
+                  <button type="button" onClick={citeFiles.onOpenOnly} className="text-xs text-muted underline underline-offset-2 transition hover:text-ink">
+                    Just the open file
+                  </button>
+                )}
+              </div>
+              <div role="listbox" aria-multiselectable="true" aria-label="Files the tutor may cite" className="max-h-56 overflow-y-auto p-1">
+                {docs.map((d) => {
+                  const selected = on.has(d.id);
+                  const isOpen = d.id === activeDocId;
+                  return (
+                    <button
+                      key={d.id}
+                      type="button"
+                      role="option"
+                      aria-selected={selected}
+                      title={selected ? (ids.length === 1 ? `${d.title} is the only file this answer can cite` : `Citing ${d.title}. Click to leave it out.`) : `Also cite ${d.title}`}
+                      onClick={() => citeFiles.onToggle(d.id)}
+                      className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition duration-150 ease-fluid hover:bg-paper ${selected ? "text-ink" : "text-muted"}`}
+                    >
+                      <span className={`flex size-3.5 shrink-0 items-center justify-center rounded-sm border transition duration-150 ${selected ? "border-ink bg-ink text-white" : "border-ink/30"}`}>
+                        {selected && (
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden>
+                            <path d="M5 12.5 9.5 17 19 7" />
+                          </svg>
+                        )}
+                      </span>
+                      <span className="font-mono">{d.label}</span>
+                      <span className="min-w-0 flex-1 truncate">{d.title}</span>
+                      {isOpen && <span className="shrink-0 text-[11px] text-muted">open</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+          <label className={`flex cursor-pointer items-start gap-2.5 px-3 py-2.5 text-xs ${citeFiles ? "border-t border-line" : ""}`}>
+            <input type="checkbox" checked={citeMode} onChange={(e) => onCiteMode(e.target.checked)} className="mt-0.5 size-3.5 shrink-0" />
+            <span>
+              <span className="block font-medium text-ink">Every answer must cite a page</span>
+              <span className="mt-0.5 block leading-relaxed text-muted">Only what your files say, each point with its page. Off: the tutor can also explain beyond them.</span>
+            </span>
+          </label>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// An empty study chat: the first few things worth asking for, each one tap.
+// (How everything works is in the help sheet, "?".)
+function StudyEmptyState({ quicks, busy, onPick }: { quicks: Quick[]; busy: boolean; onPick: (id: string, run: () => void) => void }) {
+  return (
+    <div className="animate-enter py-2">
+      <p className={eyebrowClass}>Getting started</p>
+      <h3 className="mt-1 font-serif text-2xl">Where to begin</h3>
+      {quicks.length > 0 && (
+        <ul className="mt-4 grid gap-2">
+          {quicks.slice(0, 3).map((q, i) => (
+            <li key={q.id} className="animate-enter" style={{ animationDelay: `${80 + i * 70}ms` }}>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => onPick(q.id, q.run)}
+                className="group flex w-full items-center gap-3 rounded-xl border border-line bg-panel px-4 py-3 text-left transition duration-200 ease-fluid hover:border-ink hover:shadow-hard-sm disabled:pointer-events-none disabled:opacity-50"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium">{q.label}</span>
+                  <span className="mt-0.5 block truncate text-xs text-muted">{q.hint}</span>
+                </span>
+                <span aria-hidden className="shrink-0 text-muted transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-ink">
+                  →
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <Tip>
+        Or <span className="font-medium text-ink">select any text</span> in the PDF to ask about it. Press <kbd className="rounded border border-ink/30 bg-paper px-1 font-mono text-[11px]">?</kbd> for how everything works.
+      </Tip>
+    </div>
+  );
+}
+
+function Tip({ children }: { children: ReactNode }) {
+  return <p className="mt-4 text-xs leading-relaxed text-muted">{children}</p>;
 }
 
 function AnswerBody({
@@ -464,98 +717,6 @@ function ThumbIcon({ down = false }: { down?: boolean }) {
   );
 }
 
-function CitePicker({ docs, activeDocId, citeFiles }: { docs: SessionDoc[]; activeDocId: string | null; citeFiles: CiteFiles }) {
-  const root = useRef<HTMLDivElement>(null);
-  const [open, setOpen] = useState(false);
-  const { ids, custom, onToggle, onAll, onOpenOnly } = citeFiles;
-  const on = new Set(ids);
-  const one = ids.length === 1 ? docs.find((d) => d.id === ids[0]) : null;
-  const summary = ids.length === docs.length ? "All files" : one ? one.label : `${ids.length} files`;
-  const showAll = ids.length < docs.length;
-  const showOpenOnly = Boolean(custom && activeDocId);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (!root.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
-  return (
-    <div ref={root} className="relative">
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-haspopup="listbox"
-        onClick={() => setOpen((v) => !v)}
-        className="inline-flex max-w-full items-center gap-1 bg-transparent px-0.5 py-0.5 text-[11px] text-muted transition duration-200 ease-fluid hover:text-ink"
-      >
-        <span className="font-mono text-[10px] font-medium uppercase tracking-[0.12em]">Cite</span>
-        <span className="font-medium text-ink">{summary}</span>
-        {one && one.title && <span className="max-w-[6rem] truncate">{one.title}</span>}
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden className={`shrink-0 transition-transform duration-200 ease-fluid ${open ? "rotate-180" : ""}`}>
-          <path d="M6 9l6 6 6-6" />
-        </svg>
-      </button>
-      {open && (
-        <div className="animate-pop absolute bottom-full left-0 z-30 mb-1.5 w-64 max-w-[min(18rem,calc(100vw-2.5rem))] origin-bottom overflow-hidden rounded-xl border border-ink bg-panel shadow-hard">
-          {(showAll || showOpenOnly) && (
-            <div className="flex items-center gap-3 border-b border-line px-2.5 py-1.5">
-              {showAll && (
-                <button type="button" onClick={onAll} className="text-xs font-medium underline underline-offset-2 transition hover:opacity-70">
-                  All
-                </button>
-              )}
-              {showOpenOnly && (
-                <button type="button" onClick={onOpenOnly} className="text-xs text-muted underline underline-offset-2 transition hover:text-ink">
-                  Just the open file
-                </button>
-              )}
-            </div>
-          )}
-          <div role="listbox" aria-multiselectable="true" aria-label="Files the tutor may cite" className="max-h-56 overflow-y-auto p-1">
-            {docs.map((d) => {
-              const selected = on.has(d.id);
-              const isOpen = d.id === activeDocId;
-              return (
-                <button
-                  key={d.id}
-                  type="button"
-                  role="option"
-                  aria-selected={selected}
-                  title={selected ? (ids.length === 1 ? `${d.title} is the only file this answer can cite` : `Citing ${d.title}. Click to leave it out.`) : `Also cite ${d.title}`}
-                  onClick={() => onToggle(d.id)}
-                  className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition duration-150 ease-fluid hover:bg-paper ${selected ? "text-ink" : "text-muted"}`}
-                >
-                  <span className={`flex size-3.5 shrink-0 items-center justify-center rounded-sm border transition duration-150 ${selected ? "border-ink bg-ink text-white" : "border-ink/30"}`}>
-                    {selected && (
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden>
-                        <path d="M5 12.5 9.5 17 19 7" />
-                      </svg>
-                    )}
-                  </span>
-                  <span className="font-mono">{d.label}</span>
-                  <span className="min-w-0 flex-1 truncate">{d.title}</span>
-                  {isOpen && <span className="shrink-0 text-[10px] text-muted">open</span>}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function Thinking({ label }: { label: string }) {
   return (
     <div className="animate-fade flex items-center gap-2.5 text-sm text-muted">
@@ -569,35 +730,6 @@ function Thinking({ label }: { label: string }) {
   );
 }
 
-function EmptyState({ hasPlan, onOpenPlan }: { hasPlan: boolean; onOpenPlan: () => void }) {
-  const items = [
-    ["Select text", "in the PDF to ask a doubt, summarize it, see its context, or get it explained simply."],
-    ["Capture", "in the toolbar, then drag over a figure, table or equation. A vision model reads it and the tutor explains it."],
-    ["Teach me / Check my understanding", "work through your plan one idea at a time, including topics beyond the PDF. Your progress is remembered."],
-    ["Cite", "open the menu under the input and tick the files. The answer can use each of them, and a citation still opens that page."],
-  ];
-  return (
-    <div className="animate-enter py-4">
-      <p className={eyebrowClass}>Getting started</p>
-      <h3 className="mt-1 font-serif text-2xl">How to learn here</h3>
-      <ol className="mt-5 space-y-4">
-        {items.map(([title, body], i) => (
-          <li key={title} className="animate-enter flex gap-3 text-sm" style={{ animationDelay: `${100 + i * 80}ms` }}>
-            <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-line bg-paper font-mono text-[11px]">{i + 1}</span>
-            <p className="leading-relaxed text-muted">
-              <span className="font-medium text-ink">{title}</span> {body}
-            </p>
-          </li>
-        ))}
-      </ol>
-      {!hasPlan && (
-        <button onClick={onOpenPlan} className="mt-6 text-sm font-medium underline underline-offset-4 transition hover:opacity-70">
-          Start by setting your goal →
-        </button>
-      )}
-    </div>
-  );
-}
 
 function PaperEmptyState({ onOpenPasses }: { onOpenPasses: () => void }) {
   const items = [

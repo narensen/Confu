@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { reduceMotion } from "@/lib/motion";
 
 // The 20-second product clip: highlight → ask → cited answer → jump to page.
 // Plays only while on screen; with reduced motion it waits for a click.
@@ -10,7 +11,7 @@ export function DemoVideo() {
 
   useEffect(() => {
     const el = video.current!;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (reduceMotion()) return;
     const io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) void el.play().catch(() => {});

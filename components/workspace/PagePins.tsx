@@ -134,8 +134,18 @@ export function PagePins({
           </button>
         </div>
       )}
-      <button type="button" onClick={() => setOpen((v) => !v)} className="pointer-events-auto rounded-md border border-ink bg-panel px-2.5 py-1 text-xs font-medium shadow-hard-sm">
-        Pins{here.length ? ` · ${here.length}` : ""}
+      {/* Says what it holds: questions and passages pinned to this page. */}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        title="Questions and passages pinned to this page. Classmates on the same course see them too."
+        className="pointer-events-auto flex items-center gap-1.5 rounded-md border border-ink bg-panel px-2.5 py-1 text-xs font-medium shadow-hard-sm"
+      >
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M12 17v5M9 10.8a2 2 0 0 1-1.1 1.8l-1.8.9A2 2 0 0 0 5 15.2v.8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.8a2 2 0 0 0-1.1-1.8l-1.8-.9A2 2 0 0 1 15 10.8V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" />
+        </svg>
+        {here.length ? `${here.length} pinned on p. ${page}` : "Pin a question here"}
       </button>
     </div>
   );

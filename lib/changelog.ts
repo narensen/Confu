@@ -5,6 +5,36 @@ export type Release = { date: string; title: string; summary: string; items: str
 
 export const CHANGELOG: Release[] = [
   {
+    date: "2026-11-15",
+    title: "A library that says what's next",
+    summary: "Continue shows the next step, and Today gathers what's due across your sessions.",
+    items: [
+      "Continue names the next topic, with its pages, time and due date, and takes you back to the page you were reading.",
+      "Today lists what's due across every session: reviews, plan topics due today or behind, and exams in the next two weeks. Each opens where it's done.",
+      "Exam cards show the countdown and how practice is going, not a bar that looked like progress. Paper cards show each paper's passes.",
+      "Sort your sessions by recent use, deadline or name, and pin the ones you want at the top (on this device).",
+      "On a phone, a card's Pin, Archive and Delete are always there; they no longer wait for a hover that can't happen.",
+      "Settings → Appearance has Motion: reduce animation here even if your system doesn't.",
+      "Light or Dark, chosen in the account menu, now sticks when you reload. It used to fall back to your system's setting.",
+      "In a session on a phone, the bottom bar has four places (Read, Tutor, your plan, More), and the session's title gets more of the header.",
+    ],
+  },
+  {
+    date: "2026-11-15",
+    title: "Easier to find your way",
+    summary: "Fewer places to look, tools always in view, and a Stop button for the tutor.",
+    items: [
+      "The header has three places: Library, Review (with how many reviews are due) and Community, which gathers Threads, Spaces, Study rooms and Friends under tabs. On a phone they're a tab bar along the bottom.",
+      "Go to… (Ctrl K, or ⌘ K on a Mac) jumps to any session or place, and in a session runs its tools: open the plan, fold the tutor, go full screen.",
+      "In a session, your tools sit in a labelled column on the right that stays in view, instead of a bar that hid until the mouse came near.",
+      "Stop ends an answer while the tutor is still writing. What it wrote so far is kept.",
+      "Above the message box: Teach me this topic, Quiz me, Explain this page. Sources, under it, sets which files the tutor may cite and whether every answer must cite a page.",
+      "The Focus strip opens into what to do next, in one place instead of three. Hover a page citation in an answer to see that page's text first.",
+      "In dark mode, PDF pages are drawn in night colours unless you choose otherwise in Settings → Appearance, which also has the theme and a switch for one-key shortcuts.",
+      "Shortcuts: Tab moves between controls again (full screen is z), Ctrl \\ folds the tutor (browsers keep Ctrl T for a new tab), and Shift W closes a file's tab.",
+    ],
+  },
+  {
     date: "2026-11-10",
     title: "More room for the page",
     summary: "The tools rail is now a small bar that keeps out of the way.",

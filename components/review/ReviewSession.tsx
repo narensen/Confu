@@ -8,6 +8,7 @@ import { JSON_HEADERS, notifyAiUsed, readAiError } from "@/lib/ai-errors";
 import { cueFor, endOfToday, nextIn, REVIEW_SELECT, revealFor, sessionLink, type ReviewItem, type ReviewRating } from "@/lib/review";
 import { createClient } from "@/lib/supabase/client";
 import { track } from "@/lib/telemetry";
+import { REVIEWED_EVENT } from "@/lib/use-reviews-due";
 
 type Check = { score: number; feedback: string };
 
@@ -60,6 +61,7 @@ export function ReviewSession() {
     if (err) return setError("Couldn't save that. Check your connection and try again.");
     setTally((t) => ({ ...t, [rating]: t[rating] + 1 }));
     track("review.rate", { rating, source: item.source });
+    window.dispatchEvent(new Event(REVIEWED_EVENT)); // the count on Review in the nav
     advance();
   }
 

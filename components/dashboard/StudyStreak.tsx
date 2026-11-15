@@ -87,31 +87,34 @@ export function StudyStreak({ compact = false }: { compact?: boolean }) {
         </p>
       </div>
       <div className="-m-1 min-w-0 flex-1 overflow-x-auto p-1">
-        <div className="flex w-max gap-[3px]" role="img" aria-label={`Study activity over the last ${WEEKS} weeks. Current streak ${streak} days, best ${best}.`}>
-          {columns.map((col, w) => (
-            <div key={w} className="flex flex-col gap-[3px]">
-              {col.map(({ date, day }) => {
-                const future = date > today;
-                const isToday = iso(date) === iso(today);
-                const mins = Math.round((day?.seconds ?? 0) / 60);
-                return (
-                  <span
-                    key={iso(date)}
-                    title={future ? "" : `${date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}: ${mins ? `${fmtMins(mins)} reading` : "no reading"}${day?.actions ? `, ${day.actions} actions` : ""}`}
-                    className={`block rounded-[3px] ${compact ? "size-2.5" : "size-3"} ${isToday ? "ring-2 ring-yellow-400 ring-offset-1 ring-offset-panel" : ""}`}
-                    style={{ background: future ? "transparent" : `color-mix(in srgb, var(--ink) ${ALPHA[level(day)] * 100}%, transparent)` }}
-                  />
-                );
-              })}
-            </div>
-          ))}
-        </div>
-        <div className="mt-2 flex items-center justify-end gap-1 text-[10px] text-muted">
-          Less
-          {ALPHA.map((a) => (
-            <span key={a} className="size-2.5 rounded-[2px]" style={{ background: `color-mix(in srgb, var(--ink) ${a * 100}%, transparent)` }} />
-          ))}
-          More
+        {/* The grid and its legend keep together (at the right when there's room). */}
+        <div className={compact ? "" : "w-max lg:ml-auto"}>
+          <div className="flex w-max gap-[3px]" role="img" aria-label={`Study activity over the last ${WEEKS} weeks. Current streak ${streak} days, best ${best}.`}>
+            {columns.map((col, w) => (
+              <div key={w} className="flex flex-col gap-[3px]">
+                {col.map(({ date, day }) => {
+                  const future = date > today;
+                  const isToday = iso(date) === iso(today);
+                  const mins = Math.round((day?.seconds ?? 0) / 60);
+                  return (
+                    <span
+                      key={iso(date)}
+                      title={future ? "" : `${date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}: ${mins ? `${fmtMins(mins)} reading` : "no reading"}${day?.actions ? `, ${day.actions} actions` : ""}`}
+                      className={`block rounded-[3px] ${compact ? "size-2.5" : "size-3"} ${isToday ? "ring-2 ring-yellow-400 ring-offset-1 ring-offset-panel" : ""}`}
+                      style={{ background: future ? "transparent" : `color-mix(in srgb, var(--ink) ${ALPHA[level(day)] * 100}%, transparent)` }}
+                    />
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 flex items-center justify-end gap-1 text-[10px] text-muted">
+            Less
+            {ALPHA.map((a) => (
+              <span key={a} className="size-2.5 rounded-[2px]" style={{ background: `color-mix(in srgb, var(--ink) ${a * 100}%, transparent)` }} />
+            ))}
+            More
+          </div>
         </div>
       </div>
     </section>

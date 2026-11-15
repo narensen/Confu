@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { MOTION_EVENT, REDUCE_QUERY, reduceMotion } from "@/lib/motion";
 
 const REELS = [
   { id: "stop-highlighting", title: "Stop highlighting", body: "Rereading feels like learning. Asking yourself questions is what works.", label: "Reel: why highlighting your notes doesn't help you remember, and what to do instead." },
@@ -26,17 +27,21 @@ export function Reels() {
   );
 }
 
-const MOTION = "(prefers-reduced-motion: reduce)";
+// Still with the system's "reduce motion", or when it's chosen in Settings.
 const subscribeMotion = (cb: () => void) => {
-  const m = window.matchMedia(MOTION);
+  const m = window.matchMedia(REDUCE_QUERY);
   m.addEventListener("change", cb);
-  return () => m.removeEventListener("change", cb);
+  window.addEventListener(MOTION_EVENT, cb);
+  return () => {
+    m.removeEventListener("change", cb);
+    window.removeEventListener(MOTION_EVENT, cb);
+  };
 };
 
 function Reel({ id, label, sound, onSound }: { id: string; label: string; sound: boolean; onSound: (on: boolean) => void }) {
   const video = useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = useState(false);
-  const reduced = useSyncExternalStore(subscribeMotion, () => window.matchMedia(MOTION).matches, () => false);
+  const reduced = useSyncExternalStore(subscribeMotion, reduceMotion, () => false);
 
   useEffect(() => {
     const el = video.current!;

@@ -9,7 +9,7 @@ import { DialogHost } from "@/components/dialogs";
 import { FeedbackHost } from "@/components/Feedback";
 import { FlashToast } from "@/components/FlashToast";
 import { Telemetry } from "@/components/Telemetry";
-import { THEME_SCRIPT } from "@/lib/theme";
+import { HEAD_SCRIPT } from "@/lib/head-script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,8 +42,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} ${newsreader.variable} h-full antialiased`}
     >
       <head>
-        {/* The chosen theme, before first paint (lib/theme.ts). */}
-        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+        {/* The chosen theme and motion, before first paint (lib/head-script.ts). */}
+        <script dangerouslySetInnerHTML={{ __html: HEAD_SCRIPT }} />
       </head>
       <body className="flex min-h-full flex-col">
         {children}

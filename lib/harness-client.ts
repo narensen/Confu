@@ -76,10 +76,12 @@ export async function teachWithHarness(
   link: TutorLink,
   lesson: { system: string; history: { role: string; content: string }[]; instruction: string },
   onChunk: (text: string) => void,
+  signal?: AbortSignal,
 ): Promise<string> {
   if (link.id === "groq") throw new Error("Pick a harness first.");
   const res = await fetch(`${BRIDGE_ORIGIN}/teach`, {
     ...loopback,
+    signal,
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ harness: link.id, effort: link.effort, model: link.model, ...lesson }),

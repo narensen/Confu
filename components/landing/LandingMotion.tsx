@@ -6,6 +6,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { SplitText } from "gsap/SplitText";
 import { useGSAP } from "@gsap/react";
 import { useRef, type ReactNode } from "react";
+import { reduceMotion } from "@/lib/motion";
 
 gsap.registerPlugin(useGSAP, ScrollTrigger, SplitText, DrawSVGPlugin);
 
@@ -35,7 +36,7 @@ export function LandingMotion({ children, className }: { children: ReactNode; cl
         (ctx) => {
           el.classList.remove("motion-pending");
           const { motion, pointer } = ctx.conditions as { motion: boolean; pointer: boolean };
-          if (!motion) return;
+          if (!motion || reduceMotion()) return; // the system's setting, or Settings → Appearance
 
           /* ------------------------------------------------ hero intro */
           const intro = gsap.timeline({ defaults: { ease: "power4.out" } });

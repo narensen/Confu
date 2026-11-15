@@ -23,7 +23,9 @@ export function StartHere({
   onOpen,
   onOpenDoc,
   onTeach,
+  bare = false,
 }: {
+  bare?: boolean; // inside the tutor's Focus strip, which already names the topic
   topic: PlanTopic;
   topics: PlanTopic[];
   docs: SessionDoc[];
@@ -40,14 +42,14 @@ export function StartHere({
   const have = resource && isPaperResource(resource) ? docForResource(resource, docs) : null;
 
   return (
-    <div className="animate-enter rounded-xl border border-ink bg-panel p-4 shadow-[4px_4px_0_0_#facc15]">
+    <div className={bare ? "rounded-xl border border-line bg-panel p-4" : "animate-enter rounded-xl border border-ink bg-panel p-4 shadow-[4px_4px_0_0_#facc15]"}>
       <div className="flex items-center justify-between gap-3">
         <p className={eyebrowClass}>{fresh ? "Start here" : "Up next"}</p>
         <span className="font-mono text-[11px] text-muted">
           Topic {topic.position + 1} of {topics.length}
         </span>
       </div>
-      <p className="mt-1.5 font-serif text-xl leading-snug">{topic.title}</p>
+      {!bare && <p className="mt-1.5 font-serif text-xl leading-snug">{topic.title}</p>}
       <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-muted">
         {pages && (
           <span className="rounded border border-ink/60 px-1.5 py-px font-mono text-ink">

@@ -8,6 +8,7 @@ import remarkMath from "remark-math";
 import { sanitizeSvg } from "@/lib/tutor/diagram";
 import { repairMath } from "@/lib/tutor/math-repair";
 import { MermaidDiagram, SvgDiagram } from "./Diagram";
+import { CiteButton } from "./CitePreview";
 
 // Models emit typographic characters KaTeX has no glyphs for (e.g. the
 // non-breaking hyphen in "positive‑definite"). They look identical as ASCII.
@@ -244,9 +245,9 @@ export const Markdown = memo(function Markdown({
             if (cite && onPage) {
               const page = Number(cite[2]);
               return (
-                <button type="button" onClick={() => onPage(page, cite[1] || undefined)} className="rounded bg-paper px-1 font-mono text-[0.85em] font-medium underline decoration-ink/30 underline-offset-2 transition hover:bg-ink hover:text-white">
+                <CiteButton page={page} label={cite[1] || undefined} onOpen={() => onPage(page, cite[1] || undefined)}>
                   {children}
-                </button>
+                </CiteButton>
               );
             }
             return (

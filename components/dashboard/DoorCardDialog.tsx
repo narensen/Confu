@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "@/components/dialogs";
 import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
@@ -42,16 +42,31 @@ function guessTitle(url: string) {
   }
 }
 
-export function DoorCardLauncher() {
+const OPEN_EVENT = "confu:reading-list";
+
+// Opens the dialog from elsewhere (the library's More menu).
+export function openReadingList() {
+  window.dispatchEvent(new Event(OPEN_EVENT));
+}
+
+// button={false}: only the dialog, opened with openReadingList().
+export function DoorCardLauncher({ button = true }: { button?: boolean }) {
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const onOpen = () => setOpen(true);
+    window.addEventListener(OPEN_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_EVENT, onOpen);
+  }, []);
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className={`${ghostButtonClass} py-2.5`} title="Share a list of links that anyone can start a session from">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
-          <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
-        </svg>
-        Reading list
-      </button>
+      {button && (
+        <button type="button" onClick={() => setOpen(true)} className={`${ghostButtonClass} py-2.5`} title="Share a list of links that anyone can start a session from">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden>
+            <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+          </svg>
+          Reading list
+        </button>
+      )}
       {open && createPortal(<Dialog onClose={() => setOpen(false)} />, document.body)}
     </>
   );
