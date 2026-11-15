@@ -22,7 +22,7 @@ export const CHANGELOG: Release[] = [
   {
     date: "2026-11-15",
     title: "Easier to find your way",
-    summary: "Fewer places to look, tools always in view, and a Stop button for the tutor.",
+    summary: "Fewer places to look, and a Stop button for the tutor.",
     items: [
       "The header has three places: Library, Review (with how many reviews are due) and Community, which gathers Threads, Spaces, Study rooms and Friends under tabs. On a phone they're a tab bar along the bottom.",
       "Go to… (Ctrl K, or ⌘ K on a Mac) jumps to any session or place, and in a session runs its tools: open the plan, fold the tutor, go full screen.",

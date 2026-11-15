@@ -192,30 +192,60 @@ export function ToolDock({
   const shown = !hidden && (active !== null || near || over || focused || peek || !canHover);
 
   return (
-    <nav aria-label="Session tools" inert={hidden} className="relative z-30 flex w-[4.5rem] shrink-0 flex-col gap-1 border-l border-ink bg-panel px-1 py-2">
-      {sections.map((s) => {
-        const on = active === s.id;
-        return (
-          <button
-            key={s.id}
-            type="button"
-            onClick={() => onPick(s.id)}
-            aria-pressed={on}
-            aria-label={`${s.label}${s.badge ? ` (${s.badge})` : ""}: ${s.hint}`}
-            aria-keyshortcuts={s.shortcut?.toLowerCase()}
-            title={`${s.hint}${s.shortcut ? ` (${s.shortcut.toLowerCase()})` : ""}`}
-            className={`relative flex flex-col items-center gap-1 rounded-xl px-0.5 pt-2 pb-1.5 transition duration-200 ease-fluid active:scale-95 motion-reduce:transition-none ${
-              on ? "bg-ink text-white" : "text-muted hover:bg-paper hover:text-ink"
-            }`}
-          >
-            <Icon name={s.id} size={18} />
-            <span className="max-w-full truncate text-[11px] leading-none font-medium">{s.label}</span>
-            {s.badge && <span className={`font-mono text-[10px] leading-none tabular-nums ${on ? "text-white/70" : "text-muted"}`}>{s.badge}</span>}
-            {s.dot && !on && <span aria-hidden className="absolute top-1.5 right-2 size-2 rounded-full border border-ink bg-yellow-300" />}
-          </button>
-        );
-      })}
-    </nav>
+    <div
+      ref={edge}
+      inert={hidden}
+      style={{ transform: `translateX(${-offset}px)` }}
+      className="pointer-events-none absolute inset-y-0 right-0 z-30 flex w-14 items-center justify-end transition-transform duration-300 ease-fluid motion-reduce:transition-none"
+    >
+      {/* While it's tucked away: a short line on the edge says it's there. */}
+      <span
+        aria-hidden
+        className={`absolute right-1 h-8 w-1 rounded-full bg-ink/40 transition-opacity duration-300 ${shown || hidden ? "opacity-0" : "opacity-100 delay-150"}`}
+      />
+      <nav
+        aria-label="Session tools"
+        onPointerEnter={() => setOver(true)}
+        onPointerLeave={() => setOver(false)}
+        onFocus={() => setFocused(true)}
+        onBlur={(e) => !e.currentTarget.contains(e.relatedTarget as Node | null) && setFocused(false)}
+        className={`mr-2 flex origin-right flex-col gap-0.5 rounded-xl border border-ink bg-panel p-1 shadow-hard transition-[translate,scale,opacity] duration-300 ease-fluid motion-reduce:transition-none ${
+          shown ? "pointer-events-auto translate-x-0 scale-100 opacity-100" : "translate-x-3 scale-95 opacity-0"
+        }`}
+      >
+        {sections.map((s, i) => {
+          const on = active === s.id;
+          return (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => onPick(s.id)}
+              aria-pressed={on}
+              aria-label={`${s.label}${s.badge ? ` (${s.badge})` : ""}: ${s.hint}`}
+              aria-keyshortcuts={s.shortcut?.toLowerCase()}
+              // Each one follows the bar out, a beat after the one above.
+              style={{ transitionDelay: shown ? `${70 + i * 35}ms` : "0ms" }}
+              className={`group/tool relative flex size-9 items-center justify-center rounded-lg transition-[translate,opacity,background-color,color] duration-300 ease-fluid active:scale-95 motion-reduce:transition-none ${
+                shown ? "translate-x-0 opacity-100" : "translate-x-1.5 opacity-0"
+              } ${on ? "bg-ink text-on-ink" : "text-muted hover:bg-paper hover:text-ink"}`}
+            >
+              <Icon name={s.id} size={17} />
+              {/* Waiting on you (a goal to set, files still to come in). */}
+              {s.dot && !on && <span aria-hidden className="absolute top-1 right-1 size-2 rounded-full border border-ink bg-brand" />}
+              {/* Its name, its count and its key, on hover or focus. Same frame as the other menus. */}
+              <span
+                aria-hidden
+                className="pointer-events-none absolute top-1/2 right-full mr-2 flex -translate-y-1/2 translate-x-1 items-center gap-2 rounded-md border border-ink bg-panel px-2 py-1 text-xs font-medium whitespace-nowrap text-ink opacity-0 shadow-hard-sm transition duration-150 ease-fluid group-hover/tool:translate-x-0 group-hover/tool:opacity-100 group-focus-visible/tool:translate-x-0 group-focus-visible/tool:opacity-100"
+              >
+                {s.label}
+                {s.badge && <span className="font-mono text-xs text-muted">{s.badge}</span>}
+                {s.shortcut && <kbd className="rounded border border-ink/30 px-1 font-mono text-xs text-muted">{s.shortcut}</kbd>}
+              </span>
+            </button>
+          );
+        })}
+      </nav>
+    </div>
   );
 }
 
