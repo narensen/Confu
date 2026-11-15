@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
+import { buttonClass, ghostButtonClass, inputClass, Button, Eyebrow } from "@/components/ui";
 import { JSON_HEADERS, notifyAiUsed, readAiError } from "@/lib/ai-errors";
 import type { PaperMeta } from "@/lib/pdf/add-paper";
+import { useModal } from "@/components/Modal";
 
 const OPEN_EVENT = "confu:recommend-papers";
 export const openRecommendPapers = () => window.dispatchEvent(new Event(OPEN_EVENT));
@@ -82,15 +83,16 @@ function RecommendDialog({
 
   const chosen = (result?.items ?? []).filter((_, i) => picked.has(i)).map((it) => it.paper);
 
+  const dialogRef = useModal(true, onClose, { closeOnEscape: !pending });
   return (
     <div
       className="animate-fade fixed inset-0 z-60 flex items-center justify-center bg-scrim p-3 backdrop-blur-[2px] sm:p-6"
       onMouseDown={(e) => e.target === e.currentTarget && !pending && onClose()}
     >
-      <div role="dialog" aria-modal="true" aria-labelledby="rec-title" className="animate-pop flex max-h-full w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="rec-title" className="animate-pop flex max-h-full w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
         <div className="flex items-start justify-between gap-4 border-b border-ink px-6 pt-5 pb-4">
           <div>
-            <p className={eyebrowClass}>Find papers</p>
+            <Eyebrow>Find papers</Eyebrow>
             <h2 id="rec-title" className="mt-1 font-serif text-2xl">Build me a reading path</h2>
             <p className="mt-1 text-sm text-muted">Tell us where you want to get to. You&apos;ll get real papers, in order, from foundations to the frontier.</p>
           </div>
@@ -151,7 +153,7 @@ function RecommendDialog({
                 if (!items.length) return null;
                 return (
                   <section key={stage.key}>
-                    <p className={eyebrowClass}>{stage.title}</p>
+                    <Eyebrow>{stage.title}</Eyebrow>
                     <p className="text-xs text-muted">{stage.hint}</p>
                     <ul className="mt-2 space-y-2">
                       {items.map(({ it, i }) => (
@@ -183,7 +185,7 @@ function RecommendDialog({
                                 >
                                   {it.paper.title}
                                 </a>
-                                <span className="shrink-0 rounded border border-ink/30 px-1.5 py-px font-mono text-[10px] whitespace-nowrap">pass {it.pass}</span>
+                                <span className="shrink-0 rounded border border-ink/30 px-1.5 py-px font-mono text-xs whitespace-nowrap">pass {it.pass}</span>
                               </span>
                               <span className="mt-0.5 block text-xs text-muted">
                                 {[
@@ -213,16 +215,15 @@ function RecommendDialog({
             <button onClick={() => setResult(null)} className={`${ghostButtonClass} py-1.5 text-xs`}>
               Change goal
             </button>
-            <button
+            <Button
               disabled={!chosen.length}
               onClick={() => {
                 onAdd(chosen);
                 onClose();
               }}
-              className={buttonClass}
             >
               Add {chosen.length} paper{chosen.length === 1 ? "" : "s"} to this session
-            </button>
+            </Button>
           </div>
         )}
       </div>

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { CopyButton } from "@/components/packs/CopyButton";
 import { SiteFooter, SiteNav } from "@/components/site/SiteNav";
-import { eyebrowClass } from "@/components/ui";
+import { eyebrowClass, Eyebrow } from "@/components/ui";
 import { getUser } from "@/lib/dal";
 import { SOURCE_LABEL } from "@/lib/packs";
 import { SITE } from "@/lib/site";
@@ -82,11 +82,11 @@ export default async function TemplatePage({ params }: PageProps<"/templates/[sl
 
         <section className="border-b border-ink bg-panel">
           <div className="mx-auto max-w-6xl px-6 py-14">
-            <p className={eyebrowClass}>What you&apos;ll cover</p>
+            <Eyebrow>What you&apos;ll cover</Eyebrow>
             <ol className="mt-6 grid gap-5 md:grid-cols-3">
               {t.outline.map((phase, i) => (
                 <li key={phase.phase} className="rounded-xl border border-ink bg-paper/50 p-5">
-                  <p className={eyebrowClass}>Phase {i + 1}</p>
+                  <Eyebrow>Phase {i + 1}</Eyebrow>
                   <h2 className="mt-1 font-serif text-xl">{phase.phase}</h2>
                   <ul className="mt-3 space-y-2 text-sm">
                     {phase.topics.map((topic) => (
@@ -105,7 +105,7 @@ export default async function TemplatePage({ params }: PageProps<"/templates/[sl
 
         <section className="border-b border-ink">
           <div className="mx-auto max-w-6xl px-6 py-14">
-            <p className={eyebrowClass}>Sources</p>
+            <Eyebrow>Sources</Eyebrow>
             <h2 className="mt-2 font-serif text-3xl tracking-tight">Free to read and watch</h2>
             <ul className="mt-6 divide-y divide-ink/10 rounded-2xl border border-ink bg-panel">
               {t.sources.map((s) => (
@@ -126,7 +126,7 @@ export default async function TemplatePage({ params }: PageProps<"/templates/[sl
 
         <section className="bg-panel">
           <div className="mx-auto max-w-6xl px-6 py-14">
-            <p className={eyebrowClass}>More templates</p>
+            <Eyebrow>More templates</Eyebrow>
             <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {TEMPLATES.filter((x) => x.slug !== t.slug)
                 .slice(0, 4)

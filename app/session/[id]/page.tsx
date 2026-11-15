@@ -4,10 +4,9 @@ import { AppHeader } from "@/components/AppHeader";
 import { SharePack } from "@/components/packs/SharePack";
 import { SessionTitle } from "@/components/workspace/SessionTitle";
 import { Workspace } from "@/components/workspace/Workspace";
-import { trialPromptsLeft } from "@/lib/ai-access";
 import { getCurrentRole, requireUser } from "@/lib/dal";
 import { getKeyInfo } from "@/lib/groq-keys";
-import { planOf } from "@/lib/plans";
+import { isOwner } from "@/lib/plans";
 import type { Attempt } from "@/lib/exam";
 import type { PaperReview } from "@/lib/paper";
 import { createClient } from "@/lib/supabase/server";
@@ -63,10 +62,9 @@ async function SessionWorkspace({ params, searchParams }: { params: Promise<{ id
   const user = await requireUser();
   const supabase = await createClient();
 
-  const [role, keyInfo, trial, session, docs, plan, memory, messages, saved] = await Promise.all([
+  const [role, keyInfo, session, docs, plan, memory, messages, saved] = await Promise.all([
     getCurrentRole(),
     getKeyInfo(supabase, user.id, id),
-    trialPromptsLeft(supabase, user.id),
     // "*": draft_goal only exists once migration 0024 has run.
     supabase.from("study_sessions").select("*").eq("id", id).maybeSingle(),
     supabase
@@ -174,9 +172,8 @@ async function SessionWorkspace({ params, searchParams }: { params: Promise<{ id
         initialHighlights={(highlights.data ?? []) as Highlight[]}
         initialMessages={((messages.data ?? []) as ChatMessage[]).reverse()}
         initialSaved={(saved.data ?? []) as SavedAnswer[]}
-        needsKey={planOf(role) !== "pro"}
+        needsKey={!isOwner(role)}
         initialKey={keyInfo}
-        trial={trial > 0}
         initialReviews={(reviews.data ?? []) as PaperReview[]}
         initialAttempts={(attempts.data ?? []) as Attempt[]}
       />

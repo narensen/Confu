@@ -46,7 +46,7 @@ function Tabs({ path, waiting }: { path: string | null; waiting: number }) {
               >
                 {t.label}
                 {t.href === "/friends" && waiting > 0 && (
-                  <span className="inline-flex min-w-4 items-center justify-center rounded-full bg-yellow-300 px-1 font-mono text-[11px] leading-4 font-medium text-ink">
+                  <span className="inline-flex min-w-4 items-center justify-center rounded-full bg-brand px-1 font-mono text-xs leading-4 font-medium text-ink">
                     {waiting > 9 ? "9+" : waiting}
                     <span className="sr-only"> waiting</span>
                   </span>

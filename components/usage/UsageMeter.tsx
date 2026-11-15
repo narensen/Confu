@@ -6,7 +6,7 @@ import { AI_USED_EVENT } from "@/lib/ai-errors";
 import { ago, formatTokens } from "@/lib/format-usage";
 
 type Main = {
-  plan: "free" | "pro" | "trial";
+  plan: "own" | "owner";
   status: "blocked" | "ok" | "stale" | "none";
   used24h: number;
   dailyLimit: number | null;
@@ -18,8 +18,7 @@ type Main = {
 // Compact "how much of today's Groq allowance is left" chip for the tutor bar.
 // It never shows a stale "limit reached": while blocked it re-checks with Groq
 // every minute (the server throttles this), so it clears once tokens free up.
-// quiet: stays out of the way until it matters (a trial's count, a blocked
-// key, or under a fifth of today's allowance left). Settings → Usage and the
+// quiet: stays out of the way until it matters (a blocked key, or under a fifth of today's allowance left). Settings → Usage and the
 // account menu always have the full picture.
 export function UsageMeter({ sessionId, keyId, keyLast4, quiet = false }: { sessionId: string; keyId?: string | null; keyLast4?: string | null; quiet?: boolean }) {
   const [main, setMain] = useState<Main | null>(null);
@@ -51,7 +50,7 @@ export function UsageMeter({ sessionId, keyId, keyLast4, quiet = false }: { sess
   // While Groq is refusing the key, keep checking so "limit reached" clears
   // as soon as tokens free up (each result reschedules the next check).
   useEffect(() => {
-    if (main?.status !== "blocked" || main.plan === "trial") return;
+    if (main?.status !== "blocked" || main.plan === "owner") return;
     const next = window.setTimeout(load, 65_000);
     return () => window.clearTimeout(next);
   }, [main, load]);
@@ -62,11 +61,7 @@ export function UsageMeter({ sessionId, keyId, keyLast4, quiet = false }: { sess
 
   let label: string | null = null;
   let suffix = ""; // dropped when the tutor panel is narrow
-  if (main?.plan === "trial") {
-    const n = Math.max(0, (main.dailyLimit ?? 0) - main.used24h);
-    label = blocked ? "free prompts used" : `${n} free prompt${n === 1 ? "" : "s"} left`;
-  }
-  else if (blocked) label = main?.plan === "pro" ? "allowance used" : "limit reached";
+  if (blocked) label = "limit reached";
   else if (main && main.status !== "none") {
     label = left !== null ? `${stale ? "~" : ""}${Math.round(left * 100)}%` : formatTokens(main.used24h);
     suffix = left !== null ? " left" : " today";
@@ -76,26 +71,22 @@ export function UsageMeter({ sessionId, keyId, keyLast4, quiet = false }: { sess
   const tone = blocked ? "text-danger" : stale ? "text-muted/70" : left !== null && left < 0.1 ? "text-danger" : left !== null && left < 0.3 ? "text-warn" : "text-muted";
   const title = !main
     ? "Usage"
-    : main.plan === "trial"
-      ? `Free trial on Confu's keys: ${main.used24h} of ${main.dailyLimit} prompts used. Add your own Groq key (it's free) to keep going after that.`
-      : main.plan === "pro"
-      ? `${main.dailyLimit === null ? "Admin" : "Pro"}: ${formatTokens(main.used24h)} tokens used in the last 24 h${main.dailyLimit ? ` of ${formatTokens(main.dailyLimit)}` : " (unlimited)"}.`
+    : main.plan === "owner"
+      ? `Owner: ${formatTokens(main.used24h)} tokens used on the server's keys in the last 24 h.`
       : blocked
       ? `Groq refused this key at ${new Date(main.blockedSince!).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} for its daily limit. Re-checking every minute; it frees up gradually.`
       : `${formatTokens(main.used24h)} tokens used here in the last 24 h${main.dailyLimit ? ` of ${main.dailyLimitEstimated ? "~" : ""}${formatTokens(main.dailyLimit)} per day` : ""}. Last checked with Groq ${ago(main.checkedAt)}${stale ? " (may be out of date)" : ""}. See Settings → Usage.`;
 
-  if (!label && !keyLast4 && main?.plan !== "pro") return null;
-  if (quiet && !(main?.plan === "trial" || blocked || (left !== null && left < 0.2))) return null;
+  if (!label && !keyLast4 && main?.plan !== "owner") return null;
+  if (quiet && !(blocked || (left !== null && left < 0.2))) return null;
   return (
     <Link
       href="/settings#usage"
       title={title}
-      className="my-2.5 mr-1 flex shrink-0 items-center gap-2 rounded-md border border-line px-2 font-mono text-[11px] whitespace-nowrap text-muted transition hover:border-ink hover:text-ink"
+      className="my-2.5 mr-1 flex shrink-0 items-center gap-2 rounded-md border border-line px-2 font-mono text-xs whitespace-nowrap text-muted transition hover:border-ink hover:text-ink"
     >
-      {main?.plan === "trial" ? (
-        <span className="rounded border border-ink/40 px-1 text-[9px] font-bold text-ink uppercase">Trial</span>
-      ) : main?.plan === "pro" ? (
-        <span className="rounded bg-yellow-400 px-1 text-[9px] font-bold text-ink uppercase">{main.dailyLimit === null ? "Admin" : "Pro"}</span>
+      {main?.plan === "owner" ? (
+        <span className="text-ink">Owner</span>
       ) : (
         keyLast4 && <span>…{keyLast4}</span>
       )}
@@ -109,7 +100,7 @@ export function UsageMeter({ sessionId, keyId, keyLast4, quiet = false }: { sess
           {label}
           {/* "today" / "left" only when the tutor panel has room (it's an @container). */}
           {suffix && <span className="hidden @lg:inline">{suffix}</span>}
-          {stale && <span className="rounded border border-dashed border-ink/30 px-1 text-[9px] uppercase">stale</span>}
+          {stale && <span className="rounded border border-dashed border-ink/30 px-1 text-xs uppercase">stale</span>}
         </span>
       )}
     </Link>

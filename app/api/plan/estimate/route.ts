@@ -17,8 +17,8 @@ const Body = z.object({
 const Refined = z.object({ hours: z.coerce.number(), low: z.coerce.number(), high: z.coerce.number(), why: z.string().catch("") });
 
 // How many hours a goal needs, for the pace calibrator: from the session's
-// PDFs and what the goal lists, then (for Pro or the student's own key, so a
-// free-trial prompt isn't spent on it) refined by the AI for the goal's scope.
+// PDFs and what the goal lists, then (when the student has a key, or is
+// the owner) refined by the AI for the goal's scope.
 export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getClaims();

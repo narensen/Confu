@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Logo } from "@/components/AppHeader";
-import { eyebrowClass } from "@/components/ui";
+import { eyebrowClass, Eyebrow } from "@/components/ui";
 import { SITE } from "@/lib/site";
 
 export function LegalPage({
@@ -37,7 +37,7 @@ export function LegalPage({
         <h1 className="animate-enter mt-1 font-serif text-4xl tracking-tight">{title}</h1>
         <p className="mt-2 font-mono text-xs text-muted">Last updated {updated}</p>
         <div className="animate-enter mt-8 rounded-xl border border-ink bg-panel p-5 shadow-hard-sm">
-          <p className={eyebrowClass}>In short</p>
+          <Eyebrow>In short</Eyebrow>
           <div className="mt-2 text-sm leading-relaxed">{summary}</div>
         </div>
         <div className="legal mt-10 space-y-8 text-[0.94rem] leading-relaxed">{children}</div>

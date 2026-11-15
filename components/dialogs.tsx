@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useModal } from "@/components/Modal";
 
 // In-app replacements for window.confirm and window.alert. The native ones
 // freeze the page while open, which browsers report as a very slow
@@ -90,6 +91,7 @@ export function DialogHost() {
     setQueue((q) => q.slice(1));
   }
 
+  const dialogRef = useModal(Boolean(current), () => answer("cancel"));
   // Focus the safe choice: Cancel for destructive actions, otherwise Confirm.
   useEffect(() => {
     if (!current) return;
@@ -113,7 +115,7 @@ export function DialogHost() {
           onMouseDown={(e) => e.target === e.currentTarget && answer("cancel")}
         >
           <div
-            role="alertdialog"
+            ref={dialogRef} role="alertdialog"
             aria-modal="true"
             aria-labelledby="confu-ask-title"
             className="animate-pop w-full max-w-sm rounded-xl border border-ink bg-panel p-5 shadow-[6px_6px_0_0_var(--shadow)]"
@@ -127,7 +129,7 @@ export function DialogHost() {
                 <button
                   type="button"
                   onClick={() => answer("alternative")}
-                  className="mr-auto rounded-lg border border-ink bg-yellow-300 px-3.5 py-2 text-sm font-medium transition hover:-translate-y-px hover:shadow-hard-sm"
+                  className="mr-auto rounded-lg border border-ink bg-brand px-3.5 py-2 text-sm font-medium transition hover:-translate-y-px hover:shadow-hard-sm"
                 >
                   {current.alternative}
                 </button>
@@ -144,7 +146,7 @@ export function DialogHost() {
                 ref={confirmRef}
                 type="button"
                 onClick={() => answer("confirm")}
-                className={`rounded-lg border px-3.5 py-2 text-sm font-medium text-white transition hover:-translate-y-px hover:shadow-hard-sm ${
+                className={`rounded-lg border px-3.5 py-2 text-sm font-medium text-on-ink transition hover:-translate-y-px hover:shadow-hard-sm ${
                   current.danger ? "border-danger bg-danger" : "border-ink bg-ink"
                 }`}
               >
@@ -202,7 +204,7 @@ function StackCard({ card, onDone }: { card: Card; onDone: () => void }) {
         onMouseLeave={() => setPaused(false)}
         className={`${motion} flex items-start gap-3 rounded-xl border bg-panel px-4 py-3 text-sm shadow-hard ${t.tone === "error" ? "border-danger" : "border-ink"}`}
       >
-        <span className={`mt-1.5 size-2 shrink-0 rounded-full ${t.tone === "error" ? "bg-danger" : "bg-yellow-400"}`} />
+        <span className={`mt-1.5 size-2 shrink-0 rounded-full ${t.tone === "error" ? "bg-danger" : "bg-brand"}`} />
         <p className="min-w-0 flex-1 leading-relaxed whitespace-pre-line">{t.message}</p>
         <button type="button" aria-label="Dismiss" onClick={close} className="-mr-1 shrink-0 rounded px-1 text-muted transition hover:text-ink">
           ✕
@@ -214,7 +216,7 @@ function StackCard({ card, onDone }: { card: Card; onDone: () => void }) {
   const n = card.notice;
   const tone = n.tone ?? "info";
   const lead = n.avatar ? (
-    <span aria-hidden className={`flex size-9 shrink-0 items-center justify-center rounded-full border border-ink font-serif text-sm ${tone === "success" ? "bg-yellow-300" : "bg-yellow-100"}`}>
+    <span aria-hidden className={`flex size-9 shrink-0 items-center justify-center rounded-full border border-ink font-serif text-sm ${tone === "success" ? "bg-brand" : "bg-brand-soft"}`}>
       {n.avatar.slice(0, 1).toUpperCase()}
     </span>
   ) : n.icon ? (
@@ -222,7 +224,7 @@ function StackCard({ card, onDone }: { card: Card; onDone: () => void }) {
       {n.icon}
     </span>
   ) : (
-    <span aria-hidden className={`mt-1.5 size-2 shrink-0 rounded-full ${tone === "error" ? "bg-danger" : tone === "success" ? "bg-ok" : "bg-yellow-400"}`} />
+    <span aria-hidden className={`mt-1.5 size-2 shrink-0 rounded-full ${tone === "error" ? "bg-danger" : tone === "success" ? "bg-ok" : "bg-brand"}`} />
   );
   const text = (
     <span className="min-w-0 flex-1">
@@ -253,7 +255,7 @@ function StackCard({ card, onDone }: { card: Card; onDone: () => void }) {
       {n.actions && n.actions.length > 0 && (
         <div className="flex gap-2 border-t border-line bg-paper px-3.5 py-2">
           {n.actions.map((a) => {
-            const cls = `rounded-lg border px-3 py-1 text-xs font-medium transition hover:-translate-y-px ${a.primary ? "border-ink bg-ink text-white" : "border-ink/30 bg-panel hover:border-ink"}`;
+            const cls = `rounded-lg border px-3 py-1 text-xs font-medium transition hover:-translate-y-px ${a.primary ? "border-ink bg-ink text-on-ink" : "border-ink/30 bg-panel hover:border-ink"}`;
             return a.href ? (
               <Link key={a.label} href={a.href} onClick={close} className={cls}>
                 {a.label}

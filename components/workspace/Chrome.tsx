@@ -192,59 +192,30 @@ export function ToolDock({
   const shown = !hidden && (active !== null || near || over || focused || peek || !canHover);
 
   return (
-    <div
-      ref={edge}
-      inert={hidden}
-      style={{ transform: `translateX(${-offset}px)` }}
-      className="pointer-events-none absolute inset-y-0 right-0 z-30 flex w-14 items-center justify-end transition-transform duration-300 ease-fluid motion-reduce:transition-none"
-    >
-      {/* While it's tucked away: a short line on the edge says it's there. */}
-      <span
-        aria-hidden
-        className={`absolute right-1 h-9 w-1 rounded-full bg-ink/20 transition-opacity duration-300 ${shown || hidden ? "opacity-0" : "opacity-100 delay-150"}`}
-      />
-      <nav
-        aria-label="Session tools"
-        onPointerEnter={() => setOver(true)}
-        onPointerLeave={() => setOver(false)}
-        onFocus={() => setFocused(true)}
-        onBlur={(e) => !e.currentTarget.contains(e.relatedTarget as Node | null) && setFocused(false)}
-        className={`mr-2.5 flex origin-right flex-col gap-0.5 rounded-2xl border border-ink/15 bg-panel p-1 shadow-hard-sm transition-[translate,scale,opacity] duration-300 ease-fluid motion-reduce:transition-none ${
-          shown ? "pointer-events-auto translate-x-0 scale-100 opacity-100" : "translate-x-3 scale-95 opacity-0"
-        }`}
-      >
-        {sections.map((s, i) => {
-          const on = active === s.id;
-          return (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => onPick(s.id)}
-              aria-pressed={on}
-              aria-label={`${s.label}${s.badge ? ` (${s.badge})` : ""}: ${s.hint}`}
-              // Each one follows the bar out, a beat after the one above.
-              style={{ transitionDelay: shown ? `${70 + i * 35}ms` : "0ms" }}
-              className={`group/tool relative flex size-9 items-center justify-center rounded-xl transition-[translate,opacity,background-color,color] duration-300 ease-fluid active:scale-95 motion-reduce:transition-none ${
-                shown ? "translate-x-0 opacity-100" : "translate-x-1.5 opacity-0"
-              } ${on ? "bg-ink text-white" : "text-muted hover:bg-paper hover:text-ink"}`}
-            >
-              <Icon name={s.id} size={17} />
-              {/* Waiting on you (a goal to set, files still to come in). */}
-              {s.dot && !on && <span aria-hidden className="absolute top-1 right-1 size-2 rounded-full border border-ink bg-yellow-300" />}
-              {/* Its name, its count and its key, on hover or focus. */}
-              <span
-                aria-hidden
-                className="pointer-events-none absolute top-1/2 right-full mr-2.5 flex -translate-y-1/2 translate-x-1 items-center gap-2 rounded-md bg-ink px-2 py-1 text-xs font-medium whitespace-nowrap text-white opacity-0 transition duration-150 ease-fluid group-hover/tool:translate-x-0 group-hover/tool:opacity-100 group-focus-visible/tool:translate-x-0 group-focus-visible/tool:opacity-100"
-              >
-                {s.label}
-                {s.badge && <span className="font-mono text-[10px] text-white/60">{s.badge}</span>}
-                {s.shortcut && <kbd className="rounded border border-white/25 px-1 font-mono text-[10px] text-white/70">{s.shortcut}</kbd>}
-              </span>
-            </button>
-          );
-        })}
-      </nav>
-    </div>
+    <nav aria-label="Session tools" inert={hidden} className="relative z-30 flex w-[4.5rem] shrink-0 flex-col gap-1 border-l border-ink bg-panel px-1 py-2">
+      {sections.map((s) => {
+        const on = active === s.id;
+        return (
+          <button
+            key={s.id}
+            type="button"
+            onClick={() => onPick(s.id)}
+            aria-pressed={on}
+            aria-label={`${s.label}${s.badge ? ` (${s.badge})` : ""}: ${s.hint}`}
+            aria-keyshortcuts={s.shortcut?.toLowerCase()}
+            title={`${s.hint}${s.shortcut ? ` (${s.shortcut.toLowerCase()})` : ""}`}
+            className={`relative flex flex-col items-center gap-1 rounded-xl px-0.5 pt-2 pb-1.5 transition duration-200 ease-fluid active:scale-95 motion-reduce:transition-none ${
+              on ? "bg-ink text-white" : "text-muted hover:bg-paper hover:text-ink"
+            }`}
+          >
+            <Icon name={s.id} size={18} />
+            <span className="max-w-full truncate text-[11px] leading-none font-medium">{s.label}</span>
+            {s.badge && <span className={`font-mono text-[10px] leading-none tabular-nums ${on ? "text-white/70" : "text-muted"}`}>{s.badge}</span>}
+            {s.dot && !on && <span aria-hidden className="absolute top-1.5 right-2 size-2 rounded-full border border-ink bg-yellow-300" />}
+          </button>
+        );
+      })}
+    </nav>
   );
 }
 
@@ -263,7 +234,7 @@ export function TutorRail({ busy, onOpen }: { busy: boolean; onOpen: () => void 
       >
         <Icon name="chat" size={18} />
         <span className="rotate-180 text-xs font-medium tracking-wide [writing-mode:vertical-rl]">Tutor</span>
-        {busy && <span aria-hidden className="absolute top-1.5 right-1 size-2 animate-pulse rounded-full border border-ink bg-yellow-300" />}
+        {busy && <span aria-hidden className="absolute top-1.5 right-1 size-2 animate-pulse rounded-full border border-ink bg-brand" />}
       </button>
     </nav>
   );
@@ -299,7 +270,7 @@ export function TutorHeader({
     <div className="flex h-12 shrink-0 items-center gap-2 border-b border-ink pr-2 pl-4">
       <span className="relative flex">
         <Icon name="chat" size={16} />
-        {busy && <span aria-hidden className="absolute -top-0.5 -right-0.5 size-1.5 animate-pulse rounded-full bg-yellow-400" />}
+        {busy && <span aria-hidden className="absolute -top-0.5 -right-0.5 size-1.5 animate-pulse rounded-full bg-brand" />}
       </span>
       <p className="font-medium">Tutor</p>
       {tutors}
@@ -366,7 +337,7 @@ export function ToolHeader({
     <div className="flex h-12 shrink-0 items-center gap-2 border-b border-ink pr-2 pl-4">
       <Icon name={section.id} size={16} />
       <p className="font-medium">{section.label}</p>
-      {section.badge && <span className="rounded border border-line px-1.5 py-px font-mono text-[10px] text-muted">{section.badge}</span>}
+      {section.badge && <span className="rounded border border-line px-1.5 py-px font-mono text-xs text-muted">{section.badge}</span>}
       <p className="hidden min-w-0 truncate text-xs text-muted @[26rem]:block">{section.hint}</p>
       <div className="flex-1" />
       {onPin && (
@@ -383,7 +354,7 @@ export function ToolHeader({
                 : "Not enough room beside the page: fold the tutor away (Ctrl+\\) or widen the window"
           }
           className={`flex h-7 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs font-medium transition duration-150 disabled:cursor-not-allowed disabled:opacity-40 ${
-            pinned ? "border-ink bg-ink text-white" : "border-ink/25 text-muted enabled:hover:border-ink enabled:hover:text-ink"
+            pinned ? "border-ink bg-ink text-on-ink" : "border-ink/25 text-muted enabled:hover:border-ink enabled:hover:text-ink"
           }`}
         >
           <Icon name="pin" size={13} />
@@ -470,21 +441,21 @@ function MobileButton({ it, on, onClick, extra }: { it: MobileItem; on: boolean;
       aria-label={`${it.label}${it.badge ? ` (${it.badge})` : ""}${it.dot ? ", waiting on you" : ""}`}
       className={`relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-lg py-1.5 transition active:scale-95 ${on ? "text-ink" : "text-muted"}`}
     >
-      <span className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${on ? "bg-ink text-white" : ""}`}>
+      <span className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${on ? "bg-ink text-on-ink" : ""}`}>
         <Icon name={it.icon} size={18} />
       </span>
-      <span className={`max-w-full truncate text-[11px] leading-none ${on ? "font-semibold" : "font-medium"}`}>{it.label}</span>
+      <span className={`max-w-full truncate text-xs leading-none ${on ? "font-semibold" : "font-medium"}`}>{it.label}</span>
       {it.badge && !on ? (
         <span
           aria-hidden
-          className={`absolute top-0.5 left-1/2 ml-2.5 min-w-4 rounded-full border px-1 font-mono text-[10px] leading-[14px] tabular-nums ${
-            it.dot ? "border-ink bg-yellow-300" : "border-line bg-panel"
+          className={`absolute top-0.5 left-1/2 ml-2.5 min-w-4 rounded-full border px-1 font-mono text-xs leading-[14px] tabular-nums ${
+            it.dot ? "border-ink bg-brand" : "border-line bg-panel"
           }`}
         >
           {it.badge}
         </span>
       ) : (
-        it.dot && <span aria-hidden className="absolute top-1 left-1/2 ml-4 size-2 rounded-full border border-ink bg-yellow-300" />
+        it.dot && <span aria-hidden className="absolute top-1 left-1/2 ml-4 size-2 rounded-full border border-ink bg-brand" />
       )}
       {extra}
     </button>
@@ -550,12 +521,12 @@ export function MobileNav({ items, active, onPick }: { items: MobileItem[]; acti
                   setOpen(false);
                   onPick(it.id);
                 }}
-                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${on ? "bg-ink text-white" : "hover:bg-paper"}`}
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${on ? "bg-ink text-on-ink" : "hover:bg-paper"}`}
               >
                 <Icon name={it.icon} size={18} />
                 <span className="min-w-0 flex-1 truncate font-medium">{it.label}</span>
-                {it.badge && <span className={`font-mono text-[11px] ${on ? "text-white/70" : "text-muted"}`}>{it.badge}</span>}
-                {it.dot && !on && <span aria-hidden className="size-2 rounded-full border border-ink bg-yellow-300" />}
+                {it.badge && <span className={`font-mono text-xs ${on ? "text-on-ink/70" : "text-muted"}`}>{it.badge}</span>}
+                {it.dot && !on && <span aria-hidden className="size-2 rounded-full border border-ink bg-brand" />}
               </button>
             );
           })}

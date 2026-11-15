@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
+import { buttonClass, eyebrowClass, ghostButtonClass, inputClass, Eyebrow } from "@/components/ui";
 import { JSON_HEADERS } from "@/lib/ai-errors";
 import type { GoalHint } from "@/lib/goal-later";
 import type { PaperMeta } from "@/lib/pdf/add-paper";
+import { useModal } from "@/components/Modal";
 
 type Result = { input: string; paper: PaperMeta | null };
 
@@ -166,7 +167,7 @@ export function AddPaperDialog({
                             .filter(Boolean)
                             .join(" · ")}
                         </span>
-                        <span className="mt-1.5 flex flex-wrap gap-1.5 font-mono text-[10px]">
+                        <span className="mt-1.5 flex flex-wrap gap-1.5 font-mono text-xs">
                           {picked.has(i) && <Tag dark>Same title as your goal</Tag>}
                           {r.paper.arxiv_id && <Tag>arXiv {r.paper.arxiv_id}</Tag>}
                           {!r.paper.arxiv_id && r.paper.doi && <Tag>DOI {r.paper.doi}</Tag>}
@@ -180,7 +181,7 @@ export function AddPaperDialog({
                         <button
                           type="button"
                           onClick={() => addOne(r.paper!)}
-                          className="shrink-0 self-start rounded-md border border-ink bg-ink px-2.5 py-1 text-xs font-medium text-white transition hover:-translate-y-px"
+                          className="shrink-0 self-start rounded-md border border-ink bg-ink px-2.5 py-1 text-xs font-medium text-on-ink transition hover:-translate-y-px"
                         >
                           Add
                         </button>
@@ -212,7 +213,7 @@ export function AddPaperDialog({
                             .filter(Boolean)
                             .join(" · ")}
                         </span>
-                        <span className="mt-1.5 flex flex-wrap gap-1.5 font-mono text-[10px]">
+                        <span className="mt-1.5 flex flex-wrap gap-1.5 font-mono text-xs">
                           {r.paper.arxiv_id && <Tag>arXiv {r.paper.arxiv_id}</Tag>}
                           {!r.paper.arxiv_id && r.paper.doi && <Tag>DOI {r.paper.doi}</Tag>}
                           {r.paper.pdf_url ? <Tag dark>PDF available</Tag> : <Tag dashed>Abstract only</Tag>}
@@ -249,16 +250,18 @@ export function AddPaperDialog({
   );
   const activeHint = hints?.find((h) => h.name === active);
 
+  const dialogRef = useModal(true, onClose, { closeOnEscape: false });
+  const resultsRef = useModal(resultsOpen, closeResults);
   return (
     <div className="animate-fade fixed inset-0 z-60 flex items-center justify-center bg-scrim p-3 backdrop-blur-[2px] sm:p-6" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal="true" aria-labelledby="add-paper-title" className="animate-pop flex max-h-full w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="add-paper-title" className="animate-pop flex max-h-full w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
         <div className="flex items-start justify-between gap-4 border-b border-ink px-6 pt-5 pb-4">
           <div>
-            <p className={eyebrowClass}>Add papers</p>
+            <Eyebrow>Add papers</Eyebrow>
             <h2 id="add-paper-title" className="mt-1 font-serif text-2xl">No PDF needed</h2>
             <p className="mt-1 text-sm text-muted">Paste an arXiv ID or link, a DOI, a PDF link, or a title. Several? One per line.</p>
             {hints && hints.length > 0 && (
-              <p className="mt-3 rounded-lg border border-ink bg-yellow-50 px-3 py-2 text-xs leading-relaxed">
+              <p className="mt-3 rounded-lg border border-ink bg-brand-faint px-3 py-2 text-xs leading-relaxed">
                 <span className="font-medium">Some papers from your goal couldn&apos;t be added on their own.</span> It happens with very new papers, papers named only
                 by a nickname, or a DOI that points somewhere else. Search for them here: click a title or ID below to look it up.
               </p>
@@ -301,10 +304,10 @@ export function AddPaperDialog({
 
           {hints && hints.length > 0 && (
             <div className="mt-4">
-              <p className={eyebrowClass}>From your goal: still to find</p>
+              <Eyebrow>From your goal: still to find</Eyebrow>
               <ul className="mt-2 space-y-1.5">
                 {hints.map((h) => (
-                  <li key={h.name} className={`rounded-lg border px-3 py-2 ${active === h.name ? "border-ink bg-yellow-50" : "border-line"}`}>
+                  <li key={h.name} className={`rounded-lg border px-3 py-2 ${active === h.name ? "border-ink bg-brand-faint" : "border-line"}`}>
                     <div className="flex items-start justify-between gap-3">
                       <span className="text-sm font-medium">
                         {h.name}
@@ -330,7 +333,7 @@ export function AddPaperDialog({
                             title={`Search for ${value}`}
                             className="max-w-full truncate rounded-md border border-ink/30 bg-panel px-2 py-0.5 text-left text-xs transition hover:border-ink hover:bg-paper"
                           >
-                            <span className="mr-1 font-mono text-[10px] text-muted uppercase">{label}</span>
+                            <span className="mr-1 font-mono text-xs text-muted uppercase">{label}</span>
                             {value}
                           </button>
                         ))}
@@ -384,10 +387,10 @@ export function AddPaperDialog({
 
       {resultsOpen && (
         <div className="animate-fade absolute inset-0 flex items-center justify-center bg-scrim p-3 sm:p-6" onMouseDown={(e) => e.target === e.currentTarget && closeResults()}>
-          <div role="dialog" aria-modal="true" aria-labelledby="paper-results-title" className="animate-pop flex max-h-full w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
+          <div ref={resultsRef} role="dialog" aria-modal="true" aria-labelledby="paper-results-title" className="animate-pop flex max-h-full w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
             <div className="flex items-start justify-between gap-4 border-b border-ink px-5 pt-4 pb-3">
               <div className="min-w-0">
-                <p className={eyebrowClass}>{pending ? "Searching OpenAlex and Semantic Scholar" : "Search results"}</p>
+                <Eyebrow>{pending ? "Searching OpenAlex and Semantic Scholar" : "Search results"}</Eyebrow>
                 <h3 id="paper-results-title" className="mt-1 font-serif text-xl leading-snug">
                   Search for {activeHint ? activeHint.name : <span className="font-mono text-base">{searched}</span>}
                 </h3>
@@ -414,7 +417,7 @@ export function AddPaperDialog({
 
 function Tag({ children, dark, dashed }: { children: React.ReactNode; dark?: boolean; dashed?: boolean }) {
   return (
-    <span className={`rounded border px-1.5 py-px ${dark ? "border-ink bg-ink text-white" : dashed ? "border-dashed border-ink/50" : "border-ink/30 text-muted"}`}>
+    <span className={`rounded border px-1.5 py-px ${dark ? "border-ink bg-ink text-on-ink" : dashed ? "border-dashed border-ink/50" : "border-ink/30 text-muted"}`}>
       {children}
     </span>
   );

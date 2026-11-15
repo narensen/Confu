@@ -1,6 +1,6 @@
 "use client";
 
-import { eyebrowClass } from "@/components/ui";
+import { Eyebrow } from "@/components/ui";
 import type { LearnerMemory, PlanTopic, StudyPlan } from "@/lib/types";
 
 export function MemoryPanel({ memory, plan, topics }: { memory: LearnerMemory; plan: StudyPlan | null; topics: PlanTopic[] }) {
@@ -29,11 +29,11 @@ export function MemoryPanel({ memory, plan, topics }: { memory: LearnerMemory; p
 
       {plan && topics.length > 0 && (
         <section className="animate-enter rounded-xl border border-ink p-4" style={{ animationDelay: "300ms" }}>
-          <p className={eyebrowClass}>Mastery by topic</p>
+          <Eyebrow>Mastery by topic</Eyebrow>
           <ul className="mt-3 space-y-2.5">
             {topics.map((t) => (
               <li key={t.id} className="flex items-center gap-3">
-                <span className="w-5 shrink-0 font-mono text-[11px] text-muted">{t.position + 1}</span>
+                <span className="w-5 shrink-0 font-mono text-xs text-muted">{t.position + 1}</span>
                 <span className="min-w-0 flex-1 truncate">{t.title}</span>
                 <span className="h-1.5 w-20 overflow-hidden rounded-full bg-line">
                   <span className="block h-full rounded-full bg-ok transition-[width] duration-700 ease-fluid" style={{ width: `${t.mastery * 100}%` }} />
@@ -52,7 +52,7 @@ function List({ title, items, mark, delay }: { title: string; items: string[]; m
   if (!items.length) return null;
   return (
     <section className="animate-enter" style={{ animationDelay: `${delay}ms` }}>
-      <p className={eyebrowClass}>{title}</p>
+      <Eyebrow>{title}</Eyebrow>
       <ul className="mt-2 space-y-1.5">
         {items.map((i) => (
           <li key={i} className="flex items-start gap-2.5 leading-snug">

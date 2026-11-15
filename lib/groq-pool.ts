@@ -2,7 +2,7 @@ import "server-only";
 import { createHash } from "node:crypto";
 import { parseDuration } from "@/lib/usage";
 
-// Confu's own Groq keys, used for Pro (and owner) accounts.
+// The server's own Groq keys (GROQ_API_KEYS), used only for the owner's account.
 //
 //   GROQ_API_KEYS=gsk_one,gsk_two,gsk_three   (comma or newline separated)
 //   GROQ_API_KEY=gsk_…                         (also included)

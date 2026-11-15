@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "@/components/dialogs";
-import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
+import { buttonClass, ghostButtonClass, inputClass, Eyebrow } from "@/components/ui";
 import { Markdown } from "@/components/workspace/Markdown";
 import { JSON_HEADERS, notifyAiUsed, readAiError } from "@/lib/ai-errors";
 import { bibKeys, toBibtex, type BibPaper } from "@/lib/bibtex";
@@ -12,6 +12,7 @@ import { PASSES, passNotes, type PaperReview } from "@/lib/paper";
 import { track } from "@/lib/telemetry";
 import type { SessionDoc } from "@/lib/types";
 import type { PaperTool } from "./PassesPanel";
+import { useModal } from "@/components/Modal";
 
 // The paper tools behind the Papers panel's buttons: BibTeX export, sending
 // pass notes to Zotero, a related-work draft and a side-by-side comparison.
@@ -77,12 +78,13 @@ export function PaperTools({
   }, [onClose]);
 
   const titles: Record<typeof tool, string> = { zotero: "Send notes to Zotero", related: "Draft related work", compare: "Compare papers" };
+  const dialogRef = useModal(true, onClose);
   return createPortal(
     <div className="animate-fade fixed inset-0 z-[60] flex items-center justify-center bg-scrim p-3 backdrop-blur-[2px] sm:p-6" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal="true" aria-labelledby="tool-title" className={`animate-pop flex max-h-full w-full flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard ${tool === "compare" ? "max-w-6xl" : "max-w-2xl"}`}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="tool-title" className={`animate-pop flex max-h-full w-full flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard ${tool === "compare" ? "max-w-6xl" : "max-w-2xl"}`}>
         <div className="flex items-start justify-between gap-4 border-b border-ink px-6 py-4">
           <div>
-            <p className={eyebrowClass}>Papers</p>
+            <Eyebrow>Papers</Eyebrow>
             <h2 id="tool-title" className="mt-0.5 font-serif text-2xl">
               {titles[tool]}
             </h2>
@@ -121,7 +123,7 @@ function PaperPicker({ papers, picked, setPicked, max, note }: { papers: Session
             />
             <span className="min-w-0">
               <span className="block leading-snug">
-                <span className="mr-1.5 font-mono text-[10px] text-muted">{d.label}</span>
+                <span className="mr-1.5 font-mono text-xs text-muted">{d.label}</span>
                 {d.title}
               </span>
               {note?.(d) && <span className="block text-xs text-muted">{note(d)}</span>}
@@ -195,7 +197,7 @@ function ZoteroSend({ papers, reviews }: { papers: SessionDoc[]; reviews: Record
       <PaperPicker papers={withNotes} picked={picked} setPicked={setPicked} max={50} />
       {error && <p className="rounded-lg border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger">{error}</p>}
       {result && (
-        <p className="rounded-lg border border-ink bg-yellow-50 px-3 py-2 text-sm whitespace-pre-line">
+        <p className="rounded-lg border border-ink bg-brand-faint px-3 py-2 text-sm whitespace-pre-line">
           {result.sent.length ? `Sent notes for ${result.sent.length} ${result.sent.length === 1 ? "paper" : "papers"}.` : ""}
           {result.failed.length ? `\nCouldn't send:\n${result.failed.join("\n")}` : ""}
         </p>
@@ -329,7 +331,7 @@ function Compare({ sessionId, papers }: { sessionId: string; papers: SessionDoc[
         <div className="overflow-x-auto rounded-xl border border-ink">
           <table className="w-full min-w-[56rem] text-sm">
             <thead>
-              <tr className="border-b border-ink bg-paper text-left font-mono text-[10px] tracking-wider text-muted uppercase">
+              <tr className="border-b border-ink bg-paper text-left font-mono text-xs tracking-wider text-muted uppercase">
                 <th className="w-48 px-3 py-2.5 font-medium">Paper</th>
                 {FIELDS.map((f) => (
                   <th key={f[0]} className="px-3 py-2.5 font-medium">
@@ -343,7 +345,7 @@ function Compare({ sessionId, papers }: { sessionId: string; papers: SessionDoc[
                 <tr key={r.id} className="border-b border-line align-top last:border-0">
                   <td className="px-3 py-3 font-medium leading-snug">
                     {r.title}
-                    {r.year && <span className="block font-mono text-[11px] font-normal text-muted">{r.year}</span>}
+                    {r.year && <span className="block font-mono text-xs font-normal text-muted">{r.year}</span>}
                   </td>
                   {FIELDS.map((f) => (
                     <td key={f[0]} className={`px-3 py-3 leading-relaxed ${r.cells[f[0]] === "Not stated" ? "text-muted" : ""}`}>

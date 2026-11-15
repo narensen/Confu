@@ -3,7 +3,7 @@
 import { ghostButtonClass } from "@/components/ui";
 import { openGuide } from "./Guide";
 
-export function TourButton({ label = "Take the 2-minute tour", className = "mt-5" }: { label?: string; className?: string }) {
+export function TourButton({ label = "Open the welcome", className = "mt-5" }: { label?: string; className?: string }) {
   return (
     <button type="button" onClick={openGuide} className={`${ghostButtonClass} ${className}`}>
       {label}

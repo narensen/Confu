@@ -61,8 +61,7 @@ export function LandingMotion({ children, className }: { children: ReactNode; cl
             .fromTo(q("[data-mock='mark']"), { backgroundSize: "0% 100%" }, { backgroundSize: "100% 100%", duration: 0.9, ease: "power2.inOut" }, 1.1)
             .from(q("[data-mock='popover']"), { y: 12, scale: 0.85, autoAlpha: 0, duration: 0.7, ease: "back.out(2.2)" }, 1.75)
             .from(q("[data-mock='bubble']"), { y: 16, scale: 0.94, autoAlpha: 0, duration: 0.7, ease: "back.out(1.7)" }, 2.0)
-            .from(q("[data-mock='answer'] > *"), { y: 12, autoAlpha: 0, stagger: 0.35, duration: 0.7 }, 2.45)
-            .from(q("[data-mock='vision']"), { x: 40, autoAlpha: 0, duration: 0.9 }, 2.9);
+            .from(q("[data-mock='answer'] > *"), { y: 12, autoAlpha: 0, stagger: 0.35, duration: 0.7 }, 2.45);
 
           // idle float once the demo has played
           q("[data-float]").forEach((node, i) => {

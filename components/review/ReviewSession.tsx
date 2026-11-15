@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
+import { buttonClass, ghostButtonClass, inputClass, Button, Eyebrow } from "@/components/ui";
 import { Markdown } from "@/components/workspace/Markdown";
 import { JSON_HEADERS, notifyAiUsed, readAiError } from "@/lib/ai-errors";
 import { cueFor, endOfToday, nextIn, REVIEW_SELECT, revealFor, sessionLink, type ReviewItem, type ReviewRating } from "@/lib/review";
@@ -125,8 +125,8 @@ export function ReviewSession() {
 
   if (!item) {
     return (
-      <div className="animate-enter rounded-2xl border border-ink bg-panel px-6 py-10 text-center shadow-[4px_4px_0_0_#facc15]">
-        <p className={eyebrowClass}>{doneCount ? "Done for today" : "All caught up"}</p>
+      <div className="animate-enter rounded-2xl border border-ink bg-panel px-6 py-10 text-center shadow-[4px_4px_0_0_var(--brand)]">
+        <Eyebrow>{doneCount ? "Done for today" : "All caught up"}</Eyebrow>
         <p className="mt-2 font-serif text-3xl">{doneCount ? `${doneCount} reviewed` : "Nothing due today"}</p>
         {doneCount > 0 && (
           <p className="mt-3 text-sm text-muted">
@@ -149,7 +149,7 @@ export function ReviewSession() {
   return (
     <div key={item.id} className="animate-enter">
       <div className="flex items-center justify-between gap-4">
-        <p className={eyebrowClass}>Today&apos;s review</p>
+        <Eyebrow>Today&apos;s review</Eyebrow>
         <span className="font-mono text-xs text-muted tabular-nums">
           {index + 1} of {total}
         </span>
@@ -158,12 +158,12 @@ export function ReviewSession() {
         <div className="h-full bg-ink transition-[width] duration-500 ease-fluid" style={{ width: `${(index / total) * 100}%` }} />
       </div>
 
-      <article className="mt-6 rounded-2xl border border-ink bg-panel p-6 shadow-[4px_4px_0_0_#facc15]">
+      <article className="mt-6 rounded-2xl border border-ink bg-panel p-6 shadow-[4px_4px_0_0_var(--brand)]">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className={eyebrowClass}>{cue!.eyebrow}</p>
+          <Eyebrow>{cue!.eyebrow}</Eyebrow>
           {item.study_sessions?.title && <span className="truncate rounded-full border border-line px-2.5 py-0.5 text-xs text-muted">{item.study_sessions.title}</span>}
         </div>
-        {cue!.quote && <blockquote className="mt-4 border-l-4 border-yellow-400 pl-4 font-serif text-lg leading-relaxed">{cue!.quote}</blockquote>}
+        {cue!.quote && <blockquote className="mt-4 border-l-4 border-brand pl-4 font-serif text-lg leading-relaxed">{cue!.quote}</blockquote>}
         <h2 className="mt-4 font-serif text-2xl leading-snug">{cue!.question}</h2>
 
         <label className="mt-5 block">
@@ -179,16 +179,16 @@ export function ReviewSession() {
 
         {!revealed ? (
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            <button type="button" onClick={() => setRevealed(true)} className={buttonClass}>
+            <Button type="button" onClick={() => setRevealed(true)}>
               Show answer
-            </button>
+            </Button>
             <span className="text-xs text-muted">or press Ctrl + Enter</span>
           </div>
         ) : (
           <div className="animate-enter mt-5 space-y-4">
             {reveal ? (
               <div className="rounded-xl border border-line bg-paper p-4">
-                <p className={eyebrowClass}>{reveal.label}</p>
+                <Eyebrow>{reveal.label}</Eyebrow>
                 <Markdown content={reveal.body} className="prose-tutor prose-compact mt-2" />
               </div>
             ) : (
@@ -205,7 +205,7 @@ export function ReviewSession() {
                 {item.page_number ? `Open p. ${item.page_number} ↗` : "Open session ↗"}
               </a>
             </div>
-            {!text.trim() && <p className="-mt-2 text-[11px] text-muted">Type your answer to have the tutor check it.</p>}
+            {!text.trim() && <p className="-mt-2 text-xs text-muted">Type your answer to have the tutor check it.</p>}
 
             {check && (
               <div className="animate-pop rounded-xl border border-ink p-4 text-sm">
@@ -224,11 +224,11 @@ export function ReviewSession() {
                     disabled={saving}
                     onClick={() => rate(r.id)}
                     className={`rounded-lg border px-2 py-2.5 text-center transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-hard-sm disabled:opacity-50 ${
-                      suggested === r.id ? "border-ink bg-ink text-white" : "border-ink bg-panel"
+                      suggested === r.id ? "border-ink bg-ink text-on-ink" : "border-ink bg-panel"
                     }`}
                   >
                     <span className="block text-sm font-medium">{r.label}</span>
-                    <span className={`block font-mono text-[11px] ${suggested === r.id ? "text-white/70" : "text-muted"}`}>
+                    <span className={`block font-mono text-xs ${suggested === r.id ? "text-on-ink/70" : "text-muted"}`}>
                       {nextIn(item.step, r.id)} · {r.key}
                     </span>
                   </button>

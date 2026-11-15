@@ -18,7 +18,7 @@ const KIND: Record<FeedbackItem["kind"], { text: string; cls: string }> = {
   bug: { text: "Something broke", cls: "border-danger/50 text-danger" },
   idea: { text: "Idea", cls: "border-ink/40 text-ink" },
   confusing: { text: "Confusing", cls: "border-warn/50 text-warn" },
-  love: { text: "Love it", cls: "border-transparent bg-yellow-400 text-ink" },
+  love: { text: "Love it", cls: "border-transparent bg-brand text-ink" },
 };
 
 function kindLabel(f: FeedbackItem) {
@@ -76,7 +76,7 @@ export function FeedbackInbox({ initial }: { initial: FeedbackItem[] }) {
             type="button"
             aria-selected={filter === id}
             onClick={() => setFilter(id)}
-            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${filter === id ? "border-ink bg-ink text-white" : "border-ink/30 hover:border-ink"}`}
+            className={`rounded-full border px-3 py-1 text-xs font-medium transition ${filter === id ? "border-ink bg-ink text-on-ink" : "border-ink/30 hover:border-ink"}`}
           >
             {text}
           </button>
@@ -90,14 +90,14 @@ export function FeedbackInbox({ initial }: { initial: FeedbackItem[] }) {
           {shown.map((f) => (
             <li key={f.id} className={`py-3 ${f.status === "done" ? "opacity-60" : ""}`}>
               <div className="flex flex-wrap items-center gap-2">
-                <span className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${KIND[f.kind].cls}`}>{kindLabel(f)}</span>
-                {f.status === "new" && <span className="font-mono text-[10px] tracking-wider text-ink uppercase">● New</span>}
-                {f.status === "done" && <span className="font-mono text-[10px] tracking-wider text-ok uppercase">✓ Done</span>}
-                <span className="ml-auto text-[11px] text-muted">{ago(f.created_at)}</span>
+                <span className={`rounded-full border px-2 py-0.5 text-xs font-medium ${KIND[f.kind].cls}`}>{kindLabel(f)}</span>
+                {f.status === "new" && <span className="font-mono text-xs tracking-wider text-ink uppercase">● New</span>}
+                {f.status === "done" && <span className="font-mono text-xs tracking-wider text-ok uppercase">✓ Done</span>}
+                <span className="ml-auto text-xs text-muted">{ago(f.created_at)}</span>
               </div>
               <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">{f.message}</p>
               <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-                <p className="min-w-0 truncate text-[11px] text-muted">
+                <p className="min-w-0 truncate text-xs text-muted">
                   {f.email ?? "deleted account"}
                   {f.path ? ` · ${f.path}` : ""}
                 </p>
@@ -107,7 +107,7 @@ export function FeedbackInbox({ initial }: { initial: FeedbackItem[] }) {
                   {f.email && (
                     <a
                       href={`mailto:${f.email}?subject=${encodeURIComponent("Your Confu feedback")}`}
-                      className="rounded-md border border-ink/30 px-2 py-0.5 text-[11px] font-medium transition hover:border-ink"
+                      className="rounded-md border border-ink/30 px-2 py-0.5 text-xs font-medium transition hover:border-ink"
                     >
                       Reply
                     </a>
@@ -124,7 +124,7 @@ export function FeedbackInbox({ initial }: { initial: FeedbackItem[] }) {
 
 function Action({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
   return (
-    <button type="button" onClick={onClick} className="rounded-md border border-ink/30 px-2 py-0.5 text-[11px] font-medium transition hover:border-ink">
+    <button type="button" onClick={onClick} className="rounded-md border border-ink/30 px-2 py-0.5 text-xs font-medium transition hover:border-ink">
       {children}
     </button>
   );

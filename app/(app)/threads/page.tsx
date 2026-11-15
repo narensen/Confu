@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { ThreadsView } from "@/components/community/ThreadsView";
 import { CommunityTabs } from "@/components/community/CommunityTabs";
-import { eyebrowClass } from "@/components/ui";
+import { Eyebrow } from "@/components/ui";
 
 export const metadata: Metadata = { title: "Threads — Confu", robots: { index: false } };
 
@@ -10,7 +10,7 @@ export default function ThreadsPage() {
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 pt-4 pb-10 sm:px-6 sm:pt-6">
       <CommunityTabs />
       <div className="animate-enter max-w-3xl">
-        <p className={eyebrowClass}>Threads</p>
+        <Eyebrow>Threads</Eyebrow>
         <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">Stuck? Someone&apos;s been there.</h1>
         <p className="mt-2 text-sm leading-relaxed text-muted">
           Ask about a class, a paper, or a problem you can&apos;t crack, in the subject it belongs to. Vote up what helped, and mark the reply that answered it.

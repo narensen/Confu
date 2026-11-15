@@ -203,7 +203,7 @@ export function FocusSound() {
         aria-label={current ? `${current.name} playing` : "Background sound"}
         aria-expanded={menu}
         title="Background sound"
-        className={`flex h-7 shrink-0 items-center gap-1.5 rounded-md px-1.5 text-xs transition ${current ? "bg-ink text-white hover:bg-ink/85" : "hover:bg-paper"}`}
+        className={`flex h-7 shrink-0 items-center gap-1.5 rounded-md px-1.5 text-xs transition ${current ? "bg-ink text-on-ink hover:bg-ink/85" : "hover:bg-paper"}`}
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
           <path d="M3 14v-2a9 9 0 0 1 18 0v2" />
@@ -214,7 +214,7 @@ export function FocusSound() {
       </button>
       {menu && (
         <div role="menu" className="animate-pop absolute top-full right-0 z-30 mt-1.5 w-64 rounded-xl border border-ink bg-panel p-1.5 shadow-hard">
-          <p className="px-2 pt-1 pb-1.5 text-[11px] text-muted">Background sound to block out distractions.</p>
+          <p className="px-2 pt-1 pb-1.5 text-xs text-muted">Background sound to block out distractions.</p>
           {NOISES.map((n) => {
             const on = s.playing === n.id;
             return (
@@ -227,24 +227,24 @@ export function FocusSound() {
                   void play(on ? null : n.id);
                   if (!on) track("reader.sound", { kind: n.id });
                 }}
-                className={`flex w-full items-start gap-2.5 rounded-lg px-2 py-1.5 text-left transition ${on ? "bg-ink text-white" : "hover:bg-paper"}`}
+                className={`flex w-full items-start gap-2.5 rounded-lg px-2 py-1.5 text-left transition ${on ? "bg-ink text-on-ink" : "hover:bg-paper"}`}
               >
                 <span
                   aria-hidden
-                  className={`mt-1 size-2.5 shrink-0 rounded-full border ${on ? "border-yellow-300 bg-yellow-300" : "border-ink/40"}`}
+                  className={`mt-1 size-2.5 shrink-0 rounded-full border ${on ? "border-brand bg-brand" : "border-ink/40"}`}
                   style={!on ? { background: n.id === "white" ? "#fff" : n.id === "pink" ? "#f9a8d4" : "#92400e" } : undefined}
                 />
                 <span className="min-w-0">
                   <span className="block text-sm font-medium">
                     {n.name}
-                    {on && s.loading && <span className="ml-1.5 text-[11px] font-normal text-white/70">loading…</span>}
+                    {on && s.loading && <span className="ml-1.5 text-xs font-normal text-on-ink/70">loading…</span>}
                   </span>
-                  <span className={`block text-[11px] leading-snug ${on ? "text-white/70" : "text-muted"}`}>{n.hint}</span>
+                  <span className={`block text-xs leading-snug ${on ? "text-on-ink/70" : "text-muted"}`}>{n.hint}</span>
                 </span>
               </button>
             );
           })}
-          <label className="mt-1 flex items-center gap-2.5 border-t border-line px-2 pt-2.5 pb-1.5 text-[11px] text-muted">
+          <label className="mt-1 flex items-center gap-2.5 border-t border-line px-2 pt-2.5 pb-1.5 text-xs text-muted">
             Volume
             <input
               type="range"

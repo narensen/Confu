@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { bridgeCommand, detectComputer, harnessById, HARNESSES, installCommand, osLabel, type DesktopOS, type HarnessId } from "@/lib/harnesses";
 import {
   loadConsent,
@@ -44,8 +44,23 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
   const onChangeRef = useRef(onChange);
   const root = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
-  linkRef.current = link;
-  onChangeRef.current = onChange;
+  // True after hydration. The server can't read this computer or
+  // localStorage, so the first client render matches it, then loads.
+  const mounted = useSyncExternalStore(noSubscribe, () => true, () => false);
+  const [loaded, setLoaded] = useState(false);
+  if (mounted && !loaded) {
+    const found = detectComputer();
+    const said = loadConsent();
+    setLoaded(true);
+    setComputer(found);
+    setLink(loadTutorLink());
+    setConsent(said);
+    if (said === null && !found.mobile) setAsking(true);
+  }
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  });
 
   function publish(next: TutorLink) {
     linkRef.current = next;
@@ -54,17 +69,14 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
     onChangeRef.current(next);
   }
 
+  // Tell the workspace which tutor was saved, once it's loaded.
   useEffect(() => {
-    const found = detectComputer();
-    setComputer(found);
-    const stored = loadTutorLink();
-    linkRef.current = stored;
-    setLink(stored);
-    onChangeRef.current(stored);
-    const said = loadConsent();
-    setConsent(said);
-    if (said === null && !found.mobile) setAsking(true);
-  }, []);
+    if (!loaded) return;
+    linkRef.current = link;
+    onChangeRef.current(link);
+    // Only the first load; later changes are published where they happen.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded]);
 
   function allow() {
     saveConsent("yes");
@@ -241,10 +253,10 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
             may ask to allow access to this device.
           </p>
           <div className="mt-2.5 flex gap-2">
-            <button type="button" onClick={allow} className="rounded-md border border-ink bg-ink px-2.5 py-1 text-[11px] font-medium text-panel">
+            <button type="button" onClick={allow} className="rounded-md border border-ink bg-ink px-2.5 py-1 text-xs font-medium text-panel">
               Allow
             </button>
-            <button type="button" onClick={decline} className="rounded-md border border-ink/25 px-2.5 py-1 text-[11px] font-medium text-ink">
+            <button type="button" onClick={decline} className="rounded-md border border-ink/25 px-2.5 py-1 text-xs font-medium text-ink">
               Not now
             </button>
           </div>
@@ -263,14 +275,14 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
             return (
               <button key={h.id} type="button" role="menuitem" onClick={() => choose(h.id)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-paper">
                 <span className="min-w-0 flex-1">{h.name}</span>
-                <span className={`shrink-0 font-mono text-[10px] ${status === "Ready" ? "text-ink" : "text-muted"}`}>{status}</span>
+                <span className={`shrink-0 font-mono text-xs ${status === "Ready" ? "text-ink" : "text-muted"}`}>{status}</span>
                 <Mark on={on} />
               </button>
             );
           })}
           {selected && (health?.harnesses.find((row) => row.id === link.id)?.models.length ?? 0) > 0 && (
             <div className="border-t border-line px-1.5 py-1.5">
-              <p className="px-1.5 py-1 font-mono text-[10px] tracking-widest text-muted uppercase">Model</p>
+              <p className="px-1.5 py-1 font-mono text-xs tracking-widest text-muted uppercase">Model</p>
               {health?.harnesses
                 .find((row) => row.id === link.id)
                 ?.models.map((model) => (
@@ -289,7 +301,7 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
           )}
 
           <div className="space-y-2 border-t border-line px-3 py-2.5 text-xs leading-relaxed text-muted">
-            {computer.mobile && <p>Open Confu on a Mac, Windows, or Linux computer. A phone can't run these.</p>}
+            {computer.mobile && <p>Open Confu on a Mac, Windows, or Linux computer. A phone can&apos;t run these.</p>}
             {!computer.mobile && (selected || consent === "yes") && !link.connected && !health && (
               <>
                 <p>
@@ -300,12 +312,12 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
                   . Say yes when it asks to start at login, and Confu finds it by itself from then on.
                 </p>
                 <Command text={bridgeCommand(computer.os, origin)} copied={copied === "bridge"} onCopy={() => void copy(bridgeCommand(computer.os, origin), "bridge")} />
-                {down && <p>The browser blocked it, or it isn't running. Allow loopback access if asked.</p>}
+                {down && <p>The browser blocked it, or it isn&apos;t running. Allow loopback access if asked.</p>}
               </>
             )}
             {!computer.mobile && selected && health && !link.installed && (
               <>
-                <p>{selected.name} isn't installed. Run this, then run {selected.signIn} once to sign in.</p>
+                <p>{selected.name} isn&apos;t installed. Run this, then run {selected.signIn} once to sign in.</p>
                 <Command
                   text={installCommand(selected.id, computer.os)}
                   copied={copied === "install"}
@@ -338,6 +350,10 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
   );
 }
 
+function noSubscribe() {
+  return () => {};
+}
+
 function Mark({ on }: { on: boolean }) {
   return (
     <span aria-hidden className={`size-1.5 shrink-0 rounded-full ${on ? "bg-ink" : "bg-transparent"}`} />
@@ -347,8 +363,8 @@ function Mark({ on }: { on: boolean }) {
 function Command({ text, copied, onCopy }: { text: string; copied: boolean; onCopy: () => void }) {
   return (
     <div className="flex items-start gap-2">
-      <code className="min-w-0 flex-1 overflow-x-auto rounded-md border border-ink/20 bg-paper px-2 py-1 font-mono text-[11px] leading-snug text-ink">{text}</code>
-      <button type="button" onClick={onCopy} className="shrink-0 rounded-md border border-ink/25 px-2 py-1 text-[11px] font-medium text-ink">
+      <code className="min-w-0 flex-1 overflow-x-auto rounded-md border border-ink/20 bg-paper px-2 py-1 font-mono text-xs leading-snug text-ink">{text}</code>
+      <button type="button" onClick={onCopy} className="shrink-0 rounded-md border border-ink/25 px-2 py-1 text-xs font-medium text-ink">
         {copied ? "Copied" : "Copy"}
       </button>
     </div>

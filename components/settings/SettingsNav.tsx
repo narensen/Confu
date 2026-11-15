@@ -71,7 +71,7 @@ export function SettingsNav({ items }: { items: NavItem[] }) {
               aria-current={active === item.id ? "true" : undefined}
               className={`flex items-center gap-2 rounded-md px-3 py-1.5 text-sm whitespace-nowrap transition-colors lg:rounded-none lg:pl-4 ${
                 active === item.id
-                  ? "bg-ink text-white lg:bg-transparent lg:font-medium lg:text-ink"
+                  ? "bg-ink text-on-ink lg:bg-transparent lg:font-medium lg:text-ink"
                   : item.danger
                     ? "text-danger/80 hover:text-danger"
                     : "text-muted hover:text-ink"
@@ -79,7 +79,7 @@ export function SettingsNav({ items }: { items: NavItem[] }) {
             >
               {item.label}
               {item.badge ? (
-                <span className="rounded-full bg-yellow-300 px-1.5 font-mono text-[10px] leading-4 font-medium text-ink">{item.badge}</span>
+                <span className="rounded-full bg-brand px-1.5 font-mono text-xs leading-4 font-medium text-ink">{item.badge}</span>
               ) : null}
             </a>
           </li>

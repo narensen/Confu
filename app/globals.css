@@ -36,6 +36,11 @@
   --shadow: #0d0d0c;     /* the offset "hard" shadows */
   --stroke: #0d0d0c;     /* rules and underlines; matte in the dark */
   --marker: #fde047;     /* highlighter-pen underlines behind headline words */
+  --brand: #facc15;      /* Confu's yellow: the logo dot, badges, the hover offset */
+  --brand-soft: #fef9c3; /* a yellow notice or selected row */
+  --brand-faint: #fefce8;
+  --on-ink: #ffffff;     /* text and fills on an ink surface (primary buttons) */
+  --focus: #2563eb;      /* the keyboard focus outline: blue reads on ink, paper and yellow */
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
@@ -63,7 +68,10 @@
     --viewer: #0c0c0b;
     --shadow: #0a0a09;
     --stroke: #323230;
-    --color-white: #161614;
+    --on-ink: #161614;
+    --focus: #60a5fa;
+    --brand-soft: rgba(250, 204, 21, 0.16);
+    --brand-faint: rgba(250, 204, 21, 0.08);
   }
 }
 :root[data-theme="dark"] {
@@ -84,25 +92,27 @@
   --viewer: #0c0c0b;
   --shadow: #0a0a09;
   --stroke: #323230;
-  --color-white: #161614;
+  --on-ink: #161614;
+  --focus: #60a5fa;
+  --brand-soft: rgba(250, 204, 21, 0.16);
+  --brand-faint: rgba(250, 204, 21, 0.08);
 }
 
 /* Frames follow the stroke, so a dark page doesn't grow white rules.
    A filled button keeps a border of its own colour. */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) [class*="border-ink"]:not(.bg-ink, .bg-ok, .bg-danger, .bg-warn, .bg-yellow-300, .bg-yellow-400),
+  :root:not([data-theme="light"]) [class*="border-ink"]:not(.bg-ink, .bg-ok, .bg-danger, .bg-warn, .bg-brand),
   :root:not([data-theme="light"]) [class*="divide-ink"] > :not([hidden]) ~ :not([hidden]) {
     border-color: var(--stroke);
   }
 }
-:root[data-theme="dark"] [class*="border-ink"]:not(.bg-ink, .bg-ok, .bg-danger, .bg-warn, .bg-yellow-300, .bg-yellow-400),
+:root[data-theme="dark"] [class*="border-ink"]:not(.bg-ink, .bg-ok, .bg-danger, .bg-warn, .bg-brand),
 :root[data-theme="dark"] [class*="divide-ink"] > :not([hidden]) ~ :not([hidden]) {
   border-color: var(--stroke);
 }
 
 /* On bright yellow (badges, highlights) text stays dark in either theme. */
-.bg-yellow-300,
-.bg-yellow-400 {
+.bg-brand {
   --ink: #0d0d0c;
   --muted: #3f3e39;
   color: #0d0d0c;
@@ -127,6 +137,10 @@
   --color-scrim: var(--scrim);
   --color-viewer: var(--viewer);
   --color-stroke: var(--stroke);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-faint: var(--brand-faint);
+  --color-on-ink: var(--on-ink);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-serif: var(--font-newsreader);
@@ -145,7 +159,7 @@ body {
 @media print {
   :root {
     color-scheme: light;
-    --color-white: #ffffff;
+    --on-ink: #ffffff;
     --page: #ffffff;
     --paper: #ffffff;
     --panel: #ffffff;
@@ -154,13 +168,13 @@ body {
   }
 }
 
-/* A whole section on the inverse surface (pricing's Pro card, Wrapped, the
-   landing page's last call): inside it, "ink" is the surface and "white" is
+/* A whole section on the inverse surface (Wrapped, the
+   landing page's last call): inside it, "ink" is the surface and "on-ink" is
    the text, so nested pieces written as ink-on-white keep working. */
 .surface-inverse {
   --ink: var(--inverse);
   --muted: var(--inverse-muted);
-  --color-white: var(--inverse-ink);
+  --on-ink: var(--inverse-ink);
   background-color: var(--inverse);
   color: var(--inverse-ink);
 }
@@ -178,6 +192,18 @@ body {
    lives only here, so it is not an ancestor of the password field. */
 .auth-stage { background: #0d0d0c; color: #fff; }
 .auth-stage-muted { color: rgba(255, 255, 255, 0.5); }
+
+/* One focus outline for everything, shown for keyboard focus only. It is
+   unlayered, so it wins over Tailwind's outline-none in the utilities layer:
+   no control can hide where the keyboard is. Text fields show it too, since
+   browsers treat any focus in a field as visible. */
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+/* The PDF canvas and other scroll areas that take focus for the arrow keys
+   draw it inside, so it isn't clipped by their own overflow. */
+[data-focus-inset]:focus-visible { outline-offset: -2px; }
 
 ::selection { background: rgba(253, 216, 53, 0.55); color: var(--ink); }
 
@@ -417,7 +443,6 @@ html { scroll-behavior: smooth; }
 .tutor-diagram { white-space: normal; font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif); color: #1a1a1a; }
 .tutor-diagram img { display: block; height: auto; margin-inline: auto; }
 .tutor-diagram-open { display: block; width: 100%; cursor: zoom-in; border-radius: 8px; }
-.tutor-diagram-open:focus-visible { outline: 2px solid #1a1a1a; outline-offset: 2px; }
 .tutor-diagram-pending { display: grid; min-height: 7rem; place-items: center; }
 .tutor-diagram-pending span {
   font-family: var(--font-mono, ui-monospace, monospace);

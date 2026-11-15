@@ -301,7 +301,7 @@ export function DocTabs({ docs, activeId, uploadStatus, onSelect, onAdd, onClose
           type="button"
           onClick={() => onPaper(active.id)}
           title="Open this paper's three passes"
-          className="hidden shrink-0 items-center gap-1.5 border-l border-ink bg-yellow-300 px-3 text-xs font-medium transition duration-200 hover:bg-yellow-400 sm:flex"
+          className="hidden shrink-0 items-center gap-1.5 border-l border-ink bg-brand px-3 text-xs font-medium transition duration-200 hover:bg-brand sm:flex"
         >
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
             <path d="M6 2h9l5 5v15H6zM14 2v6h6M9 13h7M9 17h5" />
@@ -312,7 +312,7 @@ export function DocTabs({ docs, activeId, uploadStatus, onSelect, onAdd, onClose
       <button
         onClick={() => (onAddClick ? onAddClick() : input.current?.click())}
         disabled={Boolean(uploadStatus)}
-        className="flex shrink-0 items-center gap-1.5 border-l border-ink px-3 text-xs font-medium transition duration-200 hover:bg-ink hover:text-white disabled:pointer-events-none"
+        className="flex shrink-0 items-center gap-1.5 border-l border-ink px-3 text-xs font-medium transition duration-200 hover:bg-ink hover:text-on-ink disabled:pointer-events-none"
       >
         {uploadStatus ? (
           <>
@@ -366,11 +366,11 @@ function TabFace({
         title={canMove ? `${doc.label}: ${doc.title} (${doc.pageCount} pages). Drag to move this tab.` : `${doc.label}: ${doc.title} (${doc.pageCount} pages)`}
         className={`flex h-full min-w-0 flex-1 items-center gap-2 py-2 pr-1 text-left text-sm ${canMove ? "pl-1" : "pl-3"}`}
       >
-        <span className={`shrink-0 rounded px-1 font-mono text-[10px] transition-colors duration-200 ${active ? "bg-ink text-white" : "border border-ink/30 text-muted"}`}>
+        <span className={`shrink-0 rounded px-1 font-mono text-xs transition-colors duration-200 ${active ? "bg-ink text-on-ink" : "border border-ink/30 text-muted"}`}>
           {doc.label}
         </span>
         <span className={`truncate ${active ? "font-medium" : "text-muted"}`}>{doc.title}</span>
-        {paper && <span className="shrink-0 rounded bg-yellow-300 px-1 font-mono text-[9px] font-medium tracking-wide text-ink uppercase">Paper</span>}
+        {paper && <span className="shrink-0 rounded bg-brand px-1 font-mono text-xs font-medium tracking-wide text-ink uppercase">Paper</span>}
       </button>
       <button
         type="button"
@@ -437,7 +437,7 @@ function TabsMenu({ docs, activeId, onSelect }: { docs: SessionDoc[]; activeId: 
               }}
               className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition hover:bg-paper ${d.id === activeId ? "font-medium" : "text-muted"}`}
             >
-              <span className={`shrink-0 rounded px-1 font-mono text-[10px] ${d.id === activeId ? "bg-ink text-white" : "border border-ink/30"}`}>{d.label}</span>
+              <span className={`shrink-0 rounded px-1 font-mono text-xs ${d.id === activeId ? "bg-ink text-on-ink" : "border border-ink/30"}`}>{d.label}</span>
               <span className="min-w-0 flex-1 truncate">{d.title}</span>
             </button>
           ))}

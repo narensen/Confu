@@ -100,7 +100,7 @@ export function StudyStreak({ compact = false }: { compact?: boolean }) {
                     <span
                       key={iso(date)}
                       title={future ? "" : `${date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}: ${mins ? `${fmtMins(mins)} reading` : "no reading"}${day?.actions ? `, ${day.actions} actions` : ""}`}
-                      className={`block rounded-[3px] ${compact ? "size-2.5" : "size-3"} ${isToday ? "ring-2 ring-yellow-400 ring-offset-1 ring-offset-panel" : ""}`}
+                      className={`block rounded-[3px] ${compact ? "size-2.5" : "size-3"} ${isToday ? "ring-2 ring-brand ring-offset-1 ring-offset-panel" : ""}`}
                       style={{ background: future ? "transparent" : `color-mix(in srgb, var(--ink) ${ALPHA[level(day)] * 100}%, transparent)` }}
                     />
                   );
@@ -108,7 +108,7 @@ export function StudyStreak({ compact = false }: { compact?: boolean }) {
               </div>
             ))}
           </div>
-          <div className="mt-2 flex items-center justify-end gap-1 text-[10px] text-muted">
+          <div className="mt-2 flex items-center justify-end gap-1 text-xs text-muted">
             Less
             {ALPHA.map((a) => (
               <span key={a} className="size-2.5 rounded-[2px]" style={{ background: `color-mix(in srgb, var(--ink) ${a * 100}%, transparent)` }} />

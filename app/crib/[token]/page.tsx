@@ -34,7 +34,7 @@ async function Sheet({ params }: { params: PageProps<"/crib/[token]">["params"] 
   const sheet = cribSheet({ objectives: raw.objectives ?? [], concepts: raw.concepts ?? [] });
   const pages = raw.pages ?? [];
   return (
-    <div className="min-h-dvh bg-paper text-ink print:bg-white print:text-black">
+    <div className="min-h-dvh bg-paper text-ink print:bg-on-ink print:text-black">
       <div className="mx-auto flex max-w-[190mm] items-center justify-between gap-3 px-6 pt-6 print:hidden">
         <p className="font-mono text-xs text-muted">One page. Nothing from a file.</p>
         <PrintButton />

@@ -1,7 +1,7 @@
 "use client";
 
 import { docForResource, findPaper, isPaperResource } from "@/lib/find-paper";
-import { eyebrowClass } from "@/components/ui";
+import { Eyebrow } from "@/components/ui";
 import { formatMinutes } from "@/lib/schedule";
 import type { PlanTopic, Resource, SessionDoc } from "@/lib/types";
 import { track } from "@/lib/telemetry";
@@ -42,10 +42,10 @@ export function StartHere({
   const have = resource && isPaperResource(resource) ? docForResource(resource, docs) : null;
 
   return (
-    <div className={bare ? "rounded-xl border border-line bg-panel p-4" : "animate-enter rounded-xl border border-ink bg-panel p-4 shadow-[4px_4px_0_0_#facc15]"}>
+    <div className={bare ? "rounded-xl border border-line bg-panel p-4" : "animate-enter rounded-xl border border-ink bg-panel p-4 shadow-[4px_4px_0_0_var(--brand)]"}>
       <div className="flex items-center justify-between gap-3">
-        <p className={eyebrowClass}>{fresh ? "Start here" : "Up next"}</p>
-        <span className="font-mono text-[11px] text-muted">
+        <Eyebrow>{fresh ? "Start here" : "Up next"}</Eyebrow>
+        <span className="font-mono text-xs text-muted">
           Topic {topic.position + 1} of {topics.length}
         </span>
       </div>
@@ -75,7 +75,7 @@ export function StartHere({
               track("start_here.open");
               onOpen(topic);
             }}
-            className="rounded-lg border border-ink bg-ink px-3.5 py-2 text-sm font-medium text-white transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[2px_2px_0_0_#facc15] active:translate-y-0"
+            className="rounded-lg border border-ink bg-ink px-3.5 py-2 text-sm font-medium text-on-ink transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[2px_2px_0_0_var(--brand)] active:translate-y-0"
           >
             Open {pages} →
           </button>
@@ -86,7 +86,7 @@ export function StartHere({
               track("start_here.open_paper");
               onOpenDoc(have.id);
             }}
-            className="rounded-lg border border-ink bg-ink px-3.5 py-2 text-sm font-medium text-white transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[2px_2px_0_0_#facc15] active:translate-y-0"
+            className="rounded-lg border border-ink bg-ink px-3.5 py-2 text-sm font-medium text-on-ink transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[2px_2px_0_0_var(--brand)] active:translate-y-0"
           >
             Open the paper: {resource.title} →
           </button>
@@ -97,7 +97,7 @@ export function StartHere({
               track("start_here.find_paper");
               findPaper(resource.search || resource.title);
             }}
-            className="rounded-lg border border-ink bg-ink px-3.5 py-2 text-sm font-medium text-white transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[2px_2px_0_0_#facc15] active:translate-y-0"
+            className="rounded-lg border border-ink bg-ink px-3.5 py-2 text-sm font-medium text-on-ink transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[2px_2px_0_0_var(--brand)] active:translate-y-0"
           >
             Find the paper: {resource.title}
           </button>
@@ -107,7 +107,7 @@ export function StartHere({
             target="_blank"
             rel="noreferrer"
             onClick={() => onOpen(topic)}
-            className="rounded-lg border border-ink bg-ink px-3.5 py-2 text-sm font-medium text-white transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[2px_2px_0_0_#facc15] active:translate-y-0"
+            className="rounded-lg border border-ink bg-ink px-3.5 py-2 text-sm font-medium text-on-ink transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-[2px_2px_0_0_var(--brand)] active:translate-y-0"
           >
             Find: {resource.title} ↗
           </a>
@@ -124,7 +124,7 @@ export function StartHere({
           Teach me instead
         </button>
       </div>
-      <p className="mt-3 text-[11px] leading-relaxed text-muted">
+      <p className="mt-3 text-xs leading-relaxed text-muted">
         Read it yourself first. Select anything that stops you to ask about it, and mark the topic done when you can explain it.
       </p>
     </div>

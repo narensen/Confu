@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { eyebrowClass } from "@/components/ui";
+import { Eyebrow } from "@/components/ui";
 import { duration, monthName, monthYear, persona, type Wrapped } from "@/lib/wrapped";
 
 // A month in numbers. Single-series charts in ink (no legend needed): a
@@ -33,22 +33,22 @@ export function WrappedCards({ w, name }: { w: Wrapped; name?: string | null }) 
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-3xl border border-ink surface-inverse p-8 shadow-[8px_8px_0_0_#facc15] sm:p-10">
-        <p className="font-mono text-xs tracking-[0.2em] text-white/60 uppercase">{name ? `${name}'s` : "Your"} {monthYear(w.month)} in Confu</p>
+      <section className="overflow-hidden rounded-3xl border border-ink surface-inverse p-8 shadow-[8px_8px_0_0_var(--brand)] sm:p-10">
+        <p className="font-mono text-xs tracking-[0.2em] text-on-ink/60 uppercase">{name ? `${name}'s` : "Your"} {monthYear(w.month)} in Confu</p>
         {quiet ? (
           <p className="mt-6 font-serif text-4xl leading-tight">A quiet month. The next one starts with ten minutes.</p>
         ) : (
           <>
             <p className="mt-6 font-sans text-6xl font-semibold tracking-tight sm:text-7xl">{duration(w.minutes)}</p>
-            <p className="mt-2 text-lg text-white/70">studied in {monthName(w.month)}</p>
+            <p className="mt-2 text-lg text-on-ink/70">studied in {monthName(w.month)}</p>
             {p && (
               <p className="mt-6 max-w-xl font-serif text-2xl leading-snug">
-                You&apos;re {p.label}: most of your studying happened around <span className="text-yellow-300">{p.time}</span>.
+                You&apos;re {p.label}: most of your studying happened around <span className="text-brand">{p.time}</span>.
               </p>
             )}
             {w.top_session && (
-              <p className="mt-3 text-white/70">
-                Most of it went into <span className="font-medium text-white">{w.top_session}</span>.
+              <p className="mt-3 text-on-ink/70">
+                Most of it went into <span className="font-medium text-on-ink">{w.top_session}</span>.
               </p>
             )}
           </>
@@ -79,7 +79,7 @@ export function WrappedCards({ w, name }: { w: Wrapped; name?: string | null }) 
         <summary className="cursor-pointer list-none font-medium">See every day as a table</summary>
         <table className="mt-3 w-full">
           <thead>
-            <tr className="border-b border-line text-left font-mono text-[10px] tracking-wider text-muted uppercase">
+            <tr className="border-b border-line text-left font-mono text-xs tracking-wider text-muted uppercase">
               <th className="py-1.5 font-medium">Day</th>
               <th className="py-1.5 text-right font-medium">Minutes</th>
               <th className="py-1.5 text-right font-medium">Things done</th>
@@ -108,7 +108,7 @@ function MonthHeatmap({ w }: { w: Wrapped }) {
   const shown = hover !== null ? cells[hover] : null;
   return (
     <section className="rounded-2xl border border-ink bg-panel p-5">
-      <p className={eyebrowClass}>Day by day</p>
+      <Eyebrow>Day by day</Eyebrow>
       <p className="mt-1 h-5 text-sm" aria-live="polite">
         {shown ? (
           <>
@@ -118,7 +118,7 @@ function MonthHeatmap({ w }: { w: Wrapped }) {
           <span className="text-muted">Darker days, more studying. Hover a day.</span>
         )}
       </p>
-      <div className="mt-3 grid grid-cols-7 gap-1.5 text-center font-mono text-[10px] text-muted" aria-hidden>
+      <div className="mt-3 grid grid-cols-7 gap-1.5 text-center font-mono text-xs text-muted" aria-hidden>
         {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
           <span key={i}>{d}</span>
         ))}
@@ -135,7 +135,7 @@ function MonthHeatmap({ w }: { w: Wrapped }) {
               onPointerLeave={() => setHover(null)}
               onFocus={() => setHover(i)}
               onBlur={() => setHover(null)}
-              className={`aspect-square rounded-md outline-none ${hover === i ? "ring-2 ring-yellow-400" : ""}`}
+              className={`aspect-square rounded-md outline-none ${hover === i ? "ring-2 ring-brand" : ""}`}
               style={{ background: `color-mix(in srgb, var(--ink) ${ALPHA[level(c)] * 100}%, transparent)` }}
             />
           ) : (
@@ -143,7 +143,7 @@ function MonthHeatmap({ w }: { w: Wrapped }) {
           ),
         )}
       </div>
-      <div className="mt-3 flex items-center justify-end gap-1.5 font-mono text-[10px] text-muted" aria-hidden>
+      <div className="mt-3 flex items-center justify-end gap-1.5 font-mono text-xs text-muted" aria-hidden>
         Less
         {ALPHA.map((a) => (
           <span key={a} className="size-3 rounded-sm" style={{ background: `color-mix(in srgb, var(--ink) ${a * 100}%, transparent)` }} />
@@ -163,7 +163,7 @@ function HourChart({ hours }: { hours: number[] }) {
   const total = hours.reduce((a, b) => a + b, 0);
   return (
     <section className="rounded-2xl border border-ink bg-panel p-5">
-      <p className={eyebrowClass}>Time of day</p>
+      <Eyebrow>Time of day</Eyebrow>
       <p className="mt-1 h-5 text-sm" aria-live="polite">
         {hover !== null ? (
           <>
@@ -191,18 +191,18 @@ function HourChart({ hours }: { hours: number[] }) {
               className="relative flex h-full flex-1 items-end justify-center outline-none"
             >
               {h === peak && n > 0 && (
-                <span className="absolute font-mono text-[10px] whitespace-nowrap text-ink" style={{ bottom: Math.max(3, (n / max) * (H - HEAD)) + 4 }}>
+                <span className="absolute font-mono text-xs whitespace-nowrap text-ink" style={{ bottom: Math.max(3, (n / max) * (H - HEAD)) + 4 }}>
                   {hourLabel(h)}
                 </span>
               )}
               <span
-                className={`block w-full max-w-[18px] rounded-t-[4px] ${hover === h ? "bg-yellow-400" : n ? "bg-ink" : "bg-transparent"}`}
+                className={`block w-full max-w-[18px] rounded-t-[4px] ${hover === h ? "bg-brand" : n ? "bg-ink" : "bg-transparent"}`}
                 style={{ height: n ? Math.max(3, (n / max) * (H - HEAD)) : 0 }}
               />
             </div>
           ))}
         </div>
-        <div className="absolute inset-x-0 flex justify-between font-mono text-[10px] text-muted" style={{ top: H + 4 }} aria-hidden>
+        <div className="absolute inset-x-0 flex justify-between font-mono text-xs text-muted" style={{ top: H + 4 }} aria-hidden>
           <span>12 am</span>
           <span>6 am</span>
           <span>12 pm</span>

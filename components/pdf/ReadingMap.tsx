@@ -77,7 +77,7 @@ export function ReadingMap({
   return (
     <aside aria-label="Where it got hard" className="animate-slide-in absolute inset-y-0 left-0 z-20 flex w-80 max-w-[90%] flex-col border-r border-ink bg-panel shadow-[6px_0_0_0_rgba(13,13,12,0.08)]">
       <div className="flex h-11 shrink-0 items-center justify-between border-b border-line pr-1.5 pl-3">
-        <p className="font-mono text-[11px] font-medium tracking-[0.12em] text-muted uppercase">Where it got hard</p>
+        <p className="font-mono text-xs font-medium tracking-[0.12em] text-muted uppercase">Where it got hard</p>
         <button type="button" aria-label="Close" onClick={onClose} className="flex size-7 items-center justify-center rounded-md text-sm hover:bg-paper">
           ✕
         </button>
@@ -106,22 +106,22 @@ export function ReadingMap({
                     className="flex h-full min-w-0 flex-1 items-end"
                   >
                     <span
-                      className={`block w-full rounded-t-[2px] ${p.page === current ? "bg-yellow-400" : p.confusing || p.questions ? "bg-danger/80" : "bg-ink"}`}
+                      className={`block w-full rounded-t-[2px] ${p.page === current ? "bg-brand" : p.confusing || p.questions ? "bg-danger/80" : "bg-ink"}`}
                       style={{ height: `${Math.max(p.seconds ? 6 : 1, (p.seconds / maxSeconds) * 100)}%`, opacity: p.seconds || p.page === current ? 1 : 0.18 }}
                     />
                   </button>
                 ))}
               </div>
-              <div className="mt-1 flex justify-between font-mono text-[10px] text-muted">
+              <div className="mt-1 flex justify-between font-mono text-xs text-muted">
                 <span>p. 1</span>
                 <span>p. {numPages}</span>
               </div>
-              <p className="mt-2 text-[11px] leading-relaxed text-muted">
+              <p className="mt-2 text-xs leading-relaxed text-muted">
                 Bar height is time on the page. Red pages are where you asked questions or marked something as confusing.
               </p>
             </div>
 
-            <p className="mt-5 font-mono text-[11px] font-medium tracking-[0.12em] text-muted uppercase">Hardest pages</p>
+            <p className="mt-5 font-mono text-xs font-medium tracking-[0.12em] text-muted uppercase">Hardest pages</p>
             {hardest.length === 0 ? (
               <p className="mt-2 text-sm leading-relaxed text-muted">
                 Nothing stands out yet. Keep reading: Confu notes where you slow down, ask questions or mark things as confusing (red highlighter).

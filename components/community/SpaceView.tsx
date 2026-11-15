@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { AskButton, ErrorNote, SpaceIcon } from "@/components/community/kit";
 import { ThreadBrowser } from "@/components/community/ThreadBrowser";
 import { ask, toast } from "@/components/dialogs";
-import { buttonClass, eyebrowClass, ghostButtonClass } from "@/components/ui";
+import { buttonClass, ghostButtonClass, Button, ButtonLink, Eyebrow } from "@/components/ui";
 import { deleteSpace, joinSpace, leaveSpace, loadSpace, type SpaceState } from "@/lib/community";
 import { SITE } from "@/lib/site";
 import { track } from "@/lib/telemetry";
@@ -75,9 +75,9 @@ export function SpaceView({ slug }: { slug: string }) {
     return (
       <div className="space-y-4">
         <ErrorNote>{error}</ErrorNote>
-        <Link href="/spaces" className={ghostButtonClass}>
+        <ButtonLink href="/spaces" variant="ghost">
           ← All spaces
-        </Link>
+        </ButtonLink>
       </div>
     );
   }
@@ -106,14 +106,14 @@ export function SpaceView({ slug }: { slug: string }) {
         </Link>
       </nav>
 
-      <header className={`relative overflow-hidden rounded-3xl border border-ink p-6 sm:p-8 ${isPublic ? "bg-panel" : "bg-yellow-100"}`}>
+      <header className={`relative overflow-hidden rounded-3xl border border-ink p-6 sm:p-8 ${isPublic ? "bg-panel" : "bg-brand-soft"}`}>
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
           <SpaceIcon space={space} size="lg" />
           <div className="min-w-0 flex-1">
-            <p className={eyebrowClass}>{isPublic ? space.category || "Subject" : space.mine ? "Your private space" : "Private space"}</p>
+            <Eyebrow>{isPublic ? space.category || "Subject" : space.mine ? "Your private space" : "Private space"}</Eyebrow>
             <h1 className="mt-1 font-serif text-4xl leading-tight tracking-tight">{space.name}</h1>
             {space.about && <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">{space.about}</p>}
-            <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 font-mono text-[11px] text-muted">
+            <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 font-mono text-xs text-muted">
               <span>
                 {space.members} {isPublic ? "following" : space.members === 1 ? "member" : "members"}
               </span>
@@ -136,9 +136,9 @@ export function SpaceView({ slug }: { slug: string }) {
                 {space.joined ? "Following" : "Follow"}
               </button>
             ) : space.joined ? (
-              <button type="button" onClick={() => navigator.clipboard.writeText(link).then(() => toast("Invite link copied."))} className={ghostButtonClass}>
+              <Button type="button" onClick={() => navigator.clipboard.writeText(link).then(() => toast("Invite link copied."))} variant="ghost">
                 Copy invite link
-              </button>
+              </Button>
             ) : null}
           </div>
         </div>

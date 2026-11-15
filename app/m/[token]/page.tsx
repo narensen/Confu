@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache, Suspense } from "react";
 import { SiteFooter, SiteNav } from "@/components/site/SiteNav";
-import { eyebrowClass } from "@/components/ui";
+import { Eyebrow } from "@/components/ui";
 
 type Topic = { topic: string; missed: number; of: number };
 type Revise = { topic: string; sourceTitle?: string | null; page?: number | null };
@@ -47,7 +47,7 @@ async function Body({ params }: { params: PageProps<"/m/[token]">["params"] }) {
   const revise = (card.revise ?? []).slice(0, 3);
   return (
     <article className="w-full rounded-3xl border border-ink bg-panel p-8 shadow-[8px_8px_0_0_var(--ink)]">
-      <p className={eyebrowClass}>Miss map</p>
+      <Eyebrow>Miss map</Eyebrow>
       <h1 className="mt-2 font-serif text-3xl leading-tight">What the section missed</h1>
       <p className="mt-3 font-mono text-xs text-muted">{card.users} people handed in</p>
       {card.band && <p className="mt-4 text-sm leading-relaxed">{card.band}</p>}
@@ -63,7 +63,7 @@ async function Body({ params }: { params: PageProps<"/m/[token]">["params"] }) {
       </ul>
       {revise.length > 0 && (
         <div className="mt-6">
-          <p className={eyebrowClass}>Revise</p>
+          <Eyebrow>Revise</Eyebrow>
           <ul className="mt-2 space-y-1 text-sm">
             {revise.map((r) => (
               <li key={r.topic}>
@@ -79,7 +79,7 @@ async function Body({ params }: { params: PageProps<"/m/[token]">["params"] }) {
           </ul>
         </div>
       )}
-      <Link href="/signup" className="mt-8 inline-flex rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-white">
+      <Link href="/signup" className="mt-8 inline-flex rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-on-ink">
         Sit from your own notes →
       </Link>
     </article>

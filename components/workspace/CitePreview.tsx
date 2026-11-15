@@ -85,7 +85,7 @@ export function CiteButton({ page, label, onOpen, children }: { page: number; la
         onBlur={close}
         aria-describedby={show ? `cite-${page}` : undefined}
         title={target ? undefined : `Open p. ${page}`}
-        className="rounded bg-paper px-1 font-mono text-[0.85em] font-medium underline decoration-ink/30 underline-offset-2 transition hover:bg-ink hover:text-white"
+        className="rounded bg-paper px-1 font-mono text-[0.85em] font-medium underline decoration-ink/30 underline-offset-2 transition hover:bg-ink hover:text-on-ink"
       >
         {children}
       </button>
@@ -99,14 +99,14 @@ export function CiteButton({ page, label, onOpen, children }: { page: number; la
             style={{ left: show.left, top: show.top, width: WIDTH, transform: show.above ? "translateY(-100%)" : undefined }}
           >
             <p className="flex items-center gap-1.5 text-xs">
-              <span className="shrink-0 rounded bg-ink px-1 font-mono text-[10px] text-white">{target.label}</span>
+              <span className="shrink-0 rounded bg-ink px-1 font-mono text-xs text-on-ink">{target.label}</span>
               <span className="shrink-0 font-mono text-muted">p. {page}</span>
               <span className="min-w-0 truncate text-muted">{target.title}</span>
             </p>
             <p className="mt-2 line-clamp-6 font-serif text-sm leading-relaxed">
               {text === undefined ? <span className="text-muted">Loading the page…</span> : text ? text.slice(0, 420) : <span className="text-muted">No text on this page (a scan or a figure, perhaps).</span>}
             </p>
-            <p className="mt-2 font-mono text-[11px] text-muted">Click to open the page</p>
+            <p className="mt-2 font-mono text-xs text-muted">Click to open the page</p>
           </div>,
           document.body,
         )}

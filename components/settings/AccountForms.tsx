@@ -6,14 +6,12 @@ import {
   changeEmail,
   changePassword,
   deleteAccount,
-  requestPro,
   sendPasswordResetLink,
   signOutEverywhere,
   updateName,
   type ActionResult,
 } from "@/app/(app)/settings/account-actions";
-import { LocalTime } from "@/components/LocalTime";
-import { buttonClass, ghostButtonClass, inputClass } from "@/components/ui";
+import { buttonClass, ghostButtonClass, inputClass, Input } from "@/components/ui";
 import { ask } from "@/components/dialogs";
 
 function Feedback({ result }: { result: ActionResult | null }) {
@@ -84,7 +82,7 @@ function EditableField({
       }}
     >
       <label className="sr-only">{label}</label>
-      <input autoFocus type={type} value={draft} placeholder={placeholder} onChange={(e) => setDraft(e.target.value)} className={inputClass} />
+      <Input autoFocus type={type} value={draft} placeholder={placeholder} onChange={(e) => setDraft(e.target.value)} />
       <div className="mt-2 flex gap-2">
         <button disabled={pending || !draft.trim()} className={`${buttonClass} py-1 text-xs`}>
           {pending ? "Saving…" : "Save"}
@@ -113,7 +111,7 @@ export function EmailField({ email, pending }: { email: string; pending: string 
       display={
         <>
           {email}
-          {pending && <span className="ml-2 rounded border border-warn/50 px-1.5 py-px text-[11px] text-warn">Confirming {pending}</span>}
+          {pending && <span className="ml-2 rounded border border-warn/50 px-1.5 py-px text-xs text-warn">Confirming {pending}</span>}
         </>
       }
     />
@@ -151,9 +149,9 @@ export function PasswordForm() {
         });
       }}
     >
-      <input name="current" type="password" required autoComplete="current-password" placeholder="Current password" className={inputClass} />
-      <input name="next" type="password" required minLength={8} autoComplete="new-password" placeholder="New password (8+ characters)" className={inputClass} />
-      <input name="confirm" type="password" required minLength={8} autoComplete="new-password" placeholder="Confirm new password" className={inputClass} />
+      <Input name="current" type="password" required autoComplete="current-password" placeholder="Current password" />
+      <Input name="next" type="password" required minLength={8} autoComplete="new-password" placeholder="New password (8+ characters)" />
+      <Input name="confirm" type="password" required minLength={8} autoComplete="new-password" placeholder="Confirm new password" />
       <div className="flex gap-2">
         <button disabled={pending} className={`${buttonClass} py-1 text-xs`}>
           {pending ? "Changing…" : "Change password"}
@@ -205,7 +203,7 @@ export function DeleteAccount() {
 
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} className="rounded-lg border border-danger px-3 py-1 text-xs font-medium text-danger transition hover:bg-danger hover:text-white">
+      <button type="button" onClick={() => setOpen(true)} className="rounded-lg border border-danger px-3 py-1 text-xs font-medium text-danger transition hover:bg-danger hover:text-on-ink">
         Delete account
       </button>
     );
@@ -224,7 +222,7 @@ export function DeleteAccount() {
       </p>
       <input autoFocus value={text} onChange={(e) => setText(e.target.value)} placeholder="DELETE" className={`${inputClass} font-mono`} />
       <div className="flex gap-2">
-        <button disabled={pending || text.trim() !== "DELETE"} className="rounded-lg bg-danger px-3 py-1.5 text-xs font-medium text-white transition hover:opacity-90 disabled:opacity-40">
+        <button disabled={pending || text.trim() !== "DELETE"} className="rounded-lg bg-danger px-3 py-1.5 text-xs font-medium text-on-ink transition hover:opacity-90 disabled:opacity-40">
           {pending ? "Deleting…" : "Delete my account"}
         </button>
         <button type="button" onClick={() => {
@@ -239,35 +237,3 @@ export function DeleteAccount() {
   );
 }
 
-export function RequestProButton({ requestedAt }: { requestedAt: string | null }) {
-  const router = useRouter();
-  const [result, setResult] = useState<ActionResult | null>(null);
-  const [pending, start] = useTransition();
-
-  if (requestedAt) {
-    return (
-      <p className="rounded-lg border border-dashed border-ink/40 bg-paper px-3 py-2 text-xs leading-relaxed text-muted">
-        <span className="font-medium text-ink">Requested</span> on <LocalTime iso={requestedAt} />. Pro turns on as soon as it&apos;s approved.
-      </p>
-    );
-  }
-  return (
-    <div>
-      <button
-        type="button"
-        disabled={pending}
-        onClick={() =>
-          start(async () => {
-            const res = await requestPro();
-            setResult(res);
-            if (res.ok) router.refresh();
-          })
-        }
-        className={`${buttonClass} w-full`}
-      >
-        {pending ? "Requesting…" : "Request Pro"}
-      </button>
-      <Feedback result={result} />
-    </div>
-  );
-}

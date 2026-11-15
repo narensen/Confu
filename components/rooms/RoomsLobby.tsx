@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { ask, toast } from "@/components/dialogs";
-import { buttonClass, eyebrowClass, inputClass } from "@/components/ui";
+import { buttonClass, Input, Eyebrow } from "@/components/ui";
 import { clock, currentRoom, subscribeRoom, timerNow } from "@/lib/rooms";
 import { SITE } from "@/lib/site";
 import { createClient } from "@/lib/supabase/client";
@@ -73,7 +73,7 @@ export function RoomsLobby() {
   return (
     <div className="mt-8 space-y-12">
       {inRoom ? (
-        <Link href={`/rooms/${inRoom.slug}`} className="group flex items-center gap-4 rounded-2xl border border-ink bg-yellow-100 px-5 py-4 transition hover:-translate-y-px hover:shadow-hard-sm">
+        <Link href={`/rooms/${inRoom.slug}`} className="group flex items-center gap-4 rounded-2xl border border-ink bg-brand-soft px-5 py-4 transition hover:-translate-y-px hover:shadow-hard-sm">
           <span className="relative flex size-3">
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-ok opacity-60" />
             <span className="relative inline-flex size-3 rounded-full bg-ok" />
@@ -96,7 +96,7 @@ export function RoomsLobby() {
       <section>
         <div className="flex items-end justify-between gap-4">
           <div>
-            <p className={eyebrowClass}>Open to everyone</p>
+            <Eyebrow>Open to everyone</Eyebrow>
             <h2 className="mt-1 font-serif text-3xl tracking-tight">Drop in and get to work</h2>
           </div>
           <p className="hidden max-w-xs text-right text-xs text-muted sm:block">On the clock all day. Quiet: no voice, just people working.</p>
@@ -116,7 +116,7 @@ export function RoomsLobby() {
 
       <section className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <div>
-          <p className={eyebrowClass}>Your rooms</p>
+          <Eyebrow>Your rooms</Eyebrow>
           <h2 className="mt-1 font-serif text-3xl tracking-tight">Private, for the people you study with</h2>
           <p className="mt-1 max-w-xl text-sm text-muted">You run the timer. Invite friends, talk or share a screen (peer to peer, never recorded), and share the link with anyone else.</p>
           {mine.length ? (
@@ -126,12 +126,12 @@ export function RoomsLobby() {
                   <Link href={`/rooms/${r.slug}`} className="font-serif text-xl leading-snug hover:underline">
                     {r.name}
                   </Link>
-                  <span className="mt-1 flex items-center gap-1.5 font-mono text-[11px] text-muted">
+                  <span className="mt-1 flex items-center gap-1.5 font-mono text-xs text-muted">
                     <span className={`size-1.5 rounded-full ${r.present ? "bg-ok" : "bg-line"}`} aria-hidden />
                     {r.present ? `${r.present} here now` : "Empty"}
                   </span>
                   <span className="mt-4 flex items-center gap-2">
-                    <Link href={`/rooms/${r.slug}`} className="rounded-lg border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white transition hover:-translate-y-px">
+                    <Link href={`/rooms/${r.slug}`} className="rounded-lg border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-on-ink transition hover:-translate-y-px">
                       Open
                     </Link>
                     <button
@@ -173,7 +173,7 @@ export function RoomsLobby() {
           className="h-fit space-y-4 rounded-2xl border border-ink bg-panel p-5 shadow-hard-sm"
         >
           <p className="font-medium">New private room</p>
-          <input value={name} maxLength={60} onChange={(e) => setName(e.target.value)} placeholder="e.g. Thesis crew, Physics 101 group" aria-label="Room name" className={inputClass} />
+          <Input value={name} maxLength={60} onChange={(e) => setName(e.target.value)} placeholder="e.g. Thesis crew, Physics 101 group" aria-label="Room name" />
           <div>
             <p className="mb-2 text-xs font-medium">Rhythm</p>
             <div className="grid grid-cols-3 gap-2">
@@ -183,10 +183,10 @@ export function RoomsLobby() {
                   type="button"
                   onClick={() => setPreset(i)}
                   aria-pressed={preset === i}
-                  className={`rounded-xl border px-2 py-2.5 text-center transition ${preset === i ? "border-ink bg-ink text-white" : "border-ink/25 hover:border-ink"}`}
+                  className={`rounded-xl border px-2 py-2.5 text-center transition ${preset === i ? "border-ink bg-ink text-on-ink" : "border-ink/25 hover:border-ink"}`}
                 >
                   <span className="block text-xs font-medium">{p.label}</span>
-                  <span className={`mt-0.5 block font-mono text-[10px] ${preset === i ? "text-white/70" : "text-muted"}`}>{p.hint}</span>
+                  <span className={`mt-0.5 block font-mono text-xs ${preset === i ? "text-on-ink/70" : "text-muted"}`}>{p.hint}</span>
                 </button>
               ))}
             </div>
@@ -209,7 +209,7 @@ function PublicRoom({ room: r, now }: { room: Listed; now: number }) {
   return (
     <Link
       href={`/rooms/${r.slug}`}
-      className={`group flex h-full items-center gap-5 rounded-2xl border border-ink p-5 transition-[translate,box-shadow] duration-300 ease-fluid hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-hard ${focus ? "bg-panel" : "bg-yellow-100"}`}
+      className={`group flex h-full items-center gap-5 rounded-2xl border border-ink p-5 transition-[translate,box-shadow] duration-300 ease-fluid hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-hard ${focus ? "bg-panel" : "bg-brand-soft"}`}
     >
       <span className="relative flex size-20 shrink-0 items-center justify-center">
         <svg viewBox="0 0 40 40" className="absolute inset-0 size-full -rotate-90" aria-hidden>
@@ -220,8 +220,8 @@ function PublicRoom({ room: r, now }: { room: Listed; now: number }) {
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-2">
-          <span className={`rounded px-1.5 py-0.5 font-mono text-[10px] uppercase ${focus ? "bg-ink text-white" : "bg-yellow-300"}`}>{focus ? "Focus" : "Break"}</span>
-          <span className="flex items-center gap-1.5 font-mono text-[11px] text-muted">
+          <span className={`rounded px-1.5 py-0.5 font-mono text-xs uppercase ${focus ? "bg-ink text-on-ink" : "bg-brand"}`}>{focus ? "Focus" : "Break"}</span>
+          <span className="flex items-center gap-1.5 font-mono text-xs text-muted">
             <span className={`size-1.5 rounded-full ${r.present ? "bg-ok" : "bg-line"}`} aria-hidden />
             {r.present} studying
           </span>

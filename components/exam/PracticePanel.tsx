@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Markdown } from "@/components/workspace/Markdown";
-import { GroqKeyForm } from "@/components/keys/GroqKeyForm";
-import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
+import { buttonClass, eyebrowClass, ghostButtonClass, inputClass, Eyebrow } from "@/components/ui";
 import { JSON_HEADERS } from "@/lib/ai-errors";
 import { countdownLabel, daysUntil, type ExamQuestion, type QuestionKind } from "@/lib/exam";
 import { endOfToday } from "@/lib/review";
@@ -23,7 +22,6 @@ type Props = {
   onExamDate: (date: string | null) => void;
   onJump: (page: number, docId?: string | null) => void;
   onAsk: (message: string) => void;
-  onTrial: boolean;
 };
 
 const MIXES: { value: "mixed" | QuestionKind; label: string }[] = [
@@ -32,11 +30,10 @@ const MIXES: { value: "mixed" | QuestionKind; label: string }[] = [
   { value: "short", label: "Short answer" },
 ];
 
-export function PracticePanel({ practice, docs, examDate, onExamDate, onJump, onAsk, onTrial }: Props) {
+export function PracticePanel({ practice, docs, examDate, onExamDate, onJump, onAsk }: Props) {
   const { quiz, loading, error, stats } = practice;
   const [scope, setScope] = useState<string>("all");
   const [mix, setMix] = useState<"mixed" | QuestionKind>("mixed");
-  const [keyAdded, setKeyAdded] = useState(false);
   const [due, setDue] = useState<number | null>(null);
   const weak = stats.filter((t) => t.level === "weak" || t.level === "improving").slice(0, 5);
   const today = useToday();
@@ -53,13 +50,12 @@ export function PracticePanel({ practice, docs, examDate, onExamDate, onJump, on
   }, [days, today]);
 
   const over = today !== null && days !== null && days < 0 && (due ?? 0) > 0;
-  const showKey = onTrial && !keyAdded && days !== null && days >= 21 && days <= 28;
 
   return (
     <div className="h-full overflow-y-auto">
       <section className="flex items-center justify-between gap-4 border-b border-ink px-6 py-4">
         <div>
-          <p className={eyebrowClass}>Exam</p>
+          <Eyebrow>Exam</Eyebrow>
           {over ? (
             <Link href="/review" className="mt-0.5 block font-serif text-xl underline decoration-ink/30 underline-offset-4">
               The paper is over. {due} {due === 1 ? "miss is" : "misses are"} due
@@ -69,7 +65,7 @@ export function PracticePanel({ practice, docs, examDate, onExamDate, onJump, on
           )}
         </div>
         <label className="text-right">
-          <span className="block font-mono text-[10px] text-muted uppercase">Exam date</span>
+          <span className="block font-mono text-xs text-muted uppercase">Exam date</span>
           <input
             type="date"
             value={examDate ?? ""}
@@ -96,14 +92,6 @@ export function PracticePanel({ practice, docs, examDate, onExamDate, onJump, on
       ) : (
         <section className="animate-enter space-y-5 px-6 py-6">
           <SectionPaper sessionId={practice.sessionId} docs={docs} onJump={onJump} />
-          {showKey && (
-            <div className="rounded-lg border border-ink bg-yellow-50 p-4">
-              <p className="text-sm leading-relaxed">The section paper does not use a prompt. Your own questions do. Add the free Groq key now.</p>
-              <div className="mt-3">
-                <GroqKeyForm sessionId={practice.sessionId} onSaved={() => setKeyAdded(true)} />
-              </div>
-            </div>
-          )}
           <div>
             <h2 className="font-serif text-2xl leading-tight">Practise with exam-style questions</h2>
             <p className="mt-1.5 text-sm leading-relaxed text-muted">
@@ -177,7 +165,7 @@ export function PracticePanel({ practice, docs, examDate, onExamDate, onJump, on
 function SourceLink({ q, onJump }: { q: ExamQuestion; onJump: Props["onJump"] }) {
   if (!q.page) return null;
   return (
-    <button onClick={() => onJump(q.page!, q.documentId)} className="rounded bg-paper px-1.5 py-0.5 font-mono text-[11px] underline decoration-ink/30 underline-offset-2 transition hover:bg-ink hover:text-white">
+    <button onClick={() => onJump(q.page!, q.documentId)} className="rounded bg-paper px-1.5 py-0.5 font-mono text-xs underline decoration-ink/30 underline-offset-2 transition hover:bg-ink hover:text-on-ink">
       {q.label} p. {q.page}
     </button>
   );
@@ -255,8 +243,8 @@ function QuestionCard({ practice, onJump, onAsk }: Pick<Props, "practice" | "onJ
                   }`}
                 >
                   <span
-                    className={`flex size-6 shrink-0 items-center justify-center rounded-full border font-mono text-[11px] ${
-                      right ? "border-ok bg-ok text-white" : wrong ? "border-danger bg-danger text-white" : chosen ? "border-ink bg-ink text-white" : "border-ink/40"
+                    className={`flex size-6 shrink-0 items-center justify-center rounded-full border font-mono text-xs ${
+                      right ? "border-ok bg-ok text-on-ink" : wrong ? "border-danger bg-danger text-on-ink" : chosen ? "border-ink bg-ink text-on-ink" : "border-ink/40"
                     }`}
                   >
                     {right ? "✓" : wrong ? "✕" : "ABCD"[i]}
@@ -308,7 +296,7 @@ function QuestionCard({ practice, onJump, onAsk }: Pick<Props, "practice" | "onJ
           {answer.feedback && <p className="text-sm leading-relaxed">{answer.feedback}</p>}
           {q.kind === "short" && (
             <div className="rounded-lg border border-line bg-paper p-3 text-sm">
-              <p className={eyebrowClass}>Model answer</p>
+              <Eyebrow>Model answer</Eyebrow>
               <Markdown content={q.answer ?? ""} className="prose-tutor prose-compact mt-1" />
             </div>
           )}
@@ -356,7 +344,7 @@ function Summary({ practice, onWeak }: { practice: ExamPractice; onWeak: (topics
 
   return (
     <section className="animate-enter px-6 py-8 text-center">
-      <p className={eyebrowClass}>{quiz.limitSec ? "Paper" : "Results"}</p>
+      <Eyebrow>{quiz.limitSec ? "Paper" : "Results"}</Eyebrow>
       <p className="mt-2 font-serif text-5xl tabular-nums">
         {score % 1 ? score.toFixed(1) : score}
         <span className="text-2xl text-muted"> / {answered.length}</span>
@@ -366,7 +354,7 @@ function Summary({ practice, onWeak }: { practice: ExamPractice; onWeak: (topics
       </p>
       {missed.length > 0 && (
         <div className="mx-auto mt-5 max-w-sm text-left">
-          <p className={eyebrowClass}>Revise</p>
+          <Eyebrow>Revise</Eyebrow>
           <ul className="mt-2 space-y-1 text-sm">
             {missed.map((t) => (
               <li key={t} className="flex items-center gap-2">
@@ -425,9 +413,9 @@ function ShareSitting({ practice, score, outOf, missed }: { practice: ExamPracti
   return (
     <div className="mx-auto mt-5 max-w-sm text-left">
       {link ? (
-        <div className="rounded-lg border border-ink bg-yellow-50 p-3">
+        <div className="rounded-lg border border-ink bg-brand-faint p-3">
           <p className="text-xs text-muted">Card link. It shows the score, the time and the misses. Not the questions.</p>
-          <code className="mt-2 block truncate rounded-md border border-line bg-panel px-2 py-1 font-mono text-[11px]">{link}</code>
+          <code className="mt-2 block truncate rounded-md border border-line bg-panel px-2 py-1 font-mono text-xs">{link}</code>
           <button type="button" onClick={() => navigator.clipboard.writeText(link)} className={`${ghostButtonClass} mt-2 py-1 text-xs`}>
             Copy link
           </button>

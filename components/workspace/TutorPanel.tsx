@@ -25,7 +25,7 @@ export type ToolTab = Exclude<Tab, "chat">;
 // and whether it's waiting on the student (a dot).
 export type Section = { id: ToolTab; label: string; hint: string; badge?: string; dot?: boolean; shortcut?: string };
 
-export type ExamProps = { practice: ExamPractice; examDate: string | null; onExamDate: (date: string | null) => void; onTrial: boolean };
+export type ExamProps = { practice: ExamPractice; examDate: string | null; onExamDate: (date: string | null) => void };
 
 export type PaperProps = {
   reviews: Record<string, PaperReview>;
@@ -187,7 +187,6 @@ export function TutorPanel({ view, ...props }: PanelProps & { view: Tab }) {
             docs={props.docs}
             examDate={props.exam.examDate}
             onExamDate={props.exam.onExamDate}
-            onTrial={props.exam.onTrial}
             onJump={props.onJump}
             onAsk={(message) => props.onSend({ action: "chat", message })}
           />

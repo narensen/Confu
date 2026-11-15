@@ -108,7 +108,7 @@ export function ReadAloudBar({ ctl }: { ctl: ReturnType<typeof useReadAloud> }) 
         type="button"
         onClick={ctl.toggle}
         aria-label={ctl.state === "playing" ? "Pause" : "Resume"}
-        className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-ink text-white"
+        className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-ink text-on-ink"
       >
         {ctl.state === "playing" ? (
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -122,7 +122,7 @@ export function ReadAloudBar({ ctl }: { ctl: ReturnType<typeof useReadAloud> }) 
         )}
       </button>
       <div className="min-w-0 flex-1">
-        <p className="font-mono text-[10px] tracking-wider text-muted uppercase">Reading p. {ctl.page}</p>
+        <p className="font-mono text-xs tracking-wider text-muted uppercase">Reading p. {ctl.page}</p>
         <p className="truncate font-serif text-sm" aria-live="off">
           {ctl.sentence}
         </p>

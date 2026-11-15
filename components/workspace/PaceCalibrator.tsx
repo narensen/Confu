@@ -1,6 +1,6 @@
 "use client";
 
-import { eyebrowClass, inputClass, labelClass } from "@/components/ui";
+import { inputClass, labelClass, Input, Eyebrow } from "@/components/ui";
 import { deadlineFor, MAX_HOURS_A_DAY, MIN_HOURS_A_DAY, type PaceEstimate } from "@/lib/pace";
 import { daysBetween } from "@/lib/schedule";
 
@@ -48,7 +48,7 @@ export function PaceCalibrator({
   return (
     <section className="rounded-xl border border-ink bg-paper/60 p-4">
       <div className="flex items-start justify-between gap-3">
-        <p className={eyebrowClass}>Your pace</p>
+        <Eyebrow>Your pace</Eyebrow>
         {canEstimate && !estimating && (
           <button type="button" onClick={onEstimate} className="text-xs text-muted underline-offset-2 hover:text-ink hover:underline">
             {estimate ? "Recalculate" : "Estimate"}
@@ -68,7 +68,7 @@ export function PaceCalibrator({
           </p>
           <p className="mt-1 text-xs leading-relaxed text-muted">{estimate!.why || "From your files and the materials in your goal, with time to practise."}</p>
           {estimate!.parts.length > 0 && (
-            <ul className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
+            <ul className="mt-2 flex flex-wrap gap-1.5 text-xs">
               {estimate!.parts.map((p) => (
                 <li key={p.label} className="rounded-md border border-ink/20 bg-panel px-2 py-0.5">
                   {p.label} <span className="font-mono text-muted">~{p.hours} h</span>
@@ -96,10 +96,10 @@ export function PaceCalibrator({
                 role="radio"
                 aria-checked={on}
                 onClick={() => onHours(String(p.hours))}
-                className={`rounded-lg border px-2 py-1.5 text-left transition ${on ? "border-ink bg-ink text-white" : "border-ink/25 bg-panel hover:border-ink"}`}
+                className={`rounded-lg border px-2 py-1.5 text-left transition ${on ? "border-ink bg-ink text-on-ink" : "border-ink/25 bg-panel hover:border-ink"}`}
               >
                 <span className="block text-xs font-medium">{p.label}</span>
-                <span className={`block text-[11px] ${on ? "text-white/70" : "text-muted"}`}>
+                <span className={`block text-xs ${on ? "text-on-ink/70" : "text-muted"}`}>
                   {perDay(p.hours)} a day · {day(deadlineFor(total, p.hours, today))}
                 </span>
               </button>
@@ -128,7 +128,7 @@ export function PaceCalibrator({
         </label>
         <label className="block">
           <span className={labelClass}>Deadline</span>
-          <input type="date" required min={today} value={deadline} onChange={(e) => onDeadline(e.target.value)} className={inputClass} />
+          <Input type="date" required min={today} value={deadline} onChange={(e) => onDeadline(e.target.value)} />
         </label>
       </div>
       {total > 0 && (

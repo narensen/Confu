@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SiteFooter, SiteNav } from "@/components/site/SiteNav";
-import { eyebrowClass } from "@/components/ui";
+import { Eyebrow } from "@/components/ui";
 import { TEMPLATES } from "@/lib/templates";
 
 export const metadata: Metadata = {
@@ -16,7 +16,7 @@ export default function TemplatesPage() {
       <main className="flex-1">
         <section className="border-b border-ink">
           <div className="mx-auto max-w-6xl px-6 pt-16 pb-12">
-            <p className={eyebrowClass}>Goal templates</p>
+            <Eyebrow>Goal templates</Eyebrow>
             <h1 className="mt-3 max-w-3xl font-serif text-5xl leading-[1.05] tracking-tight">Pick a goal. The sources are already found.</h1>
             <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">
               Each template comes with free, hand-picked lectures, readings and papers. Start one and Confu brings them into a session and
@@ -35,14 +35,14 @@ export default function TemplatesPage() {
                   >
                     <span className="flex flex-wrap gap-1.5">
                       {t.tags.slice(0, 2).map((tag) => (
-                        <span key={tag} className="rounded border border-ink/25 px-1.5 py-px font-mono text-[10px] tracking-wider text-muted uppercase">
+                        <span key={tag} className="rounded border border-ink/25 px-1.5 py-px font-mono text-xs tracking-wider text-muted uppercase">
                           {tag}
                         </span>
                       ))}
                     </span>
                     <span className="mt-3 font-serif text-2xl leading-snug">{t.title}</span>
                     <span className="mt-2 text-sm leading-relaxed text-muted">{t.tagline}</span>
-                    <span className="mt-auto pt-5 font-mono text-[11px] text-muted">
+                    <span className="mt-auto pt-5 font-mono text-xs text-muted">
                       {t.sources.length} sources · {t.weeks} {t.weeks === 1 ? "week" : "weeks"} · {t.level}
                       {t.kind === "exam" ? " · starts as an exam session" : ""}
                     </span>

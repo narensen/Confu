@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { eyebrowClass } from "@/components/ui";
+import { Eyebrow } from "@/components/ui";
 import { WrappedCards } from "@/components/wrapped/WrappedCards";
 import { WrappedShare } from "@/components/wrapped/WrappedShare";
 import { requireUser } from "@/lib/dal";
@@ -42,7 +42,7 @@ async function Body({ searchParams }: { searchParams: PageProps<"/wrapped">["sea
     <div className="animate-enter space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className={eyebrowClass}>Wrapped</p>
+          <Eyebrow>Wrapped</Eyebrow>
           <h1 className="mt-1 font-serif text-4xl tracking-tight">{monthYear(`${month}-01`)}</h1>
         </div>
         <nav aria-label="Months" className="flex flex-wrap gap-1.5">
@@ -51,7 +51,7 @@ async function Body({ searchParams }: { searchParams: PageProps<"/wrapped">["sea
               key={m}
               href={`/wrapped?m=${m}`}
               aria-current={m === month ? "page" : undefined}
-              className={`rounded-md border px-2.5 py-1 font-mono text-xs transition ${m === month ? "border-ink bg-ink text-white" : "border-ink/25 hover:border-ink"}`}
+              className={`rounded-md border px-2.5 py-1 font-mono text-xs transition ${m === month ? "border-ink bg-ink text-on-ink" : "border-ink/25 hover:border-ink"}`}
             >
               {new Date(`${m}-01T00:00:00Z`).toLocaleDateString("en-US", { month: "short", timeZone: "UTC" })}
             </Link>

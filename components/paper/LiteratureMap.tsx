@@ -3,12 +3,13 @@
 import { forceCollide, forceLink, forceManyBody, forceSimulation, forceX, forceY, type SimulationNodeDatum } from "d3-force";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { eyebrowClass, ghostButtonClass } from "@/components/ui";
+import { eyebrowClass, ghostButtonClass, Eyebrow } from "@/components/ui";
 import { JSON_HEADERS } from "@/lib/ai-errors";
 import type { Graph, GraphNode } from "@/lib/openalex";
 import type { PaperMeta } from "@/lib/pdf/add-paper";
 import { track } from "@/lib/telemetry";
 import type { SessionDoc } from "@/lib/types";
+import { useModal } from "@/components/Modal";
 
 // The literature map: a session's papers (or, on the personal map, every
 // session's), the foundations they cite and the newer work that cites them.
@@ -24,7 +25,7 @@ const CONTEXT = "#8f8c84"; // foundation ring
 const NEWER = "#b4b1a8"; // newer-work square
 const EDGE = "var(--line)";
 const SURFACE = "var(--panel)";
-const FOCUS = "#facc15";
+const FOCUS = "var(--brand)";
 
 type Kind = GraphNode["kind"];
 type SimNode = GraphNode & SimulationNodeDatum & { r: number };
@@ -237,16 +238,17 @@ export function LiteratureMap({
   const sel = graph?.nodes.find((n) => n.key === selected) ?? null;
   const hovered = drawn?.nodes.find((n) => n.key === hover?.key) ?? null;
 
+  const dialogRef = useModal(!library, () => onClose?.(), { closeOnEscape: false, lockScroll: false });
   const box = (
       <div
-        role={library ? "region" : "dialog"}
+        ref={dialogRef} role={library ? "region" : "dialog"}
         aria-modal={library ? undefined : true}
         aria-labelledby="map-title"
         className={`flex w-full flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard ${library ? "h-[calc(100dvh-9rem)] min-h-[34rem]" : "animate-pop h-full max-h-[52rem] max-w-7xl"}`}
       >
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-ink px-5 py-4">
           <div>
-            <p className={eyebrowClass}>{library ? "Your literature" : "Literature map"}</p>
+            <Eyebrow>{library ? "Your literature" : "Literature map"}</Eyebrow>
             <h2 id="map-title" className="mt-0.5 font-serif text-2xl">
               {library ? "Everything you've read, connected" : "How your papers connect"}
             </h2>
@@ -256,7 +258,7 @@ export function LiteratureMap({
             {!table && (
               <div className="flex rounded-lg border border-ink p-0.5 text-xs" role="radiogroup" aria-label="Layout">
                 {(["web", "timeline"] as const).map((m) => (
-                  <button key={m} role="radio" aria-checked={layout === m} type="button" onClick={() => setLayout(m)} className={`rounded-md px-2.5 py-1 font-medium transition ${layout === m ? "bg-ink text-white" : "text-muted hover:text-ink"}`}>
+                  <button key={m} role="radio" aria-checked={layout === m} type="button" onClick={() => setLayout(m)} className={`rounded-md px-2.5 py-1 font-medium transition ${layout === m ? "bg-ink text-on-ink" : "text-muted hover:text-ink"}`}>
                     {m === "web" ? "Web" : "Timeline"}
                   </button>
                 ))}
@@ -295,7 +297,7 @@ export function LiteratureMap({
                 role="radio"
                 aria-checked={only === x.id}
                 onClick={() => setOnly(x.id)}
-                className={`shrink-0 rounded-full border px-2.5 py-1 whitespace-nowrap transition ${only === x.id ? "border-ink bg-ink text-white" : "border-ink/25 text-muted hover:border-ink hover:text-ink"}`}
+                className={`shrink-0 rounded-full border px-2.5 py-1 whitespace-nowrap transition ${only === x.id ? "border-ink bg-ink text-on-ink" : "border-ink/25 text-muted hover:border-ink hover:text-ink"}`}
               >
                 {short(x.title, 28)} <span className="font-mono opacity-60">{x.papers}</span>
               </button>
@@ -333,14 +335,14 @@ export function LiteratureMap({
                   {drawn.ticks.map((t) => (
                     <g key={t.label}>
                       <line x1={t.x} x2={t.x} y1={28} y2={size.h - 26} stroke="var(--line)" strokeWidth={1} />
-                      <text x={t.x} y={size.h - 10} textAnchor="middle" className="fill-muted font-mono text-[10px]">
+                      <text x={t.x} y={size.h - 10} textAnchor="middle" className="fill-muted font-mono text-xs">
                         {t.label}
                       </text>
                     </g>
                   ))}
                   {layout === "timeline" &&
                     (["foundation", "session", "frontier"] as const).map((k) => (
-                      <text key={k} x={12} y={(k === "foundation" ? 0.26 : k === "session" ? 0.5 : 0.76) * size.h - 18} className="fill-muted font-mono text-[10px] uppercase">
+                      <text key={k} x={12} y={(k === "foundation" ? 0.26 : k === "session" ? 0.5 : 0.76) * size.h - 18} className="fill-muted font-mono text-xs uppercase">
                         {KIND_LABEL[k]}
                       </text>
                     ))}
@@ -413,7 +415,7 @@ export function LiteratureMap({
                         y={l.y}
                         textAnchor={l.anchor}
                         opacity={neighbours && !neighbours.has(l.key) ? 0.25 : 1}
-                        className="pointer-events-none font-sans text-[11px] font-medium"
+                        className="pointer-events-none font-sans text-xs font-medium"
                         fill={INK}
                         stroke={SURFACE}
                         strokeWidth={3}
@@ -424,7 +426,7 @@ export function LiteratureMap({
                     ))}
                   </g>
                   {drawn.earlier && (
-                    <text x={70} y={size.h - 10} textAnchor="middle" className="fill-muted font-mono text-[10px]">
+                    <text x={70} y={size.h - 10} textAnchor="middle" className="fill-muted font-mono text-xs">
                       ← {drawn.earlier}
                     </text>
                   )}
@@ -448,7 +450,7 @@ export function LiteratureMap({
               </>
             )}
             {graph && graph.missing.length > 0 && !loading && (
-              <p className="absolute bottom-2 left-3 max-w-md text-[11px] text-muted">Not found in OpenAlex or Semantic Scholar: {graph.missing.map((t) => short(t, 40)).join("; ")}.</p>
+              <p className="absolute bottom-2 left-3 max-w-md text-xs text-muted">Not found in OpenAlex or Semantic Scholar: {graph.missing.map((t) => short(t, 40)).join("; ")}.</p>
             )}
           </div>
 
@@ -521,7 +523,7 @@ function TableView({ graph, added, onPick, namesOf }: { graph: Graph; added: Set
             </h3>
             <table className="mt-2 w-full text-sm">
               <thead>
-                <tr className="border-b border-line text-left font-mono text-[10px] tracking-wider text-muted uppercase">
+                <tr className="border-b border-line text-left font-mono text-xs tracking-wider text-muted uppercase">
                   <th className="py-1.5 pr-3 font-medium">Title</th>
                   <th className="py-1.5 pr-3 text-right font-medium">Year</th>
                   <th className="py-1.5 pr-3 text-right font-medium">Citations</th>
@@ -536,7 +538,7 @@ function TableView({ graph, added, onPick, namesOf }: { graph: Graph; added: Set
                       <button type="button" onClick={() => onPick(n.key)} className="text-left hover:underline">
                         {n.title}
                       </button>
-                      {added.has(n.key) && <span className="ml-2 font-mono text-[10px] text-ok">added</span>}
+                      {added.has(n.key) && <span className="ml-2 font-mono text-xs text-ok">added</span>}
                     </td>
                     <td className="py-1.5 pr-3 text-right font-mono text-xs tabular-nums">{n.year ?? "–"}</td>
                     <td className="py-1.5 pr-3 text-right font-mono text-xs tabular-nums">{fmt(n.citations)}</td>
@@ -620,13 +622,13 @@ function Detail({
         {inSession ? (
           sessions ? (
             (node.docs ?? []).map((d) => (
-              <button key={d.doc} type="button" onClick={() => onOpen(d.doc, d.session)} className="max-w-full truncate rounded-md border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white">
+              <button key={d.doc} type="button" onClick={() => onOpen(d.doc, d.session)} className="max-w-full truncate rounded-md border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-on-ink">
                 Open in {short(sessions.find((x) => x.id === d.session)?.title ?? "its session", 30)}
               </button>
             ))
           ) : (
             node.docId && (
-              <button type="button" onClick={() => onOpen(node.docId!)} className="rounded-md border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white">
+              <button type="button" onClick={() => onOpen(node.docId!)} className="rounded-md border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-on-ink">
                 Open in this session
               </button>
             )
@@ -662,7 +664,7 @@ function Detail({
                 setPending(false);
               }
             }}
-            className="rounded-md border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+            className="rounded-md border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-on-ink disabled:opacity-50"
           >
             {added ? "Added ✓" : pending ? "Adding…" : sessions ? "Add to session" : "Add to this session"}
           </button>

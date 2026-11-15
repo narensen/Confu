@@ -90,7 +90,7 @@ export function FocusTimer() {
         aria-label={running ? `${t.phase === "focus" ? "Focus" : "Break"} timer: ${fmt(left)} left` : "Focus timer"}
         title="Focus timer"
         className={`flex h-7 shrink-0 items-center gap-1.5 rounded-md px-1.5 text-xs transition hover:bg-paper ${
-          t.phase === "focus" ? "bg-ink font-mono text-white hover:bg-ink/85" : t.phase === "break" ? "bg-yellow-300 font-mono" : ""
+          t.phase === "focus" ? "bg-ink font-mono text-on-ink hover:bg-ink/85" : t.phase === "break" ? "bg-brand font-mono" : ""
         }`}
       >
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -103,7 +103,7 @@ export function FocusTimer() {
         <div role="menu" className="animate-pop absolute top-full right-0 z-30 mt-1.5 w-52 rounded-xl border border-ink bg-panel p-1.5 shadow-hard">
           {!running ? (
             <>
-              <p className="px-2 pt-1 pb-1.5 text-[11px] text-muted">Focus, then take a short break.</p>
+              <p className="px-2 pt-1 pb-1.5 text-xs text-muted">Focus, then take a short break.</p>
               {[25, 50, 15].map((m) => (
                 <button
                   key={m}
@@ -117,13 +117,13 @@ export function FocusTimer() {
                   }}
                   className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-sm hover:bg-paper"
                 >
-                  Focus {m} min <span className="text-[11px] text-muted">+{BREAK[m]} break</span>
+                  Focus {m} min <span className="text-xs text-muted">+{BREAK[m]} break</span>
                 </button>
               ))}
             </>
           ) : (
             <>
-              <p className="px-2 pt-1 pb-1.5 text-[11px] text-muted">
+              <p className="px-2 pt-1 pb-1.5 text-xs text-muted">
                 {t.phase === "focus" ? `Focus · ${t.minutes} min` : "Break"} · {fmt(left)} left
               </p>
               <button

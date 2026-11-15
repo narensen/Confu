@@ -61,7 +61,7 @@ export function AuthShowcase() {
       <div className="relative px-12 pt-14">
         <p className="auth-stage-muted animate-enter font-mono text-[11px] tracking-[0.14em] uppercase">Confu</p>
         <p className="animate-enter mt-3 max-w-md font-serif text-4xl leading-[1.1] tracking-tight" style={{ animationDelay: "80ms" }}>
-          Understand it deeply, <span className="text-yellow-300">not just skim it.</span>
+          Understand it deeply, <span className="text-brand">not just skim it.</span>
         </p>
       </div>
 
@@ -75,7 +75,7 @@ export function AuthShowcase() {
           </p>
           <div className="mt-3 flex flex-wrap gap-1">
             {["Ask a doubt", "Summarize", "Context", "Simplify"].map((a, i) => (
-              <span key={a} className={`rounded border px-1.5 py-0.5 text-[10px] ${i === 0 ? "border-ink bg-ink text-white" : "border-ink/30"}`}>
+              <span key={a} className={`rounded border px-1.5 py-0.5 text-[10px] ${i === 0 ? "border-ink bg-ink text-on-ink" : "border-ink/30"}`}>
                 {a}
               </span>
             ))}
@@ -103,7 +103,7 @@ export function AuthShowcase() {
         </Card>
       </div>
 
-      <p className="auth-stage-muted relative px-12 pb-10 font-mono text-[11px]">Free to start · Pro from $6 a month · Your notes stay yours</p>
+      <p className="auth-stage-muted relative px-12 pb-10 font-mono text-[11px]">Free and open source · Bring your own AI · Your notes stay yours</p>
     </div>
   );
 }
@@ -112,7 +112,7 @@ function Card({ children, className, depth, delay }: { children: ReactNode; clas
   // The CSS entrance runs on the wrapper; GSAP moves the card inside it.
   return (
     <div className={`animate-enter absolute ${className}`} style={{ animationDelay: `${delay}ms` }}>
-      <div data-float data-depth={depth} className="rounded-xl border border-ink bg-panel p-4 text-ink shadow-[5px_5px_0_0_#facc15]">
+      <div data-float data-depth={depth} className="rounded-xl border border-ink bg-panel p-4 text-ink shadow-[5px_5px_0_0_var(--brand)]">
         {children}
       </div>
     </div>

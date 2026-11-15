@@ -8,7 +8,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const page = (path: string, priority: number) => ({ url: `${SITE.url}${path}`, priority });
   return [
     page("", 1),
-    page("/pricing", 0.8),
     page("/templates", 0.8),
     ...TEMPLATES.map((t) => page(`/templates/${t.slug}`, 0.7)),
     page("/packs", 0.6),

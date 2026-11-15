@@ -53,7 +53,7 @@ export function ReviewDue({ compact = false }: { compact?: boolean }) {
         href="/review"
         className="animate-enter group flex items-center gap-4 rounded-2xl border border-ink bg-panel p-5 shadow-hard-sm transition duration-200 ease-fluid hover:-translate-y-0.5 hover:shadow-hard"
       >
-        <span className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-ink bg-yellow-300 font-serif text-2xl tabular-nums">{state.due}</span>
+        <span className="flex size-12 shrink-0 items-center justify-center rounded-xl border border-ink bg-brand font-serif text-2xl tabular-nums">{state.due}</span>
         <span className="min-w-0 flex-1">
           <span className="block font-medium">{state.due === 1 ? "Review due today" : "Reviews due today"}</span>
           <span className="block text-xs text-muted">About {minutes} min. Recall it before you forget it.</span>
@@ -79,16 +79,16 @@ export function ReviewDue({ compact = false }: { compact?: boolean }) {
   return (
     <Link
       href="/review"
-      className="animate-enter group flex items-center gap-5 rounded-2xl border border-ink bg-inverse px-6 py-5 text-inverse-ink shadow-[4px_4px_0_0_#facc15] transition duration-200 ease-fluid hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#facc15]"
+      className="animate-enter group flex items-center gap-5 rounded-2xl border border-ink bg-inverse px-6 py-5 text-inverse-ink shadow-[4px_4px_0_0_var(--brand)] transition duration-200 ease-fluid hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--brand)]"
     >
       <span className="font-serif text-5xl leading-none tabular-nums">{state.due}</span>
       <span className="min-w-0 flex-1">
-        <span className="block font-mono text-[11px] tracking-[0.12em] text-yellow-400 uppercase">Due today</span>
+        <span className="block font-mono text-xs tracking-[0.12em] text-brand uppercase">Due today</span>
         <span className="mt-1 block text-sm text-inverse-muted">
           {state.due === 1 ? "1 review" : `${state.due} reviews`} · about {minutes} min. Recall it before you forget it.
         </span>
       </span>
-      <span className="hidden shrink-0 rounded-lg bg-yellow-400 px-4 py-2 text-sm font-semibold text-ink transition group-hover:bg-yellow-300 sm:block">Start review →</span>
+      <span className="hidden shrink-0 rounded-lg bg-brand px-4 py-2 text-sm font-semibold text-ink transition group-hover:bg-brand sm:block">Start review →</span>
     </Link>
   );
 }

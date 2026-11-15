@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
+import { buttonClass, ghostButtonClass, inputClass, Eyebrow } from "@/components/ui";
 import { JSON_HEADERS } from "@/lib/ai-errors";
 import { SITTING_SECONDS } from "@/lib/sitting";
 import { SITE } from "@/lib/site";
@@ -98,7 +98,7 @@ export function SectionPaper({ sessionId, docs, onJump }: { sessionId: string; d
   return (
     <section className="space-y-4 border-b border-ink px-6 py-6">
       <div>
-        <p className={eyebrowClass}>Section paper</p>
+        <Eyebrow>Section paper</Eyebrow>
         <h2 className="mt-1 font-serif text-2xl leading-tight">{questions ? "Sit the section paper" : "What the paper covers"}</h2>
         <p className="mt-1.5 text-sm leading-relaxed text-muted">
           {questions
@@ -181,9 +181,9 @@ function Sit({
   return (
     <section className="space-y-4 border-b border-ink px-6 py-6">
       <div className="flex items-center justify-between">
-        <p className={eyebrowClass}>
+        <Eyebrow>
           {index + 1} / {questions.length}
-        </p>
+        </Eyebrow>
         <Clock startedAt={startedAt} onDone={() => void handIn()} />
       </div>
       <p className="font-serif text-xl leading-snug">{q.question}</p>
@@ -193,7 +193,7 @@ function Sit({
             key={option}
             type="button"
             onClick={() => setChoices((cur) => cur.map((c, j) => (j === index ? i : c)))}
-            className={`block w-full rounded-lg border px-3 py-2 text-left text-sm ${choices[index] === i ? "border-ink bg-yellow-50" : "border-ink/30"}`}
+            className={`block w-full rounded-lg border px-3 py-2 text-left text-sm ${choices[index] === i ? "border-ink bg-brand-faint" : "border-ink/30"}`}
           >
             {option}
           </button>
@@ -252,7 +252,7 @@ function Result({ sessionId, handin, docs, onJump }: { sessionId: string; handin
       ))}
       <div className="mt-4">
         {link ? (
-          <code className="block truncate rounded-md border border-line bg-panel px-2 py-1 font-mono text-[11px]">{link}</code>
+          <code className="block truncate rounded-md border border-line bg-panel px-2 py-1 font-mono text-xs">{link}</code>
         ) : (
           <div className="rounded-lg border border-dashed border-ink/40 p-3">
             <label className="flex items-start gap-2 text-sm">
@@ -272,9 +272,9 @@ function Result({ sessionId, handin, docs, onJump }: { sessionId: string; handin
 
 function PageHint({ q, docs, onJump }: { q: { sourceTitle: string; page: number }; docs: SessionDoc[]; onJump: (page: number, docId?: string | null) => void }) {
   const doc = docs.find((d) => d.title === q.sourceTitle && q.page >= 1 && q.page <= Math.max(1, d.pageCount));
-  if (!doc) return <p className="mt-2 font-mono text-[11px] text-muted">{q.sourceTitle}, p. {q.page}</p>;
+  if (!doc) return <p className="mt-2 font-mono text-xs text-muted">{q.sourceTitle}, p. {q.page}</p>;
   return (
-    <button type="button" onClick={() => onJump(q.page, doc.id)} className="mt-2 font-mono text-[11px] underline">
+    <button type="button" onClick={() => onJump(q.page, doc.id)} className="mt-2 font-mono text-xs underline">
       {q.sourceTitle}, p. {q.page}
     </button>
   );

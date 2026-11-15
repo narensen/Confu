@@ -29,7 +29,7 @@ export function DailyChart({ title, points, unit }: { title: string; points: Poi
       <figcaption className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <span className="font-serif text-xl">{title}</span>
         {/* The readout: the hovered day, otherwise the range total. */}
-        <span aria-live="polite" className="font-mono text-[11px] text-muted">
+        <span aria-live="polite" className="font-mono text-xs text-muted">
           {hovered ? (
             <>
               <strong className="text-sm font-semibold text-ink">{hovered.value.toLocaleString("en")}</strong> {unit} · {fmt(hovered.day)}
@@ -61,7 +61,7 @@ export function DailyChart({ title, points, unit }: { title: string; points: Poi
                 className="flex h-full min-w-0 flex-1 items-end justify-center rounded-sm outline-none focus-visible:bg-paper"
               >
                 <span
-                  className={`block w-full max-w-6 rounded-t-sm transition-colors duration-150 ${active === i ? "bg-yellow-400" : "bg-ink"}`}
+                  className={`block w-full max-w-6 rounded-t-sm transition-colors duration-150 ${active === i ? "bg-brand" : "bg-ink"}`}
                   style={{ height: `${(p.value / top) * 100}%`, minHeight: p.value ? 2 : 0 }}
                 />
               </button>
@@ -70,7 +70,7 @@ export function DailyChart({ title, points, unit }: { title: string; points: Poi
 
         </div>
         {/* y-axis ticks */}
-        <div className="flex h-40 w-8 flex-col justify-between text-right font-mono text-[10px] text-muted tabular-nums">
+        <div className="flex h-40 w-8 flex-col justify-between text-right font-mono text-xs text-muted tabular-nums">
           <span className="-translate-y-1/2">{top}</span>
           <span>{top / 2}</span>
           <span className="translate-y-1/2">0</span>
@@ -78,7 +78,7 @@ export function DailyChart({ title, points, unit }: { title: string; points: Poi
       </div>
 
       {points.length > 0 && (
-        <div className="mt-2 mr-10 flex justify-between font-mono text-[10px] text-muted">
+        <div className="mt-2 mr-10 flex justify-between font-mono text-xs text-muted">
           <span>{fmt(points[0].day)}</span>
           <span>{fmt(points[Math.floor(points.length / 2)].day)}</span>
           <span>{fmt(points[points.length - 1].day)}</span>

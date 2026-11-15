@@ -43,7 +43,7 @@ export function DemoVideo() {
       <button
         type="button"
         onClick={() => (playing ? video.current?.pause() : void video.current?.play())}
-        className="absolute right-3 bottom-3 rounded-full border border-ink bg-panel/90 px-3 py-1 font-mono text-[11px] backdrop-blur transition hover:bg-ink hover:text-white"
+        className="absolute right-3 bottom-3 rounded-full border border-ink bg-panel/90 px-3 py-1 font-mono text-xs backdrop-blur transition hover:bg-ink hover:text-on-ink"
       >
         {playing ? "Pause" : "Play"}
       </button>

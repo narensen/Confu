@@ -8,7 +8,8 @@ import { StudyStreak } from "./StudyStreak";
 import { TrySample } from "./TrySample";
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { eyebrowClass } from "@/components/ui";
+import { GettingStarted, OnceTip } from "@/components/onboarding/Tips";
+import { Eyebrow } from "@/components/ui";
 import { countdownLabel, daysUntil } from "@/lib/exam";
 import { ago } from "@/lib/format-usage";
 import { setLibrarySort, togglePinnedSession, useLibrarySort, usePinnedSessions, type LibrarySort } from "@/lib/prefs";
@@ -84,7 +85,7 @@ function dueLabel(due: string, today: string | null) {
   return `due in ${days} days`;
 }
 
-export function Library({ name, sessions: all }: { name: string | null; sessions: LibrarySession[] }) {
+export function Library({ name, sessions: all, needsKey = false }: { name: string | null; sessions: LibrarySession[]; needsKey?: boolean }) {
   // Archived sessions are kept (streak included) but sit apart, at the bottom.
   const sessions = useMemo(() => all.filter((s) => !s.archived), [all]);
   const archived = useMemo(() => all.filter((s) => s.archived), [all]);
@@ -196,9 +197,9 @@ export function Library({ name, sessions: all }: { name: string | null; sessions
     <div ref={root}>
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p data-intro className={eyebrowClass}>
+          <Eyebrow data-intro>
             Library
-          </p>
+          </Eyebrow>
           <h1 data-intro className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl" suppressHydrationWarning>
             {greeting}
           </h1>
@@ -209,9 +210,16 @@ export function Library({ name, sessions: all }: { name: string | null; sessions
         <div data-intro className="flex flex-wrap items-center gap-2 [&>*]:whitespace-nowrap">
           <LibraryMore map={all.some((x) => x.kind !== "exam" && x.docs.length > 0)} />
           <DoorCardLauncher button={false} />
+          {sessions.length === 0 && <TrySample compact />}
           <NewSessionLauncher />
         </div>
       </header>
+
+      {needsKey && sessions.length > 0 && (
+        <OnceTip id="key" className="mt-6 rounded-xl border border-ink">
+          Add a Groq key before you ask the tutor: Settings, then API key. Or allow Claude, ChatGPT, Gemini or Grok on this computer. There isn&apos;t a stack of free prompts to use up first.
+        </OnceTip>
+      )}
 
       {/* Today: where you left off, beside what's due (across every session) and your streak. */}
       {sessions.length > 0 && recent ? (
@@ -254,7 +262,7 @@ export function Library({ name, sessions: all }: { name: string | null; sessions
               </button>
             ))}
           </section>
-          <TrySample />
+          <GettingStarted needsKey={needsKey} />
         </>
       ) : (
         <>
@@ -271,7 +279,7 @@ export function Library({ name, sessions: all }: { name: string | null; sessions
                   className={`flex shrink-0 items-center gap-1.5 px-3 py-2.5 text-sm transition-colors ${filter === f ? "font-medium text-ink" : "text-muted hover:text-ink"}`}
                 >
                   {f === "all" ? "All" : KIND_LABEL[f]}
-                  <span className="font-mono text-[11px] text-muted">{counts[f]}</span>
+                  <span className="font-mono text-xs text-muted">{counts[f]}</span>
                 </button>
               ))}
               {bar && <span aria-hidden className="absolute -bottom-px h-0.5 bg-stroke transition-all duration-300 ease-fluid" style={{ left: bar.left, width: bar.width }} />}
@@ -349,7 +357,7 @@ export function Library({ name, sessions: all }: { name: string | null; sessions
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden className={`transition-transform duration-300 ease-fluid ${showArchived ? "rotate-90" : ""}`}>
               <path d="m9 6 6 6-6 6" />
             </svg>
-            Archived <span className="font-mono text-[11px]">{archived.length}</span>
+            Archived <span className="font-mono text-xs">{archived.length}</span>
           </button>
           {showArchived && (
             <ul className="animate-enter mt-4 grid gap-4 opacity-80 sm:grid-cols-2 lg:grid-cols-3">
@@ -408,11 +416,11 @@ function ContinueCard({ s, today }: { s: LibrarySession; today: string | null })
     <Link
       data-continue
       href={resumeHref(s)}
-      className="group relative flex min-w-0 flex-col gap-5 overflow-hidden rounded-2xl border border-ink bg-inverse p-6 text-inverse-ink shadow-[4px_4px_0_0_#facc15] transition-[translate,box-shadow] duration-300 ease-fluid hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_#facc15] sm:p-7"
+      className="group relative flex min-w-0 flex-col gap-5 overflow-hidden rounded-2xl border border-ink bg-inverse p-6 text-inverse-ink shadow-[4px_4px_0_0_var(--brand)] transition-[translate,box-shadow] duration-300 ease-fluid hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-[6px_6px_0_0_var(--brand)] sm:p-7"
     >
       <div className="min-w-0">
-        <p className="font-mono text-[11px] tracking-widest text-inverse-muted uppercase">
-          <span className="text-yellow-400">Continue</span> · {KIND_LABEL[s.kind]} · updated <span suppressHydrationWarning>{ago(s.updatedAt)}</span>
+        <p className="font-mono text-xs tracking-widest text-inverse-muted uppercase">
+          <span className="text-brand">Continue</span> · {KIND_LABEL[s.kind]} · updated <span suppressHydrationWarning>{ago(s.updatedAt)}</span>
         </p>
         <p className="mt-2.5 line-clamp-2 font-serif text-3xl leading-tight tracking-tight sm:text-4xl">{s.title}</p>
         {goal && <p className="mt-1.5 line-clamp-1 text-sm text-inverse-muted">{goal}</p>}
@@ -420,13 +428,13 @@ function ContinueCard({ s, today }: { s: LibrarySession; today: string | null })
 
       {next && (
         <div className="flex min-w-0 items-baseline gap-3 rounded-xl border border-inverse-ink/15 bg-inverse-ink/5 px-4 py-3">
-          <span className="shrink-0 font-mono text-[11px] tracking-widest text-yellow-400 uppercase">{next.label}</span>
+          <span className="shrink-0 font-mono text-xs tracking-widest text-brand uppercase">{next.label}</span>
           <span className="min-w-0">
             <span className="block truncate text-sm font-medium" suppressHydrationWarning>
               {next.title}
             </span>
             {next.meta.length > 0 && (
-              <span className="mt-0.5 block truncate font-mono text-[11px] text-inverse-muted" suppressHydrationWarning>
+              <span className="mt-0.5 block truncate font-mono text-xs text-inverse-muted" suppressHydrationWarning>
                 {next.meta.join(" · ")}
               </span>
             )}
@@ -438,9 +446,9 @@ function ContinueCard({ s, today }: { s: LibrarySession; today: string | null })
         {progress !== null ? (
           <div className="min-w-40 flex-1 sm:max-w-xs">
             <div className="h-1.5 overflow-hidden rounded-full bg-inverse-ink/15">
-              <div className="h-full rounded-full bg-yellow-400 transition-[width] duration-700 ease-fluid" style={{ width: `${Math.round(progress * 100)}%` }} />
+              <div className="h-full rounded-full bg-brand transition-[width] duration-700 ease-fluid" style={{ width: `${Math.round(progress * 100)}%` }} />
             </div>
-            <p className="mt-1.5 font-mono text-[11px] text-inverse-muted">
+            <p className="mt-1.5 font-mono text-xs text-inverse-muted">
               {Math.round(progress * 100)}% {label}
             </p>
           </div>
@@ -507,7 +515,7 @@ function TodayCard({ sessions, today }: { sessions: LibrarySession[]; today: str
         <h2 id="today-title" className="font-serif text-xl">
           Today
         </h2>
-        {items.length > 0 && <span className="font-mono text-[11px] text-muted">{items.length} to do</span>}
+        {items.length > 0 && <span className="font-mono text-xs text-muted">{items.length} to do</span>}
       </div>
       {items.length === 0 ? (
         <p className="mt-2 text-sm leading-relaxed text-muted">Nothing due today. You&apos;re on track: pick up where you left off, or start something new.</p>
@@ -518,7 +526,7 @@ function TodayCard({ sessions, today }: { sessions: LibrarySession[]; today: str
               <Link href={it.href} className="group -mx-2 flex items-start gap-3 rounded-lg px-2 py-2 transition hover:bg-paper">
                 <span
                   aria-hidden
-                  className={`mt-1.5 size-2 shrink-0 rounded-full ${it.tone === "review" ? "bg-yellow-400" : it.tone === "late" ? "bg-danger" : it.tone === "exam" ? "bg-warn" : "bg-ink"}`}
+                  className={`mt-1.5 size-2 shrink-0 rounded-full ${it.tone === "review" ? "bg-brand" : it.tone === "late" ? "bg-danger" : it.tone === "exam" ? "bg-warn" : "bg-ink"}`}
                 />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{it.title}</span>
@@ -553,7 +561,7 @@ function PassCells({ papers }: { papers: { title: string; target: number; done: 
           ))}
         </span>
       ))}
-      {papers.length > SHOW && <span className="font-mono text-[11px] text-muted">+{papers.length - SHOW}</span>}
+      {papers.length > SHOW && <span className="font-mono text-xs text-muted">+{papers.length - SHOW}</span>}
     </div>
   );
 }
@@ -570,8 +578,8 @@ function SessionCard({ s, today, pinned = false, onPin }: { s: LibrarySession; t
     <article className="group relative flex h-full flex-col rounded-2xl border border-ink bg-panel p-5 transition-[translate,box-shadow] duration-300 ease-fluid hover:-translate-x-0.5 hover:-translate-y-0.5 hover:shadow-hard">
       <div className="flex items-center justify-between gap-3">
         <span className="flex items-center gap-1.5">
-          <span className="rounded border border-ink/30 px-1.5 py-px font-mono text-[11px] tracking-wider text-muted uppercase">{KIND_LABEL[s.kind]}</span>
-          {pinned && <span className="font-mono text-[11px] text-muted">Pinned</span>}
+          <span className="rounded border border-ink/30 px-1.5 py-px font-mono text-xs tracking-wider text-muted uppercase">{KIND_LABEL[s.kind]}</span>
+          {pinned && <span className="font-mono text-xs text-muted">Pinned</span>}
         </span>
         {/* Actions show on hover, on keyboard focus, and always on touch screens (no hover there). */}
         <div className="relative z-10 flex items-center opacity-0 transition group-hover:opacity-100 focus-within:opacity-100 [@media(hover:none)]:opacity-100">
@@ -592,7 +600,7 @@ function SessionCard({ s, today, pinned = false, onPin }: { s: LibrarySession; t
       <Link href={resumeHref(s)} className="mt-3 font-serif text-xl leading-snug after:absolute after:inset-0">
         <span className="line-clamp-2">{s.title}</span>
       </Link>
-      <p className="mt-1 font-mono text-[11px] text-muted">
+      <p className="mt-1 font-mono text-xs text-muted">
         {!s.docs.length
           ? s.kind === "paper"
             ? "No papers yet"
@@ -635,7 +643,7 @@ function SessionCard({ s, today, pinned = false, onPin }: { s: LibrarySession; t
                 {today ? countdownLabel(examDays) : " "}
               </span>
               {accuracy !== null && (
-                <span className="flex items-center gap-1.5 font-mono text-[11px] text-muted">
+                <span className="flex items-center gap-1.5 font-mono text-xs text-muted">
                   <span aria-hidden className={`size-2 rounded-full ${accuracy >= 70 ? "bg-ok" : accuracy >= 50 ? "bg-warn" : "bg-danger"}`} />
                   {accuracy}% correct
                 </span>
@@ -657,7 +665,7 @@ function SessionCard({ s, today, pinned = false, onPin }: { s: LibrarySession; t
 
 function Footer({ left, right }: { left: string; right: string }) {
   return (
-    <div className="mt-2 flex items-center justify-between gap-2 font-mono text-[11px] text-muted">
+    <div className="mt-2 flex items-center justify-between gap-2 font-mono text-xs text-muted">
       <span className="truncate" suppressHydrationWarning>
         {left}
       </span>

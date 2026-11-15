@@ -65,8 +65,8 @@ export function SessionTitle({ sessionId, initialTitle }: { sessionId: string; i
       >
         <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
       </svg>
-      {status === "saving" && <span className="shrink-0 font-mono text-[11px] text-muted">Saving…</span>}
-      {status === "error" && <span className="shrink-0 font-mono text-[11px] text-danger">Couldn&apos;t save</span>}
+      {status === "saving" && <span className="shrink-0 font-mono text-xs text-muted">Saving…</span>}
+      {status === "error" && <span className="shrink-0 font-mono text-xs text-danger">Couldn&apos;t save</span>}
     </button>
   );
 }

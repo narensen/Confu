@@ -90,7 +90,7 @@ export function RoomFriends({ slug, link, canInvite }: { slug: string; link: str
                       <span className={`size-1.5 shrink-0 rounded-full ${friend.in_voice ? "bg-ok" : friend.online ? "bg-ink" : "bg-line"}`} aria-hidden />
                       {friend.name}
                     </span>
-                    <span className="block truncate pl-3 text-[11px] text-muted">{friend.in_voice ? "In voice" : friend.online ? "Online" : "Offline"}</span>
+                    <span className="block truncate pl-3 text-xs text-muted">{friend.in_voice ? "In voice" : friend.online ? "Online" : "Offline"}</span>
                   </span>
                   <button type="button" disabled={busy === friend.user_id} onClick={() => void toggle(friend)} className={`${ghostButtonClass} shrink-0 px-2 py-1 text-xs`}>
                     {busy === friend.user_id ? "…" : friend.invited ? "Invited" : "Invite"}

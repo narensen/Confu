@@ -28,7 +28,7 @@ export default function PrivacyPage() {
               <b>Google Drive:</b> Confu only sees the files you pick (or ask it to convert), only to bring them into your
               sessions. We never sell Google data, use it for ads, or train AI on it.
             </>,
-            <>Payments are handled by Lemon Squeezy. We never see your card number.</>,
+            <>Confu takes no payments. The AI runs on a Groq key you add, or on an AI tool on your own computer.</>,
             <>Nothing you make is public unless you choose to share it (a study pack, a Wrapped page, a sitting card, a miss map, a crib, a reading list, a library hour, or a section page), and you can take it down any time.</>,
             <>We don&apos;t sell your data, show ads, or use tracking or analytics cookies, and we don&apos;t train AI models on your material.</>,
           ]}
@@ -58,13 +58,6 @@ export default function PrivacyPage() {
             <>
               <b>Paper details:</b> for research papers in your sessions, their public identifiers (DOI, arXiv and OpenAlex
               ids) and the citation map we build from public databases.
-            </>,
-            <>
-              <b>Billing:</b> if you subscribe to Pro, the status of your subscription, its renewal or end date, and the card
-              brand and last four digits that our payment provider reports. We never receive your full card number.
-            </>,
-            <>
-              <b>Invites:</b> who invited whom, so both of you get your weeks of Pro.
             </>,
             <>
               <b>Usage and diagnostics:</b> which Confu pages and features are used, how fast pages load and respond, and
@@ -281,7 +274,6 @@ export default function PrivacyPage() {
           items={[
             <>To run the app: store your material, build your plan, answer your questions and remember your progress.</>,
             <>To keep your account secure and the service working.</>,
-            <>To manage your subscription and the Pro weeks you earn through invites.</>,
             <>To understand which features help people learn, and to find and fix what breaks.</>,
             <>
               To send the reminders and weekly summaries you&apos;ve chosen (through our email provider, Resend), and your study
@@ -306,8 +298,9 @@ export default function PrivacyPage() {
               processing.
             </>,
             <>
-              <b>Lemon Squeezy</b>: our payment provider and the merchant of record for Pro. It processes your payment
-              details, taxes and receipts under its own privacy policy.
+              <b>An AI tool on your computer</b> (Claude, ChatGPT/Codex, Gemini or Grok), if you choose one as your tutor.
+              Your browser sends the lesson to Confu&apos;s bridge on that computer, which passes it to the tool. That
+              provider&apos;s own privacy policy applies. Confu&apos;s servers never see that tool&apos;s login.
             </>,
             <>
               <b>Resend</b>: sends our emails.
@@ -330,7 +323,7 @@ export default function PrivacyPage() {
 
       <Section title="Cookies and local storage">
         <p>
-          We use cookies to keep you signed in, and a short-lived one to remember an invite link until you sign up. Your
+          We use cookies to keep you signed in. Your
           browser also stores a few interface preferences, like your panel width, your reading theme, your sound volume and
           the study room you&apos;re in, plus a random anonymous id that lets us count visits before you sign up. We don&apos;t
           use advertising or analytics cookies.
@@ -351,8 +344,7 @@ export default function PrivacyPage() {
               <Link href="/settings#danger" className={link}>
                 Settings
               </Link>
-              , deletes everything in it, including your usage records, feedback, packs, shared pages, friends, rooms, threads and learning spaces. Lemon
-              Squeezy keeps its own payment records as the law requires.
+              , deletes everything in it, including your usage records, feedback, packs, shared pages, friends, rooms, threads and learning spaces.
             </>,
             <>
               You can also ask us to delete your account at{" "}

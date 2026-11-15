@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { SiteFooter, SiteNav } from "@/components/site/SiteNav";
-import { eyebrowClass } from "@/components/ui";
+import { Eyebrow } from "@/components/ui";
 import { CHANGELOG } from "@/lib/changelog";
 
 export const metadata: Metadata = {
@@ -18,7 +18,7 @@ export default function ChangelogPage() {
       <main className="flex-1">
         <section className="border-b border-ink">
           <div className="mx-auto max-w-3xl px-6 pt-16 pb-12">
-            <p className={eyebrowClass}>Changelog</p>
+            <Eyebrow>Changelog</Eyebrow>
             <h1 className="mt-3 font-serif text-5xl leading-[1.05] tracking-tight">What&apos;s new</h1>
             <p className="mt-4 text-lg leading-relaxed text-muted">
               What we&apos;ve shipped, newest first.{" "}

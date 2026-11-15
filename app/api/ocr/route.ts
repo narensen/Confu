@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   if (!doc) return Response.json({ error: "Not found" }, { status: 404 });
 
   // A retry, or a page that already has a text layer, must not call the vision
-  // model again. Checked before the trial counter, so it doesn't spend a page.
+  // model again. Checked before the AI is called, so it costs nothing.
   const { data: pageRow } = await supabase
     .from("document_pages")
     .select("content")

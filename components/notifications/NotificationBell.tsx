@@ -151,7 +151,7 @@ export function NotificationBell({ userId }: { userId: string }) {
           <path d="M10.3 20a1.9 1.9 0 0 0 3.4 0" />
         </svg>
         {unread > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 flex min-w-4 items-center justify-center rounded-full border border-ink bg-yellow-300 px-1 font-mono text-[9px] leading-[14px] font-medium">
+          <span className="absolute -top-0.5 -right-0.5 flex min-w-4 items-center justify-center rounded-full border border-ink bg-brand px-1 font-mono text-xs leading-[14px] font-medium">
             {unread > 9 ? "9+" : unread}
           </span>
         )}
@@ -221,10 +221,10 @@ function Item({ notice: n, isNew, onOpen, onAnswer }: { notice: Notice; isNew: b
   const [busy, setBusy] = useState(false);
   const answering = n.kind === "friend_request" && !n.read;
   return (
-    <li className={`relative transition ${isNew ? "bg-yellow-50" : ""}`}>
+    <li className={`relative transition ${isNew ? "bg-brand-faint" : ""}`}>
       <button type="button" onClick={onOpen} className="flex w-full items-start gap-3 px-5 py-3.5 text-left transition hover:bg-paper">
         {n.actor ? (
-          <span aria-hidden className="flex size-9 shrink-0 items-center justify-center rounded-full border border-ink bg-yellow-100 font-serif text-sm">
+          <span aria-hidden className="flex size-9 shrink-0 items-center justify-center rounded-full border border-ink bg-brand-soft font-serif text-sm">
             {n.actor.slice(0, 1).toUpperCase()}
           </span>
         ) : (
@@ -235,9 +235,9 @@ function Item({ notice: n, isNew, onOpen, onAnswer }: { notice: Notice; isNew: b
         <span className="min-w-0 flex-1">
           <span className="block text-sm leading-snug font-medium">{n.title}</span>
           {n.body && <span className="mt-0.5 line-clamp-2 block text-xs leading-relaxed text-muted">{plainExcerpt(n.body, 160)}</span>}
-          <span className="mt-1 block font-mono text-[10px] text-muted">{ago(n.created_at)}</span>
+          <span className="mt-1 block font-mono text-xs text-muted">{ago(n.created_at)}</span>
         </span>
-        {isNew && <span aria-label="New" className="mt-1.5 size-2 shrink-0 rounded-full bg-yellow-400" />}
+        {isNew && <span aria-label="New" className="mt-1.5 size-2 shrink-0 rounded-full bg-brand" />}
       </button>
       {answering && (
         <div className="flex gap-2 px-5 pb-3.5 pl-[4.25rem]">
@@ -249,7 +249,7 @@ function Item({ notice: n, isNew, onOpen, onAnswer }: { notice: Notice; isNew: b
               await onAnswer(true);
               setBusy(false);
             }}
-            className="rounded-lg border border-ink bg-ink px-3 py-1 text-xs font-medium text-white transition hover:-translate-y-px disabled:opacity-50"
+            className="rounded-lg border border-ink bg-ink px-3 py-1 text-xs font-medium text-on-ink transition hover:-translate-y-px disabled:opacity-50"
           >
             Accept
           </button>
@@ -269,7 +269,7 @@ function Item({ notice: n, isNew, onOpen, onAnswer }: { notice: Notice; isNew: b
       )}
       {n.kind === "room_invite" && n.url && (
         <div className="px-5 pb-3.5 pl-[4.25rem]">
-          <Link href={n.url} className="inline-flex rounded-lg border border-ink bg-ink px-3 py-1 text-xs font-medium text-white transition hover:-translate-y-px">
+          <Link href={n.url} className="inline-flex rounded-lg border border-ink bg-ink px-3 py-1 text-xs font-medium text-on-ink transition hover:-translate-y-px">
             Join the room
           </Link>
         </div>
