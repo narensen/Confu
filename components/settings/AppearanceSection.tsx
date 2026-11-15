@@ -1,11 +1,13 @@
 "use client";
 
+import { setMotion, useMotion, type Motion } from "@/lib/motion";
 import { setReaderPref, setSingleKeys, useReaderPref, useSingleKeys, type ReaderPref } from "@/lib/prefs";
 import { setTheme, useTheme, type Theme } from "@/lib/theme";
 import { Row, Section } from "./Section";
 
 // How Confu looks and responds on this device: the app's theme, the PDF's
-// reading theme, and the workspace's one-key shortcuts. Kept in this browser.
+// reading theme, motion, and the workspace's one-key shortcuts. Kept in this
+// browser.
 
 function Choice<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: [T, string][]; onChange: (v: T) => void }) {
   return (
@@ -30,6 +32,7 @@ export function AppearanceSection() {
   const theme = useTheme();
   const reader = useReaderPref();
   const singleKeys = useSingleKeys();
+  const motion = useMotion();
   return (
     <Section id="appearance" title="Appearance" description="How Confu looks and responds on this device.">
       <Row label="Theme" hint="Auto follows your system's light or dark setting.">
@@ -54,6 +57,17 @@ export function AppearanceSection() {
             ["light", "Light"],
             ["sepia", "Sepia"],
             ["night", "Night"],
+          ]}
+        />
+      </Row>
+      <Row label="Motion" hint="Auto follows your system's reduce-motion setting. Reduce keeps cards, panels and pages still here, whatever the system says.">
+        <Choice<Motion>
+          label="Motion"
+          value={motion}
+          onChange={setMotion}
+          options={[
+            ["system", "Auto"],
+            ["reduce", "Reduce"],
           ]}
         />
       </Row>

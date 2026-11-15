@@ -20,6 +20,7 @@ import { SessionActions } from "./SessionActions";
 import { DoorCardLauncher } from "./DoorCardDialog";
 import { LibraryMore } from "./LibraryMore";
 import { KINDS, NewSessionLauncher, openNewSession } from "./NewSessionDialog";
+import { reduceMotion } from "@/lib/motion";
 
 gsap.registerPlugin(useGSAP, Flip);
 
@@ -149,7 +150,7 @@ export function Library({ name, sessions: all }: { name: string | null; sessions
 
   // Remember where cards were, then let Flip animate them to their new places.
   const change = (fn: () => void) => {
-    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches && root.current) {
+    if (!reduceMotion() && root.current) {
       flipState.current = Flip.getState(root.current.querySelectorAll("[data-card]"));
     }
     fn();
@@ -181,6 +182,7 @@ export function Library({ name, sessions: all }: { name: string | null; sessions
     () => {
       const mm = gsap.matchMedia();
       mm.add("(prefers-reduced-motion: no-preference)", () => {
+        if (reduceMotion()) return;
         const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
         tl.fromTo("[data-intro]", { y: 18, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.6, stagger: 0.07, clearProps: "all" })
           .fromTo("[data-continue]", { y: 24, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.7, clearProps: "all" }, "-=0.35")

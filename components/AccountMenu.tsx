@@ -78,13 +78,14 @@ export function AccountMenu({ name, email, plan, owner, keyLast4 }: Props) {
           setOpen(next);
           if (next && !pro) void loadUsage();
         }}
-        className="flex max-w-40 items-center gap-2 rounded-full border border-line bg-panel py-1 pr-2.5 pl-1 text-sm font-medium text-ink transition duration-200 ease-fluid hover:border-ink/40 hover:bg-paper aria-expanded:border-ink/40 aria-expanded:bg-paper sm:max-w-56"
+        className="flex max-w-40 items-center gap-2 rounded-full border border-line bg-panel p-1 text-sm sm:pr-2.5 font-medium text-ink transition duration-200 ease-fluid hover:border-ink/40 hover:bg-paper aria-expanded:border-ink/40 aria-expanded:bg-paper sm:max-w-56"
       >
         <span aria-hidden className="flex size-6 shrink-0 items-center justify-center rounded-full bg-yellow-300 font-serif text-xs text-ink">
           {display.slice(0, 1).toUpperCase()}
         </span>
         <span className="hidden truncate sm:inline">{display}</span>
-        {pro && <span className="shrink-0 rounded bg-yellow-400 px-1 font-mono text-[9px] font-bold tracking-wider text-ink uppercase">{owner ? "Admin" : "Pro"}</span>}
+        {/* On a phone the button is just the initial (the plan is in the menu), so a session's title has room. */}
+        {pro && <span className="hidden shrink-0 rounded bg-yellow-400 px-1 font-mono text-[9px] font-bold tracking-wider text-ink uppercase sm:inline">{owner ? "Admin" : "Pro"}</span>}
         <svg
           width="12"
           height="12"
@@ -93,7 +94,7 @@ export function AccountMenu({ name, email, plan, owner, keyLast4 }: Props) {
           stroke="currentColor"
           strokeWidth="2.5"
           aria-hidden
-          className={`shrink-0 transition-transform duration-300 ease-fluid ${open ? "rotate-180" : ""}`}
+          className={`hidden shrink-0 transition-transform duration-300 ease-fluid sm:block ${open ? "rotate-180" : ""}`}
         >
           <path d="m6 9 6 6 6-6" />
         </svg>

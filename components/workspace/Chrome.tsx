@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Section, Tab } from "./TutorPanel";
 
 // The frame around the reader: the tutor's side (left), the tool rail
@@ -9,7 +9,7 @@ import type { Section, Tab } from "./TutorPanel";
 
 /* ------------------------------------------------------------------ icons */
 
-type IconName = Tab | "reader" | "keys" | "help" | "pin" | "close" | "fold" | "expand" | "shrink" | "clear";
+type IconName = Tab | "reader" | "keys" | "help" | "more" | "pin" | "close" | "fold" | "expand" | "shrink" | "clear";
 
 const PATHS: Record<IconName, ReactNode> = {
   chat: <path d="M21 11.5a8.4 8.4 0 0 1-12.2 7.5L3 20.5l1.6-5.2A8.5 8.5 0 1 1 21 11.5Z" />,
@@ -55,6 +55,13 @@ const PATHS: Record<IconName, ReactNode> = {
     <>
       <rect x="2" y="6" width="20" height="12" rx="2" />
       <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7.5 14h9" />
+    </>
+  ),
+  more: (
+    <>
+      <circle cx="5" cy="12" r="1.3" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.3" fill="currentColor" />
+      <circle cx="19" cy="12" r="1.3" fill="currentColor" />
     </>
   ),
   help: (
@@ -349,38 +356,111 @@ export function ResizeHandle({
 
 export type MobileItem = { id: "pdf" | Tab; label: string; icon: IconName; badge?: string; dot?: boolean };
 
-// Phones show one thing at a time; this bar switches between them.
-export function MobileNav({ items, active, onPick }: { items: MobileItem[]; active: MobileItem["id"]; onPick: (id: MobileItem["id"]) => void }) {
+// Phones show one thing at a time; this bar switches between them. Four
+// places at most: what you're reading, the tutor, the session's main tool
+// (Plan, Passes or Practice), and More for the rest, so labels stay legible.
+const MAIN_ITEMS = 3;
+
+function MobileButton({ it, on, onClick, extra }: { it: MobileItem; on: boolean; onClick: () => void; extra?: ReactNode }) {
   return (
-    <nav aria-label="Session" className="flex shrink-0 items-stretch border-t border-ink bg-panel px-1 pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))]">
-      {items.map((it) => {
-        const on = it.id === active;
-        return (
-          <button
-            key={it.id}
-            type="button"
-            onClick={() => onPick(it.id)}
-            aria-pressed={on}
-            className={`relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-lg py-1.5 transition active:scale-95 ${on ? "text-ink" : "text-muted"}`}
-          >
-            <span className={`flex h-7 w-11 items-center justify-center rounded-full transition-colors ${on ? "bg-ink text-white" : ""}`}>
-              <Icon name={it.icon} size={17} />
-            </span>
-            <span className={`max-w-full truncate text-[10px] leading-none ${on ? "font-semibold" : "font-medium"}`}>{it.label}</span>
-            {it.badge && !on ? (
-              <span
-                className={`absolute top-0.5 left-1/2 ml-2 min-w-4 rounded-full border px-1 font-mono text-[9px] leading-[14px] tabular-nums ${
-                  it.dot ? "border-ink bg-yellow-300" : "border-line bg-panel"
-                }`}
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={on}
+      aria-label={`${it.label}${it.badge ? ` (${it.badge})` : ""}${it.dot ? ", waiting on you" : ""}`}
+      className={`relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-lg py-1.5 transition active:scale-95 ${on ? "text-ink" : "text-muted"}`}
+    >
+      <span className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${on ? "bg-ink text-white" : ""}`}>
+        <Icon name={it.icon} size={18} />
+      </span>
+      <span className={`max-w-full truncate text-[11px] leading-none ${on ? "font-semibold" : "font-medium"}`}>{it.label}</span>
+      {it.badge && !on ? (
+        <span
+          aria-hidden
+          className={`absolute top-0.5 left-1/2 ml-2.5 min-w-4 rounded-full border px-1 font-mono text-[10px] leading-[14px] tabular-nums ${
+            it.dot ? "border-ink bg-yellow-300" : "border-line bg-panel"
+          }`}
+        >
+          {it.badge}
+        </span>
+      ) : (
+        it.dot && <span aria-hidden className="absolute top-1 left-1/2 ml-4 size-2 rounded-full border border-ink bg-yellow-300" />
+      )}
+      {extra}
+    </button>
+  );
+}
+
+export function MobileNav({ items, active, onPick }: { items: MobileItem[]; active: MobileItem["id"]; onPick: (id: MobileItem["id"]) => void }) {
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLElement>(null);
+  const folded = items.length > MAIN_ITEMS + 1;
+  const main = folded ? items.slice(0, MAIN_ITEMS) : items;
+  const rest = folded ? items.slice(MAIN_ITEMS) : [];
+  const restActive = rest.find((it) => it.id === active);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      if (!root.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <nav ref={root} aria-label="Session" className="relative flex shrink-0 items-stretch border-t border-ink bg-panel px-1 pt-1 pb-[max(0.25rem,env(safe-area-inset-bottom))]">
+      {main.map((it) => (
+        <MobileButton
+          key={it.id}
+          it={it}
+          on={it.id === active}
+          onClick={() => {
+            setOpen(false);
+            onPick(it.id);
+          }}
+        />
+      ))}
+      {folded && (
+        <MobileButton
+          // The tool that's showing from More takes its place in the bar, so you can see where you are.
+          it={restActive ? { ...restActive, badge: undefined } : { id: "files", label: "More", icon: "more", dot: rest.some((it) => it.dot) }}
+          on={Boolean(restActive) || open}
+          onClick={() => setOpen((v) => !v)}
+          extra={<span className="sr-only">{open ? ", menu open" : ", more tools"}</span>}
+        />
+      )}
+      {open && (
+        <div role="menu" aria-label="More tools" className="animate-pop absolute right-1.5 bottom-full mb-2 w-60 origin-bottom-right rounded-2xl border border-ink bg-panel p-1.5 shadow-hard">
+          {rest.map((it) => {
+            const on = it.id === active;
+            return (
+              <button
+                key={it.id}
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setOpen(false);
+                  onPick(it.id);
+                }}
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${on ? "bg-ink text-white" : "hover:bg-paper"}`}
               >
-                {it.badge}
-              </span>
-            ) : (
-              it.dot && <span aria-hidden className="absolute top-1 left-1/2 ml-3.5 size-2 rounded-full border border-ink bg-yellow-300" />
-            )}
-          </button>
-        );
-      })}
+                <Icon name={it.icon} size={18} />
+                <span className="min-w-0 flex-1 truncate font-medium">{it.label}</span>
+                {it.badge && <span className={`font-mono text-[11px] ${on ? "text-white/70" : "text-muted"}`}>{it.badge}</span>}
+                {it.dot && !on && <span aria-hidden className="size-2 rounded-full border border-ink bg-yellow-300" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </nav>
   );
 }

@@ -14,6 +14,9 @@ export const CHANGELOG: Release[] = [
       "Exam cards show the countdown and how practice is going, not a bar that looked like progress. Paper cards show each paper's passes.",
       "Sort your sessions by recent use, deadline or name, and pin the ones you want at the top (on this device).",
       "On a phone, a card's Pin, Archive and Delete are always there; they no longer wait for a hover that can't happen.",
+      "Settings → Appearance has Motion: reduce animation here even if your system doesn't.",
+      "Light or Dark, chosen in the account menu, now sticks when you reload. It used to fall back to your system's setting.",
+      "In a session on a phone, the bottom bar has four places (Read, Tutor, your plan, More), and the session's title gets more of the header.",
     ],
   },
   {

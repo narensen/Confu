@@ -63,11 +63,14 @@ export function AppHeader({ children }: { children?: ReactNode }) {
         title={workspace ? "Back to your library" : undefined}
       >
         {workspace && (
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="-ml-1 text-muted transition-transform group-hover:-translate-x-0.5">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="-ml-1 text-muted transition-transform group-hover:-translate-x-0.5 sm:size-3.5">
             <path d="m15 18-6-6 6-6" />
           </svg>
         )}
-        <Logo />
+        {/* On a phone a session needs the width for its title: the chevron alone leads back. */}
+        <span className={workspace ? "hidden sm:inline" : undefined}>
+          <Logo />
+        </span>
       </Link>
       {workspace ? (
         <div className="flex min-w-0 flex-1 items-center gap-2 border-l border-line pl-3">{children}</div>

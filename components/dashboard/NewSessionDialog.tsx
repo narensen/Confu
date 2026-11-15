@@ -13,6 +13,7 @@ import { handOffPdfs } from "@/lib/pdf/handoff";
 import { validatePdf } from "@/lib/pdf/upload";
 import { createClient } from "@/lib/supabase/client";
 import type { SessionKind } from "@/lib/types";
+import { reduceMotion } from "@/lib/motion";
 
 gsap.registerPlugin(useGSAP);
 
@@ -96,7 +97,7 @@ function NewSessionDialog({ initialKind, onClose }: { initialKind: SessionKind |
 
   const close = useCallback(() => {
     if (busy) return;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduce = reduceMotion();
     if (reduce || !panel.current) return onClose();
     gsap.to(panel.current, { y: 16, scale: 0.98, autoAlpha: 0, duration: 0.2, ease: "power2.in" });
     gsap.to(root.current, { autoAlpha: 0, duration: 0.22, onComplete: onClose });
@@ -118,6 +119,7 @@ function NewSessionDialog({ initialKind, onClose }: { initialKind: SessionKind |
     () => {
       const mm = gsap.matchMedia();
       mm.add("(prefers-reduced-motion: no-preference)", () => {
+        if (reduceMotion()) return;
         gsap.fromTo(root.current, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.25 });
         gsap.fromTo(panel.current, { y: 28, scale: 0.97, autoAlpha: 0 }, { y: 0, scale: 1, autoAlpha: 1, duration: 0.5, ease: "power3.out" });
       });
@@ -128,6 +130,7 @@ function NewSessionDialog({ initialKind, onClose }: { initialKind: SessionKind |
     () => {
       const mm = gsap.matchMedia();
       mm.add("(prefers-reduced-motion: no-preference)", () => {
+        if (reduceMotion()) return;
         gsap.fromTo("[data-step]", { x: step === 2 ? 40 : -40, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 0.45, ease: "power3.out" });
         if (step === 1) {
           gsap.fromTo("[data-kind-card]", { y: 18, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.5, ease: "power3.out", stagger: 0.06, clearProps: "all" });

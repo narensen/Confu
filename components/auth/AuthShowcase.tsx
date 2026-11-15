@@ -3,6 +3,7 @@
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { useRef, type ReactNode } from "react";
+import { reduceMotion } from "@/lib/motion";
 
 gsap.registerPlugin(useGSAP);
 
@@ -17,6 +18,7 @@ export function AuthShowcase() {
       const el = root.current!;
       const mm = gsap.matchMedia();
       mm.add("(prefers-reduced-motion: no-preference)", () => {
+        if (reduceMotion()) return; // reduced in Settings → Appearance
         const cards = gsap.utils.toArray<HTMLElement>("[data-float]", el);
         cards.forEach((card, i) => {
           gsap.fromTo(card, { y: 0 }, { y: -9, duration: 2.6 + i * 0.45, ease: "sine.inOut", yoyo: true, repeat: -1, delay: 0.9 + i * 0.35 });

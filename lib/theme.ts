@@ -1,15 +1,13 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { THEME_KEY } from "@/lib/head-script";
 
 // Light, dark, or the system's setting (the default). The choice is applied
-// as <html data-theme>, before first paint by the script in app/layout.tsx.
+// as <html data-theme>, before first paint by HEAD_SCRIPT (lib/head-script.ts).
 export type Theme = "system" | "light" | "dark";
-const KEY = "confu:theme";
+const KEY = THEME_KEY;
 export const THEME_EVENT = "confu:theme";
-
-// Runs in <head> before the page paints, so a dark-mode page never flashes light.
-export const THEME_SCRIPT = `try{var t=localStorage.getItem("${KEY}");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`;
 
 function read(): Theme {
   try {

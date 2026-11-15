@@ -279,6 +279,15 @@ html { scroll-behavior: smooth; }
     transition-duration: 0.01ms !important;
   }
 }
+/* The same when motion is reduced in Settings → Appearance (lib/motion.ts). */
+:root[data-motion="reduce"] { scroll-behavior: auto; }
+:root[data-motion="reduce"] *,
+:root[data-motion="reduce"] *::before,
+:root[data-motion="reduce"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
 
 /* ---------------------------------------------------------- tutor answers */
 
