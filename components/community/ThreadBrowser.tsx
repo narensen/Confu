@@ -78,7 +78,7 @@ export function ThreadBrowser({ space, showSpace = true, refreshKey = 0 }: { spa
               aria-selected={sort === s.id}
               title={s.hint}
               onClick={() => setSort(s.id)}
-              className={`shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium transition ${sort === s.id ? "bg-ink text-white" : "text-muted hover:bg-paper hover:text-ink"}`}
+              className={`shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium transition ${sort === s.id ? "bg-ink text-on-ink" : "text-muted hover:bg-paper hover:text-ink"}`}
             >
               {s.label}
             </button>
@@ -100,7 +100,7 @@ export function ThreadBrowser({ space, showSpace = true, refreshKey = 0 }: { spa
         </label>
       </div>
 
-      <p className="mt-3 font-mono text-[11px] text-muted">
+      <p className="mt-3 font-mono text-xs text-muted">
         {threads ? `${total} ${total === 1 ? "question" : "questions"}${query ? ` matching “${query}”` : ""} · ${current.hint.toLowerCase()}` : " "}
       </p>
 
@@ -172,14 +172,14 @@ function ThreadRow({ thread: t, showSpace, delay }: { thread: ThreadCard; showSp
       </div>
       <div className="hidden shrink-0 flex-col items-end gap-1.5 sm:flex">
         {t.solved ? (
-          <span className="inline-flex items-center gap-1 rounded-full border border-ok/50 bg-ok/10 px-2 py-0.5 text-[11px] font-medium text-ok">
+          <span className="inline-flex items-center gap-1 rounded-full border border-ok/50 bg-ok/10 px-2 py-0.5 text-xs font-medium text-ok">
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden>
               <path d="m5 12 5 5L20 7" />
             </svg>
             Answered
           </span>
         ) : t.replies === 0 ? (
-          <span className="rounded-full border border-dashed border-ink/30 px-2 py-0.5 text-[11px] text-muted">No replies yet</span>
+          <span className="rounded-full border border-dashed border-ink/30 px-2 py-0.5 text-xs text-muted">No replies yet</span>
         ) : null}
         <span className={`flex items-center gap-1 font-mono text-xs tabular-nums ${t.replies ? "text-ink" : "text-muted"}`} title={`${t.replies} ${t.replies === 1 ? "reply" : "replies"}`}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>

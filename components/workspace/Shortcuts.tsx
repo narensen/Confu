@@ -2,8 +2,9 @@
 
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
-import { eyebrowClass } from "@/components/ui";
+import { Eyebrow } from "@/components/ui";
 import { setSingleKeys, useSingleKeys } from "@/lib/prefs";
+import { useModal } from "@/components/Modal";
 
 // How to learn here: what used to fill the empty chat, kept one key away.
 export const HOW_TO: [string, string][] = [
@@ -56,12 +57,13 @@ export function ShortcutsDialog({ onClose }: { onClose: () => void }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  const dialogRef = useModal(true, onClose);
   return createPortal(
     <div className="animate-fade fixed inset-0 z-60 flex items-center justify-center bg-scrim p-3 backdrop-blur-[2px]" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal="true" aria-labelledby="keys-title" className="animate-pop w-full max-w-md overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="keys-title" className="animate-pop w-full max-w-md overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
         <div className="flex items-start justify-between gap-4 border-b border-ink px-6 pt-5 pb-4">
           <div>
-            <p className={eyebrowClass}>Help</p>
+            <Eyebrow>Help</Eyebrow>
             <h2 id="keys-title" className="mt-1 font-serif text-2xl">
               How it works
             </h2>
@@ -72,11 +74,11 @@ export function ShortcutsDialog({ onClose }: { onClose: () => void }) {
         </div>
         <div className="max-h-[70vh] space-y-5 overflow-y-auto px-6 py-5">
           <section>
-            <p className={eyebrowClass}>Learning here</p>
+            <Eyebrow>Learning here</Eyebrow>
             <ol className="mt-2 space-y-2">
               {HOW_TO.map(([title, body], i) => (
                 <li key={title} className="flex gap-3 text-sm">
-                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full border border-line bg-paper font-mono text-[11px]">{i + 1}</span>
+                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full border border-line bg-paper font-mono text-xs">{i + 1}</span>
                   <p className="leading-relaxed text-muted">
                     <span className="font-medium text-ink">{title}</span> {body}
                   </p>
@@ -93,13 +95,13 @@ export function ShortcutsDialog({ onClose }: { onClose: () => void }) {
           </label>
           {SHORTCUTS.map((g) => (
             <section key={g.group}>
-              <p className={eyebrowClass}>{g.group}</p>
+              <Eyebrow>{g.group}</Eyebrow>
               <dl className="mt-2 space-y-1.5">
                 {g.keys.map(([k, what]) => (
                   <div key={k} className="flex items-baseline justify-between gap-4 text-sm">
                     <dt className="flex shrink-0 gap-1">
                       {k.split("  ").map((part) => (
-                        <kbd key={part} className="rounded border border-ink/30 bg-paper px-1.5 py-0.5 font-mono text-[11px]">
+                        <kbd key={part} className="rounded border border-ink/30 bg-paper px-1.5 py-0.5 font-mono text-xs">
                           {part}
                         </kbd>
                       ))}

@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
+import { buttonClass, ghostButtonClass, inputClass, Eyebrow } from "@/components/ui";
 import { JSON_HEADERS, notifyAiUsed, readAiError } from "@/lib/ai-errors";
 import { createClient } from "@/lib/supabase/client";
 import { track } from "@/lib/telemetry";
 import type { PlanTopic } from "@/lib/types";
+import { useModal } from "@/components/Modal";
 
 type Question = { q: string; answer: string };
 type Rating = "again" | "hard" | "good";
@@ -121,12 +122,13 @@ export function RecallCheck({ topic, sessionId, offer, onClose }: { topic: PlanT
   const q = questions[i];
   const got = ratings.filter((r) => r === "good").length;
 
+  const dialogRef = useModal(true, close);
   return createPortal(
     <div className="animate-fade fixed inset-0 z-60 flex items-center justify-center bg-scrim p-3 backdrop-blur-[2px]" onMouseDown={(e) => e.target === e.currentTarget && close()}>
-      <div role="dialog" aria-modal="true" aria-labelledby="recall-title" className="animate-pop flex max-h-full w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="recall-title" className="animate-pop flex max-h-full w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
         <div className="flex items-start justify-between gap-4 border-b border-ink px-6 pt-5 pb-4">
           <div className="min-w-0">
-            <p className={eyebrowClass}>{stage === "asking" ? `Question ${i + 1} of ${questions.length}` : "Quick check"}</p>
+            <Eyebrow>{stage === "asking" ? `Question ${i + 1} of ${questions.length}` : "Quick check"}</Eyebrow>
             <h2 id="recall-title" className="mt-1 font-serif text-2xl leading-snug">
               {stage === "offer" ? "Topic done. Lock it in?" : topic.title}
             </h2>
@@ -174,7 +176,7 @@ export function RecallCheck({ topic, sessionId, offer, onClose }: { topic: PlanT
               {revealed ? (
                 <div className="animate-enter space-y-3">
                   <div className="rounded-lg border border-line bg-paper px-3 py-2.5 text-sm leading-relaxed">
-                    <p className={eyebrowClass}>Model answer</p>
+                    <Eyebrow>Model answer</Eyebrow>
                     <p className="mt-1">{q.answer}</p>
                   </div>
                   <p className="text-xs text-muted">How did yours compare?</p>

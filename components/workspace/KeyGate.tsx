@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { GroqKeyForm } from "@/components/keys/GroqKeyForm";
-import { eyebrowClass } from "@/components/ui";
+import { Eyebrow } from "@/components/ui";
 import type { KeyInfo } from "@/lib/groq-keys";
 
 // Shown in place of the tutor when a regular (non-admin) user has no usable
@@ -30,7 +30,7 @@ export function KeyGate({
       <div className="flex-1 overflow-y-auto px-6 py-8">
         <div className="animate-enter mx-auto max-w-md space-y-6">
           <header>
-            <p className={eyebrowClass}>Bring your own key</p>
+            <Eyebrow>Bring your own key</Eyebrow>
             <h2 className="mt-1 font-serif text-2xl leading-tight">Add your Groq API key</h2>
             <p className="mt-2 text-sm leading-relaxed text-muted">
               The tutor, planner and figure reader run on your own Groq account. You can still read your PDFs without a key.
@@ -54,7 +54,7 @@ export function KeyGate({
               <>Paste it below and choose where to save it.</>,
             ].map((step, i) => (
               <li key={i} className="flex gap-3">
-                <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-ink font-mono text-[11px]">{i + 1}</span>
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-ink font-mono text-xs">{i + 1}</span>
                 <span className="pt-0.5 leading-relaxed text-muted">{step}</span>
               </li>
             ))}
@@ -62,7 +62,7 @@ export function KeyGate({
 
           <GroqKeyForm sessionId={sessionId} allowScopeChoice onSaved={onSaved} />
 
-          <p className="text-[11px] leading-relaxed text-muted">
+          <p className="text-xs leading-relaxed text-muted">
             <span className="font-medium text-ink">We only use your key to run the requests you make here.</span> We never share,
             sell or log it. It&apos;s checked with Groq, then encrypted before it&apos;s stored, and only its last four characters
             are ever shown. Usage is billed to your Groq account. Remove it any time in{" "}

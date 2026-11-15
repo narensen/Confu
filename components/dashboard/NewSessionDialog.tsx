@@ -5,7 +5,7 @@ import { useGSAP } from "@gsap/react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { buttonClass, eyebrowClass, ghostButtonClass, inputClass, labelClass } from "@/components/ui";
+import { buttonClass, ghostButtonClass, inputClass, labelClass, Input, Eyebrow } from "@/components/ui";
 import { isPowerPoint, PPT_CONVERTER_URL } from "@/lib/pdf/office";
 import { needsConversion } from "@/lib/import/drive";
 import { ConvertFiles } from "@/components/import/ConvertFiles";
@@ -14,6 +14,7 @@ import { validatePdf } from "@/lib/pdf/upload";
 import { createClient } from "@/lib/supabase/client";
 import type { SessionKind } from "@/lib/types";
 import { reduceMotion } from "@/lib/motion";
+import { useModal } from "@/components/Modal";
 
 gsap.registerPlugin(useGSAP);
 
@@ -89,30 +90,24 @@ function NewSessionDialog({ initialKind, onClose }: { initialKind: SessionKind |
   const [pptPicked, setPptPicked] = useState(false);
   const [busy, setBusy] = useState(false);
   const root = useRef<HTMLDivElement>(null);
-  const panel = useRef<HTMLDivElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const titleInput = useRef<HTMLInputElement>(null);
   const step = kind ? 2 : 1;
   const meta = KINDS.find((k) => k.kind === kind);
 
+  // The dialog behaviour (focus trap, Escape) calls the animated close.
+  const closeRef = useRef<() => void>(() => {});
+  const panel = useModal(true, () => closeRef.current());
   const close = useCallback(() => {
     if (busy) return;
     const reduce = reduceMotion();
     if (reduce || !panel.current) return onClose();
     gsap.to(panel.current, { y: 16, scale: 0.98, autoAlpha: 0, duration: 0.2, ease: "power2.in" });
     gsap.to(root.current, { autoAlpha: 0, duration: 0.22, onComplete: onClose });
-  }, [busy, onClose]);
-
+  }, [busy, onClose, panel]);
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
-    window.addEventListener("keydown", onKey);
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = overflow;
-    };
-  }, [close]);
+    closeRef.current = close;
+  });
 
   // Entrance, and a slide between steps.
   useGSAP(
@@ -211,7 +206,7 @@ function NewSessionDialog({ initialKind, onClose }: { initialKind: SessionKind |
       >
         <div className="flex items-start justify-between gap-4 border-b border-ink px-6 pt-5 pb-4">
           <div>
-            <p className={eyebrowClass}>New session · step {step} of 2</p>
+            <Eyebrow>New session · step {step} of 2</Eyebrow>
             <h2 id="new-session-title" className="mt-1 font-serif text-2xl">
               {step === 1 ? "What are you here to do?" : `New ${meta!.name.toLowerCase()} session`}
             </h2>
@@ -244,7 +239,7 @@ function NewSessionDialog({ initialKind, onClose }: { initialKind: SessionKind |
             <form id="new-session-form" data-step onSubmit={create} className="space-y-5">
               <label className="block">
                 <span className={labelClass}>Title</span>
-                <input
+                <Input
                   ref={titleInput}
                   required
                   maxLength={200}
@@ -252,7 +247,6 @@ function NewSessionDialog({ initialKind, onClose }: { initialKind: SessionKind |
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder={meta!.example}
                   disabled={busy}
-                  className={inputClass}
                 />
                 <span className="mt-1 block text-xs text-muted">You can rename it any time.</span>
               </label>
@@ -303,7 +297,7 @@ function NewSessionDialog({ initialKind, onClose }: { initialKind: SessionKind |
                       <ul className="mb-3 space-y-1 text-left text-sm">
                         {files.map((f) => (
                           <li key={f.name + f.size} className="flex items-center gap-2">
-                            <span className="font-mono text-[10px] text-muted">PDF</span>
+                            <span className="font-mono text-xs text-muted">PDF</span>
                             <span className="min-w-0 flex-1 truncate">{f.name}</span>
                             <button type="button" onClick={() => setFiles((cur) => cur.filter((c) => c !== f))} className="text-xs text-muted hover:text-danger">
                               Remove
@@ -324,7 +318,7 @@ function NewSessionDialog({ initialKind, onClose }: { initialKind: SessionKind |
                 <div className="animate-pop rounded-lg border border-danger/40 bg-danger/5 px-3 py-2 text-sm text-danger">
                   <p>{error}</p>
                   {pptPicked && (
-                    <a href={PPT_CONVERTER_URL} target="_blank" rel="noreferrer" className="mt-2 inline-flex rounded-md border border-danger/50 bg-panel px-2.5 py-1 text-xs font-medium text-danger hover:bg-danger hover:text-white">
+                    <a href={PPT_CONVERTER_URL} target="_blank" rel="noreferrer" className="mt-2 inline-flex rounded-md border border-danger/50 bg-panel px-2.5 py-1 text-xs font-medium text-danger hover:bg-danger hover:text-on-ink">
                       Open the free converter ↗
                     </a>
                   )}

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { createClient as createAnon } from "@supabase/supabase-js";
 import { SiteFooter, SiteNav } from "@/components/site/SiteNav";
-import { eyebrowClass } from "@/components/ui";
+import { eyebrowClass, Eyebrow } from "@/components/ui";
 import { TEMPLATES } from "@/lib/templates";
 
 export const metadata: Metadata = {
@@ -20,7 +20,7 @@ export default function PacksPage() {
       <main className="flex-1">
         <section className="border-b border-ink">
           <div className="mx-auto max-w-6xl px-6 pt-16 pb-12">
-            <p className={eyebrowClass}>Study packs</p>
+            <Eyebrow>Study packs</Eyebrow>
             <h1 className="mt-3 max-w-3xl font-serif text-5xl leading-[1.05] tracking-tight">Start from what worked for someone else.</h1>
             <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">
               A pack is a study session someone shared: their sources, plan and highlights. Copy one and Confu fetches everything into your
@@ -44,7 +44,7 @@ export default function PacksPage() {
         </section>
         <section className="bg-panel">
           <div className="mx-auto max-w-6xl px-6 py-14">
-            <p className={eyebrowClass}>Or start from a template</p>
+            <Eyebrow>Or start from a template</Eyebrow>
             <h2 className="mt-2 font-serif text-3xl tracking-tight">Goals with free sources, ready to go</h2>
             <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {TEMPLATES.map((t) => (
@@ -93,7 +93,7 @@ async function Gallery() {
             <span className={eyebrowClass}>{p.kind === "paper" ? "Paper pack" : p.kind === "exam" ? "Exam pack" : "Study pack"}</span>
             <span className="mt-2 line-clamp-2 font-serif text-xl leading-snug">{p.title}</span>
             {p.description && <span className="mt-2 line-clamp-3 text-sm text-muted">{p.description}</span>}
-            <span className="mt-auto pt-4 font-mono text-[11px] text-muted">
+            <span className="mt-auto pt-4 font-mono text-xs text-muted">
               {p.sources} sources{p.topics ? ` · ${p.topics} topics` : ""} · {p.copies} copies{p.author_name ? ` · by ${p.author_name}` : ""}
             </span>
           </Link>

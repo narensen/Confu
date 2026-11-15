@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { AppHeader } from "@/components/AppHeader";
 import { LocalTime } from "@/components/LocalTime";
-import { eyebrowClass } from "@/components/ui";
+import { Eyebrow } from "@/components/ui";
 import { requireUser } from "@/lib/dal";
 import { getPackForViewer } from "@/lib/packs-server";
 import { createClient } from "@/lib/supabase/server";
@@ -53,7 +53,7 @@ async function ClassBody({ params }: { params: PageProps<"/p/[slug]/class">["par
 
   return (
     <div className="animate-enter">
-      <p className={eyebrowClass}>Class progress</p>
+      <Eyebrow>Class progress</Eyebrow>
       <h1 className="mt-1 font-serif text-4xl tracking-tight">{pack.title}</h1>
       <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
         People who copied this pack and chose to share their progress. You see how far they&apos;ve got, never their notes, answers or
@@ -80,7 +80,7 @@ async function ClassBody({ params }: { params: PageProps<"/p/[slug]/class">["par
         <div className="mt-8 overflow-x-auto rounded-2xl border border-ink bg-panel">
           <table className="w-full min-w-[44rem] text-sm">
             <thead>
-              <tr className="border-b border-ink text-left font-mono text-[11px] tracking-wider text-muted uppercase">
+              <tr className="border-b border-ink text-left font-mono text-xs tracking-wider text-muted uppercase">
                 <th className="px-5 py-3 font-medium">Student</th>
                 <th className="px-3 py-3 font-medium">Topics done</th>
                 <th className="px-3 py-3 text-right font-medium">Mastery</th>

@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { buttonClass, eyebrowClass, ghostButtonClass } from "@/components/ui";
+import { buttonClass, ghostButtonClass, Eyebrow } from "@/components/ui";
 import { convertWithGoogle, driveConfigured, driveReady, prepareDrive } from "@/lib/import/drive";
 import { POWERPOINT_HELP, PPT_CONVERTER_URL } from "@/lib/pdf/office";
 import { track } from "@/lib/telemetry";
+import { useModal } from "@/components/Modal";
 
 // Slides and Word files picked for upload: turn them into PDFs through the
 // student's Google Drive, with one click (Google's sign-in has to open from a
@@ -50,20 +51,21 @@ export function ConvertFiles({ files, onDone, onClose }: { files: File[]; onDone
 
   const slides = files.every((f) => /\.(pptx?|odp|key)$/i.test(f.name));
 
+  const dialogRef = useModal(true, onClose, { closeOnEscape: !status });
   return (
     <div
       className="animate-fade fixed inset-0 z-[65] flex items-center justify-center bg-scrim p-4 backdrop-blur-[2px]"
       onMouseDown={(e) => e.target === e.currentTarget && !status && onClose()}
     >
-      <div role="dialog" aria-modal="true" aria-labelledby="convert-title" className="animate-pop w-full max-w-md rounded-2xl border border-ink bg-panel p-6 shadow-hard">
-        <p className={eyebrowClass}>{slides ? "Slides" : "Documents"} to PDF</p>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="convert-title" className="animate-pop w-full max-w-md rounded-2xl border border-ink bg-panel p-6 shadow-hard">
+        <Eyebrow>{slides ? "Slides" : "Documents"} to PDF</Eyebrow>
         <h2 id="convert-title" className="mt-1 font-serif text-2xl leading-snug">
           Turn {files.length === 1 ? "this file" : `these ${files.length} files`} into {files.length === 1 ? "a PDF" : "PDFs"}
         </h2>
         <ul className="mt-3 space-y-1 text-sm">
           {files.map((f) => (
             <li key={f.name + f.size} className="flex items-center gap-2">
-              <span className="shrink-0 rounded border border-ink/30 px-1 font-mono text-[10px] text-muted uppercase">{f.name.split(".").pop()}</span>
+              <span className="shrink-0 rounded border border-ink/30 px-1 font-mono text-xs text-muted uppercase">{f.name.split(".").pop()}</span>
               <span className="min-w-0 truncate">{f.name}</span>
             </li>
           ))}

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, type FormEvent } from "react";
 import { ask, notify, toast } from "@/components/dialogs";
-import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
+import { buttonClass, ghostButtonClass, Input, Eyebrow } from "@/components/ui";
 import { classifyFriendQuery } from "@/lib/friend-query";
 import {
   cancelFriendRequest,
@@ -91,10 +91,10 @@ export function FriendsView() {
     <div className="mt-8 space-y-10">
       {data.invites.length > 0 && (
         <section>
-          <p className={eyebrowClass}>Room invites</p>
+          <Eyebrow>Room invites</Eyebrow>
           <ul className="mt-3 space-y-3">
             {data.invites.map((invite) => (
-              <li key={invite.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-ink bg-yellow-100 px-4 py-3">
+              <li key={invite.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-ink bg-brand-soft px-4 py-3">
                 <p className="text-sm">
                   <span className="font-medium">{invite.from_name}</span> invited you to <span className="font-medium">{invite.room_name}</span>
                 </p>
@@ -123,7 +123,7 @@ export function FriendsView() {
 
       {data.incoming.length > 0 && (
         <section>
-          <p className={eyebrowClass}>Requests</p>
+          <Eyebrow>Requests</Eyebrow>
           <ul className="mt-3 divide-y divide-line rounded-2xl border border-ink bg-panel">
             {data.incoming.map((row) => (
               <li key={row.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
@@ -168,27 +168,26 @@ export function FriendsView() {
 
       <section className="grid gap-8 lg:grid-cols-2">
         <div>
-          <p className={eyebrowClass}>Add a friend</p>
+          <Eyebrow>Add a friend</Eyebrow>
           <form onSubmit={(event) => void add(event)} className="mt-3 space-y-3 rounded-2xl border border-ink bg-panel p-5">
-            <input
+            <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Friend code or email"
               autoComplete="off"
               maxLength={200}
               aria-label="Friend code or email"
-              className={inputClass}
             />
             <button type="submit" disabled={pending} className={`${buttonClass} py-2`}>
               {pending ? "Sending…" : "Send request"}
             </button>
             {formError && <p className="text-sm text-danger">{formError}</p>}
             {formNote && <p className="text-sm text-ok">{formNote}</p>}
-            <p className="text-xs text-muted">They&apos;ll see your first name and can accept or decline. This is separate from inviting someone new to Confu for a free week of Pro.</p>
+            <p className="text-xs text-muted">They&apos;ll see your first name and can accept or decline.</p>
           </form>
         </div>
         <div>
-          <p className={eyebrowClass}>Your code</p>
+          <Eyebrow>Your code</Eyebrow>
           <div className="mt-3 rounded-2xl border border-ink bg-panel p-5">
             <p className="font-mono text-3xl tracking-[0.18em]">{code || "····-····"}</p>
             <button
@@ -205,7 +204,7 @@ export function FriendsView() {
       </section>
 
       <section>
-        <p className={eyebrowClass}>Your friends</p>
+        <Eyebrow>Your friends</Eyebrow>
         {data.friends.length === 0 ? (
           <p className="mt-3 rounded-2xl border border-dashed border-ink/30 px-4 py-6 text-sm text-muted">No friends yet. Share your code with someone you study with.</p>
         ) : (
@@ -231,7 +230,7 @@ export function FriendsView() {
 
       {data.outgoing.length > 0 && (
         <section>
-          <p className={eyebrowClass}>Sent</p>
+          <Eyebrow>Sent</Eyebrow>
           <ul className="mt-3 divide-y divide-line rounded-2xl border border-ink bg-panel">
             {data.outgoing.map((row) => (
               <li key={row.id} className="flex items-center justify-between gap-3 px-4 py-3">
@@ -263,7 +262,7 @@ function FriendRow({ friend, onRemove }: { friend: Friend; onRemove: () => void 
   const status = friendStatus(friend);
   return (
     <li className="flex items-center gap-3 px-4 py-3">
-      <span className={`flex size-9 shrink-0 items-center justify-center rounded-full border border-ink font-serif ${friend.online ? "bg-yellow-300" : "bg-panel"}`}>
+      <span className={`flex size-9 shrink-0 items-center justify-center rounded-full border border-ink font-serif ${friend.online ? "bg-brand" : "bg-panel"}`}>
         {friend.name.slice(0, 1).toUpperCase()}
       </span>
       <span className="min-w-0 flex-1">

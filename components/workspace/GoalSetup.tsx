@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { buttonClass, eyebrowClass, ghostButtonClass, inputClass, labelClass } from "@/components/ui";
+import { buttonClass, ghostButtonClass, inputClass, labelClass, Button, Eyebrow } from "@/components/ui";
 import { JSON_HEADERS, notifyAiUsed, readAiError } from "@/lib/ai-errors";
 import { deadlineFor, hoursADayFor, type PaceEstimate } from "@/lib/pace";
 import { addDays, toISODate } from "@/lib/schedule";
@@ -299,7 +299,7 @@ function GoalForm({ sessionId, docTitles, existing, draftGoal, setup, onCreated,
   if (job?.state === "queued") {
     return (
       <div className="animate-enter flex min-h-[60vh] flex-col items-center justify-center gap-6 text-center">
-        <p className={eyebrowClass}>Plan queued</p>
+        <Eyebrow>Plan queued</Eyebrow>
         <p className="max-w-sm font-serif text-2xl leading-snug">Your plan builds as soon as your files are in.</p>
         <div className="indeterminate h-[3px] w-56 rounded-full bg-line" />
         <p className="max-w-xs text-xs text-muted" aria-live="polite">
@@ -317,14 +317,14 @@ function GoalForm({ sessionId, docTitles, existing, draftGoal, setup, onCreated,
       const topics = found.filter((f) => "topic" in f).length;
       return (
         <div className="animate-enter py-4">
-          <p className={eyebrowClass}>Building your plan</p>
+          <Eyebrow>Building your plan</Eyebrow>
           <p className="mt-1 font-serif text-2xl leading-tight">
             {topics} {topics === 1 ? "topic" : "topics"} so far…
           </p>
           <ol className="mt-5 space-y-1.5" aria-live="polite">
             {found.map((f, i) =>
               "phase" in f ? (
-                <li key={i} className="animate-enter pt-3 font-mono text-[11px] tracking-wider text-muted uppercase first:pt-0">
+                <li key={i} className="animate-enter pt-3 font-mono text-xs tracking-wider text-muted uppercase first:pt-0">
                   {f.phase}
                 </li>
               ) : (
@@ -342,7 +342,7 @@ function GoalForm({ sessionId, docTitles, existing, draftGoal, setup, onCreated,
     }
     return (
       <div className="animate-enter flex min-h-[60vh] flex-col items-center justify-center gap-6 text-center">
-        <p className={eyebrowClass}>Building your plan</p>
+        <Eyebrow>Building your plan</Eyebrow>
         <p key={step} className="animate-enter font-serif text-2xl">
           {STEPS[step]}
         </p>
@@ -355,7 +355,7 @@ function GoalForm({ sessionId, docTitles, existing, draftGoal, setup, onCreated,
   return (
     <form onSubmit={submit} className="animate-enter space-y-6">
       <header>
-        <p className={eyebrowClass}>{existing ? "Re-plan" : "Step 1 of 1"}</p>
+        <Eyebrow>{existing ? "Re-plan" : "Step 1 of 1"}</Eyebrow>
         <h2 className="mt-1 font-serif text-2xl leading-tight">{existing ? "Change your goal" : "What do you want to learn?"}</h2>
         <p className="mt-2 text-sm leading-relaxed text-muted">
           Write your goal and Confu turns it into a plan: which pages to read, which papers and lectures, in what order,
@@ -381,7 +381,7 @@ function GoalForm({ sessionId, docTitles, existing, draftGoal, setup, onCreated,
               target="_blank"
               rel="noreferrer"
               onClick={() => track("goal.open_assistant", { name })}
-              className="rounded-md border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white transition hover:-translate-y-px"
+              className="rounded-md border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-on-ink transition hover:-translate-y-px"
             >
               Open in {name} ↗
             </a>
@@ -390,7 +390,7 @@ function GoalForm({ sessionId, docTitles, existing, draftGoal, setup, onCreated,
             {copied ? "✓ Copied" : "Copy the prompt"}
           </button>
         </div>
-        <p className="mt-2 text-[11px] text-muted">Gemini or another assistant? Copy the prompt and paste it there.</p>
+        <p className="mt-2 text-xs text-muted">Gemini or another assistant? Copy the prompt and paste it there.</p>
       </div>
 
       <div>
@@ -416,7 +416,7 @@ function GoalForm({ sessionId, docTitles, existing, draftGoal, setup, onCreated,
         />
         <div className="mt-1 flex items-start justify-between gap-3">
           <GoalCheck check={check} show={written.length > 40} />
-          <span className="shrink-0 font-mono text-[11px] text-muted">{goal.length.toLocaleString()} / 8,000</span>
+          <span className="shrink-0 font-mono text-xs text-muted">{goal.length.toLocaleString()} / 8,000</span>
         </div>
       </div>
 
@@ -440,7 +440,7 @@ function GoalForm({ sessionId, docTitles, existing, draftGoal, setup, onCreated,
                 if (estimate || estimating) runEstimate(goal, l);
               }}
               className={`relative z-10 rounded-md py-1.5 text-xs font-medium capitalize transition-colors duration-300 ${
-                level === l ? "text-white" : "text-muted hover:text-ink"
+                level === l ? "text-on-ink" : "text-muted hover:text-ink"
               }`}
             >
               {l}
@@ -496,21 +496,20 @@ function GoalForm({ sessionId, docTitles, existing, draftGoal, setup, onCreated,
           {setup.upload ? "Build my plan when they're in" : existing ? "Rebuild plan" : "Build my plan"}
         </button>
         {onCancel && (
-          <button
+          <Button
             type="button"
             onClick={() => {
               clearDraft(sessionId);
               setJob(null);
               onCancel();
-            }}
-            className={ghostButtonClass}
+            }} variant="ghost"
           >
             Cancel
-          </button>
+          </Button>
         )}
       </div>
 
-      <p className="text-[11px] leading-relaxed text-muted">
+      <p className="text-xs leading-relaxed text-muted">
         Plans and suggested resources are generated by AI and can contain mistakes. Review them and adjust your goal if
         something looks off. See the{" "}
         <a href="/terms" target="_blank" className="underline underline-offset-2">

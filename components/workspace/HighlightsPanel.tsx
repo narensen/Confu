@@ -9,6 +9,7 @@ import type { Highlight, SavedAnswer, SessionDoc } from "@/lib/types";
 import { LocalTime } from "@/components/LocalTime";
 import { Markdown } from "./Markdown";
 import type { SendRequest } from "./Workspace";
+import { useModal } from "@/components/Modal";
 
 // Your marks, by meaning: important, definitions, confusing, examples, notes,
 // a gallery of captured figures, and the tutor answers you saved.
@@ -33,7 +34,7 @@ type Props = {
 function ExportLinks({ sessionId }: { sessionId: string }) {
   const link = "underline-offset-4 transition hover:text-ink hover:underline";
   return (
-    <p className="text-[11px] text-muted">
+    <p className="text-xs text-muted">
       Take it with you:{" "}
       <a href={`/api/export/session?id=${sessionId}&format=md`} download onClick={() => track("export.markdown")} className={link}>
         whole session (Markdown)
@@ -163,16 +164,16 @@ export function HighlightsPanel({ sessionId, highlights, saved, onUnsaveAnswer, 
                 type="button"
                 onClick={() => setFilter(c.id)}
                 aria-pressed={filter === c.id}
-                className={`flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium transition ${filter === c.id ? "border-ink bg-ink text-white" : "border-ink/25 hover:border-ink"}`}
+                className={`flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium transition ${filter === c.id ? "border-ink bg-ink text-on-ink" : "border-ink/25 hover:border-ink"}`}
               >
                 {c.swatch && <span className="size-2 rounded-full" style={{ background: c.swatch }} />}
                 {c.label}
-                <span className={filter === c.id ? "text-white/60" : "text-muted"}>{counts[c.id]}</span>
+                <span className={filter === c.id ? "text-on-ink/60" : "text-muted"}>{counts[c.id]}</span>
               </button>
             ))}
         </div>
         <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-          <button type="button" onClick={copyNotes} className="text-[11px] text-muted underline-offset-4 transition hover:text-ink hover:underline">
+          <button type="button" onClick={copyNotes} className="text-xs text-muted underline-offset-4 transition hover:text-ink hover:underline">
             Copy highlights (Markdown)
           </button>
           <ExportLinks sessionId={sessionId} />
@@ -187,7 +188,7 @@ export function HighlightsPanel({ sessionId, highlights, saved, onUnsaveAnswer, 
             <SavedCard key={a.id} a={a} i={i} onRemove={onUnsaveAnswer} onCite={onCite} />
           ))}
           {filter === "all" && saved.length > 0 && sorted.length > 0 && (
-            <li aria-hidden className="flex items-center gap-3 pt-2 font-mono text-[10px] tracking-[0.14em] text-muted uppercase">
+            <li aria-hidden className="flex items-center gap-3 pt-2 font-mono text-xs tracking-[0.14em] text-muted uppercase">
               From your files
               <span className="h-px flex-1 bg-line" />
             </li>
@@ -233,7 +234,7 @@ function SavedCard({ a, i, onRemove, onCite }: { a: SavedAnswer; i: number; onRe
   return (
     <li className="group animate-enter rounded-xl border border-ink bg-panel p-4 transition duration-200 ease-fluid hover:shadow-hard-sm" style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}>
       <div className="mb-2 flex items-center gap-2 text-xs">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="#facc15" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--brand)" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden>
           <path d="M18 21l-6-4.5L6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z" />
         </svg>
         <span className="font-medium">Saved answer</span>
@@ -341,7 +342,7 @@ function TextCard({
                 onUpdate(h, { note: note.trim() || null });
                 setNoting(false);
               }}
-              className="rounded-md bg-ink px-2.5 py-1 text-xs font-medium text-white"
+              className="rounded-md bg-ink px-2.5 py-1 text-xs font-medium text-on-ink"
             >
               Save note
             </button>
@@ -349,7 +350,7 @@ function TextCard({
         </div>
       ) : h.note ? (
         <button type="button" onClick={() => setNoting(true)} className="mt-3 block w-full rounded-lg bg-paper px-3 py-2 text-left text-sm leading-relaxed whitespace-pre-wrap transition hover:bg-line/60">
-          <span className="mr-1 font-mono text-[10px] tracking-wider text-muted uppercase">Note</span>
+          <span className="mr-1 font-mono text-xs tracking-wider text-muted uppercase">Note</span>
           {h.note}
         </button>
       ) : null}
@@ -405,6 +406,7 @@ function FigureGallery({
     };
   }, [paths]);
 
+  const dialogRef = useModal(Boolean(open), () => setOpen(null));
   const label = (f: Highlight) => `${docs.length > 1 ? `${docs.find((d) => d.id === f.document_id)?.label ?? ""} ` : ""}p. ${f.page_number}`;
 
   return (
@@ -430,7 +432,7 @@ function FigureGallery({
 
       {open && (
         <div className="animate-fade fixed inset-0 z-[70] flex items-center justify-center bg-scrim p-4" onMouseDown={(e) => e.target === e.currentTarget && setOpen(null)}>
-          <div role="dialog" aria-modal="true" className="animate-pop flex max-h-full w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
+          <div ref={dialogRef} role="dialog" aria-modal="true" className="animate-pop flex max-h-full w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
             <div className="flex items-center justify-between border-b border-line px-5 py-3">
               <p className="font-mono text-xs font-medium">{label(open)}</p>
               <button type="button" onClick={() => setOpen(null)} aria-label="Close" className="rounded px-2 text-muted hover:text-ink">
@@ -476,7 +478,7 @@ function Chip({ primary, ...props }: { primary?: boolean } & React.ButtonHTMLAtt
     <button
       type="button"
       className={`rounded-full border border-ink px-3 py-0.5 text-xs transition duration-200 active:scale-95 disabled:pointer-events-none disabled:opacity-40 ${
-        primary ? "bg-ink text-white hover:opacity-85" : "hover:bg-ink hover:text-white"
+        primary ? "bg-ink text-on-ink hover:opacity-85" : "hover:bg-ink hover:text-on-ink"
       }`}
       {...props}
     />

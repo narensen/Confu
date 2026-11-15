@@ -19,7 +19,7 @@ export default function TermsPage() {
             <>Confu is a study aid. Its answers, plans and suggested resources are AI-generated and can be wrong.</>,
             <>Double-check anything important against your course material, instructors or other trusted sources.</>,
             <>Only upload material you have the right to use, and use Confu to learn, not to cheat.</>,
-            <>Pro renews monthly until you cancel; cancel any time, and ask for a refund within 7 days of a payment.</>,
+            <>Confu is free and open source. The AI runs on a key or a tool you bring, under that provider&apos;s own terms.</>,
             <>
               We only use your Groq key to run your requests. See the{" "}
               <Link href="/privacy" className="underline underline-offset-4">
@@ -88,41 +88,19 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section title="Pro subscriptions and billing" id="billing">
+      <Section title="Your AI" id="billing">
         <Bullets
           items={[
             <>
-              Pro is sold through Lemon Squeezy, our reseller and merchant of record, which processes the payment, adds any
-              sales tax, VAT or GST, and sends your receipts. Its terms apply to the purchase.
+              Confu has no paid plan. The tutor runs on a Groq API key you add, or on an AI tool you&apos;re signed in to on your
+              own computer. Your use of that key or tool is between you and its provider, under its terms and limits.
             </>,
             <>
-              Pro renews automatically every month at the price shown at checkout until you cancel. Cancel any time from
-              Settings → Plan → Manage billing; Pro stays on until the end of the month you&apos;ve paid for.
-            </>,
-            <>
-              <b>Refunds:</b> if Pro isn&apos;t for you, email us within 7 days of a payment and we&apos;ll refund it in full.
-            </>,
-            <>
-              Pro includes a generous daily allowance of AI use on our keys, shown in your account menu; it exists so the
-              service stays fast and fair for everyone.
-            </>,
-            <>
-              Prices can vary by country. If we change the price, we&apos;ll tell you at least 30 days before it applies to your
-              next renewal.
-            </>,
-            <>
-              If a payment fails, Pro stays on while it&apos;s retried; if it can&apos;t be collected, your account returns to
-              Free. Nothing is deleted either way.
+              A tool on your computer is reached through Confu&apos;s bridge, which runs on that computer only. Confu sends it the
+              lesson to teach and nothing else.
             </>,
           ]}
         />
-      </Section>
-
-      <Section title="Invites">
-        <p>
-          Inviting friends earns weeks of Pro for both of you, within the limits shown in Settings. Invites are for real
-          people who want to study: rewards from fake or duplicate accounts may be removed.
-        </p>
       </Section>
 
       <Section title="Sharing: study packs, Wrapped and rooms">
@@ -146,10 +124,6 @@ export default function TermsPage() {
               In study rooms, use a name you&apos;re comfortable showing and keep what you write respectful. In a private
               room&apos;s voice, don&apos;t record the others without them agreeing. Voice isn&apos;t recorded by Confu. A screen
               share is the same: live between the browsers, and not recorded by Confu.
-            </>,
-            <>
-              A class pack can grant its author Pro for the term, once, about four months, after 30 classmates copy it.
-              That grant isn&apos;t a payment and doesn&apos;t renew.
             </>,
             <>
               A sitting card and a page pin follow the same rule: don&apos;t publish other people&apos;s personal information.

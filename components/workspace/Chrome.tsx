@@ -134,13 +134,13 @@ export function ToolRail({
             aria-keyshortcuts={s.shortcut?.toLowerCase()}
             title={`${s.hint}${s.shortcut ? ` (${s.shortcut.toLowerCase()})` : ""}`}
             className={`relative flex flex-col items-center gap-1 rounded-xl px-0.5 pt-2 pb-1.5 transition duration-200 ease-fluid active:scale-95 motion-reduce:transition-none ${
-              on ? "bg-ink text-white" : "text-muted hover:bg-paper hover:text-ink"
+              on ? "bg-ink text-on-ink" : "text-muted hover:bg-paper hover:text-ink"
             }`}
           >
             <Icon name={s.id} size={18} />
-            <span className="max-w-full truncate text-[11px] leading-none font-medium">{s.label}</span>
-            {s.badge && <span className={`font-mono text-[10px] leading-none tabular-nums ${on ? "text-white/70" : "text-muted"}`}>{s.badge}</span>}
-            {s.dot && !on && <span aria-hidden className="absolute top-1.5 right-2 size-2 rounded-full border border-ink bg-yellow-300" />}
+            <span className="max-w-full truncate text-xs leading-none font-medium">{s.label}</span>
+            {s.badge && <span className={`font-mono text-xs leading-none tabular-nums ${on ? "text-on-ink/70" : "text-muted"}`}>{s.badge}</span>}
+            {s.dot && !on && <span aria-hidden className="absolute top-1.5 right-2 size-2 rounded-full border border-ink bg-brand" />}
           </button>
         );
       })}
@@ -163,7 +163,7 @@ export function TutorRail({ busy, onOpen }: { busy: boolean; onOpen: () => void 
       >
         <Icon name="chat" size={18} />
         <span className="rotate-180 text-xs font-medium tracking-wide [writing-mode:vertical-rl]">Tutor</span>
-        {busy && <span aria-hidden className="absolute top-1.5 right-1 size-2 animate-pulse rounded-full border border-ink bg-yellow-300" />}
+        {busy && <span aria-hidden className="absolute top-1.5 right-1 size-2 animate-pulse rounded-full border border-ink bg-brand" />}
       </button>
     </nav>
   );
@@ -199,7 +199,7 @@ export function TutorHeader({
     <div className="flex h-12 shrink-0 items-center gap-2 border-b border-ink pr-2 pl-4">
       <span className="relative flex">
         <Icon name="chat" size={16} />
-        {busy && <span aria-hidden className="absolute -top-0.5 -right-0.5 size-1.5 animate-pulse rounded-full bg-yellow-400" />}
+        {busy && <span aria-hidden className="absolute -top-0.5 -right-0.5 size-1.5 animate-pulse rounded-full bg-brand" />}
       </span>
       <p className="font-medium">Tutor</p>
       {tutors}
@@ -266,7 +266,7 @@ export function ToolHeader({
     <div className="flex h-12 shrink-0 items-center gap-2 border-b border-ink pr-2 pl-4">
       <Icon name={section.id} size={16} />
       <p className="font-medium">{section.label}</p>
-      {section.badge && <span className="rounded border border-line px-1.5 py-px font-mono text-[10px] text-muted">{section.badge}</span>}
+      {section.badge && <span className="rounded border border-line px-1.5 py-px font-mono text-xs text-muted">{section.badge}</span>}
       <p className="hidden min-w-0 truncate text-xs text-muted @[26rem]:block">{section.hint}</p>
       <div className="flex-1" />
       {onPin && (
@@ -283,7 +283,7 @@ export function ToolHeader({
                 : "Not enough room beside the page: fold the tutor away (Ctrl+\\) or widen the window"
           }
           className={`flex h-7 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs font-medium transition duration-150 disabled:cursor-not-allowed disabled:opacity-40 ${
-            pinned ? "border-ink bg-ink text-white" : "border-ink/25 text-muted enabled:hover:border-ink enabled:hover:text-ink"
+            pinned ? "border-ink bg-ink text-on-ink" : "border-ink/25 text-muted enabled:hover:border-ink enabled:hover:text-ink"
           }`}
         >
           <Icon name="pin" size={13} />
@@ -370,21 +370,21 @@ function MobileButton({ it, on, onClick, extra }: { it: MobileItem; on: boolean;
       aria-label={`${it.label}${it.badge ? ` (${it.badge})` : ""}${it.dot ? ", waiting on you" : ""}`}
       className={`relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-lg py-1.5 transition active:scale-95 ${on ? "text-ink" : "text-muted"}`}
     >
-      <span className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${on ? "bg-ink text-white" : ""}`}>
+      <span className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${on ? "bg-ink text-on-ink" : ""}`}>
         <Icon name={it.icon} size={18} />
       </span>
-      <span className={`max-w-full truncate text-[11px] leading-none ${on ? "font-semibold" : "font-medium"}`}>{it.label}</span>
+      <span className={`max-w-full truncate text-xs leading-none ${on ? "font-semibold" : "font-medium"}`}>{it.label}</span>
       {it.badge && !on ? (
         <span
           aria-hidden
-          className={`absolute top-0.5 left-1/2 ml-2.5 min-w-4 rounded-full border px-1 font-mono text-[10px] leading-[14px] tabular-nums ${
-            it.dot ? "border-ink bg-yellow-300" : "border-line bg-panel"
+          className={`absolute top-0.5 left-1/2 ml-2.5 min-w-4 rounded-full border px-1 font-mono text-xs leading-[14px] tabular-nums ${
+            it.dot ? "border-ink bg-brand" : "border-line bg-panel"
           }`}
         >
           {it.badge}
         </span>
       ) : (
-        it.dot && <span aria-hidden className="absolute top-1 left-1/2 ml-4 size-2 rounded-full border border-ink bg-yellow-300" />
+        it.dot && <span aria-hidden className="absolute top-1 left-1/2 ml-4 size-2 rounded-full border border-ink bg-brand" />
       )}
       {extra}
     </button>
@@ -450,12 +450,12 @@ export function MobileNav({ items, active, onPick }: { items: MobileItem[]; acti
                   setOpen(false);
                   onPick(it.id);
                 }}
-                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${on ? "bg-ink text-white" : "hover:bg-paper"}`}
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${on ? "bg-ink text-on-ink" : "hover:bg-paper"}`}
               >
                 <Icon name={it.icon} size={18} />
                 <span className="min-w-0 flex-1 truncate font-medium">{it.label}</span>
-                {it.badge && <span className={`font-mono text-[11px] ${on ? "text-white/70" : "text-muted"}`}>{it.badge}</span>}
-                {it.dot && !on && <span aria-hidden className="size-2 rounded-full border border-ink bg-yellow-300" />}
+                {it.badge && <span className={`font-mono text-xs ${on ? "text-on-ink/70" : "text-muted"}`}>{it.badge}</span>}
+                {it.dot && !on && <span aria-hidden className="size-2 rounded-full border border-ink bg-brand" />}
               </button>
             );
           })}

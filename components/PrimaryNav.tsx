@@ -62,7 +62,7 @@ function useBadges(): Record<string, { n: number; label: string } | undefined> {
 
 function Count({ n, className = "" }: { n: number; className?: string }) {
   return (
-    <span aria-hidden className={`inline-flex min-w-4 items-center justify-center rounded-full bg-yellow-300 px-1 font-mono text-[11px] leading-4 font-medium text-ink ${className}`}>
+    <span aria-hidden className={`inline-flex min-w-4 items-center justify-center rounded-full bg-brand px-1 font-mono text-xs leading-4 font-medium text-ink ${className}`}>
       {n > 99 ? "99+" : n}
     </span>
   );
@@ -160,8 +160,8 @@ export function MobileTabBar() {
             aria-label={badge ? `${p.label}, ${badge.label}` : undefined}
             className={`relative flex min-w-0 flex-1 flex-col items-center gap-1 rounded-lg py-1.5 transition active:scale-95 ${here ? "text-ink" : "text-muted"}`}
           >
-            <span className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${here ? "bg-ink text-white" : ""}`}>{p.icon}</span>
-            <span className={`max-w-full truncate text-[11px] leading-none ${here ? "font-semibold" : "font-medium"}`}>{p.label}</span>
+            <span className={`flex h-7 w-12 items-center justify-center rounded-full transition-colors ${here ? "bg-ink text-on-ink" : ""}`}>{p.icon}</span>
+            <span className={`max-w-full truncate text-xs leading-none ${here ? "font-semibold" : "font-medium"}`}>{p.label}</span>
             {badge && <Count n={badge.n} className="absolute top-0 left-1/2 ml-2.5" />}
           </Link>
         );

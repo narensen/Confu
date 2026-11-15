@@ -25,7 +25,7 @@ const round1 = (h: number) => Math.round(h * 2) / 2;
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
 // From the session's PDFs and what the goal lists. Free and instant; the AI
-// (when it doesn't cost a free-trial prompt) refines it for the goal's scope.
+// (when the student has an AI to run on) refines it for the goal's scope.
 export function materialsEstimate(input: { books: number[]; paperPdfs: number; goal: string; level: Level }): PaceEstimate {
   const { books, paperPdfs, goal, level } = input;
   const ids = new Set([...(goal.match(DOI) ?? []).map((d) => d.toLowerCase()), ...[...goal.matchAll(ARXIV)].map((m) => m[1])]);

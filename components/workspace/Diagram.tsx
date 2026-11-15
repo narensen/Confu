@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import type { Mermaid } from "mermaid";
 import { quoteMermaidLabels, svgSize, tidyMermaid } from "@/lib/tutor/diagram";
 import { fitSvg } from "@/lib/tutor/svg-fit";
+import { useModal } from "@/components/Modal";
 
 // The tutor's diagrams. A ```mermaid block is laid out here (the boxes fit
 // their labels, arrows route around them); a ```svg block is the tutor's own
@@ -222,9 +223,11 @@ function DiagramViewer({ picture, onClose }: { picture: Picture; onClose: () => 
     return () => window.removeEventListener("keydown", onKey, true);
   }, [onClose]);
   const ratio = picture.width / picture.height;
+  const dialogRef = useModal(true, onClose, { closeOnEscape: false });
   return createPortal(
     <div
-      role="dialog"
+      ref={dialogRef}
+        role="dialog"
       aria-modal="true"
       aria-label="Diagram"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}

@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
+import { buttonClass, ghostButtonClass, inputClass, Eyebrow } from "@/components/ui";
 import { deadlineFor, hoursADayFor, roundQuarter } from "@/lib/pace";
 import { daysBetween } from "@/lib/schedule";
 import type { PlanTopic, StudyPlan } from "@/lib/types";
+import { useModal } from "@/components/Modal";
 
 // The dial: a knob spun around a 300° track (open at the bottom) from 15
 // minutes to 6 hours a day. Drag it, scroll on it, or use the arrow keys.
@@ -18,7 +19,7 @@ const C = SIZE / 2;
 const R = 92;
 const INK = "var(--ink)";
 const TRACK = "var(--line)";
-const FOCUS = "#facc15";
+const FOCUS = "var(--brand)";
 
 const PRESETS = [
   { label: "Light", hours: 0.75 },
@@ -121,7 +122,7 @@ function Dial({ value, onChange }: { value: number; onChange: (v: number) => voi
       {[1, 2, 3, 4, 5, 6].map((h) => {
         const p = point(angleOf(h), R + 33);
         return (
-          <text key={h} x={p.x} y={p.y + 3.5} textAnchor="middle" className="fill-muted font-mono text-[10px]">
+          <text key={h} x={p.x} y={p.y + 3.5} textAnchor="middle" className="fill-muted font-mono text-xs">
             {h}h
           </text>
         );
@@ -177,12 +178,13 @@ export function CustomPace({
     setDeadline(deadlineFor(remaining, h, today));
   }
 
+  const dialogRef = useModal(true, onClose);
   return createPortal(
     <div className="animate-fade fixed inset-0 z-60 flex items-center justify-center bg-scrim p-3 backdrop-blur-[2px]" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal="true" aria-labelledby="pace-title" className="animate-pop flex max-h-full w-full max-w-md flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="pace-title" className="animate-pop flex max-h-full w-full max-w-md flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
         <div className="flex items-start justify-between gap-4 border-b border-ink px-6 pt-5 pb-4">
           <div>
-            <p className={eyebrowClass}>Custom pace</p>
+            <Eyebrow>Custom pace</Eyebrow>
             <h2 id="pace-title" className="mt-1 font-serif text-2xl">
               Spin to set your pace
             </h2>
@@ -217,10 +219,10 @@ export function CustomPace({
                   type="button"
                   onClick={() => spin(p.hours)}
                   aria-pressed={hours === p.hours}
-                  className={`rounded-lg border px-2 py-1.5 text-center text-xs transition ${hours === p.hours ? "border-ink bg-ink text-white" : "border-ink/25 hover:border-ink"}`}
+                  className={`rounded-lg border px-2 py-1.5 text-center text-xs transition ${hours === p.hours ? "border-ink bg-ink text-on-ink" : "border-ink/25 hover:border-ink"}`}
                 >
                   <span className="block font-medium">{p.label}</span>
-                  <span className={hours === p.hours ? "text-white/70" : "text-muted"}>{perDay(p.hours)}</span>
+                  <span className={hours === p.hours ? "text-on-ink/70" : "text-muted"}>{perDay(p.hours)}</span>
                 </button>
               ))}
             </div>

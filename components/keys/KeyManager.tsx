@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, useTransition } from "react";
 import { deleteGroqKey } from "@/app/(app)/settings/actions";
-import { eyebrowClass, ghostButtonClass } from "@/components/ui";
+import { ghostButtonClass, Eyebrow } from "@/components/ui";
 import type { KeyInfo } from "@/lib/groq-keys";
 import { GroqKeyForm } from "./GroqKeyForm";
 import { ask } from "@/components/dialogs";
@@ -91,7 +91,7 @@ export function KeyManager({ initialAccount, initialOverrides }: { initialAccoun
 
       {overrides.length > 0 && (
         <div className="mt-6">
-          <p className={eyebrowClass}>Session-specific keys</p>
+          <Eyebrow>Session-specific keys</Eyebrow>
           <p className="mt-1 text-xs text-muted">These sessions use their own key instead of your account key.</p>
           <ul className="mt-3 divide-y divide-line rounded-lg border border-line">
             {overrides.map((o) => (

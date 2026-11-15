@@ -2,6 +2,8 @@
 export const SITE = {
   name: "Confu",
   contactEmail: "confuedu.ai@gmail.com",
+  // The source code. Confu is open source.
+  repo: "https://github.com/narensen/Confu",
   policyDate: "November 1, 2026",
   // Where links in emails and calendar feeds point.
   url: (process.env.NEXT_PUBLIC_SITE_URL ?? "https://confu.lol").replace(/\/$/, ""),

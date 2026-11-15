@@ -3,18 +3,18 @@
 import Link from "next/link";
 import { useActionState, useEffect, useState, useSyncExternalStore } from "react";
 import { login, requestPasswordReset, resendConfirmation, signup, updatePassword, type AuthState } from "@/app/(auth)/actions";
-import { buttonClass, inputClass, labelClass } from "@/components/ui";
+import { buttonClass, inputClass, labelClass, Input } from "@/components/ui";
 import { safeNext } from "@/lib/safe-next";
 import { HEARD_FROM, OCCUPATIONS, PURPOSES } from "@/lib/signup-survey";
 import { useCaptcha } from "./Captcha";
 import { GoogleButton, OrDivider } from "./GoogleButton";
 
-// Where to go, and any error or invite flag, from the address bar.
+// Where to go, and any error, from the address bar.
 // useSearchParams() would hide this form behind Suspense. Chrome's password
 // manager only attaches to a password field that was in the first HTML, so
 // the server snapshot stays empty and the real query is read after hydration.
-type AuthQuery = { next: string; error: string | null; invited: boolean };
-const SERVER_QUERY: AuthQuery = { next: "/dashboard", error: null, invited: false };
+type AuthQuery = { next: string; error: string | null };
+const SERVER_QUERY: AuthQuery = { next: "/dashboard", error: null };
 let cachedSearch = "";
 let cachedQuery: AuthQuery = SERVER_QUERY;
 
@@ -30,8 +30,7 @@ function readQuery(): AuthQuery {
   const params = new URLSearchParams(search);
   const next = safeNext(params.get("next"));
   const error = params.get("error");
-  const invited = Boolean(params.get("ref"));
-  cachedQuery = next === SERVER_QUERY.next && error == null && !invited ? SERVER_QUERY : { next, error, invited };
+  cachedQuery = next === SERVER_QUERY.next && error == null ? SERVER_QUERY : { next, error };
   return cachedQuery;
 }
 
@@ -52,7 +51,7 @@ function NextStep({ state, email }: { state: AuthState; email: string }) {
       <form action={resend} className="mt-3 space-y-2">
         <input type="hidden" name="email" value={state.email ?? email} />
         {captcha.field}
-        <button disabled={sending || !captcha.ready} className="w-full rounded-lg border border-ink px-3 py-2 text-sm font-medium transition hover:bg-ink hover:text-white disabled:opacity-50">
+        <button disabled={sending || !captcha.ready} className="w-full rounded-lg border border-ink px-3 py-2 text-sm font-medium transition hover:bg-ink hover:text-on-ink disabled:opacity-50">
           {sending ? "Sending…" : "Resend the confirmation email"}
         </button>
         <Status state={resendState} />
@@ -66,7 +65,7 @@ function NextStep({ state, email }: { state: AuthState; email: string }) {
   } as const;
   const l = links[state.action];
   return (
-    <Link href={l.href} className="mt-3 block w-full rounded-lg border border-ink px-3 py-2 text-center text-sm font-medium transition hover:bg-ink hover:text-white">
+    <Link href={l.href} className="mt-3 block w-full rounded-lg border border-ink px-3 py-2 text-center text-sm font-medium transition hover:bg-ink hover:text-on-ink">
       {l.label}
     </Link>
   );
@@ -93,7 +92,7 @@ function Field({ label, ...props }: { label: string } & React.InputHTMLAttribute
   return (
     <label className="block">
       <span className={labelClass}>{label}</span>
-      <input className={inputClass} {...props} />
+      <Input {...props} />
     </label>
   );
 }
@@ -166,11 +165,6 @@ export function SignupForm() {
   const mismatch = confirm.length > 0 && confirm !== password;
   return (
     <>
-      {query.invited && (
-        <p className="mb-4 rounded-lg border border-ink bg-yellow-100 px-3 py-2.5 text-sm leading-relaxed">
-          <span className="font-medium">You were invited.</span> Your first week of Pro is on your friend: it starts when you confirm your email.
-        </p>
-      )}
       <GoogleButton label="Sign up with Google" next={query.next} />
       <OrDivider />
       {/* Keyed by the returned answers so they're refilled after an error. */}
@@ -319,7 +313,7 @@ export function ResetPasswordForm() {
 function CheckInbox({ email }: { email?: string }) {
   return (
     <div role="status" className="animate-pop space-y-4">
-      <div className="flex size-12 items-center justify-center rounded-full border border-ink bg-yellow-200">
+      <div className="flex size-12 items-center justify-center rounded-full border border-ink bg-brand-soft">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden>
           <rect x="3" y="5" width="18" height="14" rx="2" />
           <path d="m3 7 9 6 9-6" />

@@ -187,7 +187,7 @@ export function RemindersSection() {
                         const next = on ? (prefs.study_days ?? []).filter((x) => x !== i) : [...(prefs.study_days ?? []), i].sort();
                         if (next.length) save({ study_days: next });
                       }}
-                      className={`size-8 rounded-full border text-xs font-medium transition ${on ? "border-ink bg-ink text-white" : "border-ink/30 text-muted hover:border-ink"}`}
+                      className={`size-8 rounded-full border text-xs font-medium transition ${on ? "border-ink bg-ink text-on-ink" : "border-ink/30 text-muted hover:border-ink"}`}
                     >
                       {d}
                     </button>
@@ -211,7 +211,7 @@ export function RemindersSection() {
                 href={`https://calendar.google.com/calendar/r?cid=${encodeURIComponent(webcal!)}`}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center rounded-lg border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white transition hover:-translate-y-px hover:shadow-[2px_2px_0_0_#facc15]"
+                className="inline-flex items-center rounded-lg border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-on-ink transition hover:-translate-y-px hover:shadow-[2px_2px_0_0_var(--brand)]"
               >
                 Add to Google Calendar
               </a>
@@ -259,7 +259,7 @@ function Toggle({ on, onChange, disabled, label }: { on: boolean; onChange: (v: 
       onClick={() => onChange(!on)}
       className={`relative h-6 w-11 shrink-0 rounded-full border border-ink transition-colors disabled:opacity-40 ${on ? "bg-ink" : "bg-panel"}`}
     >
-      <span className={`absolute top-0.5 left-0.5 size-[18px] rounded-full transition-transform duration-200 ${on ? "translate-x-5 bg-yellow-400" : "bg-ink/70"}`} />
+      <span className={`absolute top-0.5 left-0.5 size-[18px] rounded-full transition-transform duration-200 ${on ? "translate-x-5 bg-brand" : "bg-ink/70"}`} />
     </button>
   );
 }

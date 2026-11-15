@@ -61,9 +61,9 @@ function VoiceLive({ slug }: { slug: string }) {
       <Heading live={people.length} />
 
       {mine && v.resumable && !inVoice && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink bg-yellow-100 px-5 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-ink bg-brand-soft px-5 py-3">
           <p className="text-sm">You were in voice before the page reloaded.</p>
-          <button type="button" onClick={() => void joinVoice(slug)} disabled={v.joining} className="rounded-lg border border-ink bg-ink px-3 py-1.5 text-sm font-medium text-white transition hover:-translate-y-px disabled:opacity-50">
+          <button type="button" onClick={() => void joinVoice(slug)} disabled={v.joining} className="rounded-lg border border-ink bg-ink px-3 py-1.5 text-sm font-medium text-on-ink transition hover:-translate-y-px disabled:opacity-50">
             {v.joining ? "Rejoining…" : "Rejoin voice"}
           </button>
         </div>
@@ -123,7 +123,7 @@ function VoiceLive({ slug }: { slug: string }) {
             type="button"
             onClick={() => void leaveVoice()}
             title="Leave voice"
-            className="flex h-10 items-center gap-2 rounded-full bg-danger px-4 text-sm font-medium text-white transition hover:opacity-90 active:scale-95"
+            className="flex h-10 items-center gap-2 rounded-full bg-danger px-4 text-sm font-medium text-on-ink transition hover:opacity-90 active:scale-95"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
               <path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85a1 1 0 0 1-1.41-.02L.29 13.08a1 1 0 0 1 0-1.41C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67a1 1 0 0 1 0 1.41l-2.48 2.48a1 1 0 0 1-1.41.02 11.3 11.3 0 0 0-2.66-1.85 1 1 0 0 1-.56-.9v-3.1A15 15 0 0 0 12 9Z" />
@@ -137,7 +137,7 @@ function VoiceLive({ slug }: { slug: string }) {
       {mine && v.needsTap && inVoice && (
         <div className="flex items-center justify-between gap-3 border-t border-line px-5 py-3">
           <p className="text-sm text-muted">Your browser paused the sound.</p>
-          <button type="button" onClick={hearVoice} className="rounded-lg border border-ink px-3 py-1.5 text-sm font-medium transition hover:bg-ink hover:text-white">
+          <button type="button" onClick={hearVoice} className="rounded-lg border border-ink px-3 py-1.5 text-sm font-medium transition hover:bg-ink hover:text-on-ink">
             Tap to hear
           </button>
         </div>
@@ -160,7 +160,7 @@ function Heading({ live }: { live: number }) {
         <p className="flex items-center gap-2 font-medium">
           Voice
           {live > 0 && (
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-ok/10 px-2 py-0.5 font-mono text-[10px] font-medium text-ok">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-ok/10 px-2 py-0.5 font-mono text-xs font-medium text-ok">
               <span className="size-1.5 animate-pulse rounded-full bg-ok" aria-hidden />
               {live} in voice
             </span>
@@ -178,7 +178,7 @@ function JoinButton({ slug, joining, className = "" }: { slug: string; joining: 
       type="button"
       disabled={joining}
       onClick={() => void joinVoice(slug)}
-      className={`inline-flex items-center gap-2 rounded-full border border-ink bg-ink px-5 py-2.5 text-sm font-medium text-white shadow-hard-sm transition hover:-translate-y-px hover:shadow-hard active:translate-y-0 disabled:opacity-50 ${className}`}
+      className={`inline-flex items-center gap-2 rounded-full border border-ink bg-ink px-5 py-2.5 text-sm font-medium text-on-ink shadow-hard-sm transition hover:-translate-y-px hover:shadow-hard active:translate-y-0 disabled:opacity-50 ${className}`}
     >
       <Mic off={false} />
       {joining ? "Joining…" : "Join voice"}
@@ -215,7 +215,7 @@ function Tile({ person: p }: { person: VoicePerson }) {
     <li className={`flex flex-col items-center rounded-xl border px-3 py-4 text-center transition ${p.speaking ? "border-ok bg-ok/5" : "border-line"}`}>
       <span className="relative">
         <span
-          className={`flex size-14 items-center justify-center rounded-full border-2 font-serif text-xl transition-shadow duration-150 ${p.speaking ? "border-ok shadow-[0_0_0_4px_color-mix(in_srgb,var(--ok)_25%,transparent)]" : "border-ink"} ${p.me ? "bg-yellow-300" : "bg-paper"} ${p.connecting ? "opacity-50" : ""}`}
+          className={`flex size-14 items-center justify-center rounded-full border-2 font-serif text-xl transition-shadow duration-150 ${p.speaking ? "border-ok shadow-[0_0_0_4px_color-mix(in_srgb,var(--ok)_25%,transparent)]" : "border-ink"} ${p.me ? "bg-brand" : "bg-paper"} ${p.connecting ? "opacity-50" : ""}`}
         >
           {p.name.slice(0, 1).toUpperCase()}
         </span>
@@ -229,7 +229,7 @@ function Tile({ person: p }: { person: VoicePerson }) {
         {p.name}
         {p.me && <span className="font-normal text-muted"> (you)</span>}
       </span>
-      <span className={`mt-0.5 text-[11px] ${p.speaking ? "font-medium text-ok" : "text-muted"}`}>{status}</span>
+      <span className={`mt-0.5 text-xs ${p.speaking ? "font-medium text-ok" : "text-muted"}`}>{status}</span>
     </li>
   );
 }

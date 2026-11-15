@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
+import { buttonClass, ghostButtonClass, inputClass, Eyebrow } from "@/components/ui";
 import { openRecommendPapers } from "./RecommendDialog";
 import { JSON_HEADERS, notifyAiUsed, readAiError } from "@/lib/ai-errors";
 import { passDef, passNotes, PASSES, type PaperReview, type PassNumber } from "@/lib/paper";
@@ -61,7 +61,7 @@ export function PassesPanel(props: Props) {
             ← All papers
           </button>
           <span className="min-w-0 truncate text-xs text-muted">
-            <span className="mr-1.5 rounded border border-ink/30 px-1 font-mono text-[10px]">{active.label}</span>
+            <span className="mr-1.5 rounded border border-ink/30 px-1 font-mono text-xs">{active.label}</span>
             {active.title}
           </span>
         </div>
@@ -77,8 +77,8 @@ export function PassesPanel(props: Props) {
       {/* Reading list */}
       <section className="border-b border-ink px-6 py-5">
         <div className="flex items-baseline justify-between">
-          <p className={eyebrowClass}>Reading list</p>
-          <p className="font-mono text-[11px] text-muted">target pass</p>
+          <Eyebrow>Reading list</Eyebrow>
+          <p className="font-mono text-xs text-muted">target pass</p>
         </div>
         {docs.length === 0 ? (
           <p className="mt-3 text-sm text-muted">Add papers with “+ Add paper” above the viewer, or from Files.</p>
@@ -101,7 +101,7 @@ export function PassesPanel(props: Props) {
                       title="Open it beside its passes"
                       className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
                     >
-                      <span className={`shrink-0 rounded px-1 font-mono text-[10px] ${selected ? "bg-ink text-white" : "border border-ink/30 text-muted"}`}>{d.label}</span>
+                      <span className={`shrink-0 rounded px-1 font-mono text-xs ${selected ? "bg-ink text-on-ink" : "border border-ink/30 text-muted"}`}>{d.label}</span>
                       <span className="min-w-0">
                         <span className={`block truncate text-sm ${selected ? "font-medium" : ""}`}>{d.title}</span>
                         <PassPips done={r?.passes_done ?? 0} target={r?.target_pass ?? 1} />
@@ -159,7 +159,7 @@ function ResearchGoal(props: Props) {
   if (suggested) {
     return (
       <section className="animate-enter border-b border-ink px-6 pt-5 pb-4">
-        <p className={eyebrowClass}>{inStudy ? "Papers in this study" : "Paper session"} · three-pass method</p>
+        <Eyebrow>{inStudy ? "Papers in this study" : "Paper session"} · three-pass method</Eyebrow>
         {(researchGoal || studyGoal) && <p className="mt-1 truncate text-sm text-muted" title={researchGoal || studyGoal}>{researchGoal || studyGoal}</p>}
         <div className="mt-3 flex flex-wrap gap-1.5">
           {onAddPapers && (
@@ -171,7 +171,7 @@ function ResearchGoal(props: Props) {
             Suggest papers
           </button>
           {onOpenMap && docs.length > 0 && (
-            <button type="button" onClick={onOpenMap} className="rounded-md border border-ink bg-ink px-2.5 py-1 text-xs font-medium text-white transition hover:-translate-y-px">
+            <button type="button" onClick={onOpenMap} className="rounded-md border border-ink bg-ink px-2.5 py-1 text-xs font-medium text-on-ink transition hover:-translate-y-px">
               Literature map
             </button>
           )}
@@ -197,7 +197,7 @@ function ResearchGoal(props: Props) {
 
   return (
     <section className="animate-enter border-b border-ink px-6 pt-6 pb-5">
-      <p className={eyebrowClass}>{inStudy ? "Papers in this study" : "Paper session"} · three-pass method</p>
+      <Eyebrow>{inStudy ? "Papers in this study" : "Paper session"} · three-pass method</Eyebrow>
       <h2 className="mt-1 font-serif text-2xl leading-tight">{inStudy ? "Read papers like a researcher" : "What are you researching?"}</h2>
       <p className="mt-1.5 text-sm leading-relaxed text-muted">
         Not every paper deserves a deep read. Your goal decides which ones get one pass, two, or a full re-implementation.
@@ -218,7 +218,7 @@ function ResearchGoal(props: Props) {
           disabled={pending || busy || Boolean(fetching) || goal.trim().length < 5 || !docs.length}
           className={`${buttonClass} py-1.5 text-xs`}
         >
-          {(pending || fetching) && <span aria-hidden className="size-3 animate-spin rounded-full border-2 border-white/30 border-t-white" />}
+          {(pending || fetching) && <span aria-hidden className="size-3 animate-spin rounded-full border-2 border-on-ink/30 border-t-on-ink" />}
           {pending ? "Reading abstracts…" : fetching ? "Waiting for papers…" : "Suggest a pass for each paper"}
         </button>
         <span className="text-xs text-muted">{fetching ? "It runs once every paper is in." : "AI suggestion; change any target yourself."}</span>
@@ -257,11 +257,11 @@ function ResearchGoal(props: Props) {
             <button
               type="button"
               onClick={onOpenMap}
-              className="col-span-2 flex items-center justify-between gap-3 rounded-lg border border-ink bg-ink px-4 py-2.5 text-left text-white transition hover:-translate-y-px hover:shadow-[3px_3px_0_0_#facc15]"
+              className="col-span-2 flex items-center justify-between gap-3 rounded-lg border border-ink bg-ink px-4 py-2.5 text-left text-on-ink transition hover:-translate-y-px hover:shadow-[3px_3px_0_0_var(--brand)]"
             >
               <span>
                 <span className="block text-sm font-medium">Literature map</span>
-                <span className="block text-xs text-white/60">How these papers connect: shared foundations and newer work</span>
+                <span className="block text-xs text-on-ink/60">How these papers connect: shared foundations and newer work</span>
               </span>
               <span aria-hidden>→</span>
             </button>
@@ -330,7 +330,7 @@ function PaperWorkspace({
 
   return (
     <section className="animate-enter px-6 py-5">
-      <p className={eyebrowClass}>Reading {doc.label}</p>
+      <Eyebrow>Reading {doc.label}</Eyebrow>
       <h3 className="mt-1 line-clamp-2 font-serif text-xl leading-snug">{doc.title}</h3>
 
       {/* Pass stepper */}
@@ -346,10 +346,10 @@ function PaperWorkspace({
               aria-selected={selected}
               onClick={() => setPass(p.n)}
               className={`rounded-lg border px-2.5 py-2 text-left transition-all duration-200 ease-fluid ${
-                selected ? "border-ink bg-ink text-white" : optional ? "border-dashed border-ink/30 text-muted hover:border-ink/60" : "border-ink/40 hover:border-ink"
+                selected ? "border-ink bg-ink text-on-ink" : optional ? "border-dashed border-ink/30 text-muted hover:border-ink/60" : "border-ink/40 hover:border-ink"
               }`}
             >
-              <span className="flex items-center justify-between font-mono text-[10px] uppercase tracking-wider">
+              <span className="flex items-center justify-between font-mono text-xs uppercase tracking-wider">
                 Pass {p.n}
                 {isDone && <span aria-label="done">✓</span>}
               </span>
@@ -403,7 +403,7 @@ function PaperWorkspace({
               <button
                 onClick={draftPass1}
                 disabled={drafting || busy}
-                className="shrink-0 rounded-md border border-ink bg-panel px-2.5 py-1 text-xs font-medium transition hover:bg-ink hover:text-white disabled:opacity-40"
+                className="shrink-0 rounded-md border border-ink bg-panel px-2.5 py-1 text-xs font-medium transition hover:bg-ink hover:text-on-ink disabled:opacity-40"
               >
                 {drafting ? "Drafting…" : "Draft with AI"}
               </button>
@@ -432,7 +432,7 @@ function PaperWorkspace({
               disabled={busy}
               onClick={() => onSend({ action: a.action })}
               className={`rounded-md border border-ink px-3 py-1.5 text-xs font-medium transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-hard-sm active:translate-y-0 disabled:pointer-events-none disabled:opacity-40 ${
-                a.primary ? "bg-ink text-white" : "bg-panel"
+                a.primary ? "bg-ink text-on-ink" : "bg-panel"
               }`}
             >
               {a.label}
@@ -480,7 +480,7 @@ function TargetPicker({ value, onChange }: { value: PassNumber; onChange: (v: Pa
           role="radio"
           aria-checked={value === n}
           onClick={() => onChange(n)}
-          className={`relative z-10 w-6 py-0.5 font-mono text-[11px] transition-colors duration-300 ${value === n ? "text-white" : "text-muted hover:text-ink"}`}
+          className={`relative z-10 w-6 py-0.5 font-mono text-xs transition-colors duration-300 ${value === n ? "text-on-ink" : "text-muted hover:text-ink"}`}
         >
           {n}
         </button>
@@ -498,7 +498,7 @@ function PassPips({ done, target }: { done: number; target: number }) {
           className={`h-1 w-5 rounded-full transition-colors duration-300 ${n <= done ? "bg-ink" : n <= target ? "bg-ink/20" : "border border-dashed border-ink/20"}`}
         />
       ))}
-      <span className="ml-1 font-mono text-[10px] text-muted">{done >= target ? "done" : `${done}/${target}`}</span>
+      <span className="ml-1 font-mono text-xs text-muted">{done >= target ? "done" : `${done}/${target}`}</span>
     </span>
   );
 }

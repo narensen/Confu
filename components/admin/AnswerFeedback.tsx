@@ -36,18 +36,18 @@ export function AnswerFeedback({ notes, missing }: { notes: AnswerNote[]; missin
       {notes.map((n) => (
         <li key={n.id} className="py-3">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-ink/30 px-2 py-0.5 font-mono text-[11px] font-medium">{n.rating === "down" ? "Not quite" : n.rating === "up" ? "Helpful" : "Note"}</span>
-            <span className="ml-auto text-[11px] text-muted">{ago(n.created_at)}</span>
+            <span className="rounded-full border border-ink/30 px-2 py-0.5 font-mono text-xs font-medium">{n.rating === "down" ? "Not quite" : n.rating === "up" ? "Helpful" : "Note"}</span>
+            <span className="ml-auto text-xs text-muted">{ago(n.created_at)}</span>
           </div>
           {n.correction && (
             <p className="mt-2 rounded-lg bg-paper px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap">
-              <span className="mb-1 block font-mono text-[10px] tracking-wider text-muted uppercase">Correction</span>
+              <span className="mb-1 block font-mono text-xs tracking-wider text-muted uppercase">Correction</span>
               {n.correction}
             </p>
           )}
           {n.comment && <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap">{n.comment}</p>}
           <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-muted">{n.answer}</p>
-          <p className="mt-1.5 truncate text-[11px] text-muted">
+          <p className="mt-1.5 truncate text-xs text-muted">
             {n.email ?? "deleted account"}
             {n.path ? ` · ${n.path}` : ""}
           </p>

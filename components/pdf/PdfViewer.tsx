@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
@@ -11,6 +11,7 @@ import { FocusSound } from "./FocusSound";
 import { FocusTimer } from "./FocusTimer";
 import { ReadAloudBar, useReadAloud } from "./ReadAloud";
 import { ReadingMap } from "./ReadingMap";
+import { OnceTip } from "@/components/onboarding/Tips";
 import { placePopover } from "@/lib/popover-place";
 import { createClient } from "@/lib/supabase/client";
 import { track } from "@/lib/telemetry";
@@ -29,6 +30,32 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.m
 const FIRST_CHUNK = 512 * 1024;
 const PDF_OPTIONS = { rangeChunkSize: 512 * 1024 };
 type PdfSource = string | { range: InstanceType<typeof pdfjs.PDFDataRangeTransport> };
+
+// Large text, remembered on this device. The server render stays off so the
+// page doesn't jump, then this tab's saved choice applies.
+const LARGE_KEY = "confu:read-large";
+const largeListeners = new Set<() => void>();
+function readLarge() {
+  try {
+    return localStorage.getItem(LARGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+function subscribeLarge(cb: () => void) {
+  largeListeners.add(cb);
+  window.addEventListener("storage", cb);
+  return () => {
+    largeListeners.delete(cb);
+    window.removeEventListener("storage", cb);
+  };
+}
+function writeLarge(on: boolean) {
+  try {
+    localStorage.setItem(LARGE_KEY, on ? "1" : "0");
+  } catch {}
+  largeListeners.forEach((cb) => cb());
+}
 
 async function rangedSource(url: string): Promise<PdfSource> {
   try {
@@ -188,6 +215,14 @@ export default function PdfViewer(props: Props) {
   const pendingJump = useRef<number | null>(initialPage);
   const dpr = typeof window === "undefined" ? 2 : Math.min(3, Math.max(2, window.devicePixelRatio || 1));
   const pdfRef = useRef<PDFDocument | null>(null);
+  // Large text: the current page as type, for a phone or a tired pair of eyes.
+  const largeText = useSyncExternalStore(subscribeLarge, readLarge, () => false);
+  const pageRef = useRef(initialPage);
+  const [pageCopy, setPageCopy] = useState<{ n: number; text: string } | null>(null);
+  function toggleLarge() {
+    writeLarge(!largeText);
+    track("reader.large_text", { on: !largeText });
+  }
 
   // Reading theme, remembered on this device. Until one is chosen the page
   // follows the app: night in dark mode, so a dark screen has no white slab.
@@ -261,12 +296,46 @@ export default function PdfViewer(props: Props) {
     root.scrollTo({ top: el.offsetTop - 12, behavior: smooth ? "smooth" : "auto" });
   }, []);
 
+  // Large text has no page boxes to scroll, so the page number is state.
+  const goPage = useCallback(
+    (n: number, smooth = false) => {
+      const page = numPages ? Math.min(Math.max(1, n), numPages) : Math.max(1, n);
+      if (!largeText) {
+        scrollToPage(page, smooth);
+        return;
+      }
+      setCurrent(page);
+      setPageInput(String(page));
+      if (page !== pageRef.current) {
+        pageRef.current = page;
+        onPageChange(page);
+      }
+      scrollRef.current?.scrollTo({ top: 0, behavior: smooth ? "smooth" : "auto" });
+    },
+    [largeText, numPages, onPageChange, scrollToPage],
+  );
+
+  // A jump from outside (a citation, a topic) while large text is on.
+  const [appliedJump, setAppliedJump] = useState<number | null>(null);
+  if (largeText && goTo && goTo.n !== appliedJump) {
+    const page = numPages ? Math.min(Math.max(1, goTo.page), numPages) : Math.max(1, goTo.page);
+    setAppliedJump(goTo.n);
+    setCurrent(page);
+    setPageInput(String(page));
+  }
+
   // External jump requests (plan topics, citations, highlights).
   useEffect(() => {
-    if (!goTo) return;
+    if (!goTo || largeText) return;
     if (numPages) scrollToPage(Math.min(Math.max(1, goTo.page), numPages), true);
     else pendingJump.current = goTo.page;
-  }, [goTo, numPages, scrollToPage]);
+  }, [goTo, largeText, numPages, scrollToPage]);
+
+  useEffect(() => {
+    if (!largeText || current === pageRef.current) return;
+    pageRef.current = current;
+    onPageChange(current);
+  }, [largeText, current, onPageChange]);
 
   // Time per page for "Where it got hard".
   useReadingTime(documentId, current);
@@ -278,7 +347,29 @@ export default function PdfViewer(props: Props) {
     const content = await (await pdf.getPage(n)).getTextContent();
     return content.items.map((it) => ("str" in it ? it.str + (it.hasEOL ? " " : "") : "")).join("");
   }, []);
-  const readAloud = useReadAloud({ pageText, numPages, onPage: (n) => scrollToPage(n, true) });
+  const readAloud = useReadAloud({ pageText, numPages, onPage: (n) => goPage(n, true) });
+
+  useEffect(() => {
+    if (!largeText || !numPages) return;
+    let cancel = false;
+    void (async () => {
+      const pdf = pdfRef.current;
+      if (!pdf) return;
+      const content = await (await pdf.getPage(current)).getTextContent();
+      const text = content.items
+        .map((it) => ("str" in it ? it.str + (it.hasEOL ? "\n" : "") : ""))
+        .join("")
+        .replace(/[ \t]+\n/g, "\n")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+      if (!cancel) setPageCopy({ n: current, text });
+    })().catch(() => {
+      if (!cancel) setPageCopy({ n: current, text: "" });
+    });
+    return () => {
+      cancel = true;
+    };
+  }, [largeText, current, numPages]);
 
   // Zooming keeps the spot being read in place on screen: the point under
   // the pointer for Ctrl+scroll and pinch, the middle of the view for the
@@ -313,7 +404,6 @@ export default function PdfViewer(props: Props) {
   );
 
   // Keep the reading position when zooming or resizing.
-  const pageRef = useRef(initialPage);
   useLayoutEffect(() => {
     const anchor = zoomAnchor.current;
     zoomAnchor.current = null;
@@ -322,10 +412,10 @@ export default function PdfViewer(props: Props) {
     if (anchor && root && el) {
       root.scrollTop = el.offsetTop + anchor.fy * el.offsetHeight - anchor.cy;
       root.scrollLeft = el.offsetLeft + anchor.fx * el.offsetWidth - anchor.cx;
-    } else if (numPages) scrollToPage(pageRef.current);
+    } else if (numPages && !largeText) scrollToPage(pageRef.current);
     const id = requestAnimationFrame(() => requestAnimationFrame(() => (resizing.current = false)));
     return () => cancelAnimationFrame(id);
-  }, [zoom, fitWidth, numPages, scrollToPage]);
+  }, [zoom, fitWidth, largeText, numPages, scrollToPage]);
 
   // Ctrl+scroll and trackpad pinch zoom the PDF, a step at a time like − and
   // +, instead of the whole page. A mouse wheel notch is one step; a pinch's
@@ -377,6 +467,7 @@ export default function PdfViewer(props: Props) {
 
   const onScroll = useCallback(() => {
     setPopover(null);
+    if (largeText) return;
     const root = scrollRef.current;
     // While the document reloads its pages are unmounted and the scroll resets
     // to the top; don't mistake that for the student scrolling to page 1.
@@ -394,7 +485,7 @@ export default function PdfViewer(props: Props) {
       setPageInput(String(inView));
       onPageChange(inView);
     }
-  }, [numPages, onPageChange]);
+  }, [largeText, numPages, onPageChange]);
 
   // Text selection → action popover.
   const onMouseUp = useCallback(() => {
@@ -504,7 +595,7 @@ export default function PdfViewer(props: Props) {
       const from = hits.findIndex((h) => h.page >= pageRef.current);
       const index = from === -1 ? 0 : from;
       setSearch({ q, hits, loading: false, index });
-      if (hits.length) scrollToPage(hits[index].page, true);
+      if (hits.length) goPage(hits[index].page, true);
       track("reader.search", { results: hits.length });
     }, 260);
   }
@@ -513,7 +604,7 @@ export default function PdfViewer(props: Props) {
     if (!search?.hits.length) return;
     const index = to ?? (search.index + dir + search.hits.length) % search.hits.length;
     setSearch({ ...search, index });
-    scrollToPage(search.hits[index].page, true);
+    goPage(search.hits[index].page, true);
   }
 
   // Wrap matches in the text layer so they show on the page. Text from the PDF
@@ -592,7 +683,7 @@ export default function PdfViewer(props: Props) {
             onSubmit={(e) => {
               e.preventDefault();
               const n = Math.min(Math.max(1, Number(pageInput) || 1), numPages || 1);
-              scrollToPage(n);
+              goPage(n);
             }}
           >
             <input
@@ -617,6 +708,9 @@ export default function PdfViewer(props: Props) {
         </div>
         <div className="mx-1 h-5 w-px shrink-0 bg-ink/20" />
         <div role="group" aria-label="View" className="flex items-center gap-0.5">
+          <ToolButton label={largeText ? "Show the page" : "Large text of this page"} aria-pressed={largeText} onClick={toggleLarge}>
+            <span className="font-serif text-sm leading-none">Aa</span>
+          </ToolButton>
           <span className="hidden items-center gap-0.5 @md:flex">
             <ToolButton label="Zoom out" disabled={zoomIndex <= 0} onClick={zoomOut}>
               −
@@ -652,7 +746,7 @@ export default function PdfViewer(props: Props) {
             aria-pressed={regionMode}
             title="Drag over a figure, table or equation to have it read by a vision model (Esc to cancel)"
             className={`flex h-7 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs font-medium transition duration-200 ease-fluid ${
-              regionMode ? "border-ink bg-ink text-white" : "border-ink hover:-translate-y-px hover:shadow-hard-sm"
+              regionMode ? "border-ink bg-ink text-on-ink" : "border-ink hover:-translate-y-px hover:shadow-hard-sm"
             }`}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -747,6 +841,12 @@ export default function PdfViewer(props: Props) {
         </div>
       </div>
 
+      {numPages > 0 && (
+        <OnceTip id="pdf" className="border-b border-ink/20">
+          Select any sentence to ask about it. On a phone the menu sits at the bottom, and Aa shows this page in large text.
+        </OnceTip>
+      )}
+
       {/* Pages, with the contents drawer and search bar over them */}
       <div className="relative flex min-h-0 flex-1">
         {panel === "map" && (
@@ -756,7 +856,7 @@ export default function PdfViewer(props: Props) {
             current={current}
             highlights={highlights}
             onPick={(page) => {
-              scrollToPage(page, true);
+              goPage(page, true);
               if ((scrollRef.current?.clientWidth ?? 0) < 760) setPanel(null);
             }}
             onClose={() => setPanel(null)}
@@ -767,13 +867,42 @@ export default function PdfViewer(props: Props) {
             outline={outline}
             currentIndex={currentSection}
             onPick={(page) => {
-              scrollToPage(page, true);
+              goPage(page, true);
               if ((scrollRef.current?.clientWidth ?? 0) < 760) setPanel(null);
             }}
             onClose={() => setPanel(null)}
           />
         )}
       <div ref={scrollRef} onScroll={onScroll} onMouseUp={onMouseUp} className="pdf-scroll relative min-h-0 flex-1 overflow-auto">
+        {largeText && (
+          <article className="mx-auto w-full max-w-2xl px-5 py-8">
+            <div className="flex items-center justify-between gap-3">
+              <p className="font-mono text-xs text-muted">
+                Page {current}
+                {numPages ? ` of ${numPages}` : ""}
+              </p>
+              <div className="flex gap-2">
+                <button type="button" disabled={current <= 1} onClick={() => goPage(current - 1)} className="rounded-lg border border-ink px-3 py-1.5 text-sm font-medium disabled:opacity-40">
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  disabled={!numPages || current >= numPages}
+                  onClick={() => goPage(current + 1)}
+                  className="rounded-lg border border-ink bg-ink px-3 py-1.5 text-sm font-medium text-on-ink disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+            <div className="mt-6 font-serif text-lg leading-relaxed whitespace-pre-wrap">
+              {pageCopy?.n === current
+                ? pageCopy.text || "This page has no selectable text. Turn large text off to see the page, or capture a region of it."
+                : "Reading this page…"}
+            </div>
+          </article>
+        )}
+        <div className={largeText ? "hidden" : "contents"}>
         {loadError ? (
           <div className="flex flex-col items-center gap-3 p-8 text-center text-sm">
             <p className="text-danger">{loadError}</p>
@@ -818,7 +947,7 @@ export default function PdfViewer(props: Props) {
               requestAnimationFrame(() => scrollToPage(target));
               props.onLoaded?.();
             }}
-            onItemClick={({ pageNumber }) => scrollToPage(pageNumber, true)}
+            onItemClick={({ pageNumber }) => goPage(pageNumber, true)}
             externalLinkTarget="_blank"
             externalLinkRel="noopener noreferrer"
             className="flex w-max min-w-full flex-col items-center gap-4 px-6 py-6"
@@ -932,6 +1061,7 @@ export default function PdfViewer(props: Props) {
             })}
           </Document>
         )}
+        </div>
       </div>
         <ReadAloudBar ctl={readAloud} />
         {panel === "search" && (
@@ -1068,7 +1198,7 @@ function NoteMarker({
         onClick={() => setOpen((v) => !v)}
         aria-label="Note"
         title={h.note ?? ""}
-        className="flex size-6 items-center justify-center rounded-md border border-ink bg-yellow-300 shadow-[2px_2px_0_0_var(--shadow)] transition hover:-translate-y-px"
+        className="flex size-6 items-center justify-center rounded-md border border-ink bg-brand shadow-[2px_2px_0_0_var(--shadow)] transition hover:-translate-y-px"
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden>
           <path d="M4 4h16v12H8l-4 4z" />
@@ -1096,7 +1226,7 @@ function NoteMarker({
                   setEditing(false);
                   setOpen(false);
                 }}
-                className="rounded-md bg-ink px-2.5 py-1 font-medium text-white"
+                className="rounded-md bg-ink px-2.5 py-1 font-medium text-on-ink"
               >
                 Save
               </button>
@@ -1176,7 +1306,7 @@ function SearchPanel({
           aria-label="Search this PDF"
           className="h-8 min-w-0 flex-1 bg-transparent px-1 text-sm outline-none"
         />
-        <span aria-live="polite" className="shrink-0 px-1 font-mono text-[11px] whitespace-nowrap text-muted tabular-nums">
+        <span aria-live="polite" className="shrink-0 px-1 font-mono text-xs whitespace-nowrap text-muted tabular-nums">
           {status}
         </span>
         <ToolButton label="Previous page with a match (Shift+Enter)" disabled={hits.length < 2} onClick={() => onStep(-1)}>
@@ -1195,7 +1325,7 @@ function SearchPanel({
       </form>
       {hits.length > 0 && (
         <>
-          <p className="border-t border-line px-3 pt-2 pb-1 font-mono text-[10px] tracking-wider text-muted uppercase">
+          <p className="border-t border-line px-3 pt-2 pb-1 font-mono text-xs tracking-wider text-muted uppercase">
             {totalMatches} {totalMatches === 1 ? "match" : "matches"} on {hits.length} {hits.length === 1 ? "page" : "pages"}
           </p>
           <ul className="min-h-0 overflow-y-auto px-1.5 pb-1.5">
@@ -1207,15 +1337,15 @@ function SearchPanel({
                   onClick={() => onPick(i)}
                   className={`flex w-full gap-2.5 rounded-lg px-2 py-1.5 text-left text-xs transition ${i === search!.index ? "bg-paper" : "hover:bg-paper/60"}`}
                 >
-                  <span className="w-11 shrink-0 font-mono text-[11px] text-muted">p. {h.page}</span>
+                  <span className="w-11 shrink-0 font-mono text-xs text-muted">p. {h.page}</span>
                   <span className="line-clamp-2 min-w-0 flex-1 leading-snug text-ink/80">
                     {h.before && "…"}
                     {h.before}
-                    <mark className="rounded-sm bg-yellow-300 px-0.5 text-ink">{h.match}</mark>
+                    <mark className="rounded-sm bg-brand px-0.5 text-ink">{h.match}</mark>
                     {h.after}
                     {h.after && "…"}
                   </span>
-                  {h.count > 1 && <span className="shrink-0 font-mono text-[10px] text-muted">×{h.count}</span>}
+                  {h.count > 1 && <span className="shrink-0 font-mono text-xs text-muted">×{h.count}</span>}
                 </button>
               </li>
             ))}
@@ -1246,7 +1376,7 @@ function ContentsPanel({
   return (
     <aside aria-label="Contents" className="animate-slide-in absolute inset-y-0 left-0 z-20 flex w-72 max-w-[85%] flex-col border-r border-ink bg-panel shadow-[6px_0_0_0_rgba(13,13,12,0.08)]">
       <div className="flex h-11 shrink-0 items-center justify-between border-b border-line pr-1.5 pl-3">
-        <p className="font-mono text-[11px] font-medium tracking-[0.12em] text-muted uppercase">Contents</p>
+        <p className="font-mono text-xs font-medium tracking-[0.12em] text-muted uppercase">Contents</p>
         <ToolButton label="Close contents" onClick={onClose}>
           <span className="text-sm">✕</span>
         </ToolButton>
@@ -1266,14 +1396,14 @@ function ContentsPanel({
                 aria-current={i === currentIndex ? "true" : undefined}
                 onClick={() => onPick(o.page)}
                 className={`flex w-full items-baseline gap-2 py-1.5 pr-3 text-left transition hover:bg-paper ${
-                  i === currentIndex ? "bg-paper shadow-[inset_3px_0_0_0_#facc15]" : ""
+                  i === currentIndex ? "bg-paper shadow-[inset_3px_0_0_0_var(--brand)]" : ""
                 }`}
                 style={{ paddingLeft: 12 + Math.min(o.level, 5) * 14 }}
               >
                 <span className={`min-w-0 flex-1 truncate ${o.level === 0 ? "text-sm font-medium" : "text-[13px] text-ink/80"}`} title={o.title}>
                   {o.title}
                 </span>
-                <span className="shrink-0 font-mono text-[11px] text-muted tabular-nums">{o.page}</span>
+                <span className="shrink-0 font-mono text-xs text-muted tabular-nums">{o.page}</span>
               </button>
             </li>
           ))}
@@ -1297,7 +1427,7 @@ function ToolButton({
       type="button"
       aria-label={label}
       title={label}
-      className="flex h-7 min-w-7 shrink-0 items-center justify-center gap-1.5 rounded-md px-1.5 text-base text-ink transition duration-200 hover:bg-paper active:scale-90 disabled:opacity-30 aria-pressed:bg-ink aria-pressed:text-white"
+      className="flex h-7 min-w-7 shrink-0 items-center justify-center gap-1.5 rounded-md px-1.5 text-base text-ink transition duration-200 hover:bg-paper active:scale-90 disabled:opacity-30 aria-pressed:bg-ink aria-pressed:text-on-ink"
       {...rest}
     >
       {children}
@@ -1393,10 +1523,10 @@ function MoreItem({ pressed, hint, onClick, children }: { pressed?: boolean; hin
       type="button"
       role="menuitem"
       onClick={onClick}
-      className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-sm transition ${pressed ? "bg-ink text-white" : "hover:bg-paper"}`}
+      className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-sm transition ${pressed ? "bg-ink text-on-ink" : "hover:bg-paper"}`}
     >
       {children}
-      {hint && <span className="ml-auto text-[11px] text-muted">{hint}</span>}
+      {hint && <span className="ml-auto text-xs text-muted">{hint}</span>}
     </button>
   );
 }
@@ -1407,7 +1537,7 @@ function PopButton({ primary, children, ...rest }: { primary?: boolean; children
       type="button"
       onMouseDown={(e) => e.preventDefault()} // keep the text selection
       className={`flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition disabled:opacity-40 ${
-        primary ? "bg-ink text-white hover:opacity-85" : "hover:bg-paper"
+        primary ? "bg-ink text-on-ink hover:opacity-85" : "hover:bg-paper"
       }`}
       {...rest}
     >
@@ -1441,7 +1571,7 @@ function AskInput(props: {
       />
       <button
         disabled={props.disabled}
-        className="h-8 rounded-md bg-ink px-3 text-xs font-medium text-white transition hover:opacity-85 active:scale-95 disabled:opacity-40"
+        className="h-8 rounded-md bg-ink px-3 text-xs font-medium text-on-ink transition hover:opacity-85 active:scale-95 disabled:opacity-40"
       >
         {props.submitLabel ?? "Ask"}
       </button>
@@ -1465,6 +1595,16 @@ function SelectionPopover({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ left: number; top: number; maxHeight: number; maxWidth: number } | null>(null);
+  // On a phone the menu is a sheet at the bottom, so the sentence stays readable.
+  const sheet = useSyncExternalStore(
+    (cb) => {
+      const query = window.matchMedia("(max-width: 767px)");
+      query.addEventListener("change", cb);
+      return () => query.removeEventListener("change", cb);
+    },
+    () => window.matchMedia("(max-width: 767px)").matches,
+    () => false,
+  );
 
   const place = useCallback(() => {
     const el = ref.current;
@@ -1536,11 +1676,18 @@ function SelectionPopover({
     <div
       ref={ref}
       role="dialog"
-      className="animate-pop absolute z-50 overflow-y-auto overscroll-contain rounded-xl border border-ink bg-panel p-1.5 shadow-hard"
+      aria-label="Ask about this selection"
+      className={
+        sheet
+          ? "absolute inset-x-2 bottom-2 z-50 max-h-[46%] overflow-y-auto overscroll-contain rounded-2xl border border-ink bg-panel p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-hard"
+          : "animate-pop absolute z-50 overflow-y-auto overscroll-contain rounded-xl border border-ink bg-panel p-1.5 shadow-hard"
+      }
       style={
-        pos
-          ? { left: pos.left, top: pos.top, maxHeight: pos.maxHeight, maxWidth: pos.maxWidth }
-          : { left: 0, top: 0, visibility: "hidden" }
+        sheet
+          ? undefined
+          : pos
+            ? { left: pos.left, top: pos.top, maxHeight: pos.maxHeight, maxWidth: pos.maxWidth }
+            : { left: 0, top: 0, visibility: "hidden" }
       }
     >
       {children}

@@ -7,14 +7,14 @@ import { NotificationBell } from "@/components/notifications/NotificationBell";
 import { PrimaryNav, SessionNav } from "@/components/PrimaryNav";
 import { RoomStatus } from "@/components/rooms/RoomStatus";
 import { getKeyInfo } from "@/lib/groq-keys";
-import { isOwner, planOf } from "@/lib/plans";
+import { isOwner } from "@/lib/plans";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentRole, getFirstTime, getUser } from "@/lib/dal";
 
 export function Logo() {
   return (
     <span className="font-serif text-xl font-semibold tracking-tight">
-      Confu<span className="text-yellow-500">.</span>
+      Confu<span className="text-brand">.</span>
     </span>
   );
 }
@@ -27,7 +27,7 @@ async function UserMenu({ workspace }: { workspace: boolean }) {
   return (
     <div className="animate-fade flex shrink-0 items-center gap-1.5">
       {/* No button: opens by itself for new accounts, or from Settings. */}
-      <Guide userId={user.id} firstTime={firstTime} needsKey={planOf(role) !== "pro"} />
+      <Guide userId={user.id} firstTime={firstTime} needsKey={!isOwner(role) && !key} />
       {/* Go to… (Ctrl/Cmd+K): sessions, places and, in a session, its tools. */}
       <CommandPalette />
       {workspace ? <SessionNav /> : <PaletteButton />}
@@ -35,7 +35,7 @@ async function UserMenu({ workspace }: { workspace: boolean }) {
       <RoomStatus />
       <div className="flex shrink-0 items-center gap-2 border-l border-line pl-2.5">
         <NotificationBell userId={user.id} />
-        <AccountMenu name={user.name} email={user.email} plan={planOf(role)} owner={isOwner(role)} keyLast4={key?.last4 ?? null} />
+        <AccountMenu name={user.name} email={user.email} owner={isOwner(role)} keyLast4={key?.last4 ?? null} />
       </div>
     </div>
   );

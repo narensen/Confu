@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { ErrorNote, SpaceIcon } from "@/components/community/kit";
 import { toast } from "@/components/dialogs";
-import { buttonClass, eyebrowClass, inputClass, labelClass } from "@/components/ui";
+import { buttonClass, inputClass, labelClass, Input, Eyebrow } from "@/components/ui";
 import { browseSpaces, createSpace, joinSpace, leaveSpace, loadSpaces, type SpaceCard } from "@/lib/community";
 import { track } from "@/lib/telemetry";
 
@@ -74,7 +74,7 @@ export function SpacesView() {
       {/* Yours */}
       {(followed.length > 0 || privateSpaces.length > 0) && (
         <section>
-          <p className={eyebrowClass}>Your spaces</p>
+          <Eyebrow>Your spaces</Eyebrow>
           <ul className="mt-3 flex gap-3 overflow-x-auto pb-2 [scrollbar-width:thin]">
             {[...privateSpaces, ...followed].map((s) => (
               <li key={s.id} className="shrink-0">
@@ -82,7 +82,7 @@ export function SpacesView() {
                   <SpaceIcon space={s} />
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-medium">{s.name}</span>
-                    <span className="block truncate font-mono text-[10px] text-muted">
+                    <span className="block truncate font-mono text-xs text-muted">
                       {s.visibility === "private" ? (s.mine ? "Private · yours" : "Private") : "Subject"} · {s.questions} {s.questions === 1 ? "question" : "questions"}
                     </span>
                   </span>
@@ -97,7 +97,7 @@ export function SpacesView() {
       <section>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className={eyebrowClass}>Subjects</p>
+            <Eyebrow>Subjects</Eyebrow>
             <h2 className="mt-1 font-serif text-3xl tracking-tight">Every subject has a space</h2>
             <p className="mt-1 max-w-xl text-sm text-muted">Follow the ones you study. Anyone signed in can read and ask; asking in one follows it for you.</p>
           </div>
@@ -133,7 +133,7 @@ export function SpacesView() {
           <div className="mt-6 space-y-8">
             {groups.map(([category, list]) => (
               <div key={category}>
-                <h3 className="flex items-center gap-3 font-mono text-[11px] font-medium tracking-[0.12em] text-muted uppercase">
+                <h3 className="flex items-center gap-3 font-mono text-xs font-medium tracking-[0.12em] text-muted uppercase">
                   {category}
                   <span className="h-px flex-1 bg-line" />
                 </h3>
@@ -149,9 +149,9 @@ export function SpacesView() {
       </section>
 
       {/* Private */}
-      <section className="grid grid-cols-[minmax(0,1fr)] gap-6 rounded-3xl border border-ink bg-yellow-100 p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
+      <section className="grid grid-cols-[minmax(0,1fr)] gap-6 rounded-3xl border border-ink bg-brand-soft p-6 sm:p-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div>
-          <p className={eyebrowClass}>Private spaces</p>
+          <Eyebrow>Private spaces</Eyebrow>
           <h2 className="mt-1 font-serif text-3xl tracking-tight">A space just for your group</h2>
           <p className="mt-2 max-w-md text-sm leading-relaxed text-muted">
             Your class, your lab, your study group. Only people with the link can join, and nothing in it shows up in public threads. For a shared timer and voice, use a{" "}
@@ -167,7 +167,7 @@ export function SpacesView() {
                   <Link href={`/spaces/${s.slug}`} className="flex items-center gap-3 rounded-xl border border-ink bg-panel px-3 py-2.5 transition hover:-translate-y-px hover:shadow-hard-sm">
                     <SpaceIcon space={s} size="sm" />
                     <span className="min-w-0 flex-1 truncate text-sm font-medium">{s.name}</span>
-                    <span className="shrink-0 font-mono text-[10px] text-muted">
+                    <span className="shrink-0 font-mono text-xs text-muted">
                       {s.members} {s.members === 1 ? "person" : "people"}
                     </span>
                   </Link>
@@ -192,7 +192,7 @@ function SubjectCard({ space: s, delay, onToggle }: { space: SpaceCard; delay: n
             <Link href={`/spaces/${s.slug}`} className="block truncate font-medium after:absolute after:inset-0 after:rounded-2xl">
               {s.name}
             </Link>
-            <p className="font-mono text-[10px] text-muted">
+            <p className="font-mono text-xs text-muted">
               {s.members} following · {s.questions} {s.questions === 1 ? "question" : "questions"}
             </p>
           </div>
@@ -201,13 +201,13 @@ function SubjectCard({ space: s, delay, onToggle }: { space: SpaceCard; delay: n
             type="button"
             onClick={onToggle}
             aria-pressed={s.joined}
-            className={`relative z-10 shrink-0 rounded-lg border px-2.5 py-1 text-xs font-medium transition active:scale-95 ${s.joined ? "border-ink bg-ink text-white hover:bg-panel hover:text-ink" : "border-ink/30 hover:border-ink"}`}
+            className={`relative z-10 shrink-0 rounded-lg border px-2.5 py-1 text-xs font-medium transition active:scale-95 ${s.joined ? "border-ink bg-ink text-on-ink hover:bg-panel hover:text-ink" : "border-ink/30 hover:border-ink"}`}
           >
             {s.joined ? "Following" : "Follow"}
           </button>
         </div>
         <p className="mt-3 line-clamp-2 text-sm leading-relaxed text-muted">{s.about}</p>
-        {s.thisWeek > 0 && <p className="mt-auto pt-3 text-[11px] font-medium text-ok">{s.thisWeek} new this week</p>}
+        {s.thisWeek > 0 && <p className="mt-auto pt-3 text-xs font-medium text-ok">{s.thisWeek} new this week</p>}
       </div>
     </li>
   );
@@ -239,7 +239,7 @@ function CreateSpace({ onCreated }: { onCreated: (slug: string) => void }) {
       <p className="font-medium">New private space</p>
       <label className="block">
         <span className={labelClass}>Name</span>
-        <input value={name} maxLength={80} onChange={(e) => setName(e.target.value)} placeholder="e.g. Physics 101, Tuesday group" className={inputClass} />
+        <Input value={name} maxLength={80} onChange={(e) => setName(e.target.value)} placeholder="e.g. Physics 101, Tuesday group" />
       </label>
       <label className="block">
         <span className={labelClass}>What it&apos;s for</span>

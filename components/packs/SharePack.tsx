@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { ask, toast } from "@/components/dialogs";
-import { buttonClass, eyebrowClass, ghostButtonClass, inputClass, labelClass } from "@/components/ui";
+import { buttonClass, ghostButtonClass, inputClass, labelClass, Input, Eyebrow } from "@/components/ui";
 import { JSON_HEADERS } from "@/lib/ai-errors";
 import { SITE } from "@/lib/site";
 import { createClient } from "@/lib/supabase/client";
 import { track } from "@/lib/telemetry";
 import { SectionLoop } from "./SectionLoop";
+import { useModal } from "@/components/Modal";
 
 type Existing = { slug: string; title: string; description: string; visibility: "public" | "unlisted"; class_mode: boolean; author_name: string | null; views: number; copies: number };
 
@@ -141,12 +142,13 @@ function ShareDialog({ sessionId, sessionTitle, onClose }: { sessionId: string; 
 
   const link = existing ? `${SITE.url}/p/${existing.slug}` : "";
 
+  const dialogRef = useModal(true, onClose);
   return (
     <div className="animate-fade fixed inset-0 z-[60] flex items-center justify-center bg-scrim p-3 backdrop-blur-[2px] sm:p-6" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal="true" aria-labelledby="share-title" className="animate-pop flex max-h-full w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="share-title" className="animate-pop flex max-h-full w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
         <div className="flex items-start justify-between gap-4 px-6 pt-5">
           <div>
-            <p className={eyebrowClass}>{roadmap ? "Roadmap" : "Study pack"}</p>
+            <Eyebrow>{roadmap ? "Roadmap" : "Study pack"}</Eyebrow>
             <h2 id="share-title" className="mt-1 font-serif text-2xl">
               {existing ? (roadmap ? "Your roadmap is live" : "Your pack is live") : roadmap ? "Share this as a roadmap" : "Share this session"}
             </h2>
@@ -162,13 +164,13 @@ function ShareDialog({ sessionId, sessionTitle, onClose }: { sessionId: string; 
           ) : (
             <>
               {existing && (
-                <div className="space-y-2 rounded-xl border border-ink bg-yellow-50 p-4">
+                <div className="space-y-2 rounded-xl border border-ink bg-brand-faint p-4">
                   <code className="block truncate rounded-md border border-line bg-panel px-2.5 py-1.5 font-mono text-xs">{link}</code>
                   <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"
                       onClick={() => navigator.clipboard.writeText(link).then(() => toast("Link copied."))}
-                      className="rounded-md border border-ink bg-ink px-3 py-1 text-xs font-medium text-white"
+                      className="rounded-md border border-ink bg-ink px-3 py-1 text-xs font-medium text-on-ink"
                     >
                       Copy link
                     </button>
@@ -180,7 +182,7 @@ function ShareDialog({ sessionId, sessionTitle, onClose }: { sessionId: string; 
                         Class progress
                       </a>
                     )}
-                    <span className="ml-auto font-mono text-[11px] text-muted">
+                    <span className="ml-auto font-mono text-xs text-muted">
                       {existing.views} views · {existing.copies} copies
                     </span>
                   </div>
@@ -197,7 +199,7 @@ function ShareDialog({ sessionId, sessionTitle, onClose }: { sessionId: string; 
                         aria-label="Course code"
                         className={`${inputClass} py-1 font-mono text-xs`}
                       />
-                      <button type="button" disabled={codePending} onClick={() => void saveCode()} className="shrink-0 rounded-md border border-ink bg-ink px-3 py-1 text-xs font-medium text-white disabled:opacity-40">
+                      <button type="button" disabled={codePending} onClick={() => void saveCode()} className="shrink-0 rounded-md border border-ink bg-ink px-3 py-1 text-xs font-medium text-on-ink disabled:opacity-40">
                         {codePending ? "Saving…" : course ? "Update" : "Make link"}
                       </button>
                     </div>
@@ -212,7 +214,7 @@ function ShareDialog({ sessionId, sessionTitle, onClose }: { sessionId: string; 
               )}
               <label className="block">
                 <span className={labelClass}>Title</span>
-                <input value={title} maxLength={200} onChange={(e) => setTitle(e.target.value)} className={inputClass} />
+                <Input value={title} maxLength={200} onChange={(e) => setTitle(e.target.value)} />
               </label>
               <label className="block">
                 <span className={labelClass}>What it&apos;s for</span>
@@ -238,7 +240,7 @@ function ShareDialog({ sessionId, sessionTitle, onClose }: { sessionId: string; 
                 checked={classMode}
                 onChange={setClassMode}
                 label="Class mode"
-                hint="People who copy it can choose to share their progress with you (topics done, days active), never their notes or chats. Once 30 classmates copy it, you get Pro for the term, once."
+                hint="People who copy it can choose to share their progress with you (topics done, days active), never their notes or chats."
               />
               <p className="rounded-lg border border-line bg-paper px-3 py-2.5 text-xs leading-relaxed text-muted">
                 <span className="font-medium text-ink">What&apos;s shared:</span> your sources as links and paper IDs, your plan
@@ -293,7 +295,7 @@ function Toggle({ checked, onChange, label, hint }: { checked: boolean; onChange
         onClick={() => onChange(!checked)}
         className={`relative mt-0.5 h-6 w-11 shrink-0 rounded-full border border-ink transition-colors ${checked ? "bg-ink" : "bg-panel"}`}
       >
-        <span className={`absolute top-0.5 left-0.5 size-[18px] rounded-full transition-transform duration-200 ${checked ? "translate-x-5 bg-yellow-400" : "bg-ink/70"}`} />
+        <span className={`absolute top-0.5 left-0.5 size-[18px] rounded-full transition-transform duration-200 ${checked ? "translate-x-5 bg-brand" : "bg-ink/70"}`} />
       </button>
     </label>
   );

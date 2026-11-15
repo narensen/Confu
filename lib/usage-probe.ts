@@ -1,14 +1,15 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getRole, PRO_DAILY_TOKENS, proUsedLast24h, resolveGroq, TRIAL_PROMPTS, trialState, userKeyRef } from "@/lib/ai-access";
+import { getRole, POOL_KEY_REF, resolveGroq, userKeyRef } from "@/lib/ai-access";
 import { MODELS, modelBudget } from "@/lib/groq";
 import { getKeyInfo } from "@/lib/groq-keys";
-import { planOf } from "@/lib/plans";
+import { isOwner } from "@/lib/plans";
 import { FREE_TIER_DAILY_TOKENS, usageSummary, type KeyUsage, type ModelUsage } from "@/lib/usage-summary";
 
 // What the usage meters show for a user (and session).
 export type MeterUsage = {
-  plan: "free" | "pro" | "trial";
+  // "own": the student's own Groq key. "owner": the server's pool.
+  plan: "own" | "owner";
   status: ModelUsage["status"];
   used24h: number;
   dailyLimit: number | null;
@@ -17,7 +18,7 @@ export type MeterUsage = {
   blockedSince: string | null;
 };
 
-// The key a free user's session runs on, as tracked in usage.
+// The key a user's session runs on, as tracked in usage.
 export async function ownKeyRef(supabase: SupabaseClient, userId: string, sessionId: string | null) {
   const info = await getKeyInfo(supabase, userId, sessionId);
   return info ? userKeyRef(info.id) : null;
@@ -63,50 +64,46 @@ export async function freshUsage(
   return usage ?? null;
 }
 
-// The meter's view. Pro is measured against the plan's daily allowance, which
-// Confu counts itself, so it's always current. Free follows the user's key.
+// Tokens the owner used on the server's pool in the last 24 hours.
+async function poolUsedLast24h(supabase: SupabaseClient, userId: string): Promise<number> {
+  const since = new Date(Date.now() - 86_400_000).toISOString();
+  const { data } = await supabase
+    .from("ai_usage")
+    .select("total_tokens")
+    .eq("user_id", userId)
+    .eq("key_ref", POOL_KEY_REF)
+    .gte("created_at", since)
+    .limit(20_000);
+  return ((data ?? []) as { total_tokens: number }[]).reduce((s, r) => s + r.total_tokens, 0);
+}
+
+// The meter's view. The owner's pool has no cap and is counted by Confu.
+// Everyone else follows their own key.
 export async function meterUsage(
   supabase: SupabaseClient,
   userId: string,
   sessionId: string | null,
   opts: { force?: boolean } = {},
 ): Promise<MeterUsage | null> {
-  const role = await getRole(supabase, userId);
-  if (planOf(role) === "pro") {
-    const used = await proUsedLast24h(supabase, userId);
-    const cap = role === "pro" ? PRO_DAILY_TOKENS : null; // owners are unlimited
+  if (isOwner(await getRole(supabase, userId))) {
     return {
-      plan: "pro",
-      status: cap !== null && used >= cap ? "blocked" : "ok",
-      used24h: used,
-      dailyLimit: cap,
+      plan: "owner",
+      status: "ok",
+      used24h: await poolUsedLast24h(supabase, userId),
+      dailyLimit: null,
       dailyLimitEstimated: false,
       checkedAt: new Date().toISOString(),
       blockedSince: null,
     };
   }
   const keyRef = await ownKeyRef(supabase, userId, sessionId);
-  if (!keyRef) {
-    // No key: show what's left of the free trial, counted in prompts (one-off, not daily).
-    const trial = await trialState(supabase, userId);
-    if (!trial) return null;
-    const used = trial.promptsUsed;
-    return {
-      plan: "trial",
-      status: used >= TRIAL_PROMPTS ? "blocked" : used ? "ok" : "none",
-      used24h: used,
-      dailyLimit: TRIAL_PROMPTS,
-      dailyLimitEstimated: false,
-      checkedAt: new Date().toISOString(),
-      blockedSince: null,
-    };
-  }
+  if (!keyRef) return null;
   const usage = await freshUsage(supabase, userId, sessionId, keyRef, opts);
   const main = usage?.models.find((m) => m.model === MODELS.chat);
   if (!main) {
     const estimate = FREE_TIER_DAILY_TOKENS[MODELS.chat] ?? null;
-    return { plan: "free", status: "none", used24h: 0, dailyLimit: estimate, dailyLimitEstimated: estimate !== null, checkedAt: null, blockedSince: null };
+    return { plan: "own", status: "none", used24h: 0, dailyLimit: estimate, dailyLimitEstimated: estimate !== null, checkedAt: null, blockedSince: null };
   }
   const { status, used24h, dailyLimit, dailyLimitEstimated, checkedAt, blockedSince } = main;
-  return { plan: "free", status, used24h, dailyLimit, dailyLimitEstimated, checkedAt, blockedSince };
+  return { plan: "own", status, used24h, dailyLimit, dailyLimitEstimated, checkedAt, blockedSince };
 }

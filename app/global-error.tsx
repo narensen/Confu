@@ -18,7 +18,7 @@ export default function GlobalError({ error, retry }: { error: unknown; retry: (
       <body className="flex min-h-dvh flex-col items-center justify-center bg-paper px-6 text-center font-sans text-ink">
         <title>Something went wrong · Confu</title>
         <p className="font-serif text-xl font-semibold tracking-tight">
-          Confu<span className="text-yellow-500">.</span>
+          Confu<span className="text-brand">.</span>
         </p>
         <h1 className="mt-6 max-w-lg font-serif text-4xl leading-tight">Confu hit a problem loading.</h1>
         <p className="mt-3 max-w-md text-sm leading-relaxed text-muted">
@@ -28,10 +28,10 @@ export default function GlobalError({ error, retry }: { error: unknown; retry: (
           </a>{" "}
           if it keeps happening.
         </p>
-        <button type="button" onClick={() => retry()} className="mt-7 rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-white">
+        <button type="button" onClick={() => retry()} className="mt-7 rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-on-ink">
           Try again
         </button>
-        {digest && <p className="mt-6 font-mono text-[11px] text-muted">Reference: {digest}</p>}
+        {digest && <p className="mt-6 font-mono text-xs text-muted">Reference: {digest}</p>}
       </body>
     </html>
   );

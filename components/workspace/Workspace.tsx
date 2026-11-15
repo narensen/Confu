@@ -86,7 +86,6 @@ type Props = {
   // Regular users bring their own Groq key; admins use the server's.
   needsKey: boolean;
   initialKey: KeyInfo | null;
-  trial: boolean; // no key yet, but free-trial tokens left on Confu's keys
   // Paper sessions: three-pass notes per paper.
   initialReviews: PaperReview[];
   // Exam sessions: past practice answers.
@@ -147,7 +146,6 @@ export function Workspace({
   initialSaved,
   needsKey,
   initialKey,
-  trial,
   initialReviews,
   initialAttempts,
 }: Props) {
@@ -271,8 +269,7 @@ export function Workspace({
   const rootRef = useRef<HTMLDivElement>(null);
   const [keyInfo, setKeyInfo] = useState(initialKey);
   const [keyNotice, setKeyNotice] = useState<string | null>(null);
-  const [onTrial, setOnTrial] = useState(trial);
-  const locked = needsKey && !keyInfo && !onTrial;
+  const locked = needsKey && !keyInfo;
   // A local harness teaches without a Groq key. The ref is what send() reads.
   const harnessRef = useRef<TutorLink>(GROQ_LINK);
   const [localTutor, setLocalTutor] = useState(false);
@@ -282,7 +279,6 @@ export function Workspace({
     const onKeyError = (e: Event) => {
       setKeyNotice((e as CustomEvent<{ message: string }>).detail.message);
       setKeyInfo(null);
-      setOnTrial(false); // the trial ran out (or there never was one)
       revealTutor();
     };
     window.addEventListener(KEY_ERROR_EVENT, onKeyError);
@@ -1752,7 +1748,7 @@ export function Workspace({
       onPassesOpen: setPassesOpen,
       onTool: (t) => (t === "bibtex" ? exportBibtex(paperDocs, session.title) : setPaperTool(t)),
     },
-    exam: { practice, examDate, onExamDate: saveExamDate, onTrial },
+    exam: { practice, examDate, onExamDate: saveExamDate },
     citeMode,
     onCiteMode: setCiteMode,
     citeFiles: multi
@@ -1909,17 +1905,6 @@ export function Workspace({
           ) : (
             <TutorRail busy={Boolean(busy)} onOpen={revealTutor} />
           )
-        ) : mobileShown === "tutor" ? (
-          <aside aria-label="Tutor" className="@container flex w-full min-w-0 flex-col bg-panel">
-            {tutor()}
-          </aside>
-        ) : mobileShown === "tool" && tool ? (
-          <aside aria-label={sectionOf(tool).label} className="@container flex w-full min-w-0 flex-col bg-panel">
-            <ToolHeader section={sectionOf(tool)} />
-            <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
-              <TutorPanel view={tool} {...panelProps} />
-            </div>
-          </aside>
         ) : null}
 
         {/* Middle: what you're reading. Clicking back into it puts a floating tool away. */}
@@ -1929,7 +1914,7 @@ export function Workspace({
           onPointerDownCapture={() => {
             if (wide && tool && !docked) setTool(null);
           }}
-          className={`relative min-w-0 flex-1 flex-col ${wide || mobileShown === "pdf" ? "flex" : "hidden"}`}
+          className="relative flex min-w-0 flex-1 flex-col"
         >
           <PackSources sessionId={session.id} docs={docs} busy={Boolean(uploadStatus)} onAttach={attachPdf} onSelect={openDocTab} />
           <DocTabs
@@ -1987,7 +1972,7 @@ export function Workspace({
                 <button
                   type="button"
                   onClick={() => openTool("files")}
-                  className="mt-3 rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-white transition hover:-translate-y-px hover:shadow-hard-sm"
+                  className="mt-3 rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-on-ink transition hover:-translate-y-px hover:shadow-hard-sm"
                 >
                   Open Files
                 </button>
@@ -2003,7 +1988,7 @@ export function Workspace({
                 <div className="mt-3 flex flex-wrap justify-center gap-2">
                   <button
                     onClick={isPaper ? () => setAddPaperOpen(true) : () => setAddMaterialOpen(true)}
-                    className="rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-white transition hover:-translate-y-px hover:shadow-hard-sm"
+                    className="rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-on-ink transition hover:-translate-y-px hover:shadow-hard-sm"
                   >
                     {isPaper ? "+ Add papers" : "+ Add material"}
                   </button>
@@ -2063,6 +2048,31 @@ export function Workspace({
           </aside>
         )}
         {wide && <ToolRail sections={sections} active={tool} hidden={tutorFullShown} onPick={(id) => (tool === id ? setTool(null) : openTool(id))} />}
+        {/* Phones: the tutor and tools are a sheet over the page, so the page stays visible. */}
+        {!wide && mobileShown !== "pdf" && (
+          <div className="absolute inset-x-0 bottom-0 z-30 flex h-[62%] flex-col rounded-t-2xl border border-b-0 border-ink bg-panel shadow-hard">
+            <button type="button" onClick={() => setMobileView("pdf")} aria-label="Back to the page" className="flex h-8 shrink-0 items-center justify-center">
+              <span aria-hidden className="h-1 w-10 rounded-full bg-ink/40" />
+            </button>
+            {mobileShown === "tutor" ? (
+              <div className="@container flex min-h-0 flex-1 flex-col">{tutor()}</div>
+            ) : tool ? (
+              <>
+                <ToolHeader
+                  section={sectionOf(tool)}
+                  canPin={false}
+                  onClose={() => {
+                    setTool(null);
+                    setMobileView("pdf");
+                  }}
+                />
+                <div className="@container min-h-0 flex-1 overflow-x-hidden">
+                  <TutorPanel view={tool} {...panelProps} />
+                </div>
+              </>
+            ) : null}
+          </div>
+        )}
       </div>
 
       {!wide && (

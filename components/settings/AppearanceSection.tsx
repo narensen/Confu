@@ -19,7 +19,7 @@ function Choice<T extends string>({ label, value, options, onChange }: { label: 
           role="radio"
           aria-checked={value === v}
           onClick={() => onChange(v)}
-          className={`rounded-md px-3 py-1.5 transition ${value === v ? "bg-ink text-white" : "text-muted hover:text-ink"}`}
+          className={`rounded-md px-3 py-1.5 transition ${value === v ? "bg-ink text-on-ink" : "text-muted hover:text-ink"}`}
         >
           {name}
         </button>

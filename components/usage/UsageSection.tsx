@@ -1,4 +1,4 @@
-import { eyebrowClass } from "@/components/ui";
+import { Eyebrow } from "@/components/ui";
 import { ago, FEATURE_LABELS, formatTokens, resetIn } from "@/lib/format-usage";
 import type { KeyUsage, ModelUsage } from "@/lib/usage-summary";
 import { CheckNowButton } from "./CheckNowButton";
@@ -8,7 +8,7 @@ export type UsageKey = {
   label: string;
   sessionId: string | null;
   usage: KeyUsage | undefined;
-  // Pro: the plan's daily allowance (cap null = unlimited owner), counted by Confu.
+  // The owner's server pool: counted by Confu, with no cap (cap null).
   allowance?: { used: number; cap: number | null };
 };
 
@@ -39,7 +39,7 @@ export function UsageSection({ keys, modelLabels }: { keys: UsageKey[]; modelLab
               )}
               {k.usage && k.usage.byFeature.length > 0 && (
                 <div className="mt-4 border-t border-line pt-3">
-                  <p className={eyebrowClass}>Last 24 hours by feature</p>
+                  <Eyebrow>Last 24 hours by feature</Eyebrow>
                   <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
                     {k.usage.byFeature.map((f) => (
                       <li key={f.feature}>
@@ -55,12 +55,11 @@ export function UsageSection({ keys, modelLabels }: { keys: UsageKey[]; modelLab
       )}
 
       {keys.length > 0 && keys.every((k) => k.allowance) ? (
-        <p className="mt-4 text-[11px] leading-relaxed text-muted">
-          Counted by Confu for every request you make. The allowance is a rolling 24 hours: tokens free up as usage from a day ago
-          ages out.
+        <p className="mt-4 text-xs leading-relaxed text-muted">
+          Counted by Confu for every request you make on the server&apos;s keys, over a rolling 24 hours.
         </p>
       ) : (
-        <p className="mt-4 text-[11px] leading-relaxed text-muted">
+        <p className="mt-4 text-xs leading-relaxed text-muted">
           Counted by Confu for requests made here, per key: replacing a key starts a fresh count. Groq frees tokens gradually, 24
           hours after use. Request limits come from Groq, “~” marks the free-tier daily allowance as an estimate until Groq
           reports the exact limit, and “Check now” asks Groq directly (a 1-token request). Exact figures: console.groq.com.
@@ -76,7 +75,7 @@ function Allowance({ used, cap }: { used: number; cap: number | null }) {
   return (
     <div className="mt-3">
       <div className="flex items-baseline justify-between gap-3 text-sm">
-        <span>{cap === null ? "Unlimited (admin)" : share >= 1 ? "Today's allowance is used up" : `${Math.round((1 - share) * 100)}% of today's allowance left`}</span>
+        <span>{cap === null ? "No cap (server keys)" : share >= 1 ? "Today's allowance is used up" : `${Math.round((1 - share) * 100)}% of today's allowance left`}</span>
         <span className="font-mono text-xs text-muted">
           {formatTokens(used)}
           {cap ? ` / ${formatTokens(cap)}` : ""} tokens · 24 h
@@ -101,7 +100,7 @@ function ModelRow({ m, label, plan }: { m: ModelUsage; label?: string; plan: boo
     <li>
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
         <p className="text-sm">
-          {label ?? m.model} <span className="font-mono text-[11px] text-muted">{m.model}</span>
+          {label ?? m.model} <span className="font-mono text-xs text-muted">{m.model}</span>
         </p>
         <p className="font-mono text-xs">
           {formatTokens(m.used24h)}
@@ -123,7 +122,7 @@ function ModelRow({ m, label, plan }: { m: ModelUsage; label?: string; plan: boo
           </span>
         ) : stale ? (
           <span>
-            <span className="rounded border border-dashed border-ink/30 px-1 font-mono text-[10px] uppercase">stale</span> Last checked {ago(m.checkedAt)}, so this may
+            <span className="rounded border border-dashed border-ink/30 px-1 font-mono text-xs uppercase">stale</span> Last checked {ago(m.checkedAt)}, so this may
             be out of date. {left !== null ? `About ${Math.round(left * 100)}% left then. ` : ""}
           </span>
         ) : (

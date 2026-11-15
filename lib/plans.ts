@@ -1,34 +1,10 @@
-// Plans, shared by the server and the UI.
-//   Free  brings their own Groq key (role NULL)
-//   Pro   runs on Confu's keys with a daily fair-use allowance: a subscription,
-//         invite weeks or a grant (role 'pro'; see getRole in lib/ai-access.ts)
-//   Owner is Pro without the allowance (role 'admin')
+// Who runs on whose AI. Confu is open source and has no paid plan: everyone
+// brings their own AI, a Groq key saved in Settings or a tutor that runs on
+// their own computer (lib/harnesses.ts).
+//   null     a student, on their own key
+//   'admin'  whoever runs this deployment; their requests use the server's
+//            GROQ_API_KEYS. Set by hand in the database, never by the app.
 
-export type Role = "admin" | "pro" | null;
-export type Plan = "free" | "pro";
+export type Role = "admin" | null;
 
-export const planOf = (role: Role): Plan => (role === "pro" || role === "admin" ? "pro" : "free");
 export const isOwner = (role: Role) => role === "admin";
-
-export const PLANS: Record<Plan, { name: string; tagline: string; features: string[] }> = {
-  free: {
-    name: "Free",
-    tagline: "Everything Confu does, on your own Groq key.",
-    features: [
-      "Study, exam prep and paper sessions",
-      "Highlight-to-ask, figure reading, practice questions",
-      "10 free prompts on our keys, then your own Groq key (Groq has a free tier)",
-      "Usage meter for your key",
-    ],
-  },
-  pro: {
-    name: "Pro",
-    tagline: "No API key, no setup. Just learn.",
-    features: [
-      "Everything in Free",
-      "No Groq key needed: runs on Confu's keys",
-      "A generous daily allowance, shown in your account menu",
-      "Cancel anytime; your sessions stay yours on Free",
-    ],
-  },
-};

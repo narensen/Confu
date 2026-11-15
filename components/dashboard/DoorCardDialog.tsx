@@ -4,10 +4,11 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "@/components/dialogs";
-import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
+import { buttonClass, ghostButtonClass, inputClass, Button, Input, Eyebrow } from "@/components/ui";
 import { JSON_HEADERS } from "@/lib/ai-errors";
 import { SITE } from "@/lib/site";
 import { track } from "@/lib/telemetry";
+import { useModal } from "@/components/Modal";
 
 // A reading list (stored as a "noticeboard", migration 0034; once called a
 // door card): a title and up to 12 links, shared as a short link or printed
@@ -123,12 +124,13 @@ function Dialog({ onClose }: { onClose: () => void }) {
 
   const url = code ? `${SITE.url}/b/${code}` : "";
 
+  const dialogRef = useModal(true, onClose);
   return (
     <div className="animate-fade fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-scrim p-3 backdrop-blur-[2px] sm:items-center" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal="true" aria-labelledby="reading-list-title" className="animate-pop my-6 w-full max-w-2xl overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="reading-list-title" className="animate-pop my-6 w-full max-w-2xl overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
         <div className="flex items-start justify-between gap-4 border-b border-ink px-6 pt-5 pb-4">
           <div>
-            <p className={eyebrowClass}>Reading list</p>
+            <Eyebrow>Reading list</Eyebrow>
             <h2 id="reading-list-title" className="mt-1 font-serif text-2xl">
               {code ? "Your list is ready to share" : "Share a reading list"}
             </h2>
@@ -145,7 +147,7 @@ function Dialog({ onClose }: { onClose: () => void }) {
 
         {code ? (
           <div className="space-y-5 px-6 py-5">
-            <div className="rounded-xl border border-ink bg-yellow-100 p-4">
+            <div className="rounded-xl border border-ink bg-brand-soft p-4">
               <p className="text-sm text-muted">Anyone with this link sees the list and can start a session from it in one click:</p>
               <p className="mt-2 truncate font-mono text-sm font-medium">{url}</p>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -179,7 +181,7 @@ function Dialog({ onClose }: { onClose: () => void }) {
             <ol className="grid gap-2 text-xs text-muted sm:grid-cols-3">
               {["Paste the links: papers, lectures, pages.", "Share the link, or print it for a noticeboard.", "Whoever opens it starts a session with all of it."].map((step, i) => (
                 <li key={step} className="flex gap-2 rounded-lg bg-paper px-3 py-2">
-                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full border border-ink font-mono text-[10px] text-ink">{i + 1}</span>
+                  <span className="flex size-5 shrink-0 items-center justify-center rounded-full border border-ink font-mono text-xs text-ink">{i + 1}</span>
                   {step}
                 </li>
               ))}
@@ -188,13 +190,13 @@ function Dialog({ onClose }: { onClose: () => void }) {
             <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium">Title</span>
-                <input value={title} maxLength={120} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Week 4: Electric potential" className={inputClass} />
+                <Input value={title} maxLength={120} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Week 4: Electric potential" />
               </label>
               <div>
                 <span className="mb-1.5 block text-sm font-medium">Starts a</span>
                 <div className="flex rounded-lg border border-ink/25 p-0.5">
                   {(["study", "exam", "paper"] as const).map((k) => (
-                    <button key={k} type="button" onClick={() => setKind(k)} aria-pressed={kind === k} className={`rounded-md px-3 py-1.5 text-xs font-medium capitalize transition ${kind === k ? "bg-ink text-white" : "text-muted hover:text-ink"}`}>
+                    <button key={k} type="button" onClick={() => setKind(k)} aria-pressed={kind === k} className={`rounded-md px-3 py-1.5 text-xs font-medium capitalize transition ${kind === k ? "bg-ink text-on-ink" : "text-muted hover:text-ink"}`}>
                       {k === "paper" ? "Papers" : k === "exam" ? "Exam prep" : "Study"}
                     </button>
                   ))}
@@ -267,13 +269,13 @@ function Dialog({ onClose }: { onClose: () => void }) {
         <div className="flex items-center justify-between gap-3 border-t border-line bg-paper px-6 py-3.5">
           <p className="text-xs text-muted">Links only: no files are uploaded.</p>
           {code ? (
-            <button type="button" onClick={onClose} className={buttonClass}>
+            <Button type="button" onClick={onClose}>
               Done
-            </button>
+            </Button>
           ) : (
-            <button type="button" disabled={busy} onClick={() => void create()} className={buttonClass}>
+            <Button type="button" disabled={busy} onClick={() => void create()}>
               {busy ? "Making…" : "Make the list"}
-            </button>
+            </Button>
           )}
         </div>
       </div>

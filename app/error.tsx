@@ -16,7 +16,7 @@ export default function ErrorPage({ error, retry }: { error: unknown; retry: () 
 
   return (
     <main className="animate-enter flex flex-1 flex-col items-center justify-center bg-paper px-6 py-20 text-center">
-      <p className="font-mono text-[11px] font-medium tracking-[0.12em] text-muted uppercase">Something went wrong</p>
+      <p className="font-mono text-xs font-medium tracking-[0.12em] text-muted uppercase">Something went wrong</p>
       <h1 className="mt-2 max-w-lg font-serif text-4xl leading-tight tracking-tight">That page didn&apos;t load properly.</h1>
       <p className="mt-3 max-w-md text-sm leading-relaxed text-muted">
         It&apos;s been reported automatically. It&apos;s often a one-off, so try again. Your work is saved.
@@ -25,7 +25,7 @@ export default function ErrorPage({ error, retry }: { error: unknown; retry: () 
         <button
           type="button"
           onClick={() => retry()}
-          className="rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-white transition hover:-translate-y-px hover:shadow-[2px_2px_0_0_#facc15]"
+          className="rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-on-ink transition hover:-translate-y-px hover:shadow-[2px_2px_0_0_var(--brand)]"
         >
           Try again
         </button>
@@ -40,7 +40,7 @@ export default function ErrorPage({ error, retry }: { error: unknown; retry: () 
           Tell us what happened
         </button>
       </div>
-      {digest && <p className="mt-6 font-mono text-[11px] text-muted">Reference: {digest}</p>}
+      {digest && <p className="mt-6 font-mono text-xs text-muted">Reference: {digest}</p>}
     </main>
   );
 }

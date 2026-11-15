@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { FriendsView } from "@/components/friends/FriendsView";
 import { CommunityTabs } from "@/components/community/CommunityTabs";
-import { eyebrowClass } from "@/components/ui";
+import { Eyebrow } from "@/components/ui";
 
 export const metadata: Metadata = { title: "Friends — Confu", robots: { index: false } };
 
@@ -10,7 +10,7 @@ export default function FriendsPage() {
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-4 pb-10 sm:px-6 sm:pt-6">
       <CommunityTabs />
       <div className="animate-enter">
-        <p className={eyebrowClass}>Friends</p>
+        <Eyebrow>Friends</Eyebrow>
         <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">Study with people you know</h1>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
           Add someone with their code or the email on their account. You&apos;ll see when they&apos;re online or in a room, and you can invite them into a private one.

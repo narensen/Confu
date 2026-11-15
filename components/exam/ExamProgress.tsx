@@ -1,6 +1,6 @@
 "use client";
 
-import { buttonClass, eyebrowClass } from "@/components/ui";
+import { buttonClass, Eyebrow } from "@/components/ui";
 import { countdownLabel, daysUntil, type TopicStat } from "@/lib/exam";
 import { useToday } from "@/lib/use-today";
 import type { ExamPractice } from "./useExamPractice";
@@ -31,7 +31,7 @@ export function ExamProgress({
   return (
     <div className="h-full space-y-6 overflow-y-auto p-6 text-sm">
       <section className="animate-enter">
-        <p className={eyebrowClass}>Exam</p>
+        <Eyebrow>Exam</Eyebrow>
         <h2 className="mt-1 font-serif text-2xl">{today ? countdownLabel(daysUntil(examDate, today)) : "\u00a0"}</h2>
       </section>
 
@@ -42,7 +42,7 @@ export function ExamProgress({
           ["Weak topics", String(stats.filter((t) => t.level === "weak").length)],
         ].map(([label, value]) => (
           <div key={label} className="rounded-lg border border-ink p-3">
-            <p className="font-mono text-[10px] text-muted uppercase">{label}</p>
+            <p className="font-mono text-xs text-muted uppercase">{label}</p>
             <p className="mt-1 font-serif text-2xl tabular-nums">{value}</p>
           </div>
         ))}
@@ -53,7 +53,7 @@ export function ExamProgress({
       ) : (
         <section className="animate-enter" style={{ animationDelay: "120ms" }}>
           <div className="flex items-center justify-between">
-            <p className={eyebrowClass}>Topics</p>
+            <Eyebrow>Topics</Eyebrow>
             {weak.length > 0 && (
               <button onClick={() => onPractiseWeak(weak.slice(0, 5).map((t) => t.topic))} className={`${buttonClass} py-1 text-xs`}>
                 Practise my weak topics
@@ -64,11 +64,11 @@ export function ExamProgress({
             {stats.map((t) => (
               <li key={t.topic} className="flex items-center gap-3">
                 <span className="min-w-0 flex-1 truncate">{t.topic}</span>
-                <span className={`shrink-0 rounded-full border px-2 py-px text-[10px] font-medium ${LEVEL[t.level].tone}`}>{LEVEL[t.level].label}</span>
+                <span className={`shrink-0 rounded-full border px-2 py-px text-xs font-medium ${LEVEL[t.level].tone}`}>{LEVEL[t.level].label}</span>
                 <span className="h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-line">
                   <span className={`block h-full rounded-full transition-[width] duration-700 ease-fluid ${LEVEL[t.level].bar}`} style={{ width: `${t.accuracy * 100}%` }} />
                 </span>
-                <span className="w-14 shrink-0 text-right font-mono text-[11px] text-muted tabular-nums">
+                <span className="w-14 shrink-0 text-right font-mono text-xs text-muted tabular-nums">
                   {Math.round(t.accuracy * 100)}% · {t.attempts}
                 </span>
               </li>
@@ -79,7 +79,7 @@ export function ExamProgress({
 
       {memorySummary && (
         <section className="animate-enter" style={{ animationDelay: "180ms" }}>
-          <p className={eyebrowClass}>Tutor&apos;s notes</p>
+          <Eyebrow>Tutor&apos;s notes</Eyebrow>
           <p className="mt-2 border-l-2 border-ink pl-3 leading-relaxed text-ink/80">{memorySummary}</p>
         </section>
       )}

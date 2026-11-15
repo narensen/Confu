@@ -18,7 +18,7 @@ import { logError } from "@/lib/log";
 //
 // Readers see the correction labelled, with the original one click away; the
 // author is told. Very likely spam or abuse (JEV_HIDE_THRESHOLD) is hidden for
-// the owner to review. Never runs on a student's own key or trial.
+// the owner to review. Never runs on a student's own key.
 
 const JEV_URL = "https://api.typesafe.ai/v1/systemone";
 const JEV_KEY = process.env.TYPESAFE_API_KEY;

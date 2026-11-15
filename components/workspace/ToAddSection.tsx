@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { eyebrowClass, ghostButtonClass } from "@/components/ui";
+import { ghostButtonClass, Eyebrow } from "@/components/ui";
 import type { GoalLink, Later } from "@/lib/goal-later";
 
 export type ToAddProps = {
@@ -28,8 +28,8 @@ export function ToAddSection({ later, busy, onFind, onRemovePaper, onImport, onP
   const printFor = useRef<string | null>(null);
   if (!papers.length && !links.length) return null;
   return (
-    <section className="rounded-xl border border-ink bg-yellow-50 p-4">
-      <p className={eyebrowClass}>From your goal, not added yet</p>
+    <section className="rounded-xl border border-ink bg-brand-faint p-4">
+      <Eyebrow>From your goal, not added yet</Eyebrow>
       <p className="mt-1 text-xs leading-relaxed text-muted">Papers Confu found were added already. These it couldn&apos;t pin down, or haven&apos;t been brought in yet.</p>
 
       {papers.length > 0 && (
@@ -60,7 +60,7 @@ export function ToAddSection({ later, busy, onFind, onRemovePaper, onImport, onP
                   onClick={() => onFind(p.name)}
                   disabled={busy}
                   title="Look it up and add it"
-                  className="shrink-0 rounded-md border border-ink px-2 py-0.5 text-xs font-medium transition hover:bg-ink hover:text-white disabled:opacity-40"
+                  className="shrink-0 rounded-md border border-ink px-2 py-0.5 text-xs font-medium transition hover:bg-ink hover:text-on-ink disabled:opacity-40"
                 >
                   Add
                 </button>
@@ -112,7 +112,7 @@ export function ToAddSection({ later, busy, onFind, onRemovePaper, onImport, onP
                     }}
                     disabled={busy}
                     title={l.kind === "web" ? "Add the page, printed as a PDF" : undefined}
-                    className="shrink-0 rounded-md border border-ink px-2 py-0.5 text-xs font-medium transition hover:bg-ink hover:text-white disabled:opacity-40"
+                    className="shrink-0 rounded-md border border-ink px-2 py-0.5 text-xs font-medium transition hover:bg-ink hover:text-on-ink disabled:opacity-40"
                   >
                     {playlist ? "Choose" : l.kind === "youtube" ? "Import" : "Add PDF"}
                   </button>

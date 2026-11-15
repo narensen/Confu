@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ask, toast } from "@/components/dialogs";
-import { eyebrowClass, ghostButtonClass } from "@/components/ui";
+import { eyebrowClass, ghostButtonClass, Eyebrow } from "@/components/ui";
 import { JSON_HEADERS } from "@/lib/ai-errors";
 import { buildPdfFile } from "@/lib/import/build-pdf";
 import { lecturePdf } from "@/lib/import/fetch-client";
@@ -104,7 +104,7 @@ export function PackSources({
   if (!pending.length && !origin?.class_mode) return null;
 
   return (
-    <div className="shrink-0 border-b border-ink bg-yellow-50">
+    <div className="shrink-0 border-b border-ink bg-brand-faint">
       {origin?.class_mode && (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-ink/15 px-4 py-2 text-xs">
           <span className="text-muted">
@@ -148,7 +148,7 @@ export function PackSources({
                 type="button"
                 onClick={fetchAll}
                 disabled={running || busy}
-                className="rounded-md border border-ink bg-ink px-3 py-1 text-xs font-medium text-white transition hover:-translate-y-px hover:shadow-[2px_2px_0_0_#facc15] disabled:opacity-50"
+                className="rounded-md border border-ink bg-ink px-3 py-1 text-xs font-medium text-on-ink transition hover:-translate-y-px hover:shadow-[2px_2px_0_0_var(--brand)] disabled:opacity-50"
               >
                 {running ? "Fetching…" : "Fetch all"}
               </button>
@@ -230,9 +230,9 @@ export function PendingSourceCard({ doc, busy, onAttach }: { doc: SessionDoc; bu
   return (
     <div className="h-full overflow-y-auto bg-viewer px-6 py-8">
       <article className="animate-enter mx-auto max-w-xl rounded-xl border border-ink bg-panel p-8 shadow-hard">
-        <p className={eyebrowClass}>
+        <Eyebrow>
           {doc.label} · {SOURCE_LABEL[s.kind]}
-        </p>
+        </Eyebrow>
         <h1 className="mt-2 font-serif text-3xl leading-tight tracking-tight">{doc.title}</h1>
         {s.url && (
           <a href={s.url} target="_blank" rel="noreferrer" className="mt-3 inline-block max-w-full truncate font-mono text-xs text-muted underline-offset-2 hover:underline">
@@ -263,7 +263,7 @@ export function PendingSourceCard({ doc, busy, onAttach }: { doc: SessionDoc; bu
                   setStatus(null);
                 }
               }}
-              className="rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-white transition hover:-translate-y-px hover:shadow-hard-sm disabled:opacity-50"
+              className="rounded-lg border border-ink bg-ink px-4 py-2 text-sm font-medium text-on-ink transition hover:-translate-y-px hover:shadow-hard-sm disabled:opacity-50"
             >
               {status ? "Fetching…" : "Fetch it now"}
             </button>

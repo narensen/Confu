@@ -32,7 +32,7 @@ export async function requireUser(): Promise<SessionUser> {
   return user;
 }
 
-// NULL = Free (own Groq key), 'pro' = Pro, 'admin' = owner. Only ever set by
+// NULL = a student on their own key, 'admin' = owner (lib/plans.ts). Only ever set by
 // hand in Supabase (users can't change their own role).
 export const getCurrentRole = cache(async (): Promise<Role> => {
   const user = await getUser();

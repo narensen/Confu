@@ -5,7 +5,7 @@ import { after } from "next/server";
 import { Suspense } from "react";
 import { CopyButton } from "@/components/packs/CopyButton";
 import { SiteFooter, SiteNav } from "@/components/site/SiteNav";
-import { eyebrowClass } from "@/components/ui";
+import { eyebrowClass, Eyebrow } from "@/components/ui";
 import { getUser } from "@/lib/dal";
 import { SOURCE_LABEL, type Pack, type PackTopic } from "@/lib/packs";
 import { courseCodeFor, getPackForViewer, getPackPublic, sectionScopeFor } from "@/lib/packs-server";
@@ -63,13 +63,12 @@ async function PackBody({ params }: { params: PageProps<"/p/[slug]">["params"] }
   return (
     <>
       {pack.mine && (
-        <div className="border-b border-ink bg-yellow-100">
+        <div className="border-b border-ink bg-brand-soft">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-1 px-6 py-2.5 text-sm">
             <span className="font-medium">{c.roadmap ? "This is your roadmap." : "This is your pack."}</span>
             <span className="font-mono text-xs text-muted">
               {pack.views} views · {pack.copies} copies · {pack.visibility === "public" ? "listed in the gallery" : "unlisted: only people with the link"}
             </span>
-            {pack.class_mode && <span className="text-muted">Pro for the term once 30 classmates copy it.</span>}
             {pack.class_mode && (
               <Link href={`/p/${pack.slug}/class`} className="ml-auto font-medium underline underline-offset-4">
                 Class progress →
@@ -82,7 +81,7 @@ async function PackBody({ params }: { params: PageProps<"/p/[slug]">["params"] }
       <section className="border-b border-ink">
         <div className="mx-auto grid max-w-6xl gap-10 px-6 py-14 lg:grid-cols-[minmax(0,1fr)_22rem] lg:py-20">
           <div>
-            <p className={eyebrowClass}>{label}</p>
+            <Eyebrow>{label}</Eyebrow>
             <h1 className="mt-3 font-serif text-4xl leading-tight tracking-tight sm:text-5xl">{pack.title}</h1>
             {c.roadmap && (
               <p className="mt-4 max-w-2xl text-sm leading-relaxed text-muted">
@@ -92,7 +91,7 @@ async function PackBody({ params }: { params: PageProps<"/p/[slug]">["params"] }
             {pack.description && <p className="mt-5 max-w-2xl text-lg leading-relaxed whitespace-pre-line text-muted">{pack.description}</p>}
             {scope.length > 0 && (
               <div className="mt-6 max-w-2xl">
-                <p className={eyebrowClass}>Section paper</p>
+                <Eyebrow>Section paper</Eyebrow>
                 <ul className="mt-2 list-disc space-y-1 pl-5 text-sm leading-relaxed text-muted">
                   {scope.map((line) => (
                     <li key={line}>{line}</li>
@@ -163,7 +162,7 @@ async function PackBody({ params }: { params: PageProps<"/p/[slug]">["params"] }
       {c.plan && (
         <section className="border-b border-ink bg-panel">
           <div className="mx-auto max-w-6xl px-6 py-14">
-            <p className={eyebrowClass}>The plan</p>
+            <Eyebrow>The plan</Eyebrow>
             <h2 className="mt-2 max-w-3xl font-serif text-3xl leading-tight tracking-tight">{c.plan.goal_title || "The goal"}</h2>
             {(c.plan.goal_summary || c.plan.overview) && <p className="mt-3 max-w-3xl leading-relaxed text-muted">{c.plan.goal_summary || c.plan.overview}</p>}
             <p className="mt-3 font-mono text-xs text-muted">
@@ -175,7 +174,7 @@ async function PackBody({ params }: { params: PageProps<"/p/[slug]">["params"] }
                 if (!list.length) return null;
                 return (
                   <li key={i} className="rounded-xl border border-ink bg-paper/50 p-5">
-                    <p className={eyebrowClass}>Phase {i + 1}</p>
+                    <Eyebrow>Phase {i + 1}</Eyebrow>
                     <h3 className="mt-1 font-serif text-xl">{phase.title}</h3>
                     <ul className="mt-3 space-y-2 text-sm">
                       {list.map((t, j) => (
@@ -184,7 +183,7 @@ async function PackBody({ params }: { params: PageProps<"/p/[slug]">["params"] }
                           <span>
                             {t.title}
                             {t.doc !== null && sources[t.doc] && (
-                              <span className="ml-1.5 font-mono text-[11px] text-muted">
+                              <span className="ml-1.5 font-mono text-xs text-muted">
                                 · {SOURCE_LABEL[sources[t.doc].kind]}
                                 {t.page_start ? `, p. ${t.page_start}` : ""}
                               </span>
@@ -203,7 +202,7 @@ async function PackBody({ params }: { params: PageProps<"/p/[slug]">["params"] }
 
       <section className="border-b border-ink">
         <div className="mx-auto max-w-6xl px-6 py-14">
-          <p className={eyebrowClass}>Sources</p>
+          <Eyebrow>Sources</Eyebrow>
           <h2 className="mt-2 font-serif text-3xl tracking-tight">What&apos;s in it</h2>
           <ul className="mt-6 divide-y divide-ink/10 rounded-2xl border border-ink bg-panel">
             {sources.map((s, i) => (
@@ -234,14 +233,14 @@ async function PackBody({ params }: { params: PageProps<"/p/[slug]">["params"] }
       {highlights.length > 0 && (
         <section className="border-b border-ink bg-panel">
           <div className="mx-auto max-w-6xl px-6 py-14">
-            <p className={eyebrowClass}>Highlights</p>
+            <Eyebrow>Highlights</Eyebrow>
             <h2 className="mt-2 font-serif text-3xl tracking-tight">What {pack.author_name ?? "the author"} marked</h2>
             <ul className="mt-6 grid gap-4 md:grid-cols-2">
               {highlights.slice(0, 12).map((h, i) => (
                 <li key={i} className="rounded-xl border border-ink/20 bg-paper/60 p-5">
                   <blockquote className="font-serif text-lg leading-snug">“{h.text!.slice(0, 280)}{h.text!.length > 280 ? "…" : ""}”</blockquote>
                   {h.note && <p className="mt-2 text-sm leading-relaxed text-muted">{h.note.slice(0, 300)}</p>}
-                  <p className="mt-2 font-mono text-[11px] text-muted">
+                  <p className="mt-2 font-mono text-xs text-muted">
                     {sources[h.doc]?.title ?? "Source"} · p. {h.page}
                   </p>
                 </li>

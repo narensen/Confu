@@ -3,7 +3,7 @@ import { createClient as createAnon } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
 import { cache, Suspense } from "react";
 import { SiteFooter, SiteNav } from "@/components/site/SiteNav";
-import { eyebrowClass } from "@/components/ui";
+import { Eyebrow } from "@/components/ui";
 
 type Wrapped = {
   token: string;
@@ -57,7 +57,7 @@ async function Body({ params }: { params: PageProps<"/w/section/[token]">["param
   const closed = names(card.closed);
   return (
     <article className="w-full rounded-3xl border border-ink bg-panel p-8 shadow-[8px_8px_0_0_var(--ink)]">
-      <p className={eyebrowClass}>{card.course_code ?? "Section"}</p>
+      <Eyebrow>{card.course_code ?? "Section"}</Eyebrow>
       <h1 className="mt-2 font-serif text-3xl leading-tight">After the paper</h1>
       <dl className="mt-6 space-y-3 text-sm">
         <div className="flex justify-between gap-3">
@@ -76,13 +76,13 @@ async function Body({ params }: { params: PageProps<"/w/section/[token]">["param
       </dl>
       {topics.length > 0 && (
         <div className="mt-6">
-          <p className={eyebrowClass}>Last miss map</p>
+          <Eyebrow>Last miss map</Eyebrow>
           <p className="mt-2 text-sm">{topics.join(" · ")}</p>
         </div>
       )}
       {closed.length > 0 && (
         <div className="mt-5">
-          <p className={eyebrowClass}>Closed</p>
+          <Eyebrow>Closed</Eyebrow>
           <p className="mt-2 text-sm">{closed.join(" · ")}</p>
         </div>
       )}

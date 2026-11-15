@@ -4,23 +4,24 @@ import Link from "next/link";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "@/components/dialogs";
-import { buttonClass, eyebrowClass, inputClass } from "@/components/ui";
+import { buttonClass, inputClass, Button, Input, Eyebrow } from "@/components/ui";
 import { Markdown } from "@/components/workspace/Markdown";
 import { browseSpaces, createThread, loadSpaces, toggleVote, type SpaceCard, type SpaceRef } from "@/lib/community";
 import { track } from "@/lib/telemetry";
+import { useModal } from "@/components/Modal";
 
 // Shared pieces of Threads and Spaces: people, subjects, votes, and the
 // composer (Markdown with maths, with a preview).
 
 /* ----------------------------------------------------------------- people */
 
-const TONES = ["bg-yellow-200", "bg-accent-soft", "bg-panel", "bg-yellow-100"];
+const TONES = ["bg-brand-soft", "bg-accent-soft", "bg-panel", "bg-brand-soft"];
 
 export function Avatar({ name, size = "md", me = false }: { name: string; size?: "sm" | "md" | "lg"; me?: boolean }) {
   let hash = 0;
   for (const ch of name) hash = (hash * 31 + ch.charCodeAt(0)) | 0;
-  const tone = me ? "bg-yellow-300" : TONES[Math.abs(hash) % TONES.length];
-  const box = size === "sm" ? "size-6 text-[11px]" : size === "lg" ? "size-11 text-lg" : "size-8 text-sm";
+  const tone = me ? "bg-brand" : TONES[Math.abs(hash) % TONES.length];
+  const box = size === "sm" ? "size-6 text-xs" : size === "lg" ? "size-11 text-lg" : "size-8 text-sm";
   return (
     <span aria-hidden className={`flex shrink-0 items-center justify-center rounded-full border border-ink font-serif ${box} ${tone}`}>
       {name.slice(0, 1).toUpperCase()}
@@ -53,7 +54,7 @@ export function SpaceChip({ space }: { space: SpaceRef }) {
     <Link
       href={`/spaces/${space.slug}`}
       onClick={(e) => e.stopPropagation()}
-      className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-ink/25 bg-panel px-2 py-0.5 text-[11px] font-medium transition hover:border-ink"
+      className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-ink/25 bg-panel px-2 py-0.5 text-xs font-medium transition hover:border-ink"
     >
       <span aria-hidden>{space.icon || (space.visibility === "private" ? "🔒" : "#")}</span>
       <span className="truncate">{space.name}</span>
@@ -115,7 +116,7 @@ export function VoteButton({
       title={mine ? "You can't vote on your own post" : state.voted ? "Take back your vote" : "Helpful"}
       className={`group inline-flex shrink-0 items-center justify-center rounded-lg border font-mono text-xs font-medium tabular-nums transition duration-150 active:scale-95 disabled:cursor-default ${
         column ? "w-11 flex-col gap-0.5 py-1.5" : "gap-1.5 px-2 py-1"
-      } ${state.voted ? "border-ink bg-ink text-white" : "border-ink/25 bg-panel enabled:hover:border-ink"} ${mine ? "opacity-60" : ""}`}
+      } ${state.voted ? "border-ink bg-ink text-on-ink" : "border-ink/25 bg-panel enabled:hover:border-ink"} ${mine ? "opacity-60" : ""}`}
     >
       <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden className={state.voted ? "" : "text-muted group-enabled:group-hover:text-ink"}>
         <path d="M12 4 3 15h6v5h6v-5h6z" />
@@ -159,7 +160,7 @@ export function MarkdownField({
             {m}
           </button>
         ))}
-        <span className="ml-auto hidden pr-1.5 font-mono text-[10px] text-muted sm:inline">**bold** · `code` · $x^2$ · - list</span>
+        <span className="ml-auto hidden pr-1.5 font-mono text-xs text-muted sm:inline">**bold** · `code` · $x^2$ · - list</span>
       </div>
       {mode === "write" ? (
         <textarea
@@ -238,9 +239,11 @@ export function AskDialog({ initialSpaceId, onClose, onPosted }: { initialSpaceI
   const groups = choices ? [...new Set(choices.map((c) => c.group))] : [];
   const picked = choices?.find((c) => c.id === spaceId);
 
+  const dialogRef = useModal<HTMLFormElement>(true, onClose);
   return createPortal(
     <div className="animate-fade fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-scrim p-3 backdrop-blur-[2px] sm:items-center" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <form
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="ask-title"
@@ -252,7 +255,7 @@ export function AskDialog({ initialSpaceId, onClose, onPosted }: { initialSpaceI
       >
         <div className="flex items-start justify-between gap-4 border-b border-ink px-6 pt-5 pb-4">
           <div>
-            <p className={eyebrowClass}>New question</p>
+            <Eyebrow>New question</Eyebrow>
             <h2 id="ask-title" className="mt-1 font-serif text-2xl">
               Ask the community
             </h2>
@@ -298,9 +301,9 @@ export function AskDialog({ initialSpaceId, onClose, onPosted }: { initialSpaceI
           <label className="block">
             <span className="mb-1.5 flex items-baseline justify-between text-sm font-medium">
               Your question
-              <span className={`font-mono text-[10px] ${title.length > 140 ? "text-warn" : "text-muted"}`}>{title.length}/160</span>
+              <span className={`font-mono text-xs ${title.length > 140 ? "text-warn" : "text-muted"}`}>{title.length}/160</span>
             </span>
-            <input ref={titleRef} value={title} maxLength={160} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Why does the electric field vanish inside a conductor?" className={inputClass} />
+            <Input ref={titleRef} value={title} maxLength={160} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Why does the electric field vanish inside a conductor?" />
           </label>
           <div>
             <span className="mb-1.5 block text-sm font-medium">Details</span>
@@ -310,9 +313,9 @@ export function AskDialog({ initialSpaceId, onClose, onPosted }: { initialSpaceI
         </div>
         <div className="flex items-center justify-between gap-3 border-t border-line bg-paper px-6 py-3.5">
           <p className="text-xs text-muted">Be kind. Anyone signed in can read and answer.</p>
-          <button type="submit" disabled={pending} className={buttonClass}>
+          <Button type="submit" disabled={pending}>
             {pending ? "Posting…" : "Post question"}
-          </button>
+          </Button>
         </div>
       </form>
     </div>,

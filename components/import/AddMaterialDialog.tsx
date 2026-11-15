@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
+import { buttonClass, ghostButtonClass, inputClass, Button, Eyebrow } from "@/components/ui";
 import { lecturePdf, playlistLectures, TranscriptError, type PlaylistLecture } from "@/lib/import/fetch-client";
 import { driveConfigured, driveReady, importFromDrive, prepareDrive } from "@/lib/import/drive";
 import {
@@ -18,6 +18,7 @@ import {
 import { boardPhotoPdf } from "@/lib/import/board-pdf";
 import { metaFor, type PaperMeta } from "@/lib/pdf/add-paper";
 import { track } from "@/lib/telemetry";
+import { useModal } from "@/components/Modal";
 
 // "Add material": PDFs, web pages (printed to PDF by the student), YouTube
 // lectures, Google Drive and Zotero. Everything except papers becomes a PDF
@@ -76,15 +77,16 @@ export function AddMaterialDialog({
 
   const shared = { busy, setBusy, setError, done };
 
+  const dialogRef = useModal(true, onClose, { closeOnEscape: !busy });
   return (
     <div
       className="animate-fade fixed inset-0 z-60 flex items-center justify-center bg-scrim p-3 backdrop-blur-[2px] sm:p-6"
       onMouseDown={(e) => e.target === e.currentTarget && !busy && onClose()}
     >
-      <div role="dialog" aria-modal="true" aria-labelledby="add-material-title" className="animate-pop flex max-h-full w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="add-material-title" className="animate-pop flex max-h-full w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
         <div className="flex items-start justify-between gap-4 px-6 pt-5">
           <div>
-            <p className={eyebrowClass}>Add material</p>
+            <Eyebrow>Add material</Eyebrow>
             <h2 id="add-material-title" className="mt-1 font-serif text-2xl">
               Study from anything
             </h2>
@@ -248,7 +250,7 @@ function DropZone({ accept, title, hint, onFiles }: { accept: string; title: str
 
 /* ---------------------------------------------------------------- web */
 
-const kbdClass = "rounded border border-ink/30 bg-paper px-1.5 py-0.5 font-mono text-[11px]";
+const kbdClass = "rounded border border-ink/30 bg-paper px-1.5 py-0.5 font-mono text-xs";
 
 // A web page comes in as the student's own print of it. The browser draws
 // the page as they see it, so diagrams, images, maths and tables come along
@@ -397,9 +399,9 @@ function YouTubeTab({ busy, setBusy, setError, done, initialUrl, onLectures }: S
                     }
                     className="mt-0.5 size-4 shrink-0 accent-[var(--ink)]"
                   />
-                  <span className="w-6 shrink-0 text-right font-mono text-[11px] text-muted">{i + 1}</span>
+                  <span className="w-6 shrink-0 text-right font-mono text-xs text-muted">{i + 1}</span>
                   <span className="min-w-0 flex-1 leading-snug">{v.title}</span>
-                  {v.seconds > 0 && <span className="shrink-0 font-mono text-[11px] text-muted">{minutes(v.seconds)}</span>}
+                  {v.seconds > 0 && <span className="shrink-0 font-mono text-xs text-muted">{minutes(v.seconds)}</span>}
                 </label>
               </li>
             ))}
@@ -709,7 +711,7 @@ function ZoteroTab({ busy, setBusy, setError, done, onPapers, close }: Shared & 
                       <span className="mt-0.5 block truncate text-xs text-muted">
                         {[it.paper.authors.slice(0, 3).join(", ") + (it.paper.authors.length > 3 ? " et al." : ""), it.paper.venue, it.paper.year].filter(Boolean).join(" · ")}
                       </span>
-                      <span className="mt-1 inline-block rounded border border-ink/30 px-1.5 py-px font-mono text-[10px] text-muted">
+                      <span className="mt-1 inline-block rounded border border-ink/30 px-1.5 py-px font-mono text-xs text-muted">
                         {it.pdf && account?.files ? "PDF in Zotero" : it.paper.pdf_url ? "arXiv PDF" : it.paper.abstract ? "Abstract only" : "Details only"}
                       </span>
                     </span>
@@ -775,12 +777,12 @@ function BoardTab({ busy, setBusy, setError, done }: Shared) {
       <input ref={camera} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => void take(e.target.files?.[0])} />
       <input ref={library} type="file" accept="image/*" className="hidden" onChange={(e) => void take(e.target.files?.[0])} />
       <div className="flex flex-wrap gap-2">
-        <button type="button" disabled={Boolean(busy)} onClick={() => camera.current?.click()} className={buttonClass}>
+        <Button type="button" disabled={Boolean(busy)} onClick={() => camera.current?.click()}>
           Take a photo
-        </button>
-        <button type="button" disabled={Boolean(busy)} onClick={() => library.current?.click()} className={ghostButtonClass}>
+        </Button>
+        <Button type="button" disabled={Boolean(busy)} onClick={() => library.current?.click()} variant="ghost">
           Choose a photo
-        </button>
+        </Button>
       </div>
     </div>
   );

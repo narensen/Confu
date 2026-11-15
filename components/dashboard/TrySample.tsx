@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "@/components/dialogs";
+import { Button } from "@/components/ui";
 import { buildPdfFile } from "@/lib/import/build-pdf";
 import { SAMPLE, SAMPLE_TITLE } from "@/lib/import/sample";
 import { uploadPdfToSession } from "@/lib/pdf/upload";
@@ -12,7 +13,7 @@ import { track } from "@/lib/telemetry";
 // "Try a sample session": a study session with Confu's short guide to the
 // science of learning already in it, so new students can try highlighting,
 // asking, planning and reviewing before uploading their own material.
-export function TrySample() {
+export function TrySample({ compact = false }: { compact?: boolean }) {
   const router = useRouter();
   const [status, setStatus] = useState<string | null>(null);
 
@@ -48,6 +49,14 @@ export function TrySample() {
     }
   }
 
+  if (compact) {
+    return (
+      <Button variant="ghost" onClick={start} disabled={Boolean(status)} className="py-2.5">
+        {status ?? "Try a sample"}
+      </Button>
+    );
+  }
+
   return (
     <div className="mt-6 flex flex-col items-start gap-3 rounded-2xl border border-dashed border-ink/40 p-5 sm:flex-row sm:items-center sm:justify-between">
       <div>
@@ -58,7 +67,7 @@ export function TrySample() {
         type="button"
         onClick={start}
         disabled={Boolean(status)}
-        className="shrink-0 rounded-lg border border-ink bg-panel px-4 py-2 text-sm font-medium transition hover:-translate-y-px hover:shadow-[2px_2px_0_0_#facc15] disabled:opacity-60"
+        className="shrink-0 rounded-lg border border-ink bg-panel px-4 py-2 text-sm font-medium transition hover:-translate-y-px hover:shadow-[2px_2px_0_0_var(--brand)] disabled:opacity-60"
       >
         {status ?? "Try a sample session"}
       </button>

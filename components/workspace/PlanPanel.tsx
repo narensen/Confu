@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { eyebrowClass } from "@/components/ui";
+import { OnceTip } from "@/components/onboarding/Tips";
+import { Eyebrow } from "@/components/ui";
 import { formatMinutes, scheduleStatus, toISODate } from "@/lib/schedule";
 import type { PaperReview } from "@/lib/paper";
 import type { PlanTopic, Resource, SessionDoc, StudyPlan, TopicStatus } from "@/lib/types";
@@ -97,10 +98,13 @@ export function PlanPanel(props: Props) {
 
   return (
     <div className="h-full overflow-y-auto">
+      <OnceTip id="plan" className="border-b border-ink/20">
+        Open a topic for the pages and what you should be able to explain. Mark it done when you can.
+      </OnceTip>
       {/* Goal */}
       <section className="animate-enter border-b border-ink px-6 pt-6 pb-5">
         <div className="flex items-start justify-between gap-4">
-          <p className={eyebrowClass}>Your goal</p>
+          <Eyebrow>Your goal</Eyebrow>
           <button onClick={() => setEditing(true)} className="text-xs text-muted underline-offset-4 transition hover:text-ink hover:underline">
             Edit goal
           </button>
@@ -123,7 +127,7 @@ export function PlanPanel(props: Props) {
           <button
             type="button"
             onClick={() => setPacing(true)}
-            className="ml-auto flex items-center gap-1.5 rounded-full border border-ink px-2.5 py-0.5 font-medium transition hover:bg-ink hover:text-white"
+            className="ml-auto flex items-center gap-1.5 rounded-full border border-ink px-2.5 py-0.5 font-medium transition hover:bg-ink hover:text-on-ink"
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
               <path d="M5.6 18.4a9 9 0 1 1 12.8 0M12 12l4-4" />
@@ -144,7 +148,7 @@ export function PlanPanel(props: Props) {
             <button
               type="button"
               onClick={() => setPacing(true)}
-              className="shrink-0 rounded-md border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white transition hover:-translate-y-px"
+              className="shrink-0 rounded-md border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-on-ink transition hover:-translate-y-px"
             >
               Re-pace
             </button>
@@ -174,7 +178,7 @@ export function PlanPanel(props: Props) {
               <Markdown content={plan.goal} className="prose-tutor prose-compact" />
               {plan.materials && (
                 <div className="mt-4 border-t border-line pt-3">
-                  <p className={eyebrowClass}>Other materials</p>
+                  <Eyebrow>Other materials</Eyebrow>
                   <p className="mt-1 text-sm whitespace-pre-line">{plan.materials}</p>
                 </div>
               )}
@@ -199,8 +203,8 @@ export function PlanPanel(props: Props) {
           <section key={pi} className="animate-enter border-b border-line" style={{ animationDelay: `${80 + pi * 70}ms` }}>
             <header className="px-6 pt-5 pb-2">
               <div className="flex items-center justify-between">
-                <p className={eyebrowClass}>Phase {String(pi + 1).padStart(2, "0")}</p>
-                <span className="font-mono text-[11px] text-muted">
+                <Eyebrow>Phase {String(pi + 1).padStart(2, "0")}</Eyebrow>
+                <span className="font-mono text-xs text-muted">
                   {done}/{phaseTopics.length}
                 </span>
               </div>
@@ -216,7 +220,7 @@ export function PlanPanel(props: Props) {
         );
       })}
 
-      <p className="px-6 py-5 text-[11px] leading-relaxed text-muted">
+      <p className="px-6 py-5 text-xs leading-relaxed text-muted">
         Plans and resources are AI-generated and may contain mistakes. Resource links open a search, so check you have the
         right one.
       </p>
@@ -257,15 +261,15 @@ function TopicRow({
     >
       <button onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex w-full items-start gap-3 px-3 py-3 text-left">
         <span
-          className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border font-mono text-[11px] transition-colors duration-300 ${
-            completed ? "border-ink bg-ink text-white" : active ? "border-ink text-ink" : "border-ink/30 text-muted"
+          className={`mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border font-mono text-xs transition-colors duration-300 ${
+            completed ? "border-ink bg-ink text-on-ink" : active ? "border-ink text-ink" : "border-ink/30 text-muted"
           }`}
         >
           {completed ? "✓" : t.position + 1}
         </span>
         <span className="min-w-0 flex-1">
           <span className={`block text-sm leading-snug ${completed ? "text-muted line-through" : "font-medium"}`}>{t.title}</span>
-          <span className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px] text-muted">
+          <span className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-muted">
             {inPdf ? (
               <span className="rounded border border-ink/60 px-1.5 py-px font-mono text-ink">
                 {docs.length > 1 ? doc!.label : "PDF"} {t.page_start === t.page_end ? `p. ${t.page_start}` : `pp. ${t.page_start}–${t.page_end}`}
@@ -276,7 +280,7 @@ function TopicRow({
               </span>
             )}
             {paper && (
-              <span className="rounded bg-ink px-1.5 py-px font-mono text-white">
+              <span className="rounded bg-ink px-1.5 py-px font-mono text-on-ink">
                 Paper · {paper.passes_done >= paper.target_pass ? "read" : `pass ${Math.min(3, paper.passes_done + 1)}/${paper.target_pass}`}
               </span>
             )}
@@ -298,7 +302,7 @@ function TopicRow({
         <div>
           <div className="space-y-4 px-3 pb-4 pl-12 text-sm">
             <div>
-              <p className={eyebrowClass}>You should be able to</p>
+              <Eyebrow>You should be able to</Eyebrow>
               <ul className="mt-2 space-y-1.5">
                 {t.objectives.map((o) => (
                   <li key={o} className="flex gap-2 leading-snug">
@@ -321,7 +325,7 @@ function TopicRow({
 
             {t.resources?.length > 0 && (
               <div>
-                <p className={eyebrowClass}>Go deeper</p>
+                <Eyebrow>Go deeper</Eyebrow>
                 <ul className="mt-2 divide-y divide-line rounded-lg border border-line">
                   {t.resources.map((r) => {
                     // Already in the session (added from the goal or the plan): open it.
@@ -334,10 +338,10 @@ function TopicRow({
                           onClick={() => (papers.has(have.id) ? onOpenPaper(have.id) : onJump(have.lastPage || 1, have.id))}
                           className="flex w-full items-center gap-3 px-3 py-2 text-left transition hover:bg-paper"
                         >
-                          <span className="w-16 shrink-0 font-mono text-[10px] uppercase tracking-wider text-muted">{RESOURCE_LABEL.paper}</span>
+                          <span className="w-16 shrink-0 font-mono text-xs uppercase tracking-wider text-muted">{RESOURCE_LABEL.paper}</span>
                           <span className="min-w-0 flex-1 text-sm leading-snug">
                             {r.title}
-                            <span className="ml-1.5 rounded border border-ok/50 px-1 font-mono text-[9px] text-ok uppercase">In your files</span>
+                            <span className="ml-1.5 rounded border border-ok/50 px-1 font-mono text-xs text-ok uppercase">In your files</span>
                           </span>
                           <span className="shrink-0 text-xs font-medium">Open</span>
                         </button>
@@ -348,7 +352,7 @@ function TopicRow({
                           onClick={() => findPaper(r.search || r.title)}
                           className="flex w-full items-center gap-3 px-3 py-2 text-left transition hover:bg-paper"
                         >
-                          <span className="w-16 shrink-0 font-mono text-[10px] uppercase tracking-wider text-muted">{RESOURCE_LABEL.paper}</span>
+                          <span className="w-16 shrink-0 font-mono text-xs uppercase tracking-wider text-muted">{RESOURCE_LABEL.paper}</span>
                           <span className="min-w-0 flex-1 text-sm leading-snug">{r.title}</span>
                           <span className="shrink-0 text-xs font-medium">Find &amp; add</span>
                         </button>
@@ -359,7 +363,7 @@ function TopicRow({
                           rel="noreferrer"
                           className="flex items-center gap-3 px-3 py-2 transition hover:bg-paper"
                         >
-                          <span className="w-16 shrink-0 font-mono text-[10px] uppercase tracking-wider text-muted">{RESOURCE_LABEL[r.type]}</span>
+                          <span className="w-16 shrink-0 font-mono text-xs uppercase tracking-wider text-muted">{RESOURCE_LABEL[r.type]}</span>
                           <span className="min-w-0 flex-1 text-sm leading-snug">{r.title}</span>
                           <span className="text-muted" aria-hidden>
                             ↗
@@ -431,7 +435,7 @@ function SmallButton({ primary, children, ...rest }: { primary?: boolean } & Rea
     <button
       type="button"
       className={`rounded-md border border-ink px-2.5 py-1 text-xs font-medium transition duration-200 ease-fluid hover:-translate-y-px hover:shadow-hard-sm active:translate-y-0 active:shadow-none disabled:pointer-events-none disabled:opacity-40 ${
-        primary ? "bg-ink text-white" : "bg-panel"
+        primary ? "bg-ink text-on-ink" : "bg-panel"
       }`}
       {...rest}
     >

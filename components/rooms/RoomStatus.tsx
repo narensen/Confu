@@ -92,12 +92,12 @@ export function RoomStatus() {
       >
         <span
           aria-hidden
-          className={`size-2 shrink-0 rounded-full ${phase === "focus" ? "animate-pulse bg-ink" : phase === "break" ? "bg-yellow-400" : "bg-line"}`}
+          className={`size-2 shrink-0 rounded-full ${phase === "focus" ? "animate-pulse bg-ink" : phase === "break" ? "bg-brand" : "bg-line"}`}
         />
         <span className="hidden max-w-28 truncate font-medium sm:inline">In {room.name}</span>
-        <span className="font-mono text-[11px] whitespace-nowrap text-muted tabular-nums">{timer ?? "In room"}</span>
+        <span className="font-mono text-xs whitespace-nowrap text-muted tabular-nums">{timer ?? "In room"}</span>
         {state && (
-          <span className="flex items-center gap-0.5 font-mono text-[11px] text-muted" aria-label={`${members.length} here`}>
+          <span className="flex items-center gap-0.5 font-mono text-xs text-muted" aria-label={`${members.length} here`}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
               <path d="M16 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1M9 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM22 19v-1a4 4 0 0 0-3-3.9M16 4.1a3 3 0 0 1 0 5.8" />
             </svg>
@@ -116,7 +116,7 @@ export function RoomStatus() {
           className={`flex items-center gap-1 self-stretch border-l border-ink/20 px-1.5 transition hover:bg-paper ${voice.muted || voice.deafened ? "text-danger" : talking.length ? "text-ok" : "text-ink"}`}
         >
           <Mic off={voice.muted || voice.deafened} size={13} />
-          <span className="font-mono text-[11px] tabular-nums">{voice.people.length}</span>
+          <span className="font-mono text-xs tabular-nums">{voice.people.length}</span>
         </button>
       )}
       {inVoice && voice.sharing && (
@@ -134,7 +134,7 @@ export function RoomStatus() {
         <button
           type="button"
           onClick={() => void joinVoice(room.slug)}
-          className="self-stretch border-l border-ink/20 px-2 text-[11px] font-medium text-ok transition hover:bg-paper"
+          className="self-stretch border-l border-ink/20 px-2 text-xs font-medium text-ok transition hover:bg-paper"
           title="You were in voice before the page reloaded"
         >
           Rejoin voice
@@ -159,11 +159,11 @@ export function RoomStatus() {
         <div className="rounded-xl border border-ink bg-panel p-3 shadow-hard">
           <div className="flex items-baseline justify-between gap-3">
             <p className="truncate text-sm font-medium">{room.name}</p>
-            <p className="shrink-0 font-mono text-[11px] text-muted">
+            <p className="shrink-0 font-mono text-xs text-muted">
               {state ? `${members.length} ${members.length === 1 ? "person" : "people"} here` : "…"}
             </p>
           </div>
-          <p className="mt-0.5 font-mono text-[11px] text-muted">{timer ? `${timer} left` : "Timer not running"}</p>
+          <p className="mt-0.5 font-mono text-xs text-muted">{timer ? `${timer} left` : "Timer not running"}</p>
           {inVoice && (
             <div className="mt-2.5 border-t border-line pt-2.5">
               <div className="flex items-center justify-between gap-2">
@@ -171,7 +171,7 @@ export function RoomStatus() {
                   <span className="size-1.5 animate-pulse rounded-full bg-ok" aria-hidden />
                   In voice · {voice.people.length}
                 </p>
-                <button type="button" onClick={() => void leaveVoice()} className="rounded-md border border-danger/40 px-2 py-0.5 text-[11px] font-medium text-danger transition hover:bg-danger/5">
+                <button type="button" onClick={() => void leaveVoice()} className="rounded-md border border-danger/40 px-2 py-0.5 text-xs font-medium text-danger transition hover:bg-danger/5">
                   Leave voice
                 </button>
               </div>
@@ -179,7 +179,7 @@ export function RoomStatus() {
                 {voice.people.map((p) => (
                   <li
                     key={p.id}
-                    className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] ${p.speaking ? "border-ok text-ok" : "border-line"}`}
+                    className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs ${p.speaking ? "border-ok text-ok" : "border-line"}`}
                   >
                     {(p.muted || p.deafened) && <Mic off size={10} />}
                     {p.me ? "You" : p.name}
@@ -192,7 +192,7 @@ export function RoomStatus() {
             <ul className="mt-2.5 max-h-60 space-y-1.5 overflow-y-auto border-t border-line pt-2.5">
               {members.slice(0, 12).map((m, i) => (
                 <li key={`${m.name}-${i}`} className="flex items-start gap-2 text-xs">
-                  <span aria-hidden className={`mt-1 size-1.5 shrink-0 rounded-full ${m.me ? "bg-yellow-400" : "bg-ink"}`} />
+                  <span aria-hidden className={`mt-1 size-1.5 shrink-0 rounded-full ${m.me ? "bg-brand" : "bg-ink"}`} />
                   <span className="min-w-0">
                     <span className="block truncate font-medium">{m.me ? "You" : m.name}</span>
                     {m.studying && <span className="block truncate text-muted">{m.studying}</span>}

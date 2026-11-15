@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import { Library, type LibrarySession, type NextStep } from "@/components/dashboard/Library";
-import { requireUser } from "@/lib/dal";
+import { getCurrentRole, requireUser } from "@/lib/dal";
+import { getKeyInfo } from "@/lib/groq-keys";
+import { isOwner } from "@/lib/plans";
 import { createClient } from "@/lib/supabase/server";
 import { docLabel, type SessionKind } from "@/lib/types";
 import { logError } from "@/lib/log";
@@ -146,5 +148,6 @@ async function LibraryLoader() {
     };
   });
 
-  return <Library name={user.name} sessions={sessions} />;
+  const [key, role] = await Promise.all([getKeyInfo(supabase, user.id, null), getCurrentRole()]);
+  return <Library name={user.name} sessions={sessions} needsKey={!key && !isOwner(role)} />;
 }

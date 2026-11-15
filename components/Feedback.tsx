@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "@/components/dialogs";
 import { createClient } from "@/lib/supabase/client";
 import { routeOf, track } from "@/lib/telemetry";
+import { useModal } from "@/components/Modal";
 
 // "Send feedback": opens from anywhere with openFeedback(), lands in the
 // owner's admin dashboard (feedback table, migration 0018).
@@ -68,6 +69,7 @@ export function FeedbackHost() {
     toast("Thanks. Every message is read by the person building Confu.");
   }
 
+  const dialogRef = useModal(open, () => setOpen(false));
   if (!open) return null;
   const current = KINDS.find((k) => k.id === kind)!;
 
@@ -76,7 +78,7 @@ export function FeedbackHost() {
       className="animate-fade fixed inset-0 z-[70] flex items-center justify-center bg-scrim p-4 backdrop-blur-[2px]"
       onMouseDown={(e) => e.target === e.currentTarget && setOpen(false)}
     >
-      <div role="dialog" aria-modal="true" aria-labelledby="fb-title" className="animate-pop w-full max-w-md rounded-xl border border-ink bg-panel p-5 shadow-[6px_6px_0_0_var(--shadow)]">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="fb-title" className="animate-pop w-full max-w-md rounded-xl border border-ink bg-panel p-5 shadow-[6px_6px_0_0_var(--shadow)]">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p id="fb-title" className="font-serif text-2xl leading-tight">
@@ -98,7 +100,7 @@ export function FeedbackHost() {
               aria-checked={kind === k.id}
               onClick={() => setKind(k.id)}
               className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                kind === k.id ? "border-ink bg-ink text-white" : "border-ink/30 hover:border-ink"
+                kind === k.id ? "border-ink bg-ink text-on-ink" : "border-ink/30 hover:border-ink"
               }`}
             >
               {k.label}
@@ -118,7 +120,7 @@ export function FeedbackHost() {
           placeholder={current.placeholder}
           className="mt-3 w-full resize-y rounded-lg border border-ink/25 bg-panel px-3 py-2 text-sm leading-relaxed outline-none transition placeholder:text-muted/70 focus:border-ink focus:shadow-hard-sm"
         />
-        <p className="mt-1 text-[11px] text-muted">We&apos;ll include the page you&apos;re on, so we can find the problem. Nothing else.</p>
+        <p className="mt-1 text-xs text-muted">We&apos;ll include the page you&apos;re on, so we can find the problem. Nothing else.</p>
         {error && <p className="animate-pop mt-2 text-sm text-danger">{error}</p>}
 
         <div className="mt-4 flex justify-end gap-2">
@@ -129,7 +131,7 @@ export function FeedbackHost() {
             type="button"
             disabled={!message.trim() || sending}
             onClick={send}
-            className="rounded-lg border border-ink bg-ink px-3.5 py-2 text-sm font-medium text-white transition hover:-translate-y-px hover:shadow-[2px_2px_0_0_#facc15] disabled:pointer-events-none disabled:opacity-40"
+            className="rounded-lg border border-ink bg-ink px-3.5 py-2 text-sm font-medium text-on-ink transition hover:-translate-y-px hover:shadow-[2px_2px_0_0_var(--brand)] disabled:pointer-events-none disabled:opacity-40"
           >
             {sending ? "Sending…" : "Send"}
           </button>

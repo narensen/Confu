@@ -46,7 +46,7 @@ export function SectionLoop({ sessionId, slug }: { sessionId: string; slug: stri
   return (
     <div className="space-y-3 rounded-xl border border-line p-3">
       {requests !== null && (
-        <p className="font-mono text-[11px] text-muted">
+        <p className="font-mono text-xs text-muted">
           {requests} course-link requests, not people · last 14 days
         </p>
       )}
@@ -81,7 +81,7 @@ export function SectionLoop({ sessionId, slug }: { sessionId: string; slug: stri
         >
           Add to a calendar
         </button>
-        {hour && <code className="block truncate font-mono text-[11px]">{SITE.url}/api/library-hour/{hour}</code>}
+        {hour && <code className="block truncate font-mono text-xs">{SITE.url}/api/library-hour/{hour}</code>}
       </div>
       <div className="flex flex-wrap gap-2">
         <button type="button" disabled={busy} onClick={() => void run("Miss map", () => createClient().rpc("roll_miss_map", { p_session: sessionId }), setMap)} className={`${ghostButtonClass} py-1 text-xs`}>
@@ -94,9 +94,9 @@ export function SectionLoop({ sessionId, slug }: { sessionId: string; slug: stri
           January page
         </button>
       </div>
-      {map && <a className="block truncate font-mono text-[11px] underline" href={`/m/${map}`}>{SITE.url}/m/{map}</a>}
-      {crib && <a className="block truncate font-mono text-[11px] underline" href={`/crib/${crib}`}>{SITE.url}/crib/{crib}</a>}
-      {wrapped && <a className="block truncate font-mono text-[11px] underline" href={`/w/section/${wrapped}`}>{SITE.url}/w/section/{wrapped}</a>}
+      {map && <a className="block truncate font-mono text-xs underline" href={`/m/${map}`}>{SITE.url}/m/{map}</a>}
+      {crib && <a className="block truncate font-mono text-xs underline" href={`/crib/${crib}`}>{SITE.url}/crib/{crib}</a>}
+      {wrapped && <a className="block truncate font-mono text-xs underline" href={`/w/section/${wrapped}`}>{SITE.url}/w/section/{wrapped}</a>}
       {note && <p className="text-xs text-danger">{note}</p>}
     </div>
   );

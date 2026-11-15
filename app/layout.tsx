@@ -7,7 +7,6 @@ import { SITE } from "@/lib/site";
 import { AppShell } from "@/components/AppShell";
 import { DialogHost } from "@/components/dialogs";
 import { FeedbackHost } from "@/components/Feedback";
-import { FlashToast } from "@/components/FlashToast";
 import { Telemetry } from "@/components/Telemetry";
 import { HEAD_SCRIPT } from "@/lib/head-script";
 
@@ -50,7 +49,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <DialogHost />
         <FeedbackHost />
         <AppShell />
-        <FlashToast />
         <Suspense fallback={null}>
           <Telemetry />
         </Suspense>

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { createClient as createAnon } from "@supabase/supabase-js";
 import { SiteFooter, SiteNav } from "@/components/site/SiteNav";
-import { eyebrowClass } from "@/components/ui";
+import { eyebrowClass, Eyebrow } from "@/components/ui";
 
 export const metadata: Metadata = {
   title: "Roadmaps — Confu",
@@ -32,7 +32,7 @@ export default function RoadmapsPage() {
       <main className="flex-1">
         <section className="border-b border-ink">
           <div className="mx-auto max-w-6xl px-6 pt-16 pb-12">
-            <p className={eyebrowClass}>Roadmaps</p>
+            <Eyebrow>Roadmaps</Eyebrow>
             <h1 className="mt-3 max-w-3xl font-serif text-5xl leading-[1.05] tracking-tight">A session, shared as a path.</h1>
             <p className="mt-5 max-w-2xl text-lg leading-relaxed text-muted">
               A roadmap is a study plan someone already walked: the phases, the sources, and how the days were split. Copy it and the plan starts from today, with your own files.
@@ -106,7 +106,7 @@ async function Gallery() {
             <span className={eyebrowClass}>Roadmap</span>
             <span className="mt-2 line-clamp-2 font-serif text-xl leading-snug">{p.title}</span>
             <span className="mt-2 line-clamp-3 text-sm text-muted">{p.goal || p.description}</span>
-            <span className="mt-auto pt-4 font-mono text-[11px] text-muted">
+            <span className="mt-auto pt-4 font-mono text-xs text-muted">
               {p.days ? `${p.days} days` : "A plan"}
               {p.minutes ? ` · ${p.minutes} min a day` : ""}
               {p.topics ? ` · ${p.topics} topics` : ""}

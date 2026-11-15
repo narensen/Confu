@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { buttonClass, inputClass } from "@/components/ui";
+import { inputClass, Button, Input } from "@/components/ui";
 import { createThread } from "@/lib/community";
 import { track } from "@/lib/telemetry";
 
@@ -38,7 +38,7 @@ export function QuestionForm({ spaceId, onPosted }: { spaceId?: string | null; o
       className="space-y-3 rounded-2xl border border-ink bg-panel p-4 sm:p-5"
     >
       <p className="font-medium">Ask a question</p>
-      <input value={title} maxLength={160} onChange={(e) => setTitle(e.target.value)} placeholder="The question, in one sentence" aria-label="Question" className={inputClass} />
+      <Input value={title} maxLength={160} onChange={(e) => setTitle(e.target.value)} placeholder="The question, in one sentence" aria-label="Question" />
       <textarea
         value={body}
         maxLength={8000}
@@ -49,9 +49,9 @@ export function QuestionForm({ spaceId, onPosted }: { spaceId?: string | null; o
         className={inputClass}
       />
       {error && <p className="text-sm text-danger">{error}</p>}
-      <button type="submit" disabled={pending} className={buttonClass}>
+      <Button type="submit" disabled={pending}>
         {pending ? "Posting…" : "Post question"}
-      </button>
+      </Button>
     </form>
   );
 }

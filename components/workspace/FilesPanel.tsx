@@ -1,6 +1,6 @@
 "use client";
 
-import { eyebrowClass, ghostButtonClass } from "@/components/ui";
+import { ghostButtonClass, Eyebrow } from "@/components/ui";
 import type { SessionDoc } from "@/lib/types";
 import { ToAddSection, type ToAddProps } from "./ToAddSection";
 
@@ -41,7 +41,7 @@ export function FilesPanel({ docs, activeId, open, addLabel, onAdd, onAddPapers,
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-1.5 @md:flex-col @md:items-end">
-          <button type="button" onClick={onAdd} className="rounded-md border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-white transition hover:-translate-y-px">
+          <button type="button" onClick={onAdd} className="rounded-md border border-ink bg-ink px-3 py-1.5 text-xs font-medium text-on-ink transition hover:-translate-y-px">
             {addLabel}
           </button>
           {onAddPapers && (
@@ -54,7 +54,7 @@ export function FilesPanel({ docs, activeId, open, addLabel, onAdd, onAddPapers,
 
       {uploads.length > 0 && (
         <section className="mt-5" aria-live="polite">
-          <p className={eyebrowClass}>Coming in</p>
+          <Eyebrow>Coming in</Eyebrow>
           <ul className="mt-2 divide-y divide-line rounded-xl border border-line">
             {uploads.map((u) => (
               <li key={u.key} className="flex items-center gap-3 px-3 py-2.5">
@@ -70,7 +70,7 @@ export function FilesPanel({ docs, activeId, open, addLabel, onAdd, onAddPapers,
                 </span>
                 {u.status === "failed" && (
                   <span className="flex shrink-0 items-center gap-1 text-xs">
-                    <button type="button" onClick={() => onRetry(u.key)} className="rounded-md border border-ink px-2 py-0.5 font-medium transition hover:bg-ink hover:text-white">
+                    <button type="button" onClick={() => onRetry(u.key)} className="rounded-md border border-ink px-2 py-0.5 font-medium transition hover:bg-ink hover:text-on-ink">
                       Retry
                     </button>
                     <button type="button" onClick={() => onDismiss(u.key)} className="rounded px-1.5 py-0.5 text-muted transition hover:text-ink">
@@ -97,8 +97,8 @@ export function FilesPanel({ docs, activeId, open, addLabel, onAdd, onAddPapers,
             const viewing = isOpen && d.id === activeId;
             const isPaperDoc = paperIds?.has(d.id);
             return (
-              <li key={d.id} className={`group flex items-start gap-2.5 px-3 py-2.5 ${viewing ? "bg-yellow-50" : ""}`}>
-                <span className={`mt-0.5 shrink-0 rounded px-1 font-mono text-[10px] ${viewing ? "bg-ink text-white" : "border border-ink/30 text-muted"}`}>{d.label}</span>
+              <li key={d.id} className={`group flex items-start gap-2.5 px-3 py-2.5 ${viewing ? "bg-brand-faint" : ""}`}>
+                <span className={`mt-0.5 shrink-0 rounded px-1 font-mono text-xs ${viewing ? "bg-ink text-on-ink" : "border border-ink/30 text-muted"}`}>{d.label}</span>
                 <div className="min-w-0 flex-1">
                   <button type="button" onClick={() => onOpen(d.id)} title={isOpen ? "Show it" : "Open it as a tab"} className="block w-full truncate text-left text-sm font-medium hover:underline">
                     {d.title}

@@ -5,7 +5,6 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { friendlyAuthError } from "@/lib/auth-errors";
 import { HEARD_FROM, OCCUPATIONS, PURPOSES } from "@/lib/signup-survey";
-import { claimInvite } from "@/lib/referrals";
 import { createClient } from "@/lib/supabase/server";
 
 // `values` hands the sign-up answers back on an error, so the form keeps them.
@@ -87,10 +86,7 @@ export async function signup(_: AuthState, formData: FormData): Promise<AuthStat
   if (error) return { ...friendlyAuthError(error, "signup"), values, email: parsed.data.email };
 
   // With email confirmation disabled, Supabase returns a session immediately.
-  if (data.session) {
-    await claimInvite(supabase);
-    redirect(next);
-  }
+  if (data.session) redirect(next);
   // Signing up again with an existing email "succeeds" (Supabase hides which
   // emails exist) but sends nothing: the user comes back with no identities.
   if (data.user && data.user.identities?.length === 0) {

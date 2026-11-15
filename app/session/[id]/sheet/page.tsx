@@ -47,7 +47,7 @@ async function Sheet({ params, searchParams }: { params: PageProps<"/session/[id
     topic.page_start == null ? "" : topic.page_start === topic.page_end ? `p. ${topic.page_start}` : `pp. ${topic.page_start}–${topic.page_end}`;
 
   return (
-    <div className="min-h-dvh bg-paper text-ink print:bg-white print:text-black">
+    <div className="min-h-dvh bg-paper text-ink print:bg-on-ink print:text-black">
       <div className="mx-auto flex max-w-[190mm] items-center justify-between gap-3 px-6 pt-6 print:hidden">
         <Link href={`/session/${id}`} className="text-sm text-muted underline-offset-2 hover:text-ink hover:underline">
           ← Back to the session
@@ -55,12 +55,12 @@ async function Sheet({ params, searchParams }: { params: PageProps<"/session/[id
         <PrintButton />
       </div>
       <article className="mx-auto box-border h-[297mm] max-w-[190mm] overflow-hidden px-[14mm] py-[12mm]">
-        <p className="font-mono text-[10px] tracking-wider text-neutral-500 uppercase">{session.title}</p>
+        <p className="font-mono text-xs tracking-wider text-neutral-500 uppercase">{session.title}</p>
         <h1 className="mt-1 font-serif text-[26px] leading-tight">{topic.title}</h1>
-        {pagesLabel && <p className="mt-1 font-mono text-[11px] text-neutral-500">{pagesLabel}</p>}
+        {pagesLabel && <p className="mt-1 font-mono text-xs text-neutral-500">{pagesLabel}</p>}
         {sheet.objectives.length > 0 && (
           <section className="mt-4">
-            <h2 className="font-mono text-[10px] tracking-wider text-neutral-500 uppercase">You should be able to</h2>
+            <h2 className="font-mono text-xs tracking-wider text-neutral-500 uppercase">You should be able to</h2>
             <ul className="mt-1.5 space-y-1 text-[13px] leading-snug">
               {sheet.objectives.map((o) => (
                 <li key={o}>· {o}</li>
@@ -71,10 +71,10 @@ async function Sheet({ params, searchParams }: { params: PageProps<"/session/[id
         {sheet.concepts.length > 0 && <p className="mt-3 text-[12px] leading-snug text-neutral-700">{sheet.concepts.join(" · ")}</p>}
         {sheet.excerpts.length > 0 && (
           <section className="mt-4 space-y-2">
-            <h2 className="font-mono text-[10px] tracking-wider text-neutral-500 uppercase">From the page</h2>
+            <h2 className="font-mono text-xs tracking-wider text-neutral-500 uppercase">From the page</h2>
             {sheet.excerpts.map((e) => (
-              <p key={e.page} className="text-[11px] leading-snug">
-                <span className="font-mono text-[10px] text-neutral-500">p. {e.page} </span>
+              <p key={e.page} className="text-xs leading-snug">
+                <span className="font-mono text-xs text-neutral-500">p. {e.page} </span>
                 {e.text}
               </p>
             ))}

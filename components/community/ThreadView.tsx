@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Avatar, ErrorNote, MarkdownField, SpaceChip, SpaceIcon, VoteButton } from "@/components/community/kit";
 import { ask, toast } from "@/components/dialogs";
-import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
+import { eyebrowClass, inputClass, Button, ButtonLink } from "@/components/ui";
 import { Markdown } from "@/components/workspace/Markdown";
 import { ago } from "@/lib/format-usage";
 import { acceptReply, deletePost, editPost, loadThread, replyThread, reportPost, requestChecks, type PostCheck, type ReportReason, type ThreadDetail, type ThreadReply } from "@/lib/community";
@@ -126,9 +126,9 @@ export function ThreadView({ id }: { id: string }) {
     return (
       <div className="mt-8 space-y-4">
         <ErrorNote>{error}</ErrorNote>
-        <Link href="/threads" className={ghostButtonClass}>
+        <ButtonLink href="/threads" variant="ghost">
           ← All questions
-        </Link>
+        </ButtonLink>
       </div>
     );
   }
@@ -239,7 +239,7 @@ export function ThreadView({ id }: { id: string }) {
             {replies.length > 2 && (
               <div className="flex gap-1 rounded-lg border border-ink/20 bg-panel p-0.5 text-xs">
                 {(["oldest", "top"] as const).map((s) => (
-                  <button key={s} type="button" onClick={() => setReplySort(s)} aria-pressed={replySort === s} className={`rounded-md px-2.5 py-1 font-medium capitalize transition ${replySort === s ? "bg-ink text-white" : "text-muted hover:text-ink"}`}>
+                  <button key={s} type="button" onClick={() => setReplySort(s)} aria-pressed={replySort === s} className={`rounded-md px-2.5 py-1 font-medium capitalize transition ${replySort === s ? "bg-ink text-on-ink" : "text-muted hover:text-ink"}`}>
                     {s}
                   </button>
                 ))}
@@ -282,12 +282,12 @@ export function ThreadView({ id }: { id: string }) {
             <MarkdownField value={body} onChange={setBody} rows={5} label="Your reply" placeholder="Explain it the way you'd want it explained. Show the step that made it click." />
             {formError && <p className="mt-2 text-sm text-danger">{formError}</p>}
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <button type="submit" disabled={pending} className={buttonClass}>
+              <Button type="submit" disabled={pending}>
                 {pending ? "Posting…" : "Post reply"}
-              </button>
-              <Link href={backHref} className={ghostButtonClass}>
+              </Button>
+              <ButtonLink href={backHref} variant="ghost">
                 Back
-              </Link>
+              </ButtonLink>
               {thread.space?.visibility === "public" && !thread.joined && <span className="text-xs text-muted">Replying follows {thread.space.name}.</span>}
             </div>
           </form>
@@ -315,7 +315,7 @@ export function ThreadView({ id }: { id: string }) {
             ["Helpful", String(thread.votes)],
           ].map(([k, v]) => (
             <div key={k} className="bg-panel px-3 py-2.5">
-              <dt className="font-mono text-[10px] tracking-wider text-muted uppercase">{k}</dt>
+              <dt className="font-mono text-xs tracking-wider text-muted uppercase">{k}</dt>
               <dd className="mt-0.5 truncate font-medium">{v}</dd>
             </div>
           ))}
@@ -440,12 +440,12 @@ function PostEditor({ title, body, onSave, onCancel }: { title?: string; body: s
       <MarkdownField value={nextBody} onChange={setNextBody} rows={6} autoFocus={title === undefined} placeholder="Details" />
       {error && <p className="text-sm text-danger">{error}</p>}
       <div className="flex gap-2">
-        <button type="submit" disabled={busy} className={buttonClass}>
+        <Button type="submit" disabled={busy}>
           {busy ? "Saving…" : "Save"}
-        </button>
-        <button type="button" onClick={onCancel} className={ghostButtonClass}>
+        </Button>
+        <Button type="button" onClick={onCancel} variant="ghost">
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   );
@@ -455,7 +455,7 @@ function CheckNote({ check }: { check: PostCheck | null }) {
   if (!check || check.status === "pending" || check.status === "corrected") return null;
   const hidden = check.status === "hidden";
   return (
-    <div className={`mt-4 rounded-xl border px-3 py-2.5 text-sm ${hidden ? "border-danger/40 bg-danger/5 text-danger" : "border-yellow-600/40 bg-yellow-100"}`}>
+    <div className={`mt-4 rounded-xl border px-3 py-2.5 text-sm ${hidden ? "border-danger/40 bg-danger/5 text-danger" : "border-brand/40 bg-brand-soft"}`}>
       <p className="text-xs font-medium">{hidden ? "Hidden for review" : "This may be wrong"}</p>
       {check.note && <p className={`mt-1 ${hidden ? "" : "text-ink"}`}>{check.note}</p>}
     </div>

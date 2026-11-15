@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { eyebrowClass, ghostButtonClass } from "@/components/ui";
+import { ghostButtonClass, Eyebrow } from "@/components/ui";
 import type { SessionDoc } from "@/lib/types";
 
 // Shown in place of the PDF viewer for papers added without a PDF.
@@ -17,9 +17,9 @@ export function PaperCard({ doc, busy, onAttach }: { doc: SessionDoc; busy: bool
   return (
     <div className="h-full overflow-y-auto bg-viewer px-6 py-8">
       <article className="animate-enter mx-auto max-w-2xl rounded-xl border border-ink bg-panel p-8 shadow-hard">
-        <p className={eyebrowClass}>
+        <Eyebrow>
           {doc.label} · {[m.venue, m.year].filter(Boolean).join(" · ") || "Paper"}
-        </p>
+        </Eyebrow>
         <h1 className="mt-2 font-serif text-3xl leading-tight tracking-tight">{doc.title}</h1>
         {m.authors?.length ? <p className="mt-3 text-sm leading-relaxed text-muted">{m.authors.join(", ")}</p> : null}
 

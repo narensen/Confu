@@ -99,7 +99,7 @@ export function PagePins({
       {open && (
         <div className="pointer-events-auto max-h-[50vh] w-80 overflow-y-auto rounded-xl border border-ink bg-panel p-3 shadow-hard">
           <div className="flex items-center justify-between gap-2">
-            <p className="font-mono text-[10px] tracking-wider text-muted uppercase">Pins · p. {page}</p>
+            <p className="font-mono text-xs tracking-wider text-muted uppercase">Pins · p. {page}</p>
             <button type="button" onClick={onExplain} className="text-xs font-medium underline-offset-2 hover:underline">
               Explain (45s)
             </button>
@@ -129,7 +129,7 @@ export function PagePins({
             <input value={question} maxLength={300} onChange={(e) => setQuestion(e.target.value)} placeholder="Optional. Answered once for the class." className="mt-1 w-full rounded-md border border-ink/30 bg-panel px-2 py-1 outline-none focus:border-ink" />
           </label>
           {error && <p className="mt-2 text-xs text-danger">{error}</p>}
-          <button type="button" disabled={busy || (!quote.trim() && !question.trim())} onClick={() => void save()} className="mt-2 rounded-md border border-ink bg-ink px-2.5 py-1 text-xs font-medium text-white disabled:opacity-40">
+          <button type="button" disabled={busy || (!quote.trim() && !question.trim())} onClick={() => void save()} className="mt-2 rounded-md border border-ink bg-ink px-2.5 py-1 text-xs font-medium text-on-ink disabled:opacity-40">
             {busy ? "Saving…" : "Pin this page"}
           </button>
         </div>

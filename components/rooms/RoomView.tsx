@@ -7,7 +7,7 @@ import { FocusSound } from "@/components/pdf/FocusSound";
 import { chime } from "@/components/pdf/FocusTimer";
 import { RoomFriends } from "@/components/rooms/RoomFriends";
 import { Mic, VoiceRoom } from "@/components/rooms/VoiceRoom";
-import { buttonClass, eyebrowClass, ghostButtonClass, inputClass } from "@/components/ui";
+import { buttonClass, eyebrowClass, ghostButtonClass, inputClass, Eyebrow } from "@/components/ui";
 import { clock, currentRoom, heartbeat, joinRoom, leaveRoom, onRoomChange, ping, roomState, setStudying, stayIfJoined, subscribeRoom, timerNow, type RoomState } from "@/lib/rooms";
 import { SITE } from "@/lib/site";
 import { createClient } from "@/lib/supabase/client";
@@ -117,7 +117,7 @@ export function RoomView({ slug }: { slug: string }) {
     <div className="animate-enter grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
       <div className="min-w-0">
         {/* The room */}
-        <section className={`overflow-hidden rounded-3xl border border-ink transition-colors duration-700 ${phase === "focus" ? "bg-inverse text-inverse-ink" : phase === "break" ? "bg-yellow-100" : "bg-panel"}`}>
+        <section className={`overflow-hidden rounded-3xl border border-ink transition-colors duration-700 ${phase === "focus" ? "bg-inverse text-inverse-ink" : phase === "break" ? "bg-brand-soft" : "bg-panel"}`}>
           <div className="flex flex-wrap items-start justify-between gap-3 px-6 pt-6 sm:px-8 sm:pt-8">
             <div className="min-w-0">
               <Link href="/rooms" className={`${eyebrowClass} ${phase === "focus" ? "text-inverse-muted! hover:text-inverse-ink!" : "hover:text-ink"}`}>
@@ -140,7 +140,7 @@ export function RoomView({ slug }: { slug: string }) {
 
           <div className="flex flex-col items-center px-6 pt-6 pb-8 sm:pb-10">
             <TimerRing progress={progress} phase={phase}>
-              <p className={`font-mono text-[11px] tracking-[0.25em] uppercase ${phase === "focus" ? "text-yellow-400" : "text-muted"}`}>
+              <p className={`font-mono text-xs tracking-[0.25em] uppercase ${phase === "focus" ? "text-brand" : "text-muted"}`}>
                 {phase === "focus" ? "Focus" : phase === "break" ? "Break" : "Ready"}
               </p>
               <p className="mt-1 font-sans text-6xl font-semibold tracking-tight tabular-nums sm:text-7xl" aria-live="polite">
@@ -171,7 +171,7 @@ export function RoomView({ slug }: { slug: string }) {
                       phase === next
                         ? phase === "focus"
                           ? "bg-inverse-ink/15 text-inverse-ink ring-1 ring-inverse-ink/25 ring-inset"
-                          : "bg-ink text-white"
+                          : "bg-ink text-on-ink"
                         : phase === "focus"
                           ? "text-inverse-ink/80 hover:bg-inverse-ink/10"
                           : "text-muted hover:bg-paper hover:text-ink"
@@ -190,8 +190,8 @@ export function RoomView({ slug }: { slug: string }) {
         {/* Who's here */}
         <section className="mt-8" aria-label="In the room">
           <div className="flex items-baseline justify-between">
-            <p className={eyebrowClass}>In the room</p>
-            <p className="font-mono text-[11px] text-muted">
+            <Eyebrow>In the room</Eyebrow>
+            <p className="font-mono text-xs text-muted">
               {room.members.length} {room.members.length === 1 ? "person" : "people"}
             </p>
           </div>
@@ -202,7 +202,7 @@ export function RoomView({ slug }: { slug: string }) {
                 return (
                   <li key={`${m.name}-${i}`} className="animate-enter flex items-center gap-3 rounded-xl border border-line bg-panel px-3 py-2.5" style={{ animationDelay: `${Math.min(i, 8) * 30}ms` }}>
                     <span className="relative">
-                      <span className={`flex size-10 shrink-0 items-center justify-center rounded-full border border-ink font-serif ${m.me ? "bg-yellow-300" : "bg-paper"}`}>{m.name.slice(0, 1).toUpperCase()}</span>
+                      <span className={`flex size-10 shrink-0 items-center justify-center rounded-full border border-ink font-serif ${m.me ? "bg-brand" : "bg-paper"}`}>{m.name.slice(0, 1).toUpperCase()}</span>
                       {talking && (
                         <span title="In voice" className="absolute -right-1 -bottom-1 flex size-5 items-center justify-center rounded-full border border-ink bg-panel text-ok">
                           <Mic off={false} size={10} />
@@ -324,7 +324,7 @@ function TimerRing({ progress, phase, children }: { progress: number; phase: "fo
           strokeLinecap="round"
           strokeDasharray={c}
           strokeDashoffset={c * (1 - progress)}
-          className={`transition-[stroke-dashoffset] duration-1000 ease-linear ${phase === "focus" ? "stroke-yellow-300" : phase === "break" ? "stroke-ink" : "stroke-transparent"}`}
+          className={`transition-[stroke-dashoffset] duration-1000 ease-linear ${phase === "focus" ? "stroke-brand" : phase === "break" ? "stroke-ink" : "stroke-transparent"}`}
         />
       </svg>
       <div className="relative text-center">{children}</div>

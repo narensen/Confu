@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 import { track } from "@/lib/telemetry";
 import { setTheme, useTheme } from "@/lib/theme";
 import type { SessionKind } from "@/lib/types";
+import { useModal } from "@/components/Modal";
 
 // Ctrl/Cmd+K, anywhere once signed in: jump to a session or a place, or run
 // one of the open page's commands (a workspace tool, full screen…). Typing
@@ -46,7 +47,7 @@ export function PaletteButton({ compact = false }: { compact?: boolean }) {
         <path d="m20 20-3.5-3.5" />
       </svg>
       <span className={compact ? "hidden lg:inline" : "hidden sm:inline"}>Go to…</span>
-      <kbd className={`rounded border border-line px-1 font-mono text-[11px] ${compact ? "hidden lg:inline" : "hidden sm:inline"}`}>{mac ? "⌘K" : "Ctrl K"}</kbd>
+      <kbd className={`rounded border border-line px-1 font-mono text-xs ${compact ? "hidden lg:inline" : "hidden sm:inline"}`}>{mac ? "⌘K" : "Ctrl K"}</kbd>
     </button>
   );
 }
@@ -172,7 +173,7 @@ function Palette({ onClose }: { onClose: () => void }) {
     if (item.group !== lastGroup && !query.trim()) {
       lastGroup = item.group;
       rows.push(
-        <p key={`g-${item.group}`} role="presentation" className="px-3 pt-3 pb-1 font-mono text-[11px] tracking-[0.12em] text-muted uppercase">
+        <p key={`g-${item.group}`} role="presentation" className="px-3 pt-3 pb-1 font-mono text-xs tracking-[0.12em] text-muted uppercase">
           {item.group}
         </p>,
       );
@@ -187,18 +188,19 @@ function Palette({ onClose }: { onClose: () => void }) {
         aria-selected={on}
         onMouseMove={() => setActive(index)}
         onClick={() => run(item)}
-        className={`mx-1.5 flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm ${on ? "bg-ink text-white" : "text-ink"}`}
+        className={`mx-1.5 flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-sm ${on ? "bg-ink text-on-ink" : "text-ink"}`}
       >
         <span className="min-w-0 flex-1 truncate">{item.label}</span>
-        {item.hint && <span className={`max-w-[45%] shrink-0 truncate text-xs ${on ? "text-white/70" : "text-muted"}`}>{item.hint}</span>}
-        {item.keys && <kbd className={`shrink-0 rounded border px-1 font-mono text-[11px] ${on ? "border-white/30 text-white/80" : "border-line text-muted"}`}>{item.keys}</kbd>}
+        {item.hint && <span className={`max-w-[45%] shrink-0 truncate text-xs ${on ? "text-on-ink/70" : "text-muted"}`}>{item.hint}</span>}
+        {item.keys && <kbd className={`shrink-0 rounded border px-1 font-mono text-xs ${on ? "border-on-ink/30 text-on-ink/80" : "border-line text-muted"}`}>{item.keys}</kbd>}
       </div>,
     );
   });
 
+  const dialogRef = useModal(true, onClose);
   return (
     <div className="animate-fade fixed inset-0 z-[70] flex items-start justify-center bg-scrim px-3 pt-[12vh] backdrop-blur-[2px]" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-modal="true" aria-label="Go to" className="animate-pop w-full max-w-lg overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Go to" className="animate-pop w-full max-w-lg overflow-hidden rounded-2xl border border-ink bg-panel shadow-hard">
         <div className="flex items-center gap-2.5 border-b border-line px-4">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 text-muted" aria-hidden>
             <circle cx="11" cy="11" r="7" />
@@ -237,7 +239,7 @@ function Palette({ onClose }: { onClose: () => void }) {
             placeholder="Go to a session, a place or a tool…"
             className="h-12 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted"
           />
-          <kbd className="shrink-0 rounded border border-line px-1.5 font-mono text-[11px] text-muted">Esc</kbd>
+          <kbd className="shrink-0 rounded border border-line px-1.5 font-mono text-xs text-muted">Esc</kbd>
         </div>
         <div ref={list} id="palette-list" role="listbox" aria-label="Results" className="max-h-[min(60vh,26rem)] overflow-y-auto pb-1.5">
           {items.length ? rows : <p className="px-4 py-6 text-center text-sm text-muted">Nothing matches “{query.trim()}”.</p>}

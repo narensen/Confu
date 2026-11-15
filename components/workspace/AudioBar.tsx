@@ -21,10 +21,10 @@ export function AudioBar() {
           onClick={() => (s.status === "playing" ? speechPause() : speechResume())}
           disabled={s.status === "loading" || s.status === "failed"}
           aria-label={s.status === "playing" ? "Pause" : "Play"}
-          className="flex size-9 shrink-0 items-center justify-center rounded-full border border-ink bg-ink text-white disabled:opacity-40"
+          className="flex size-9 shrink-0 items-center justify-center rounded-full border border-ink bg-ink text-on-ink disabled:opacity-40"
         >
           {s.status === "loading" ? (
-            <span aria-hidden className="size-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+            <span aria-hidden className="size-3.5 animate-spin rounded-full border-2 border-on-ink/30 border-t-on-ink" />
           ) : s.status === "playing" ? (
             <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden>
               <path d="M2.5 1.5h2.5v9H2.5zM7 1.5h2.5v9H7z" fill="currentColor" />
@@ -36,7 +36,7 @@ export function AudioBar() {
           )}
         </button>
         <div className="min-w-0 flex-1">
-          <p className="font-mono text-[10px] tracking-wider text-muted uppercase">{s.status === "loading" ? "Writing your overview…" : "Audio overview"}</p>
+          <p className="font-mono text-xs tracking-wider text-muted uppercase">{s.status === "loading" ? "Writing your overview…" : "Audio overview"}</p>
           {s.status === "failed" ? (
             <p className="text-xs leading-snug text-danger">This browser has no voice to read with. Try Chrome, Edge or Safari, or check your system&apos;s speech settings.</p>
           ) : (
@@ -47,7 +47,7 @@ export function AudioBar() {
           type="button"
           onClick={() => speechRate(RATES[(RATES.indexOf(s.rate) + 1) % RATES.length] ?? 1)}
           title="Speed"
-          className="shrink-0 rounded-md border border-ink/25 px-1.5 py-0.5 font-mono text-[11px] transition hover:border-ink"
+          className="shrink-0 rounded-md border border-ink/25 px-1.5 py-0.5 font-mono text-xs transition hover:border-ink"
         >
           {s.rate}×
         </button>

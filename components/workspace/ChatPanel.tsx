@@ -2,7 +2,7 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "@/components/dialogs";
-import { eyebrowClass } from "@/components/ui";
+import { eyebrowClass, Eyebrow } from "@/components/ui";
 import { createClient } from "@/lib/supabase/client";
 import { routeOf, track } from "@/lib/telemetry";
 import { ACTION_LABELS } from "@/lib/tutor/format";
@@ -242,7 +242,7 @@ export function ChatPanel({
               return m.role === "user" ? (
                 <div key={m.id} className={`flex justify-end pl-8 ${isNew ? "animate-enter" : ""}`}>
                   <div className="min-w-0 max-w-[85%] rounded-2xl rounded-br-md border border-line bg-paper px-4 py-2.5 text-sm">
-                    {m.action !== "chat" && <p className="mb-1 text-[11px] font-medium text-muted">{ACTION_LABELS[m.action]}</p>}
+                    {m.action !== "chat" && <p className="mb-1 text-xs font-medium text-muted">{ACTION_LABELS[m.action]}</p>}
                     <Markdown content={m.content} onPage={onCite} />
                   </div>
                 </div>
@@ -343,7 +343,7 @@ export function ChatPanel({
         </form>
         <div className="mt-1.5 flex min-w-0 items-center gap-3 px-3">
           {reading && (
-            <span title="The tutor answers with the page you're on in mind" className="min-w-0 truncate font-mono text-[11px] text-muted">
+            <span title="The tutor answers with the page you're on in mind" className="min-w-0 truncate font-mono text-xs text-muted">
               Reading {reading}
             </span>
           )}
@@ -404,9 +404,9 @@ function SourcesPicker({
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex max-w-full items-center gap-1 rounded-md px-1 py-0.5 text-[11px] text-muted transition duration-200 ease-fluid hover:bg-paper hover:text-ink"
+        className="inline-flex max-w-full items-center gap-1 rounded-md px-1 py-0.5 text-xs text-muted transition duration-200 ease-fluid hover:bg-paper hover:text-ink"
       >
-        <span className="font-mono text-[10px] font-medium uppercase tracking-[0.12em]">Sources</span>
+        <span className="font-mono text-xs font-medium uppercase tracking-[0.12em]">Sources</span>
         <span className="truncate font-medium text-ink">{summary}</span>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden className={`shrink-0 transition-transform duration-200 ease-fluid ${open ? "rotate-180" : ""}`}>
           <path d="M6 9l6 6 6-6" />
@@ -447,7 +447,7 @@ function SourcesPicker({
                       onClick={() => citeFiles.onToggle(d.id)}
                       className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition duration-150 ease-fluid hover:bg-paper ${selected ? "text-ink" : "text-muted"}`}
                     >
-                      <span className={`flex size-3.5 shrink-0 items-center justify-center rounded-sm border transition duration-150 ${selected ? "border-ink bg-ink text-white" : "border-ink/30"}`}>
+                      <span className={`flex size-3.5 shrink-0 items-center justify-center rounded-sm border transition duration-150 ${selected ? "border-ink bg-ink text-on-ink" : "border-ink/30"}`}>
                         {selected && (
                           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden>
                             <path d="M5 12.5 9.5 17 19 7" />
@@ -456,7 +456,7 @@ function SourcesPicker({
                       </span>
                       <span className="font-mono">{d.label}</span>
                       <span className="min-w-0 flex-1 truncate">{d.title}</span>
-                      {isOpen && <span className="shrink-0 text-[11px] text-muted">open</span>}
+                      {isOpen && <span className="shrink-0 text-xs text-muted">open</span>}
                     </button>
                   );
                 })}
@@ -481,7 +481,7 @@ function SourcesPicker({
 function StudyEmptyState({ quicks, busy, onPick }: { quicks: Quick[]; busy: boolean; onPick: (id: string, run: () => void) => void }) {
   return (
     <div className="animate-enter py-2">
-      <p className={eyebrowClass}>Getting started</p>
+      <Eyebrow>Getting started</Eyebrow>
       <h3 className="mt-1 font-serif text-2xl">Where to begin</h3>
       {quicks.length > 0 && (
         <ul className="mt-4 grid gap-2">
@@ -506,7 +506,7 @@ function StudyEmptyState({ quicks, busy, onPick }: { quicks: Quick[]; busy: bool
         </ul>
       )}
       <Tip>
-        Or <span className="font-medium text-ink">select any text</span> in the PDF to ask about it. Press <kbd className="rounded border border-ink/30 bg-paper px-1 font-mono text-[11px]">?</kbd> for how everything works.
+        Or <span className="font-medium text-ink">select any text</span> in the PDF to ask about it. Press <kbd className="rounded border border-ink/30 bg-paper px-1 font-mono text-xs">?</kbd> for how everything works.
       </Tip>
     </div>
   );
@@ -615,7 +615,7 @@ function AnswerBody({
                 aria-pressed={Boolean(savedId)}
                 onClick={() => (savedId ? onUnsave(savedId) : onSave())}
                 title={savedId ? "Saved under Highlights, and the tutor keeps it in mind. Click to remove it." : "Save it under Highlights. The tutor keeps it in mind for the rest of this session."}
-                className={`ml-1 flex items-center gap-1 rounded-md px-1.5 py-1 text-[11px] font-medium transition ${
+                className={`ml-1 flex items-center gap-1 rounded-md px-1.5 py-1 text-xs font-medium transition ${
                   savedId ? "text-ink" : "text-muted hover:bg-paper hover:text-ink"
                 }`}
               >
@@ -655,8 +655,8 @@ function AnswerBody({
                 />
               </label>
               <div className="flex items-center justify-between gap-3">
-                <p className="text-[11px] leading-snug text-muted">Stays with Confu. Not sold, and not used to train a model.</p>
-                <button type="submit" disabled={sending} className="shrink-0 rounded-md border border-ink bg-ink px-2.5 py-1 text-xs font-medium text-white disabled:opacity-40">
+                <p className="text-xs leading-snug text-muted">Stays with Confu. Not sold, and not used to train a model.</p>
+                <button type="submit" disabled={sending} className="shrink-0 rounded-md border border-ink bg-ink px-2.5 py-1 text-xs font-medium text-on-ink disabled:opacity-40">
                   {sending ? "Sending…" : "Send"}
                 </button>
               </div>
@@ -685,7 +685,7 @@ function IconButton({ label, pressed, onClick, children }: { label: string; pres
 
 function BookmarkIcon({ filled }: { filled: boolean }) {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill={filled ? "#facc15" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill={filled ? "var(--brand)" : "none"} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M18 21l-6-4.5L6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z" />
     </svg>
   );
@@ -739,7 +739,7 @@ function PaperEmptyState({ onOpenPasses }: { onOpenPasses: () => void }) {
   ];
   return (
     <div className="animate-enter py-4">
-      <p className={eyebrowClass}>Paper session</p>
+      <Eyebrow>Paper session</Eyebrow>
       <h3 className="mt-1 font-serif text-2xl">Read papers in three passes</h3>
       <p className="mt-2 text-sm leading-relaxed text-muted">
         Each pass goes deeper, and you stop as soon as you have what you need. Most papers only need the first.
@@ -747,7 +747,7 @@ function PaperEmptyState({ onOpenPasses }: { onOpenPasses: () => void }) {
       <ol className="mt-5 space-y-4">
         {items.map(([title, body], i) => (
           <li key={title} className="animate-enter flex gap-3 text-sm" style={{ animationDelay: `${100 + i * 80}ms` }}>
-            <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-line bg-paper font-mono text-[11px]">{i + 1}</span>
+            <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-line bg-paper font-mono text-xs">{i + 1}</span>
             <p className="leading-relaxed text-muted">
               <span className="font-medium text-ink">{title}.</span> {body}
             </p>
@@ -764,7 +764,7 @@ function PaperEmptyState({ onOpenPasses }: { onOpenPasses: () => void }) {
 function ExamEmptyState({ onOpenPractice }: { onOpenPractice: () => void }) {
   return (
     <div className="animate-enter py-4">
-      <p className={eyebrowClass}>Exam prep</p>
+      <Eyebrow>Exam prep</Eyebrow>
       <h3 className="mt-1 font-serif text-2xl">Ask anything from your notes</h3>
       <p className="mt-2 text-sm leading-relaxed text-muted">
         Select text in your PDF to ask about it. Answers come from your own course material, with page references, and show how to write it in the exam.

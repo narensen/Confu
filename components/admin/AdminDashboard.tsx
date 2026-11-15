@@ -100,7 +100,7 @@ export function AdminDashboard({ data, days, ranges, answers = [], answersMissin
       {/* Title + the one filter that scopes everything */}
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="font-mono text-[11px] font-medium tracking-[0.12em] text-muted uppercase">Owner</p>
+          <p className="font-mono text-xs font-medium tracking-[0.12em] text-muted uppercase">Owner</p>
           <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">Insights</h1>
           <p className="mt-2 max-w-xl text-sm text-muted">
             What people actually do in Confu, from your own database. No third-party trackers. Updated {ago(data.generated_at)}.
@@ -112,7 +112,7 @@ export function AdminDashboard({ data, days, ranges, answers = [], answersMissin
               key={r}
               href={`/admin?days=${r}`}
               aria-current={r === days ? "page" : undefined}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${r === days ? "bg-ink text-white" : "text-muted hover:text-ink"}`}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${r === days ? "bg-ink text-on-ink" : "text-muted hover:text-ink"}`}
             >
               {r} days
             </Link>
@@ -122,7 +122,7 @@ export function AdminDashboard({ data, days, ranges, answers = [], answersMissin
 
       {/* Headline numbers */}
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="People" value={n(u.total)} note={`+${n(u.new)} in the last ${days} days · ${n(u.pro)} on Pro`} />
+        <Stat label="People" value={n(u.total)} note={`+${n(u.new)} in the last ${days} days`} />
         <Stat label="Active, last 7 days" value={n(u.wau)} note={`${n(u.dau)} today · ${n(u.mau)} in 30 days`} />
         <Stat
           label="Landing to sign-up"
@@ -147,7 +147,7 @@ export function AdminDashboard({ data, days, ranges, answers = [], answersMissin
                 <li key={s.step}>
                   <div className="flex items-baseline justify-between gap-3 text-sm">
                     <span>
-                      <span className="mr-2 font-mono text-[11px] text-muted tabular-nums">{i + 1}</span>
+                      <span className="mr-2 font-mono text-xs text-muted tabular-nums">{i + 1}</span>
                       {s.step}
                     </span>
                     <span className="font-mono text-xs tabular-nums">
@@ -230,9 +230,9 @@ export function AdminDashboard({ data, days, ranges, answers = [], answersMissin
                 <li key={e.fingerprint} className="py-2.5">
                   <div className="flex items-start justify-between gap-3">
                     <p className="min-w-0 font-mono text-xs leading-relaxed wrap-break-word">{e.message}</p>
-                    <span className="shrink-0 rounded bg-danger/10 px-1.5 py-0.5 font-mono text-[11px] text-danger tabular-nums">×{n(e.count)}</span>
+                    <span className="shrink-0 rounded bg-danger/10 px-1.5 py-0.5 font-mono text-xs text-danger tabular-nums">×{n(e.count)}</span>
                   </div>
-                  <p className="mt-1 text-[11px] text-muted">
+                  <p className="mt-1 text-xs text-muted">
                     {e.source} · {e.path ?? "unknown page"} · {n(e.people)} {e.people === 1 ? "person" : "people"} · last {ago(e.last_seen)}
                   </p>
                 </li>
@@ -256,7 +256,7 @@ export function AdminDashboard({ data, days, ranges, answers = [], answersMissin
                   return (
                     <tr key={v.metric} className="border-t border-line">
                       <td className="py-2 pr-3 text-sm">
-                        {t.name} <span className="font-mono text-[11px] text-muted">{v.metric}</span>
+                        {t.name} <span className="font-mono text-xs text-muted">{v.metric}</span>
                       </td>
                       <td className="py-2 text-right font-mono text-xs tabular-nums">
                         {v.metric === "CLS" ? v.p75 : n(Math.round(v.p75))}
@@ -327,7 +327,7 @@ export function AdminDashboard({ data, days, ranges, answers = [], answersMissin
             </Table>
           )}
         </Card>
-        <Card title="Heaviest users of Confu's keys" sub="Pro, free trial and owner usage. Watch this for cost.">
+        <Card title="Use of the server's keys" sub="Requests on GROQ_API_KEYS (the owner, and older Pro and trial usage).">
           {data.ai.top_users.length === 0 ? (
             <Empty>Nobody yet.</Empty>
           ) : (
@@ -384,7 +384,7 @@ function Stat({ label, value, note }: { label: string; value: string; note: stri
     <div className="rounded-xl border border-ink bg-panel p-4">
       <p className="text-xs text-muted">{label}</p>
       <p className="mt-1 text-4xl font-semibold tracking-tight">{value}</p>
-      <p className="mt-1 text-[11px] text-muted">{note}</p>
+      <p className="mt-1 text-xs text-muted">{note}</p>
     </div>
   );
 }
@@ -400,11 +400,11 @@ function Bar({ share, thin = false }: { share: number; thin?: boolean }) {
 
 // Retention cell: one hue (ink), light to dark with the share; the number is always shown.
 function RetentionCell({ value }: { value: number | null }) {
-  if (value === null) return <span className="font-mono text-[11px] text-muted">·</span>;
+  if (value === null) return <span className="font-mono text-xs text-muted">·</span>;
   const alpha = 0.06 + (Math.min(100, value) / 100) * 0.84;
   return (
     <span
-      className="inline-block min-w-11 rounded px-1.5 py-0.5 text-center font-mono text-[11px] tabular-nums"
+      className="inline-block min-w-11 rounded px-1.5 py-0.5 text-center font-mono text-xs tabular-nums"
       style={{ background: `color-mix(in srgb, var(--ink) ${alpha * 100}%, transparent)`, color: alpha > 0.45 ? "var(--paper)" : "var(--ink)" }}
     >
       {value}%
@@ -419,8 +419,8 @@ function Status({ kind }: { kind: "good" | "work" | "poor" }) {
     poor: { text: "Poor", cls: "text-danger", icon: "■" },
   }[kind];
   return (
-    <span className={`inline-flex items-center gap-1 text-[11px] font-medium whitespace-nowrap ${map.cls}`}>
-      <span aria-hidden className="text-[9px]">
+    <span className={`inline-flex items-center gap-1 text-xs font-medium whitespace-nowrap ${map.cls}`}>
+      <span aria-hidden className="text-xs">
         {map.icon}
       </span>
       {map.text}
@@ -464,7 +464,7 @@ function Table({ head, align, fixed = true, children }: { head: string[]; align:
             <th
               key={`${h}-${i}`}
               scope="col"
-              className={`pb-2 font-mono text-[10px] font-medium tracking-wider whitespace-nowrap text-muted uppercase ${align[i] === "right" ? "text-right" : "text-left"} ${fixed && i === 0 ? "w-[45%]" : ""}`}
+              className={`pb-2 font-mono text-xs font-medium tracking-wider whitespace-nowrap text-muted uppercase ${align[i] === "right" ? "text-right" : "text-left"} ${fixed && i === 0 ? "w-[45%]" : ""}`}
             >
               {h}
             </th>
