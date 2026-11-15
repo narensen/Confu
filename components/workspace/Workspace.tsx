@@ -2047,7 +2047,6 @@ export function Workspace({
             </div>
           </aside>
         )}
-        {wide && <ToolRail sections={sections} active={tool} hidden={tutorFullShown} onPick={(id) => (tool === id ? setTool(null) : openTool(id))} />}
         {/* Phones: the tutor and tools are a sheet over the page, so the page stays visible. */}
         {!wide && mobileShown !== "pdf" && (
           <div className="absolute inset-x-0 bottom-0 z-30 flex h-[62%] flex-col rounded-t-2xl border border-b-0 border-ink bg-panel shadow-hard">
