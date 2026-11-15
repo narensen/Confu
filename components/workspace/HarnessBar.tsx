@@ -2,7 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import { bridgeCommand, detectComputer, harnessById, HARNESSES, installCommand, osLabel, type DesktopOS, type HarnessId } from "@/lib/harnesses";
-import { loadTutorLink, probeBridge, saveTutorLink, type BridgeHealth, type BridgeModel, type TutorLink } from "@/lib/harness-client";
+import {
+  loadConsent,
+  loadTutorLink,
+  probeBridge,
+  saveConsent,
+  saveTutorLink,
+  storedTutor,
+  type BridgeHealth,
+  type BridgeModel,
+  type LocalConsent,
+  type TutorLink,
+} from "@/lib/harness-client";
 
 const NAMES: Record<TutorLink["id"], string> = {
   groq: "Confu",
@@ -12,8 +23,10 @@ const NAMES: Record<TutorLink["id"], string> = {
   grok: "Grok",
 };
 
-// One Tutors button. Opening it asks the local bridge which harnesses are
-// installed and connects the one you pick. No connection code.
+// One Tutors button. When a session opens, Confu asks once whether it may
+// look for tutors on this computer. With a yes it finds the local bridge on
+// its own, keeps the tutor picked last time if it's installed, and otherwise
+// connects the first one found. No connection code.
 export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }) {
   const [link, setLink] = useState<TutorLink>({ id: "groq", effort: "low", model: null, modelName: null, connected: false, installed: true });
   const [open, setOpen] = useState(false);
@@ -22,7 +35,12 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
   const [checking, setChecking] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [computer, setComputer] = useState<{ os: DesktopOS; mobile: boolean }>({ os: "linux", mobile: false });
+  const [consent, setConsent] = useState<LocalConsent>("no");
+  const [asking, setAsking] = useState(false);
   const linkRef = useRef(link);
+  // Set when the student said yes in this session. If no bridge answers,
+  // the menu opens with the one-time setup instead of failing quietly.
+  const justAllowed = useRef(false);
   const onChangeRef = useRef(onChange);
   const root = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
@@ -37,20 +55,39 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
   }
 
   useEffect(() => {
-    setComputer(detectComputer());
+    const found = detectComputer();
+    setComputer(found);
     const stored = loadTutorLink();
     linkRef.current = stored;
     setLink(stored);
     onChangeRef.current(stored);
+    const said = loadConsent();
+    setConsent(said);
+    if (said === null && !found.mobile) setAsking(true);
   }, []);
 
+  function allow() {
+    saveConsent("yes");
+    setConsent("yes");
+    setAsking(false);
+    justAllowed.current = true;
+    setChecking(true);
+  }
+
+  function decline() {
+    saveConsent("no");
+    setConsent("no");
+    setAsking(false);
+  }
+
   useEffect(() => {
-    if (!open) return;
+    if (!open && !asking) return;
     const onDown = (e: MouseEvent) => {
       if (root.current && !root.current.contains(e.target as Node)) setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        if (asking) decline();
         setOpen(false);
         button.current?.focus();
       }
@@ -61,22 +98,36 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("keydown", onKey);
     };
-  }, [open]);
+  }, [open, asking]);
 
-  // Probe when the menu is open, and keep probing while a harness is the
-  // tutor so a bridge that stops is noticed before the next question.
-  // Staying on Confu does not probe, so the browser is not asked for loopback.
+  // With permission, probe from the moment the session opens and keep
+  // probing, so a bridge that starts later is picked up and one that stops
+  // is noticed before the next question. Without it, probe only while the
+  // menu is open or a harness is the tutor, so the browser isn't asked for
+  // loopback by someone who said no.
+  const looking = consent === "yes" || open || link.id !== "groq";
   useEffect(() => {
-    if (link.id === "groq" && !open) return;
+    if (!looking) return;
     let stop = false;
     const look = async () => {
-      const current = linkRef.current;
+      let current = linkRef.current;
       try {
         const found = await probeBridge();
         if (stop || linkRef.current.id !== current.id) return;
         setChecking(false);
         setDown(false);
         setHealth(found);
+        justAllowed.current = false;
+        if (consent === "yes" && found) {
+          // Keep the last pick if it's installed, else the first one found.
+          // Choosing Confu on purpose sticks.
+          const usable = (id: TutorLink["id"]) => found.harnesses.some((h) => h.id === id && h.installed);
+          const explicitConfu = storedTutor() === "groq";
+          const first = HARNESSES.find((h) => usable(h.id));
+          if (first && !explicitConfu && !usable(current.id)) {
+            current = { ...current, id: first.id, model: null, modelName: null };
+          }
+        }
         if (current.id === "groq") return;
         const row = found?.harnesses.find((h) => h.id === current.id);
         const options = row?.models ?? [];
@@ -88,7 +139,8 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
           next.connected !== current.connected ||
           next.installed !== current.installed ||
           next.model !== current.model ||
-          next.modelName !== current.modelName;
+          next.modelName !== current.modelName ||
+          next.id !== linkRef.current.id;
         linkRef.current = next;
         setLink(next);
         if (changed) onChangeRef.current(next);
@@ -97,6 +149,10 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
         setChecking(false);
         setHealth(null);
         setDown(true);
+        if (justAllowed.current) {
+          justAllowed.current = false;
+          setOpen(true);
+        }
         if (current.id === "groq") return;
         const next = { ...current, connected: false };
         if (next.connected !== current.connected) {
@@ -107,12 +163,13 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
       }
     };
     void look();
-    const timer = window.setInterval(() => void look(), 4000);
+    // Waiting for a bridge that isn't there yet doesn't need to be quick.
+    const timer = window.setInterval(() => void look(), open || link.id !== "groq" ? 4000 : 10000);
     return () => {
       stop = true;
       window.clearInterval(timer);
     };
-  }, [link.id, open]);
+  }, [link.id, open, looking, consent]);
 
   function choose(id: TutorLink["id"]) {
     const row = id === "groq" ? null : health?.harnesses.find((h) => h.id === id);
@@ -160,6 +217,7 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
         title="Choose who teaches"
         onClick={() => {
           const next = !open;
+          setAsking(false);
           setOpen(next);
           if (next) setChecking(true);
         }}
@@ -170,6 +228,28 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
           <path d="m6 9 6 6 6-6" />
         </svg>
       </button>
+
+      {asking && !open && (
+        <div
+          role="dialog"
+          aria-label="Use tutors on this computer"
+          className="animate-pop absolute top-full left-0 z-50 mt-2 w-72 origin-top-left rounded-2xl border border-ink bg-panel p-3 text-xs leading-relaxed text-muted shadow-hard"
+        >
+          <p className="text-sm font-medium text-ink">Teach with AI on this computer?</p>
+          <p className="mt-1">
+            Confu can teach with Claude, ChatGPT, Gemini or Grok if one is signed in here. It looks for them now and each time a session opens. Your browser
+            may ask to allow access to this device.
+          </p>
+          <div className="mt-2.5 flex gap-2">
+            <button type="button" onClick={allow} className="rounded-md border border-ink bg-ink px-2.5 py-1 text-[11px] font-medium text-panel">
+              Allow
+            </button>
+            <button type="button" onClick={decline} className="rounded-md border border-ink/25 px-2.5 py-1 text-[11px] font-medium text-ink">
+              Not now
+            </button>
+          </div>
+        </div>
+      )}
 
       {open && (
         <div role="menu" aria-label="Tutors" className="animate-pop absolute top-full left-0 z-50 mt-2 max-h-[70vh] w-72 origin-top-left overflow-y-auto rounded-2xl border border-ink bg-panel shadow-hard">
@@ -210,14 +290,14 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
 
           <div className="space-y-2 border-t border-line px-3 py-2.5 text-xs leading-relaxed text-muted">
             {computer.mobile && <p>Open Confu on a Mac, Windows, or Linux computer. A phone can't run these.</p>}
-            {!computer.mobile && selected && !link.connected && !health && (
+            {!computer.mobile && (selected || consent === "yes") && !link.connected && !health && (
               <>
                 <p>
-                  Start the bridge once on this {osLabel(computer.os)}. It needs{" "}
+                  {selected ? "" : "No tutors found on this computer yet. "}Set up the bridge once on this {osLabel(computer.os)}. It needs{" "}
                   <a className="underline underline-offset-2" href="https://nodejs.org" target="_blank" rel="noreferrer">
                     Node.js
                   </a>
-                  . Leave that window open.
+                  . Say yes when it asks to start at login, and Confu finds it by itself from then on.
                 </p>
                 <Command text={bridgeCommand(computer.os, origin)} copied={copied === "bridge"} onCopy={() => void copy(bridgeCommand(computer.os, origin), "bridge")} />
                 {down && <p>The browser blocked it, or it isn't running. Allow loopback access if asked.</p>}
@@ -236,8 +316,20 @@ export function HarnessBar({ onChange }: { onChange: (link: TutorLink) => void }
             {selected && link.connected && (
               <p className="text-ink">
                 {selected.name}
-                {link.modelName ? ` · ${link.modelName}` : ""} is teaching. Leave the bridge window open.
+                {link.modelName ? ` · ${link.modelName}` : ""} is teaching.
               </p>
+            )}
+            {!computer.mobile && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (consent === "yes") decline();
+                  else allow();
+                }}
+                className="underline underline-offset-2 hover:text-ink"
+              >
+                {consent === "yes" ? "Stop looking for tutors on this computer" : "Look for tutors on this computer"}
+              </button>
             )}
           </div>
         </div>

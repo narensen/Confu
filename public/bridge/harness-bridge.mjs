@@ -1,13 +1,24 @@
 #!/usr/bin/env node
 // Confu's local bridge. Run it on the computer where Claude, Codex,
 // Antigravity or Grok Build is signed in. It listens only on this machine
-// and answers one teaching turn at a time. Leave the window open.
+// and answers one teaching turn at a time.
+//
+// The first run asks whether to start the bridge by itself at login. If you
+// say yes it copies itself to ~/.confu, registers with the system (systemd,
+// launchd or the Windows Startup folder), starts in the background, and the
+// window can be closed. Confu then finds it when a session opens.
+//
+//   node confu-bridge.mjs              set up (or update) and start
+//   node confu-bridge.mjs --foreground run in this window only
+//   node confu-bridge.mjs --uninstall  stop it and remove the login entry
 
 import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:http";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { createInterface } from "node:readline/promises";
+import { fileURLToPath } from "node:url";
 
 const PORT = Number(process.env.CONFU_BRIDGE_PORT) || 17321;
 const MAX_BODY = 400_000;
@@ -16,6 +27,20 @@ const TEACH_MS = 120_000;
 // "thinking" after it has already printed the answer, and the chat would
 // sit on "Asking…" until the process exits.
 const QUIET_MS = 450;
+const BRIDGE_VERSION = 2;
+
+// Only Confu's own pages may use the bridge. Any other site gets 403, so a
+// page you happen to open can't spend your harness. Add more with
+// CONFU_ORIGINS="https://a.example,https://b.example".
+const EXTRA_ORIGINS = (process.env.CONFU_ORIGINS || "")
+  .split(",")
+  .map((s) => s.trim().replace(/\/$/, ""))
+  .filter(Boolean);
+function allowedOrigin(origin) {
+  if (!origin) return true;
+  if (EXTRA_ORIGINS.includes(origin)) return true;
+  return /^https:\/\/([a-z0-9-]+\.)*confu\.lol$/i.test(origin) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);
+}
 
 const HARNESSES = [
   { id: "claude", name: "Claude", bin: "claude" },
@@ -42,7 +67,18 @@ const env = {
     .join(path.delimiter),
 };
 
+// Confu polls /health every few seconds. Asking four CLIs for --version on
+// every poll is slow, so the answer is kept for a short while.
+const versionCache = new Map();
 function versionOf(bin) {
+  const hit = versionCache.get(bin);
+  if (hit && Date.now() - hit.at < 30_000) return hit.version;
+  const version = readVersion(bin);
+  versionCache.set(bin, { at: Date.now(), version });
+  return version;
+}
+
+function readVersion(bin) {
   const run = spawnSync(bin, ["--version"], { encoding: "utf8", timeout: 8000, env, windowsHide: true });
   if (run.error) return null;
   const line = `${run.stdout || run.stderr || ""}`.trim().split(/\r?\n/).find(Boolean) || "";
@@ -197,7 +233,7 @@ function detected() {
 
 function cors(req, res) {
   const origin = req.headers.origin;
-  if (origin) res.setHeader("Access-Control-Allow-Origin", origin);
+  if (origin && allowedOrigin(origin)) res.setHeader("Access-Control-Allow-Origin", origin);
   res.setHeader("Vary", "Origin");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -436,6 +472,11 @@ function runTeach(id, effort, model, prompt, res) {
 const server = createServer(async (req, res) => {
   cors(req, res);
   const url = new URL(req.url || "/", "http://127.0.0.1");
+  if (!allowedOrigin(req.headers.origin)) {
+    res.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
+    res.end("This site can't use the Confu bridge.");
+    return;
+  }
   if (req.method === "OPTIONS") {
     res.writeHead(204);
     res.end();
@@ -443,7 +484,16 @@ const server = createServer(async (req, res) => {
   }
   if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/health")) {
     res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
-    res.end(JSON.stringify({ ok: true, os: os.platform(), harnesses: detected() }));
+    res.end(JSON.stringify({ ok: true, bridge: BRIDGE_VERSION, os: os.platform(), autostart: autostartInstalled(), harnesses: detected() }));
+    return;
+  }
+  // A newer copy of this script stops the old one before it takes the port.
+  // Pages always send an Origin, so only a local process can do this.
+  if (req.method === "POST" && url.pathname === "/quit" && !req.headers.origin) {
+    res.writeHead(204);
+    res.end();
+    server.close();
+    setTimeout(() => process.exit(0), 50);
     return;
   }
   if (req.method === "POST" && url.pathname === "/teach") {
@@ -476,20 +526,225 @@ const server = createServer(async (req, res) => {
 
 server.on("error", (err) => {
   if (err && err.code === "EADDRINUSE") {
+    // In the background the system tries again in a few seconds, which
+    // picks up the port once a bridge left open in a window is closed.
     process.stderr.write(`Port ${PORT} is already in use. A Confu bridge is probably already running.\n`);
     process.exit(1);
   }
   throw err;
 });
 
-setTimeout(refreshModels, 50);
-setInterval(refreshModels, 10 * 60 * 1000);
+function serve(foreground) {
+  setTimeout(refreshModels, 50);
+  setInterval(refreshModels, 10 * 60 * 1000);
+  server.listen(PORT, "127.0.0.1", () => {
+    const rows = detected()
+      .map((h) => `  ${h.name.padEnd(12)} ${h.installed ? h.version : "not installed"}`)
+      .join("\n");
+    process.stdout.write(
+      `Confu bridge\nListening on http://127.0.0.1:${PORT}\n\n${rows}\n\n${foreground ? "Leave this window open while you study.\n" : ""}`,
+    );
+  });
+}
 
-server.listen(PORT, "127.0.0.1", () => {
-  const rows = detected()
-    .map((h) => `  ${h.name.padEnd(12)} ${h.installed ? h.version : "not installed"}`)
-    .join("\n");
-  process.stdout.write(
-    `Confu bridge\nListening on http://127.0.0.1:${PORT}\n\n${rows}\n\nLeave this window open while you study.\n`,
+// ---------------------------------------------------------------------------
+// Start at login
+
+const SELF = fileURLToPath(import.meta.url);
+const HOME_DIR = path.join(home, ".confu");
+const TARGET = path.join(HOME_DIR, "bridge.mjs");
+const LOG = path.join(HOME_DIR, "bridge.log");
+const NODE = process.execPath;
+
+const SYSTEMD_UNIT = path.join(home, ".config", "systemd", "user", "confu-bridge.service");
+const XDG_AUTOSTART = path.join(home, ".config", "autostart", "confu-bridge.desktop");
+const LAUNCH_AGENT = path.join(home, "Library", "LaunchAgents", "lol.confu.bridge.plist");
+const WIN_STARTUP = path.join(
+  process.env.APPDATA || path.join(home, "AppData", "Roaming"),
+  "Microsoft",
+  "Windows",
+  "Start Menu",
+  "Programs",
+  "Startup",
+  "confu-bridge.vbs",
+);
+
+function autostartInstalled() {
+  return [SYSTEMD_UNIT, XDG_AUTOSTART, LAUNCH_AGENT, WIN_STARTUP].some((file) => fs.existsSync(file));
+}
+
+function run(bin, args) {
+  const out = spawnSync(bin, args, { encoding: "utf8", timeout: 15_000, windowsHide: true });
+  return !out.error && out.status === 0;
+}
+
+function writeFile(file, text) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, text);
+}
+
+const xml = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+async function bridgeUp() {
+  try {
+    const res = await fetch(`http://127.0.0.1:${PORT}/health`, { signal: AbortSignal.timeout(1500) });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function stopRunning() {
+  try {
+    await fetch(`http://127.0.0.1:${PORT}/quit`, { method: "POST", signal: AbortSignal.timeout(1500) });
+  } catch {}
+  for (let i = 0; i < 20 && (await bridgeUp()); i++) await new Promise((r) => setTimeout(r, 100));
+}
+
+function startDetached() {
+  const out = fs.openSync(LOG, "a");
+  const child = spawn(NODE, [TARGET, "--serve"], { detached: true, stdio: ["ignore", out, out], windowsHide: true, env });
+  child.unref();
+}
+
+// Registers the copy in ~/.confu with the system and starts it.
+// Returns false if nothing could be registered.
+async function installAutostart() {
+  fs.mkdirSync(HOME_DIR, { recursive: true });
+  if (path.resolve(SELF) !== path.resolve(TARGET)) fs.copyFileSync(SELF, TARGET);
+  const platform = os.platform();
+
+  if (platform === "darwin") {
+    writeFile(
+      LAUNCH_AGENT,
+      `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>lol.confu.bridge</string>
+  <key>ProgramArguments</key>
+  <array><string>${xml(NODE)}</string><string>${xml(TARGET)}</string><string>--serve</string></array>
+  <key>EnvironmentVariables</key>
+  <dict><key>PATH</key><string>${xml(env.PATH)}</string></dict>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>${xml(LOG)}</string>
+  <key>StandardErrorPath</key><string>${xml(LOG)}</string>
+</dict>
+</plist>
+`,
+    );
+    const domain = `gui/${process.getuid()}`;
+    run("launchctl", ["bootout", domain, LAUNCH_AGENT]);
+    await stopRunning();
+    if (run("launchctl", ["bootstrap", domain, LAUNCH_AGENT])) return true;
+    return run("launchctl", ["load", "-w", LAUNCH_AGENT]);
+  }
+
+  if (platform === "win32") {
+    const cmd = `""${NODE}"" ""${TARGET}"" --serve`;
+    writeFile(WIN_STARTUP, `CreateObject("WScript.Shell").Run "${cmd}", 0, False\r\n`);
+    await stopRunning();
+    startDetached();
+    return true;
+  }
+
+  // Linux and other Unix: a systemd user service, or the desktop's autostart.
+  const q = (s) => `"${s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+  writeFile(
+    SYSTEMD_UNIT,
+    `[Unit]
+Description=Confu bridge (local tutors)
+
+[Service]
+ExecStart=${q(NODE)} ${q(TARGET)} --serve
+Environment=${q(`PATH=${env.PATH}`)}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+`,
   );
-});
+  if (run("systemctl", ["--user", "daemon-reload"]) && run("systemctl", ["--user", "enable", "confu-bridge.service"])) {
+    await stopRunning();
+    if (run("systemctl", ["--user", "restart", "confu-bridge.service"])) {
+      fs.rmSync(XDG_AUTOSTART, { force: true });
+      return true;
+    }
+    run("systemctl", ["--user", "disable", "confu-bridge.service"]);
+  }
+  fs.rmSync(SYSTEMD_UNIT, { force: true });
+  writeFile(
+    XDG_AUTOSTART,
+    `[Desktop Entry]
+Type=Application
+Name=Confu bridge
+Exec=${q(NODE)} ${q(TARGET)} --serve
+X-GNOME-Autostart-enabled=true
+NoDisplay=true
+`,
+  );
+  await stopRunning();
+  startDetached();
+  return true;
+}
+
+async function uninstall() {
+  if (fs.existsSync(SYSTEMD_UNIT)) {
+    run("systemctl", ["--user", "disable", "--now", "confu-bridge.service"]);
+    fs.rmSync(SYSTEMD_UNIT, { force: true });
+    run("systemctl", ["--user", "daemon-reload"]);
+  }
+  if (fs.existsSync(LAUNCH_AGENT)) {
+    run("launchctl", ["bootout", `gui/${process.getuid()}`, LAUNCH_AGENT]);
+    fs.rmSync(LAUNCH_AGENT, { force: true });
+  }
+  fs.rmSync(XDG_AUTOSTART, { force: true });
+  fs.rmSync(WIN_STARTUP, { force: true });
+  await stopRunning();
+  fs.rmSync(TARGET, { force: true });
+  process.stdout.write("The Confu bridge is stopped and won't start at login.\n");
+}
+
+async function ask(question) {
+  if (!process.stdin.isTTY) return false;
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    const answer = (await rl.question(question)).trim().toLowerCase();
+    return answer === "" || answer === "y" || answer === "yes";
+  } finally {
+    rl.close();
+  }
+}
+
+async function main() {
+  const argv = process.argv.slice(2);
+  if (argv.includes("--uninstall")) return uninstall();
+  if (argv.includes("--serve")) return serve(false);
+  if (argv.includes("--foreground")) return serve(true);
+
+  // Already set up: this run updates the copy and restarts it, no question.
+  const yes =
+    autostartInstalled() ||
+    (await ask("Start the Confu bridge by itself when you log in, so you never have to run this again? [Y/n] "));
+  if (!yes) return serve(true);
+  try {
+    if (await installAutostart()) {
+      for (let i = 0; i < 50 && !(await bridgeUp()); i++) await new Promise((r) => setTimeout(r, 100));
+      if (await bridgeUp()) {
+        process.stdout.write(
+          `\nThe Confu bridge is running in the background and starts at login.\nYou can close this window. Go back to Confu.\n\nTo remove it: node ${JSON.stringify(TARGET)} --uninstall\n`,
+        );
+        return;
+      }
+    }
+  } catch (err) {
+    process.stderr.write(`Couldn't set it to start at login (${err instanceof Error ? err.message : err}).\n`);
+  }
+  process.stdout.write("Running in this window instead.\n\n");
+  await stopRunning();
+  serve(true);
+}
+
+void main();

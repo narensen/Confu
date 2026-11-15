@@ -6,6 +6,7 @@ const ENGINE_KEY = "confu:tutor-engine";
 const EFFORT_KEY = "confu:tutor-effort";
 const MODEL_KEY = "confu:tutor-models";
 const TOKEN_KEY = "confu:bridge-token";
+const CONSENT_KEY = "confu:local-tutors";
 
 export type BridgeModel = { id: string; name: string };
 export type BridgeHarness = {
@@ -17,7 +18,29 @@ export type BridgeHarness = {
   modelName: string | null;
   models: BridgeModel[];
 };
-export type BridgeHealth = { ok: true; os: string; harnesses: BridgeHarness[] };
+export type BridgeHealth = { ok: true; bridge?: number; os: string; autostart?: boolean; harnesses: BridgeHarness[] };
+
+// Whether the student said Confu may look for tutors on this computer.
+// null means they haven't been asked yet.
+export type LocalConsent = "yes" | "no" | null;
+
+export function loadConsent(): LocalConsent {
+  if (typeof localStorage === "undefined") return null;
+  const v = localStorage.getItem(CONSENT_KEY);
+  return v === "yes" || v === "no" ? v : null;
+}
+
+export function saveConsent(v: "yes" | "no") {
+  localStorage.setItem(CONSENT_KEY, v);
+}
+
+// Did the student pick a tutor themselves? Picking Confu on purpose means
+// a harness found later must not take over.
+export function storedTutor(): TutorEngine | null {
+  if (typeof localStorage === "undefined") return null;
+  const id = localStorage.getItem(ENGINE_KEY);
+  return id === "groq" || id === "claude" || id === "codex" || id === "antigravity" || id === "grok" ? id : null;
+}
 
 export type TutorLink = {
   id: TutorEngine;

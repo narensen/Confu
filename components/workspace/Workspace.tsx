@@ -539,7 +539,7 @@ export function Workspace({
       };
       try {
         if (viaHarness) {
-          if (!harness.connected) throw new Error("That tutor isn't connected. Open Tutors — the bridge has to be running, and the harness has to be installed.");
+          if (!harness.connected) throw new Error("That tutor isn't connected. Open Tutors — the bridge has to be set up on this computer, and the harness has to be installed.");
           const prepared = await fetch("/api/chat", {
             method: "POST",
             headers: JSON_HEADERS,
@@ -656,7 +656,7 @@ export function Workspace({
         const raw = err instanceof Error ? err.message : "Something went wrong.";
         const message =
           viaHarness && /failed to fetch|networkerror|load failed/i.test(raw)
-            ? "Couldn't reach the bridge. Leave its window open, and allow loopback access if the browser asks."
+            ? "Couldn't reach the bridge on this computer. Run its setup command again from Tutors, and allow access if the browser asks."
             : raw;
         setReply(`⚠️ ${message}`);
       } finally {
