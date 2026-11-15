@@ -5,6 +5,21 @@ export type Release = { date: string; title: string; summary: string; items: str
 
 export const CHANGELOG: Release[] = [
   {
+    date: "2026-11-15",
+    title: "Easier to find your way",
+    summary: "Fewer places to look, tools always in view, and a Stop button for the tutor.",
+    items: [
+      "The header has three places: Library, Review (with how many reviews are due) and Community, which gathers Threads, Spaces, Study rooms and Friends under tabs. On a phone they're a tab bar along the bottom.",
+      "Go to… (Ctrl K, or ⌘ K on a Mac) jumps to any session or place, and in a session runs its tools: open the plan, fold the tutor, go full screen.",
+      "In a session, your tools sit in a labelled column on the right that stays in view, instead of a bar that hid until the mouse came near.",
+      "Stop ends an answer while the tutor is still writing. What it wrote so far is kept.",
+      "Above the message box: Teach me this topic, Quiz me, Explain this page. Sources, under it, sets which files the tutor may cite and whether every answer must cite a page.",
+      "The Focus strip opens into what to do next, in one place instead of three. Hover a page citation in an answer to see that page's text first.",
+      "In dark mode, PDF pages are drawn in night colours unless you choose otherwise in Settings → Appearance, which also has the theme and a switch for one-key shortcuts.",
+      "Shortcuts: Tab moves between controls again (full screen is z), Ctrl \\ folds the tutor (browsers keep Ctrl T for a new tab), and Shift W closes a file's tab.",
+    ],
+  },
+  {
     date: "2026-11-10",
     title: "More room for the page",
     summary: "The tools rail is now a small bar that keeps out of the way.",

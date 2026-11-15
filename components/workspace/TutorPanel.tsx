@@ -7,6 +7,7 @@ import type { ExamPractice } from "@/components/exam/useExamPractice";
 import type { PaperReview } from "@/lib/paper";
 import type { ChatMessage, Highlight, LearnerMemory, PlanTopic, SavedAnswer, SessionDoc, SessionKind, StudyPlan, TopicStatus } from "@/lib/types";
 import { ChatPanel } from "./ChatPanel";
+import { CiteResolver, type CiteTarget } from "./CitePreview";
 import type { HighlightColor } from "@/lib/highlights";
 import { HighlightsPanel } from "./HighlightsPanel";
 import { MemoryPanel } from "./MemoryPanel";
@@ -60,6 +61,8 @@ export type PanelProps = {
   onUnsaveAnswer: (id: string) => void;
   busy: string | null;
   onSend: (req: SendRequest) => void;
+  onStop?: () => void; // only while an answer is being written
+  reading: string | null; // "D1 · p. 2": the page the tutor reads along with
   onJump: (page: number, docId?: string | null) => void;
   onCite: (page: number, docLabel?: string) => void;
   onFocusTopic: (topic: PlanTopic) => void;
@@ -138,138 +141,148 @@ export function toolSections(p: Pick<PanelProps, "kind" | "docs" | "plan" | "top
 export function TutorPanel({ view, ...props }: PanelProps & { view: Tab }) {
   const { onView, plan, topics, highlights } = props;
   const activePaper = props.docs.find((d) => d.id === props.paper.activeDocId && (props.kind === "paper" || props.paper.paperIds.has(d.id)));
+  // Which file a citation in an answer means (for its hover preview): its
+  // label, or the open file. The same rule as jumping to it.
+  const resolveCite = (_page: number, label?: string): CiteTarget | null => {
+    const d = label ? props.docs.find((x) => x.label === label) : props.docs.find((x) => x.id === props.paper.activeDocId);
+    return d?.hasPdf ? { documentId: d.id, label: d.label, title: d.title } : null;
+  };
 
   return (
-    <div key={view} className="animate-fade h-full min-h-0 min-w-0">
-      {view === "chat" && (
-        <ChatPanel
-          sessionId={props.sessionId}
-          messages={props.messages}
-          busy={props.busy}
-          plan={plan}
-          docs={props.docs}
-          activeTopic={props.activeTopic}
-          topics={topics}
-          onSend={props.onSend}
-          onJump={props.onJump}
-          onCite={props.onCite}
-          onOpenPlan={() => onView(props.kind === "paper" ? "passes" : props.kind === "exam" ? "practice" : "plan")}
-          onOpenPaper={() => onView("passes")}
-          kind={props.kind}
-          citeMode={props.citeMode}
-          onCiteMode={props.onCiteMode}
-          citeFiles={props.citeFiles}
-          activeDocId={props.paper.activeDocId}
-          paperFocus={(() => {
-            const r = activePaper ? props.paper.reviews[activePaper.id] : undefined;
-            return activePaper && r ? { label: activePaper.label, title: activePaper.title, done: r.passes_done, target: r.target_pass } : null;
-          })()}
-          saved={props.saved}
-          onSaveAnswer={props.onSaveAnswer}
-          onUnsaveAnswer={props.onUnsaveAnswer}
-        />
-      )}
-      {view === "practice" && (
-        <PracticePanel
-          practice={props.exam.practice}
-          docs={props.docs}
-          examDate={props.exam.examDate}
-          onExamDate={props.exam.onExamDate}
-          onTrial={props.exam.onTrial}
-          onJump={props.onJump}
-          onAsk={(message) => props.onSend({ action: "chat", message })}
-        />
-      )}
-      {view === "passes" && (
-        <PassesPanel
-          sessionId={props.sessionId}
-          inStudy={props.kind === "study"}
-          docs={props.kind === "paper" ? props.docs : props.docs.filter((d) => props.paper.paperIds.has(d.id))}
-          onMarkPaper={props.paper.onMarkPaper}
-          onAddPapers={props.paper.onAddPapers}
-          studyGoal={props.paper.studyGoal}
-          onOpenMap={props.paper.onOpenMap}
-          onTool={props.paper.onTool}
-          activeDocId={props.paper.activeDocId}
-          reviews={props.paper.reviews}
-          researchGoal={props.paper.researchGoal}
-          busy={Boolean(props.busy)}
-          onSelectDoc={props.paper.onSelectDoc}
-          onUpdate={props.paper.onUpdate}
-          onResearchGoal={props.paper.onResearchGoal}
-          fetching={props.paper.fetching}
-          onSend={props.onSend}
-          passesOpen={props.paper.passesOpen}
-          onPassesOpen={props.paper.onPassesOpen}
-        />
-      )}
-      {view === "plan" && (
-        <PlanPanel
-          sessionId={props.sessionId}
-          docs={props.docs}
-          plan={plan}
-          topics={topics}
-          activeTopic={props.activeTopic}
-          busy={Boolean(props.busy)}
-          onJump={props.onJump}
-          onFocusTopic={props.onFocusTopic}
-          onTopicStatus={props.onTopicStatus}
-          onRecall={props.onRecall}
-          onListen={props.onListen}
-          onExplain={props.onExplain}
-          papers={props.paper.paperIds}
-          reviews={props.paper.reviews}
-          onOpenPaper={(docId) => {
-            props.paper.onSelectDoc(docId);
-            props.paper.onPassesOpen(true);
-            onView("passes");
-          }}
-          onMarkPaper={(docId) => {
-            props.paper.onMarkPaper(docId);
-            props.paper.onSelectDoc(docId);
-            onView("passes");
-          }}
-          onTeach={(t) => {
-            props.onFocusTopic(t);
-            if (t.source === "pdf" && t.page_start && t.document_id) props.onJump(t.page_start, t.document_id);
-            props.onSend({ action: "teach", topicId: t.id });
-          }}
-          onPlanCreated={props.onPlanCreated}
-          onRepace={props.onRepace}
-          draftGoal={props.draftGoal}
-          setup={props.setup}
-        />
-      )}
-      {view === "files" && <FilesPanel {...props.files} />}
-      {view === "highlights" && (
-        <HighlightsPanel
-          sessionId={props.sessionId}
-          highlights={highlights}
-          saved={props.saved}
-          onUnsaveAnswer={props.onUnsaveAnswer}
-          onCite={props.onCite}
-          docs={props.docs}
-          busy={Boolean(props.busy)}
-          onJump={props.onJump}
-          onDelete={props.onDeleteHighlight}
-          onUpdate={props.onUpdateHighlight}
-          onSend={props.onSend}
-        />
-      )}
-      {view === "memory" &&
-        (props.kind === "exam" ? (
-          <ExamProgress
-            practice={props.exam.practice}
-            examDate={props.exam.examDate}
-            memorySummary={props.memory.summary}
-            onPractiseWeak={(weak) => {
-              onView("practice");
-              void props.exam.practice.start({ topics: weak });
-            }}
+    <CiteResolver value={resolveCite}>
+      <div key={view} className="animate-fade h-full min-h-0 min-w-0">
+        {view === "chat" && (
+          <ChatPanel
+            sessionId={props.sessionId}
+            messages={props.messages}
+            busy={props.busy}
+            plan={plan}
+            docs={props.docs}
+            activeTopic={props.activeTopic}
+            topics={topics}
+            onSend={props.onSend}
+            onStop={props.onStop}
+            reading={props.reading}
+            onJump={props.onJump}
+            onCite={props.onCite}
+            onOpenPlan={() => onView(props.kind === "paper" ? "passes" : props.kind === "exam" ? "practice" : "plan")}
+            onOpenPaper={() => onView("passes")}
+            kind={props.kind}
+            citeMode={props.citeMode}
+            onCiteMode={props.onCiteMode}
+            citeFiles={props.citeFiles}
+            activeDocId={props.paper.activeDocId}
+            paperFocus={(() => {
+              const r = activePaper ? props.paper.reviews[activePaper.id] : undefined;
+              return activePaper && r ? { label: activePaper.label, title: activePaper.title, done: r.passes_done, target: r.target_pass } : null;
+            })()}
+            saved={props.saved}
+            onSaveAnswer={props.onSaveAnswer}
+            onUnsaveAnswer={props.onUnsaveAnswer}
           />
-        ) : (
-          <MemoryPanel memory={props.memory} plan={plan} topics={topics} />
-        ))}
-    </div>
+        )}
+        {view === "practice" && (
+          <PracticePanel
+            practice={props.exam.practice}
+            docs={props.docs}
+            examDate={props.exam.examDate}
+            onExamDate={props.exam.onExamDate}
+            onTrial={props.exam.onTrial}
+            onJump={props.onJump}
+            onAsk={(message) => props.onSend({ action: "chat", message })}
+          />
+        )}
+        {view === "passes" && (
+          <PassesPanel
+            sessionId={props.sessionId}
+            inStudy={props.kind === "study"}
+            docs={props.kind === "paper" ? props.docs : props.docs.filter((d) => props.paper.paperIds.has(d.id))}
+            onMarkPaper={props.paper.onMarkPaper}
+            onAddPapers={props.paper.onAddPapers}
+            studyGoal={props.paper.studyGoal}
+            onOpenMap={props.paper.onOpenMap}
+            onTool={props.paper.onTool}
+            activeDocId={props.paper.activeDocId}
+            reviews={props.paper.reviews}
+            researchGoal={props.paper.researchGoal}
+            busy={Boolean(props.busy)}
+            onSelectDoc={props.paper.onSelectDoc}
+            onUpdate={props.paper.onUpdate}
+            onResearchGoal={props.paper.onResearchGoal}
+            fetching={props.paper.fetching}
+            onSend={props.onSend}
+            passesOpen={props.paper.passesOpen}
+            onPassesOpen={props.paper.onPassesOpen}
+          />
+        )}
+        {view === "plan" && (
+          <PlanPanel
+            sessionId={props.sessionId}
+            docs={props.docs}
+            plan={plan}
+            topics={topics}
+            activeTopic={props.activeTopic}
+            busy={Boolean(props.busy)}
+            onJump={props.onJump}
+            onFocusTopic={props.onFocusTopic}
+            onTopicStatus={props.onTopicStatus}
+            onRecall={props.onRecall}
+            onListen={props.onListen}
+            onExplain={props.onExplain}
+            papers={props.paper.paperIds}
+            reviews={props.paper.reviews}
+            onOpenPaper={(docId) => {
+              props.paper.onSelectDoc(docId);
+              props.paper.onPassesOpen(true);
+              onView("passes");
+            }}
+            onMarkPaper={(docId) => {
+              props.paper.onMarkPaper(docId);
+              props.paper.onSelectDoc(docId);
+              onView("passes");
+            }}
+            onTeach={(t) => {
+              props.onFocusTopic(t);
+              if (t.source === "pdf" && t.page_start && t.document_id) props.onJump(t.page_start, t.document_id);
+              props.onSend({ action: "teach", topicId: t.id });
+            }}
+            onPlanCreated={props.onPlanCreated}
+            onRepace={props.onRepace}
+            draftGoal={props.draftGoal}
+            setup={props.setup}
+          />
+        )}
+        {view === "files" && <FilesPanel {...props.files} />}
+        {view === "highlights" && (
+          <HighlightsPanel
+            sessionId={props.sessionId}
+            highlights={highlights}
+            saved={props.saved}
+            onUnsaveAnswer={props.onUnsaveAnswer}
+            onCite={props.onCite}
+            docs={props.docs}
+            busy={Boolean(props.busy)}
+            onJump={props.onJump}
+            onDelete={props.onDeleteHighlight}
+            onUpdate={props.onUpdateHighlight}
+            onSend={props.onSend}
+          />
+        )}
+        {view === "memory" &&
+          (props.kind === "exam" ? (
+            <ExamProgress
+              practice={props.exam.practice}
+              examDate={props.exam.examDate}
+              memorySummary={props.memory.summary}
+              onPractiseWeak={(weak) => {
+                onView("practice");
+                void props.exam.practice.start({ topics: weak });
+              }}
+            />
+          ) : (
+            <MemoryPanel memory={props.memory} plan={plan} topics={topics} />
+          ))}
+      </div>
+    </CiteResolver>
   );
 }

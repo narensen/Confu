@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { AccountMenu } from "@/components/AccountMenu";
+import { CommandPalette, PaletteButton } from "@/components/CommandPalette";
 import { Guide } from "@/components/onboarding/Guide";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
-import { PrimaryNav } from "@/components/PrimaryNav";
+import { PrimaryNav, SessionNav } from "@/components/PrimaryNav";
 import { RoomStatus } from "@/components/rooms/RoomStatus";
 import { getKeyInfo } from "@/lib/groq-keys";
 import { isOwner, planOf } from "@/lib/plans";
@@ -27,7 +28,9 @@ async function UserMenu({ workspace }: { workspace: boolean }) {
     <div className="animate-fade flex shrink-0 items-center gap-1.5">
       {/* No button: opens by itself for new accounts, or from Settings. */}
       <Guide userId={user.id} firstTime={firstTime} needsKey={planOf(role) !== "pro"} />
-      {workspace && <PrimaryNav variant="icons" />}
+      {/* Go to… (Ctrl/Cmd+K): sessions, places and, in a session, its tools. */}
+      <CommandPalette />
+      {workspace ? <SessionNav /> : <PaletteButton />}
       {/* The room you're in, with its timer (and its voice, if you're talking). */}
       <RoomStatus />
       <div className="flex shrink-0 items-center gap-2 border-l border-line pl-2.5">
@@ -43,15 +46,27 @@ async function MainNav() {
   return (await getUser()) ? <PrimaryNav /> : null;
 }
 
-// Logo, the app's places (or, in a session, its title), then the room
-// you're in, notifications and your account. In a session the places
-// shrink to icons on the right, so the title has the room it needs.
+// Logo, the app's places (or, in a session, its title), then Go to…
+// (Ctrl/Cmd+K), the room you're in, notifications and your account. In a
+// session the places give way to the title; the logo, with a back chevron,
+// returns to the library, and Go to… reaches everything else.
 export function AppHeader({ children }: { children?: ReactNode }) {
   const workspace = Boolean(children);
   return (
     // Its own layer above the page, so the account dropdown is never painted over.
     <header className="glass-bar sticky top-0 z-40 flex h-14 shrink-0 items-center gap-3 border-b border-ink px-3 sm:px-5">
-      <Link href="/dashboard" className="shrink-0 transition hover:opacity-70" aria-label="Confu, your library">
+      {/* In a session the logo is also the way back: a chevron says so. */}
+      <Link
+        href="/dashboard"
+        className="group flex shrink-0 items-center gap-1 transition hover:opacity-70"
+        aria-label={workspace ? "Back to your library" : "Confu, your library"}
+        title={workspace ? "Back to your library" : undefined}
+      >
+        {workspace && (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden className="-ml-1 text-muted transition-transform group-hover:-translate-x-0.5">
+            <path d="m15 18-6-6 6-6" />
+          </svg>
+        )}
         <Logo />
       </Link>
       {workspace ? (

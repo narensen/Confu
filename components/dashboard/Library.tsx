@@ -7,14 +7,15 @@ import { ReviewDue } from "@/components/review/ReviewDue";
 import { StudyStreak } from "./StudyStreak";
 import { TrySample } from "./TrySample";
 import Link from "next/link";
-import { useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { eyebrowClass, ghostButtonClass } from "@/components/ui";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { eyebrowClass } from "@/components/ui";
 import { countdownLabel, daysUntil } from "@/lib/exam";
 import { ago } from "@/lib/format-usage";
 import type { SessionKind } from "@/lib/types";
 import { useToday } from "@/lib/use-today";
 import { SessionActions } from "./SessionActions";
 import { DoorCardLauncher } from "./DoorCardDialog";
+import { LibraryMore } from "./LibraryMore";
 import { KINDS, NewSessionLauncher, openNewSession } from "./NewSessionDialog";
 
 gsap.registerPlugin(useGSAP, Flip);
@@ -66,6 +67,16 @@ export function Library({ name, sessions: all }: { name: string | null; sessions
   const visible = (s: LibrarySession) =>
     (filter === "all" || s.kind === filter) && (!q || s.title.toLowerCase().includes(q) || s.docs.some((d) => d.title.toLowerCase().includes(q)));
   const shown = sessions.filter(visible).length;
+
+  // "New session" from the Go to… palette on another page lands here with
+  // ?new=1: open the dialog (its launcher, a child, is listening by now).
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("new") !== "1") return;
+    url.searchParams.delete("new");
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+    openNewSession();
+  }, []);
 
   // Remember where cards were, then let Flip animate them to their new places.
   const change = (fn: () => void) => {
@@ -124,12 +135,8 @@ export function Library({ name, sessions: all }: { name: string | null; sessions
           </p>
         </div>
         <div data-intro className="flex flex-wrap items-center gap-2 [&>*]:whitespace-nowrap">
-          {all.some((x) => x.kind !== "exam" && x.docs.length > 0) && (
-            <Link href="/map" className={`${ghostButtonClass} py-2.5`} title="Every paper across your sessions, and how they connect">
-              Literature map
-            </Link>
-          )}
-          <DoorCardLauncher />
+          <LibraryMore map={all.some((x) => x.kind !== "exam" && x.docs.length > 0)} />
+          <DoorCardLauncher button={false} />
           <NewSessionLauncher />
         </div>
       </header>

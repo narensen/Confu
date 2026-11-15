@@ -14,6 +14,7 @@ import { ReadingMap } from "./ReadingMap";
 import { placePopover } from "@/lib/popover-place";
 import { createClient } from "@/lib/supabase/client";
 import { track } from "@/lib/telemetry";
+import { setReaderPref, useReaderTheme, type ReaderTheme } from "@/lib/prefs";
 import type { Highlight, OutlineItem, Rect, TutorAction } from "@/lib/types";
 
 // Must be set in the same module that renders <Document>/<Page>.
@@ -92,12 +93,10 @@ type Popover =
 type Draft = { page: number; x0: number; y0: number; x1: number; y1: number };
 
 type PDFDocument = Parameters<typeof resolveOutline>[0];
-type ReaderTheme = "light" | "sepia" | "night";
 type Hit = { page: number; count: number; before: string; match: string; after: string };
 type Search = { q: string; hits: Hit[]; loading: boolean; index: number };
 
 const THEMES: ReaderTheme[] = ["light", "sepia", "night"];
-const THEME_KEY = "confu:reader-theme";
 const THEME_NAME: Record<ReaderTheme, string> = { light: "Light", sepia: "Sepia", night: "Night" };
 
 const escapeHtml = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -190,22 +189,13 @@ export default function PdfViewer(props: Props) {
   const dpr = typeof window === "undefined" ? 2 : Math.min(3, Math.max(2, window.devicePixelRatio || 1));
   const pdfRef = useRef<PDFDocument | null>(null);
 
-  // Reading theme, remembered on this device. (The viewer only renders in the
-  // browser, so localStorage is available here.)
-  const [theme, setTheme] = useState<ReaderTheme>(() => {
-    try {
-      const saved = localStorage.getItem(THEME_KEY);
-      return saved === "sepia" || saved === "night" ? saved : "light";
-    } catch {
-      return "light";
-    }
-  });
+  // Reading theme, remembered on this device. Until one is chosen the page
+  // follows the app: night in dark mode, so a dark screen has no white slab.
+  // Settings → Appearance can put it back to following the app.
+  const theme = useReaderTheme();
   function cycleTheme() {
     const next = THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length];
-    setTheme(next);
-    try {
-      localStorage.setItem(THEME_KEY, next);
-    } catch {}
+    setReaderPref(next);
     track("reader.theme", { theme: next });
   }
 
@@ -592,9 +582,9 @@ export default function PdfViewer(props: Props) {
   return (
     <div ref={viewerRef} className="relative flex h-full flex-col bg-viewer" data-reader={theme}>
       {/* Toolbar (adapts to the panel's own width, not the screen's) */}
-      {/* Grouped by job: Navigate · Read · Capture · Focus. Labels show when
-          the viewer is wide enough; the rarely used Read tools fold into More
-          when it isn't. */}
+      {/* Grouped by job: Navigate · View · Study · Focus. Study tools carry
+          their names whenever they're shown; what doesn't fit a narrow viewer
+          (zoom, reading theme, Listen, Hard spots) folds into More. */}
       <div className="@container flex h-12 shrink-0 items-center gap-1 border-b border-ink bg-panel px-2 text-sm">
         <div role="group" aria-label="Navigate" className="flex items-center gap-0.5">
           <form
@@ -626,7 +616,7 @@ export default function PdfViewer(props: Props) {
           </ToolButton>
         </div>
         <div className="mx-1 h-5 w-px shrink-0 bg-ink/20" />
-        <div role="group" aria-label="Read" className="flex items-center gap-0.5">
+        <div role="group" aria-label="View" className="flex items-center gap-0.5">
           <span className="hidden items-center gap-0.5 @md:flex">
             <ToolButton label="Zoom out" disabled={zoomIndex <= 0} onClick={zoomOut}>
               −
@@ -643,20 +633,45 @@ export default function PdfViewer(props: Props) {
               +
             </ToolButton>
           </span>
-          <span className="hidden items-center gap-0.5 @4xl:flex">
-            <ToolButton label={`Reading theme: ${THEME_NAME[theme]} (click to change)`} text="Theme" textAt="@6xl:inline" onClick={cycleTheme}>
+          <span className="hidden @3xl:flex">
+            <ToolButton label={`Reading theme: ${THEME_NAME[theme]} (click to change)`} onClick={cycleTheme}>
               <ThemeIcon theme={theme} />
             </ToolButton>
+          </span>
+        </div>
+        <div className="mx-1 h-5 w-px shrink-0 bg-ink/20" />
+        {/* Study tools: always named when they're shown, so a speaker isn't
+            mistaken for the focus sound beside the timer. */}
+        <div role="group" aria-label="Study" className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => {
+              setRegionMode((v) => !v);
+              closePopover();
+            }}
+            aria-pressed={regionMode}
+            title="Drag over a figure, table or equation to have it read by a vision model (Esc to cancel)"
+            className={`flex h-7 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs font-medium transition duration-200 ease-fluid ${
+              regionMode ? "border-ink bg-ink text-white" : "border-ink hover:-translate-y-px hover:shadow-hard-sm"
+            }`}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+              <path d="M3 7V3h4M17 3h4v4M21 17v4h-4M7 21H3v-4" />
+              <rect x="8" y="8" width="8" height="8" rx="1" />
+            </svg>
+            <span className="hidden @md:inline">{regionMode ? "Drag to capture…" : "Capture"}</span>
+          </button>
+          <span className="hidden items-center gap-0.5 @3xl:flex">
             <ToolButton
               label={readAloud.state === "idle" ? "Read aloud from this page" : "Stop reading aloud"}
               text={readAloud.state === "idle" ? "Listen" : "Stop"}
-              textAt="@6xl:inline"
+              textAt="always"
               aria-pressed={readAloud.state !== "idle"}
               onClick={() => (readAloud.state === "idle" ? void readAloud.start(current) : readAloud.stop())}
             >
               <ListenIcon />
             </ToolButton>
-            <ToolButton label="Where it got hard" text="Hard spots" textAt="@6xl:inline" aria-pressed={panel === "map"} onClick={() => togglePanel("map")}>
+            <ToolButton label="Where it got hard" text="Hard spots" textAt="always" aria-pressed={panel === "map"} onClick={() => togglePanel("map")}>
               <HardSpotsIcon />
             </ToolButton>
           </span>
@@ -690,7 +705,7 @@ export default function PdfViewer(props: Props) {
                   }}
                 >
                   <ListenIcon />
-                  {readAloud.state === "idle" ? "Read aloud from here" : "Stop reading aloud"}
+                  {readAloud.state === "idle" ? "Listen: read aloud from here" : "Stop reading aloud"}
                 </MoreItem>
                 <MoreItem
                   pressed={panel === "map"}
@@ -700,32 +715,11 @@ export default function PdfViewer(props: Props) {
                   }}
                 >
                   <HardSpotsIcon />
-                  Where it got hard
+                  Hard spots: where it got hard
                 </MoreItem>
               </>
             )}
           </MoreMenu>
-        </div>
-        <div className="mx-1 h-5 w-px shrink-0 bg-ink/20" />
-        <div role="group" aria-label="Capture" className="flex items-center">
-          <button
-            type="button"
-            onClick={() => {
-              setRegionMode((v) => !v);
-              closePopover();
-            }}
-            aria-pressed={regionMode}
-            title="Drag over a figure, table or equation to have it read by a vision model (Esc to cancel)"
-            className={`flex h-7 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs font-medium transition duration-200 ease-fluid ${
-              regionMode ? "border-ink bg-ink text-white" : "border-ink hover:-translate-y-px hover:shadow-hard-sm"
-            }`}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-              <path d="M3 7V3h4M17 3h4v4M21 17v4h-4M7 21H3v-4" />
-              <rect x="8" y="8" width="8" height="8" rx="1" />
-            </svg>
-            <span className="hidden @xl:inline">{regionMode ? "Drag to capture…" : "Capture"}</span>
-          </button>
         </div>
         <div className="min-w-0 flex-1" />
         <span className="hidden truncate px-2 text-xs text-muted @7xl:inline">Select text to ask about it</span>
@@ -734,7 +728,7 @@ export default function PdfViewer(props: Props) {
           <FocusSound />
           <FocusTimer />
           <ToolButton
-            label={focusMode ? "Exit full screen (Tab)" : "Full screen (Tab)"}
+            label={focusMode ? "Exit full screen (z)" : "Full screen (z)"}
             onClick={() => {
               if (!focusMode) track("reader.fullscreen");
               onToggleFocus();
@@ -1307,7 +1301,7 @@ function ToolButton({
       {...rest}
     >
       {children}
-      {text && <span className={`hidden text-xs font-medium ${textAt ?? ""}`}>{text}</span>}
+      {text && <span className={`text-xs font-medium ${textAt === "always" ? "" : `hidden ${textAt ?? ""}`}`}>{text}</span>}
     </button>
   );
 }
@@ -1370,7 +1364,7 @@ function MoreMenu({ children }: { children: (close: () => void) => ReactNode }) 
     };
   }, [open]);
   return (
-    <div ref={root} className="relative @4xl:hidden">
+    <div ref={root} className="relative @3xl:hidden">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -1485,6 +1479,9 @@ function SelectionPopover({
       width: el.offsetWidth,
       height: el.scrollHeight,
       host: { left: box.left, top: box.top, right: box.right, bottom: box.bottom },
+      // With a mouse, a selection's toolbar goes above it so it doesn't cover
+      // the next line. Touch screens draw their own handles and menu there.
+      prefer: popover.kind === "text" && window.matchMedia("(pointer: fine)").matches ? "above" : "below",
       view: {
         left: vv?.offsetLeft ?? 0,
         top: vv?.offsetTop ?? 0,

@@ -59,6 +59,8 @@ export function DocTabs({ docs, activeId, uploadStatus, onSelect, onAdd, onClose
   const settleTimer = useRef<number | null>(null);
   const before = useRef<Map<string, number>>(new Map());
   const [drag, setDrag] = useState<Drag | null>(null);
+  // More tabs than fit: a menu lists them all.
+  const [overflow, setOverflow] = useState(false);
   const active = docs.find((d) => d.id === activeId);
   const activeIsPaper = Boolean(active && paperIds?.has(active.id));
   const canMove = docs.length > 1;
@@ -185,6 +187,22 @@ export function DocTabs({ docs, activeId, uploadStatus, onSelect, onAdd, onClose
     before.current = new Map(nodes.map((node) => [node.dataset.tabId || "", node.offsetLeft]));
   }, [draggingId, orderKey]);
 
+  useLayoutEffect(() => {
+    const el = strip.current;
+    if (!el) return;
+    const check = () => setOverflow(el.scrollWidth > el.clientWidth + 1);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [docs.length]);
+
+  // The active tab stays in view when it changes (from Files, [ ], a citation…).
+  useEffect(() => {
+    if (!activeId || dragRef.current) return;
+    strip.current?.querySelector(`[data-tab-id="${activeId}"]`)?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [activeId]);
+
   return (
     <div className="flex h-11 shrink-0 items-stretch border-b border-ink bg-paper">
       <div
@@ -276,6 +294,7 @@ export function DocTabs({ docs, activeId, uploadStatus, onSelect, onAdd, onClose
           if (files.length) onAdd(files);
         }}
       />
+      {overflow && <TabsMenu docs={docs} activeId={activeId} onSelect={onSelect} />}
       {/* A paper (recognised automatically) gets a shortcut to its three passes. */}
       {onPaper && active && activeIsPaper && (
         <button
@@ -325,8 +344,9 @@ function TabFace({
 }) {
   return (
     <>
+      {/* The grip shows on hover (and while dragging); the tab itself is what's grabbed. */}
       {canMove && (
-        <span aria-hidden className="flex h-full w-4 shrink-0 items-center justify-center text-muted">
+        <span aria-hidden className={`flex h-full w-4 shrink-0 items-center justify-center text-muted transition-opacity duration-150 ${onSelect ? "opacity-0 group-hover:opacity-100" : ""}`}>
           <svg width="8" height="14" viewBox="0 0 8 14" fill="currentColor">
             <circle cx="2" cy="2" r="1" />
             <circle cx="6" cy="2" r="1" />
@@ -366,5 +386,63 @@ function TabFace({
       </button>
       {active && <span className="animate-fade absolute inset-x-0 -bottom-px h-0.5 bg-stroke" />}
     </>
+  );
+}
+
+// Every open tab, when there are more than fit the strip.
+function TabsMenu({ docs, activeId, onSelect }: { docs: SessionDoc[]; activeId: string | null; onSelect: (id: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (!root.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+  return (
+    <div ref={root} className="relative flex shrink-0 border-l border-ink/15">
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`All ${docs.length} open files`}
+        title="All open files"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1 px-2.5 font-mono text-xs text-muted transition hover:bg-panel hover:text-ink aria-expanded:bg-panel aria-expanded:text-ink"
+      >
+        {docs.length}
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden className={`transition-transform ${open ? "rotate-180" : ""}`}>
+          <path d="m6 9 6 6 6-6" />
+        </svg>
+      </button>
+      {open && (
+        <div role="menu" aria-label="Open files" className="animate-pop absolute top-full right-0 z-40 mt-1 max-h-80 w-72 overflow-y-auto rounded-xl border border-ink bg-panel p-1.5 shadow-hard">
+          {docs.map((d) => (
+            <button
+              key={d.id}
+              role="menuitem"
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onSelect(d.id);
+              }}
+              className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition hover:bg-paper ${d.id === activeId ? "font-medium" : "text-muted"}`}
+            >
+              <span className={`shrink-0 rounded px-1 font-mono text-[10px] ${d.id === activeId ? "bg-ink text-white" : "border border-ink/30"}`}>{d.label}</span>
+              <span className="min-w-0 flex-1 truncate">{d.title}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

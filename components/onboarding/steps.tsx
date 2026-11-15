@@ -502,11 +502,11 @@ export const GUIDE_STEPS: GuideStep[] = [
     id: "reading",
     eyebrow: "Reading",
     title: "The tutor beside you, your tools a click away",
-    intro: "The tutor sits on the left and what you're reading fills the rest. Your tools (Plan, Highlights, Progress, Files) wait in a small bar on the right edge that tucks itself away while you read. Move toward the edge and it comes out.",
+    intro: "The tutor sits on the left and what you're reading fills the rest. Your tools (Plan, Highlights, Progress, Files) are in a labelled column on the right edge, always in view.",
     points: [
-      { label: "Tools", body: <>Press a tool in the bar on the right (or its key: <b>p</b>, <b>h</b>, <b>f</b>) to slide it out. Click back into the page, or press Esc, to put it away. <b>Pin</b> keeps it open beside the page instead.</> },
+      { label: "Tools", body: <>Press a tool in the column on the right (or its key: <b>p</b>, <b>h</b>, <b>f</b>) to slide it out. Click back into the page, or press Esc, to put it away. <b>Pin</b> keeps it open beside the page instead.</> },
       { label: "Files and tabs", body: <>Everything you add lands in <b>Files</b>; open one and it becomes a tab (D1, D2, …). ✕ on a tab only closes it; delete files from Files. PDFs, slides and Word docs all work.</> },
-      { label: "Make room", body: "Drag any edge to resize, or fold the tutor away (Ctrl+T) to read wider; it comes back when it answers. Full screen (⛶ or Tab) keeps the same layout without the header. Press ? for every shortcut." },
+      { label: "Make room", body: "Drag any edge to resize, or fold the tutor away (Ctrl+\\) to read wider; it comes back when it answers. Full screen (⛶ or z) keeps the same layout without the header. Press ? for every shortcut." },
     ],
     art: ReadingArt,
   },
@@ -541,7 +541,7 @@ export const GUIDE_STEPS: GuideStep[] = [
     title: "Learn one idea at a time",
     intro: "The tutor, on the left, is where the learning happens. It always knows your goal, the current topic and what you already understand.",
     points: [
-      { label: "Teach me / Check my understanding", body: "Teach covers the next idea in your current topic. Check asks one question that tests understanding, not memory, and grades your answer honestly." },
+      { label: "Teach me / Quiz me", body: "Teach covers the next idea in your current topic. Check asks one question that tests understanding, not memory, and grades your answer honestly." },
       { label: "Citations", body: <>Page references like <span className="rounded bg-paper px-1 font-mono text-xs underline">D1 p. 12</span> are clickable and jump straight to that page.</> },
       { label: "Stays on track", body: "It won't re-explain what you've got, changes approach when you're stuck, and steers off-topic questions back to your goal." },
     ],

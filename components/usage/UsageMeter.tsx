@@ -18,7 +18,10 @@ type Main = {
 // Compact "how much of today's Groq allowance is left" chip for the tutor bar.
 // It never shows a stale "limit reached": while blocked it re-checks with Groq
 // every minute (the server throttles this), so it clears once tokens free up.
-export function UsageMeter({ sessionId, keyId, keyLast4 }: { sessionId: string; keyId?: string | null; keyLast4?: string | null }) {
+// quiet: stays out of the way until it matters (a trial's count, a blocked
+// key, or under a fifth of today's allowance left). Settings → Usage and the
+// account menu always have the full picture.
+export function UsageMeter({ sessionId, keyId, keyLast4, quiet = false }: { sessionId: string; keyId?: string | null; keyLast4?: string | null; quiet?: boolean }) {
   const [main, setMain] = useState<Main | null>(null);
 
   const load = useCallback(async () => {
@@ -82,6 +85,7 @@ export function UsageMeter({ sessionId, keyId, keyLast4 }: { sessionId: string; 
       : `${formatTokens(main.used24h)} tokens used here in the last 24 h${main.dailyLimit ? ` of ${main.dailyLimitEstimated ? "~" : ""}${formatTokens(main.dailyLimit)} per day` : ""}. Last checked with Groq ${ago(main.checkedAt)}${stale ? " (may be out of date)" : ""}. See Settings → Usage.`;
 
   if (!label && !keyLast4 && main?.plan !== "pro") return null;
+  if (quiet && !(main?.plan === "trial" || blocked || (left !== null && left < 0.2))) return null;
   return (
     <Link
       href="/settings#usage"

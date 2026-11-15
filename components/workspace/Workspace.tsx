@@ -62,9 +62,11 @@ import { RecallCheck, recallOffered } from "./RecallCheck";
 import { ShortcutsDialog } from "./Shortcuts";
 import type { PlanJob } from "./PlanPanel";
 import { toolSections, TutorPanel, type PanelProps, type Section, type Tab, type ToolTab } from "./TutorPanel";
-import { MobileNav, ResizeHandle, ToolDock, ToolHeader, TutorHeader, TutorRail, type MobileItem } from "./Chrome";
+import { MobileNav, ResizeHandle, ToolHeader, ToolRail, TutorHeader, TutorRail, type MobileItem } from "./Chrome";
 import { UsageMeter } from "@/components/usage/UsageMeter";
 import { ask, toast } from "@/components/dialogs";
+import { singleKeysOn } from "@/lib/prefs";
+import { registerCommands, type Command } from "@/lib/commands";
 
 const PdfViewer = dynamic(() => import("@/components/pdf/PdfViewer"), {
   ssr: false,
@@ -115,7 +117,8 @@ export type CiteFiles = {
 const LAYOUT_KEY = "confu:layout";
 type Layout = { tutor: number; sheet: number; tutorOpen: boolean; pinned: boolean };
 const DEFAULT_LAYOUT: Layout = { tutor: 400, sheet: 440, tutorOpen: true, pinned: false };
-const TUTOR_RAIL = 32; // the folded tutor (w-8): only the logo peeks out
+const TUTOR_RAIL = 40; // the folded tutor (w-10): its icon and name, on end
+const TOOL_RAIL = 72; // the tools' column on the right (w-[4.5rem]), always shown
 const READER_MIN = 440; // a tool is only pinned beside the reader if this much is left for it
 const SHEET_MIN = 340;
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
@@ -199,10 +202,9 @@ export function Workspace({
   useEffect(() => () => window.clearTimeout(motionTimer.current), []);
 
   // The layout: the tutor on the left, what you're reading in the middle, and
-  // the session's tools in a small bar on the right edge that tucks itself
-  // away until the pointer comes near (see ToolDock). A tool slides out over the
-  // reader and goes away when you click back into the page, or is pinned
-  // beside it. Full screen is the same layout without the app's header.
+  // the session's tools in a labelled column on the right edge, always in view
+  // (see ToolRail). A tool slides out from it over the reader and goes away
+  // when you click back into the page, or is pinned beside it. Full screen is the same layout without the app's header.
   // Phones show one thing at a time, switched from a tab bar.
   const wide = useSyncExternalStore(
     subscribeWide,
@@ -428,8 +430,8 @@ export function Workspace({
   // while the reader keeps enough room; otherwise it floats over it.
   const tutorWidth = clamp(layout.tutor, 300, Math.max(300, Math.round(rootWidth * 0.45)));
   const leftWidth = layout.tutorOpen ? tutorWidth : TUTOR_RAIL;
-  const floatWidth = clamp(layout.sheet, SHEET_MIN, Math.max(SHEET_MIN, Math.min(Math.round(rootWidth * 0.55), rootWidth - leftWidth - 120)));
-  const roomBeside = rootWidth - leftWidth - READER_MIN;
+  const floatWidth = clamp(layout.sheet, SHEET_MIN, Math.max(SHEET_MIN, Math.min(Math.round(rootWidth * 0.55), rootWidth - leftWidth - TOOL_RAIL - 120)));
+  const roomBeside = rootWidth - leftWidth - TOOL_RAIL - READER_MIN;
   const canPin = roomBeside >= SHEET_MIN;
   const docked = layout.pinned && canPin;
   const sheetWidth = docked ? Math.min(floatWidth, roomBeside) : floatWidth;
@@ -488,6 +490,11 @@ export function Workspace({
     if (m.data) setMemory({ ...EMPTY_MEMORY, ...(m.data as LearnerMemory) });
   }, [plan, session.id, supabase]);
 
+  // The answer being written, so Stop can end it.
+  const answerAbort = useRef<AbortController | null>(null);
+  const [answering, setAnswering] = useState(false);
+  const stopAnswer = useCallback(() => answerAbort.current?.abort(), []);
+
   const send = useCallback(
     async (req: SendRequest) => {
       const harness = harnessRef.current;
@@ -495,6 +502,10 @@ export function Workspace({
       if (locked && !viaHarness) return revealGate();
       if (busyRef.current) return;
       busyRef.current = true;
+      const abort = new AbortController();
+      answerAbort.current = abort;
+      setAnswering(true);
+      let written = "";
       const topic = topics.find((t) => t.id === req.topicId) ?? activeTopic;
       const now = new Date().toISOString();
       const userId = `local-u-${Date.now()}`;
@@ -522,13 +533,17 @@ export function Workspace({
       revealTutor();
       setBusy(viaHarness ? `Asking ${harnessById(harness.id)?.name || "the tutor"}…` : "Thinking…");
 
-      const setReply = (text: string) => setMessages((m) => m.map((x) => (x.id === replyId ? { ...x, content: text } : x)));
+      const setReply = (text: string) => {
+        written = text;
+        setMessages((m) => m.map((x) => (x.id === replyId ? { ...x, content: text } : x)));
+      };
       try {
         if (viaHarness) {
           if (!harness.connected) throw new Error("That tutor isn't connected. Open Tutors — the bridge has to be running, and the harness has to be installed.");
           const prepared = await fetch("/api/chat", {
             method: "POST",
             headers: JSON_HEADERS,
+            signal: abort.signal,
             body: JSON.stringify({
               sessionId: session.id,
               documentId: activeDoc?.id ?? null,
@@ -561,7 +576,7 @@ export function Workspace({
             setBusy(`Asking ${tutorName}…`);
             window.clearTimeout(hideAsking);
             hideAsking = window.setTimeout(() => setBusy(null), 250);
-          });
+          }, abort.signal);
           window.clearTimeout(hideAsking);
           setBusy(null);
           const saved = await fetch("/api/chat/commit", {
@@ -591,6 +606,7 @@ export function Workspace({
         const res = await fetch("/api/chat", {
           method: "POST",
           headers: JSON_HEADERS,
+          signal: abort.signal,
           body: JSON.stringify({
             sessionId: session.id,
             documentId: activeDoc?.id ?? null,
@@ -632,6 +648,11 @@ export function Workspace({
           setReply(text);
         }
       } catch (err) {
+        // Stopped: keep what was written. (The server saves it the same way.)
+        if (abort.signal.aborted) {
+          setReply(written.trim() ? `${written.trimEnd()}\n\n_(Stopped.)_` : "_(Stopped before the tutor wrote anything.)_");
+          return;
+        }
         const raw = err instanceof Error ? err.message : "Something went wrong.";
         const message =
           viaHarness && /failed to fetch|networkerror|load failed/i.test(raw)
@@ -639,6 +660,8 @@ export function Workspace({
             : raw;
         setReply(`⚠️ ${message}`);
       } finally {
+        if (answerAbort.current === abort) answerAbort.current = null;
+        setAnswering(false);
         busyRef.current = false;
         setBusy(null);
         notifyAiUsed();
@@ -1501,8 +1524,10 @@ export function Workspace({
 
   // Keyboard shortcuts (see Shortcuts.tsx). Only when not typing and no
   // dialog is open; one listener, reading the latest state through a ref.
-  // Ctrl/Cmd+E and Ctrl/Cmd+T are the exception: they still run while the
-  // tutor box is focused, because plain e and t would just be typed.
+  // Ctrl/Cmd+\ and Ctrl/Cmd+E are the exception: they still run while the
+  // tutor box is focused, because plain t and e would just be typed. (Not
+  // Ctrl+T: browsers keep that for a new tab and never pass it to the page.)
+  // Tab is left alone, so the keyboard can always move between controls.
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [recall, setRecall] = useState<{ topic: PlanTopic; offer: boolean } | null>(null);
 
@@ -1538,11 +1563,13 @@ export function Workspace({
     onKey.current = (e) => {
       if (e.defaultPrevented) return;
       const key = e.key.toLowerCase();
-      // Plain e and t type into the box. Ctrl/Cmd+E and Ctrl/Cmd+T still
+      // Plain e and t type into the box. Ctrl/Cmd+E and Ctrl/Cmd+\ still
       // run those commands from there.
-      const tutorChord = (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (key === "e" || key === "t");
+      const tutorChord = (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (key === "e" || key === "\\");
       if (tutorChord && e.repeat) return;
       if ((e.ctrlKey || e.metaKey || e.altKey) && !tutorChord) return;
+      // One-key shortcuts can be turned off (Settings → Appearance); Esc stays.
+      if (!tutorChord && e.key !== "Escape" && !singleKeysOn()) return;
       const el = e.target as HTMLElement | null;
       const typing = Boolean(el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)));
       if (typing && !tutorChord) return;
@@ -1557,6 +1584,7 @@ export function Workspace({
       const go: Record<string, (() => void) | undefined> = {
         "?": () => setShortcutsOpen(true),
         t: () => (wideRef.current && layout.tutorOpen ? foldTutorAway() : writeToTutor()),
+        "\\": () => (wideRef.current && layout.tutorOpen ? foldTutorAway() : writeToTutor()),
         // In full screen: the tutor across the whole screen, or back beside the page.
         e:
           wideRef.current && focusMode
@@ -1573,7 +1601,8 @@ export function Workspace({
         Escape: tutorFullShown ? () => showTutorFull(false) : wideRef.current && tool && !docked ? () => setTool(null) : undefined,
         "[": () => openDocs.length > 1 && selectDoc(openDocs[(i - 1 + openDocs.length) % openDocs.length].id),
         "]": () => openDocs.length > 1 && selectDoc(openDocs[(i + 1) % openDocs.length].id),
-        w: () => activeDoc && closeDocTab(activeDoc),
+        // Shift+W, so a stray w never closes the file you're reading.
+        W: () => activeDoc && closeDocTab(activeDoc),
         n: () => {
           const next = currentTopic(topics);
           if (next?.source === "pdf" && next.page_start && next.document_id) {
@@ -1584,8 +1613,7 @@ export function Workspace({
             openTool("plan");
           }
         },
-        // Tab, not Shift+Tab, so moving focus backward still works.
-        Tab: e.shiftKey ? undefined : () => toggleFocus(),
+        z: () => toggleFocus(),
       };
       const run = tutorChord ? go[key] : go[e.key];
       if (!run) return;
@@ -1626,6 +1654,8 @@ export function Workspace({
     messages,
     busy,
     onSend: send,
+    onStop: answering ? stopAnswer : undefined,
+    reading: activeDoc?.hasPdf ? `${multi ? `${activeDoc.label} · ` : ""}p. ${page}` : null,
     onJump: jumpIntoView,
     onCite: citeIntoView,
     onFocusTopic: (t) => setActiveTopicId(t.id),
@@ -1749,13 +1779,48 @@ export function Workspace({
   const sections = toolSections(panelProps);
   const sectionOf = (id: ToolTab): Section => sections.find((s) => s.id === id) ?? { id, label: id === "passes" ? "Papers" : "Tool", hint: "" };
 
+  // This session's tools and actions, in the Go to… palette (Ctrl/Cmd+K).
+  useEffect(() => {
+    const commands: Command[] = [
+      ...sections.map((s) => ({
+        id: `tool-${s.id}`,
+        label: tool === s.id ? `Put away ${s.label}` : `Open ${s.label}`,
+        hint: s.hint,
+        keys: s.shortcut?.toLowerCase(),
+        run: () => (tool === s.id ? setTool(null) : openTool(s.id)),
+      })),
+      {
+        id: "tutor",
+        label: wide && layout.tutorOpen ? "Fold the tutor away" : "Show the tutor",
+        keys: "t",
+        run: () => (wide && layout.tutorOpen ? foldTutorAway() : revealTutor()),
+      },
+      {
+        id: "write",
+        label: "Write to the tutor",
+        keys: "/",
+        run: () => {
+          revealTutor();
+          window.setTimeout(() => document.getElementById("tutor-input")?.focus(), 60);
+        },
+      },
+      {
+        id: "add",
+        label: isPaper ? "Add papers" : "Add material",
+        hint: isPaper ? "By arXiv ID, DOI, link or title" : "PDFs, slides, web pages, lectures, Drive, Zotero",
+        run: () => (isPaper ? setAddPaperOpen(true) : setAddMaterialOpen(true)),
+      },
+      { id: "full", label: focusMode ? "Leave full screen" : "Full screen", keys: "z", run: toggleFocus },
+      { id: "help", label: "How it works and shortcuts", keys: "?", run: () => setShortcutsOpen(true) },
+    ];
+    return registerCommands("workspace", commands);
+  }, [sections, tool, wide, layout.tutorOpen, isPaper, focusMode, openTool, foldTutorAway, revealTutor, toggleFocus]);
+
   // The tutor: its header (what page it's reading along with, usage), then
   // the chat, or the key form while there's no key.
-  const where = activeDoc?.hasPdf ? `Reading ${multi ? `${activeDoc.label} · ` : ""}p. ${page}` : null;
   const tutor = (onFold?: () => void, onExpand?: () => void, expanded = false) => (
     <>
       <TutorHeader
-        where={where}
         busy={Boolean(busy)}
         onClear={messages.length && !locked ? () => void clearChat() : undefined}
         onFold={onFold}
@@ -1770,7 +1835,7 @@ export function Workspace({
             }}
           />
         }
-        usage={<UsageMeter sessionId={session.id} keyId={needsKey ? keyInfo?.id : undefined} keyLast4={needsKey ? keyInfo?.last4 : undefined} />}
+        usage={<UsageMeter quiet sessionId={session.id} keyId={needsKey ? keyInfo?.id : undefined} keyLast4={needsKey ? keyInfo?.last4 : undefined} />}
       />
       <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden">
         {locked && !localTutor ? (
@@ -1966,13 +2031,13 @@ export function Workspace({
         </section>
 
         {/* Right: the tool that's out (floating over the reader, or pinned
-            beside it), and the small bar of every tool at its edge. */}
+            beside it), and the column of every tool at the edge. */}
         {wide && lastTool && (
           <aside
             aria-label={sectionOf(lastTool).label}
             aria-hidden={!sheetOpen}
             inert={!sheetOpen || tutorFullShown}
-            style={{ width: sheetWidth, right: sheetDocked ? undefined : 0 }}
+            style={{ width: sheetWidth, right: sheetDocked ? undefined : TOOL_RAIL }}
             className={`@container flex min-w-0 flex-col border-l border-ink bg-panel transition-[translate,opacity,visibility] duration-200 ease-fluid ${
               sheetDocked ? "relative shrink-0" : "absolute inset-y-0 z-20 shadow-[-12px_0_32px_-16px_rgba(13,13,12,0.45)]"
             } ${sheetOpen ? "visible translate-x-0 opacity-100" : "pointer-events-none invisible translate-x-6 opacity-0"}`}
@@ -1997,15 +2062,7 @@ export function Workspace({
             </div>
           </aside>
         )}
-        {wide && (
-          <ToolDock
-            sections={sections}
-            active={tool}
-            offset={sheetOpen ? sheetWidth : 0}
-            hidden={tutorFullShown}
-            onPick={(id) => (tool === id ? setTool(null) : openTool(id))}
-          />
-        )}
+        {wide && <ToolRail sections={sections} active={tool} hidden={tutorFullShown} onPick={(id) => (tool === id ? setTool(null) : openTool(id))} />}
       </div>
 
       {!wide && (
@@ -2090,7 +2147,6 @@ export function Workspace({
           }
         />
       )}
-
     </div>
   );
 }

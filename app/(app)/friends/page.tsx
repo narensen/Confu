@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import { FriendsView } from "@/components/friends/FriendsView";
+import { CommunityTabs } from "@/components/community/CommunityTabs";
 import { eyebrowClass } from "@/components/ui";
 
 export const metadata: Metadata = { title: "Friends — Confu", robots: { index: false } };
 
 export default function FriendsPage() {
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
+    <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-4 pb-10 sm:px-6 sm:pt-6">
+      <CommunityTabs />
       <div className="animate-enter">
         <p className={eyebrowClass}>Friends</p>
         <h1 className="mt-1 font-serif text-4xl tracking-tight sm:text-5xl">Study with people you know</h1>

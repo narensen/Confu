@@ -6,7 +6,7 @@ import { useSyncExternalStore } from "react";
 // as <html data-theme>, before first paint by the script in app/layout.tsx.
 export type Theme = "system" | "light" | "dark";
 const KEY = "confu:theme";
-const EVENT = "confu:theme";
+export const THEME_EVENT = "confu:theme";
 
 // Runs in <head> before the page paints, so a dark-mode page never flashes light.
 export const THEME_SCRIPT = `try{var t=localStorage.getItem("${KEY}");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch(e){}`;
@@ -27,12 +27,12 @@ export function setTheme(t: Theme) {
   } catch {}
   if (t === "system") delete document.documentElement.dataset.theme;
   else document.documentElement.dataset.theme = t;
-  window.dispatchEvent(new Event(EVENT));
+  window.dispatchEvent(new Event(THEME_EVENT));
 }
 
 const subscribe = (fn: () => void) => {
-  window.addEventListener(EVENT, fn);
-  return () => window.removeEventListener(EVENT, fn);
+  window.addEventListener(THEME_EVENT, fn);
+  return () => window.removeEventListener(THEME_EVENT, fn);
 };
 
 export function useTheme(): Theme {

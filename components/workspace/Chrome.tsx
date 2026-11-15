@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import type { Section, Tab } from "./TutorPanel";
 
-// The frame around the reader: the tutor's side (left), the small tool bar
+// The frame around the reader: the tutor's side (left), the tool rail
 // (right) with the panel each tool slides out into, and the tab bar phones
 // use instead. The panels' contents are in TutorPanel.
 
 /* ------------------------------------------------------------------ icons */
 
-type IconName = Tab | "reader" | "keys" | "pin" | "close" | "fold" | "expand" | "shrink" | "clear";
+type IconName = Tab | "reader" | "keys" | "help" | "pin" | "close" | "fold" | "expand" | "shrink" | "clear";
 
 const PATHS: Record<IconName, ReactNode> = {
   chat: <path d="M21 11.5a8.4 8.4 0 0 1-12.2 7.5L3 20.5l1.6-5.2A8.5 8.5 0 1 1 21 11.5Z" />,
@@ -57,6 +57,12 @@ const PATHS: Record<IconName, ReactNode> = {
       <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7.5 14h9" />
     </>
   ),
+  help: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.6M12 17h.01" />
+    </>
+  ),
   pin: (
     <>
       <path d="M12 17v5" />
@@ -92,164 +98,65 @@ const iconButton = "flex size-8 shrink-0 items-center justify-center rounded-md 
 
 /* ------------------------------------------------------------- the rails */
 
-// Right edge: the session's tools in a small bar that keeps out of the way.
-// It tucks itself away while you read and comes out when the pointer moves
-// toward it (or Tab reaches it). While a tool is open it stays out, riding
-// the open tool's left edge. Touch screens, with no pointer to follow, keep
-// it out. It peeks once when the session opens, so you know where it lives.
-const HOVER = "(hover: hover) and (pointer: fine)";
-const subscribeHover = (fn: () => void) => {
-  const m = window.matchMedia(HOVER);
-  m.addEventListener("change", fn);
-  return () => m.removeEventListener("change", fn);
-};
-const REACH = 88; // px from the edge that bring it out
-const BAND = 170; // px above and below its middle that count
-const LINGER = 450; // ms it waits before tucking away again
-
-export function ToolDock({
+// Right edge: the session's tools in a labelled column, always in view, so
+// there's nothing to discover by moving the mouse about. The tool that's out
+// is filled in; a dot means it's waiting on you (a goal to set, files still
+// to come in). Tools slide out from its left edge.
+export function ToolRail({
   sections,
   active,
-  offset,
   hidden = false,
   onPick,
 }: {
   sections: Section[];
   active: Tab | null;
-  offset: number; // the open tool's width: the bar sits at its edge
   hidden?: boolean; // the tutor across the whole screen
   onPick: (id: Section["id"]) => void;
 }) {
-  const edge = useRef<HTMLDivElement>(null);
-  const canHover = useSyncExternalStore(subscribeHover, () => window.matchMedia(HOVER).matches, () => true);
-  const [near, setNear] = useState(false);
-  const [over, setOver] = useState(false);
-  const [focused, setFocused] = useState(false);
-  const [peek, setPeek] = useState(true);
-
-  useEffect(() => {
-    const id = window.setTimeout(() => setPeek(false), 2200);
-    return () => window.clearTimeout(id);
-  }, []);
-
-  // Follow the pointer (once a frame, and only a change re-renders): close
-  // to the edge, level with the bar, it comes out; away, it waits a moment.
-  useEffect(() => {
-    if (!canHover) return;
-    let frame = 0;
-    let linger = 0;
-    let isNear = false;
-    let x = -1;
-    let y = -1;
-    const check = () => {
-      frame = 0;
-      const box = edge.current?.getBoundingClientRect();
-      if (!box) return;
-      const close = x <= box.right && box.right - x < REACH && y >= box.top && y <= box.bottom && Math.abs(y - (box.top + box.height / 2)) < BAND;
-      if (close) {
-        window.clearTimeout(linger);
-        linger = 0;
-        if (!isNear) setNear((isNear = true));
-      } else if (isNear && !linger) {
-        linger = window.setTimeout(() => {
-          linger = 0;
-          setNear((isNear = false));
-        }, LINGER);
-      }
-    };
-    const onMove = (e: PointerEvent) => {
-      x = e.clientX;
-      y = e.clientY;
-      if (!frame) frame = requestAnimationFrame(check);
-    };
-    const onLeave = () => {
-      x = y = -1;
-      if (!frame) frame = requestAnimationFrame(check);
-    };
-    window.addEventListener("pointermove", onMove, { passive: true });
-    document.documentElement.addEventListener("pointerleave", onLeave);
-    return () => {
-      window.removeEventListener("pointermove", onMove);
-      document.documentElement.removeEventListener("pointerleave", onLeave);
-      cancelAnimationFrame(frame);
-      window.clearTimeout(linger);
-    };
-  }, [canHover]);
-
-  const shown = !hidden && (active !== null || near || over || focused || peek || !canHover);
-
   return (
-    <div
-      ref={edge}
-      inert={hidden}
-      style={{ transform: `translateX(${-offset}px)` }}
-      className="pointer-events-none absolute inset-y-0 right-0 z-30 flex w-14 items-center justify-end transition-transform duration-300 ease-fluid motion-reduce:transition-none"
-    >
-      {/* While it's tucked away: a short line on the edge says it's there. */}
-      <span
-        aria-hidden
-        className={`absolute right-1 h-9 w-1 rounded-full bg-ink/20 transition-opacity duration-300 ${shown || hidden ? "opacity-0" : "opacity-100 delay-150"}`}
-      />
-      <nav
-        aria-label="Session tools"
-        onPointerEnter={() => setOver(true)}
-        onPointerLeave={() => setOver(false)}
-        onFocus={() => setFocused(true)}
-        onBlur={(e) => !e.currentTarget.contains(e.relatedTarget as Node | null) && setFocused(false)}
-        className={`mr-2.5 flex origin-right flex-col gap-0.5 rounded-2xl border border-ink/15 bg-panel p-1 shadow-hard-sm transition-[translate,scale,opacity] duration-300 ease-fluid motion-reduce:transition-none ${
-          shown ? "pointer-events-auto translate-x-0 scale-100 opacity-100" : "translate-x-3 scale-95 opacity-0"
-        }`}
-      >
-        {sections.map((s, i) => {
-          const on = active === s.id;
-          return (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => onPick(s.id)}
-              aria-pressed={on}
-              aria-label={`${s.label}${s.badge ? ` (${s.badge})` : ""}: ${s.hint}`}
-              // Each one follows the bar out, a beat after the one above.
-              style={{ transitionDelay: shown ? `${70 + i * 35}ms` : "0ms" }}
-              className={`group/tool relative flex size-9 items-center justify-center rounded-xl transition-[translate,opacity,background-color,color] duration-300 ease-fluid active:scale-95 motion-reduce:transition-none ${
-                shown ? "translate-x-0 opacity-100" : "translate-x-1.5 opacity-0"
-              } ${on ? "bg-ink text-white" : "text-muted hover:bg-paper hover:text-ink"}`}
-            >
-              <Icon name={s.id} size={17} />
-              {/* Waiting on you (a goal to set, files still to come in). */}
-              {s.dot && !on && <span aria-hidden className="absolute top-1 right-1 size-2 rounded-full border border-ink bg-yellow-300" />}
-              {/* Its name, its count and its key, on hover or focus. */}
-              <span
-                aria-hidden
-                className="pointer-events-none absolute top-1/2 right-full mr-2.5 flex -translate-y-1/2 translate-x-1 items-center gap-2 rounded-md bg-ink px-2 py-1 text-xs font-medium whitespace-nowrap text-white opacity-0 transition duration-150 ease-fluid group-hover/tool:translate-x-0 group-hover/tool:opacity-100 group-focus-visible/tool:translate-x-0 group-focus-visible/tool:opacity-100"
-              >
-                {s.label}
-                {s.badge && <span className="font-mono text-[10px] text-white/60">{s.badge}</span>}
-                {s.shortcut && <kbd className="rounded border border-white/25 px-1 font-mono text-[10px] text-white/70">{s.shortcut}</kbd>}
-              </span>
-            </button>
-          );
-        })}
-      </nav>
-    </div>
+    <nav aria-label="Session tools" inert={hidden} className="relative z-30 flex w-[4.5rem] shrink-0 flex-col gap-1 border-l border-ink bg-panel px-1 py-2">
+      {sections.map((s) => {
+        const on = active === s.id;
+        return (
+          <button
+            key={s.id}
+            type="button"
+            onClick={() => onPick(s.id)}
+            aria-pressed={on}
+            aria-label={`${s.label}${s.badge ? ` (${s.badge})` : ""}: ${s.hint}`}
+            aria-keyshortcuts={s.shortcut?.toLowerCase()}
+            title={`${s.hint}${s.shortcut ? ` (${s.shortcut.toLowerCase()})` : ""}`}
+            className={`relative flex flex-col items-center gap-1 rounded-xl px-0.5 pt-2 pb-1.5 transition duration-200 ease-fluid active:scale-95 motion-reduce:transition-none ${
+              on ? "bg-ink text-white" : "text-muted hover:bg-paper hover:text-ink"
+            }`}
+          >
+            <Icon name={s.id} size={18} />
+            <span className="max-w-full truncate text-[11px] leading-none font-medium">{s.label}</span>
+            {s.badge && <span className={`font-mono text-[10px] leading-none tabular-nums ${on ? "text-white/70" : "text-muted"}`}>{s.badge}</span>}
+            {s.dot && !on && <span aria-hidden className="absolute top-1.5 right-2 size-2 rounded-full border border-ink bg-yellow-300" />}
+          </button>
+        );
+      })}
+    </nav>
   );
 }
 
-// Left edge, when the tutor is folded: only the logo, so the reader isn't squeezed.
+// Left edge, when the tutor is folded: a narrow strip that still says what
+// it is (its icon and "Tutor", on end), so the reader isn't squeezed and the
+// tutor is one click away. A dot while it's answering.
 export function TutorRail({ busy, onOpen }: { busy: boolean; onOpen: () => void }) {
   return (
-    <nav aria-label="Tutor" className="flex w-8 shrink-0 flex-col items-center border-r border-ink bg-panel pt-3">
+    <nav aria-label="Tutor" className="flex w-10 shrink-0 flex-col items-center border-r border-ink bg-panel pt-2">
       <button
         type="button"
         onClick={onOpen}
-        aria-label="Show the tutor"
-        title="Show the tutor (Ctrl+T)"
-        className="relative rounded-md px-0.5 py-2 text-ink transition hover:bg-paper"
+        aria-label={busy ? "Show the tutor (answering)" : "Show the tutor"}
+        title="Show the tutor (t, or Ctrl+\)"
+        className="relative flex flex-col items-center gap-2 rounded-lg px-1.5 py-2.5 text-ink transition hover:bg-paper"
       >
-        <span className="font-serif text-[13px] font-semibold tracking-tight [writing-mode:vertical-rl] rotate-180">
-          Confu<span className="text-yellow-500">.</span>
-        </span>
-        {busy && <span aria-hidden className="absolute top-1 right-0 size-1.5 animate-pulse rounded-full border border-ink bg-yellow-300" />}
+        <Icon name="chat" size={18} />
+        <span className="rotate-180 text-xs font-medium tracking-wide [writing-mode:vertical-rl]">Tutor</span>
+        {busy && <span aria-hidden className="absolute top-1.5 right-1 size-2 animate-pulse rounded-full border border-ink bg-yellow-300" />}
       </button>
     </nav>
   );
@@ -257,12 +164,12 @@ export function TutorRail({ busy, onOpen }: { busy: boolean; onOpen: () => void 
 
 /* ---------------------------------------------------------- panel headers */
 
-// The tutor's header: who it is, what page it's reading along with, usage.
-// In full screen it can also take the whole screen (onExpand), and come back.
-// Clear chat starts the conversation over (saved answers stay). The keyboard
-// shortcuts live here too, beside the page (phones have no keyboard).
+// The tutor's header: who teaches (the picker), and a few quiet buttons. The
+// page it reads along with sits under the message box; usage shows only when
+// it's running low. In full screen it can also take the whole screen
+// (onExpand), and come back. Clear chat starts the conversation over (saved
+// answers stay). Help and shortcuts live here too (phones have no keyboard).
 export function TutorHeader({
-  where,
   busy,
   usage,
   tutors,
@@ -272,7 +179,6 @@ export function TutorHeader({
   onClear,
   onShortcuts,
 }: {
-  where: string | null;
   busy: boolean;
   usage: ReactNode;
   tutors?: ReactNode;
@@ -290,14 +196,6 @@ export function TutorHeader({
       </span>
       <p className="font-medium">Tutor</p>
       {tutors}
-      {where && (
-        <span
-          title="The tutor answers with the page you're on in mind"
-          className="hidden min-w-0 truncate rounded-full border border-line px-2 py-0.5 font-mono text-[10px] text-muted @[22rem]:inline"
-        >
-          {where}
-        </span>
-      )}
       <div className="flex-1" />
       {usage}
       {onClear && (
@@ -329,12 +227,12 @@ export function TutorHeader({
           </button>
         ))}
       {onShortcuts && !expanded && (
-        <button type="button" onClick={onShortcuts} aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)" className={`${iconButton} hidden @[22rem]:flex`}>
-          <Icon name="keys" size={16} />
+        <button type="button" onClick={onShortcuts} aria-label="How it works and shortcuts" title="How it works and shortcuts (?)" className={iconButton}>
+          <Icon name="help" size={16} />
         </button>
       )}
       {onFold && !expanded && (
-        <button type="button" onClick={onFold} aria-label="Fold the tutor away" title="Fold the tutor away (Ctrl+T)" className={iconButton}>
+        <button type="button" onClick={onFold} aria-label="Fold the tutor away" title="Fold the tutor away (Ctrl+\)" className={iconButton}>
           <Icon name="fold" size={16} />
         </button>
       )}
@@ -375,7 +273,7 @@ export function ToolHeader({
               ? "Float it over the reader again"
               : canPin
                 ? "Keep it open beside the reader"
-                : "Not enough room beside the page: fold the tutor away (Ctrl+T) or widen the window"
+                : "Not enough room beside the page: fold the tutor away (Ctrl+\\) or widen the window"
           }
           className={`flex h-7 shrink-0 items-center gap-1.5 rounded-md border px-2 text-xs font-medium transition duration-150 disabled:cursor-not-allowed disabled:opacity-40 ${
             pinned ? "border-ink bg-ink text-white" : "border-ink/25 text-muted enabled:hover:border-ink enabled:hover:text-ink"
