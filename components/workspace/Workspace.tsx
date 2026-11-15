@@ -62,7 +62,7 @@ import { RecallCheck, recallOffered } from "./RecallCheck";
 import { ShortcutsDialog } from "./Shortcuts";
 import type { PlanJob } from "./PlanPanel";
 import { toolSections, TutorPanel, type PanelProps, type Section, type Tab, type ToolTab } from "./TutorPanel";
-import { MobileNav, ResizeHandle, ToolHeader, ToolRail, TutorHeader, TutorRail, type MobileItem } from "./Chrome";
+import { MobileNav, ResizeHandle, ToolDock, ToolHeader, TutorHeader, TutorRail, type MobileItem } from "./Chrome";
 import { UsageMeter } from "@/components/usage/UsageMeter";
 import { ask, toast } from "@/components/dialogs";
 import { singleKeysOn } from "@/lib/prefs";
@@ -118,7 +118,7 @@ const LAYOUT_KEY = "confu:layout";
 type Layout = { tutor: number; sheet: number; tutorOpen: boolean; pinned: boolean };
 const DEFAULT_LAYOUT: Layout = { tutor: 400, sheet: 440, tutorOpen: true, pinned: false };
 const TUTOR_RAIL = 40; // the folded tutor (w-10): its icon and name, on end
-const TOOL_RAIL = 72; // the tools' column on the right (w-[4.5rem]), always shown
+const TOOL_RAIL = 0; // the tool bar floats over the reader, so it takes no width
 const READER_MIN = 440; // a tool is only pinned beside the reader if this much is left for it
 const SHEET_MIN = 340;
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n));
@@ -202,8 +202,8 @@ export function Workspace({
   useEffect(() => () => window.clearTimeout(motionTimer.current), []);
 
   // The layout: the tutor on the left, what you're reading in the middle, and
-  // the session's tools in a labelled column on the right edge, always in view
-  // (see ToolRail). A tool slides out from it over the reader and goes away
+  // the session's tools in a small bar on the right edge that tucks itself
+  // away until the pointer comes near (see ToolDock). A tool slides out from it over the reader and goes away
   // when you click back into the page, or is pinned beside it. Full screen is the same layout without the app's header.
   // Phones show one thing at a time, switched from a tab bar.
   const wide = useSyncExternalStore(
@@ -2062,7 +2062,15 @@ export function Workspace({
             </div>
           </aside>
         )}
-        {wide && <ToolRail sections={sections} active={tool} hidden={tutorFullShown} onPick={(id) => (tool === id ? setTool(null) : openTool(id))} />}
+        {wide && (
+          <ToolDock
+            sections={sections}
+            active={tool}
+            offset={sheetOpen ? sheetWidth : 0}
+            hidden={tutorFullShown}
+            onPick={(id) => (tool === id ? setTool(null) : openTool(id))}
+          />
+        )}
       </div>
 
       {!wide && (
