@@ -60,7 +60,11 @@ export default function RoadmapsPage() {
 }
 
 async function Gallery() {
-  const anon = createAnon(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, { auth: { persistSession: false } });
+  // Same prerender path as /packs: a missing public Supabase env must not fail the build.
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  if (!url || !key) return <Empty note="Be one of the first: open a session with a plan, press Share, and turn on roadmap." />;
+  const anon = createAnon(url, key, { auth: { persistSession: false } });
   const { data, error } = await anon.rpc("public_roadmaps", { p_limit: 60 });
   if (error) {
     const missing = /public_roadmaps|schema cache|PGRST202|PGRST205/i.test(error.message);

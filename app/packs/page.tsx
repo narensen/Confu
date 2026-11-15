@@ -65,9 +65,16 @@ export default function PacksPage() {
 }
 
 async function Gallery() {
-  const anon = createAnon(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, { auth: { persistSession: false } });
-  const { data } = await anon.rpc("public_packs", { p_limit: 60 });
-  const packs = (data ?? []) as Listed[];
+  // This runs while the page is prerendered. createClient throws if the public
+  // Supabase env is missing, and that fails the whole build.
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  const packs: Listed[] = [];
+  if (url && key) {
+    const anon = createAnon(url, key, { auth: { persistSession: false } });
+    const { data } = await anon.rpc("public_packs", { p_limit: 60 });
+    packs.push(...((data ?? []) as Listed[]));
+  }
   if (!packs.length) {
     return (
       <div className="rounded-2xl border border-dashed border-ink/40 bg-panel px-6 py-12 text-center">
